@@ -1,0 +1,22 @@
+---
+import site from '../data/site.json';
+import { withBase } from '../utils/withBase';
+---
+<footer class="footer">
+  <div class="container grid grid-3">
+    <div>
+      <a href={withBase('/')} class="logo-link footer-logo-link" aria-label="СМУ-1 на главную">
+        <img class="logo footer-logo" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
+      </a>
+      <p class="form-note">B2B-first сайт: изделия, проектные услуги, доверительный контур.</p>
+    </div>
+    <div>
+      <p><strong>Телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
+      <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
+    </div>
+    <div>
+      <p><strong>Город:</strong> {site.city}</p>
+      <small>© {new Date().getFullYear()} {site.companyName}. Каркас сайта для публикации на GitHub Pages.</small>
+    </div>
+  </div>
+</footer>

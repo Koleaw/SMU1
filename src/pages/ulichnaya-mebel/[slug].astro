@@ -1,0 +1,42 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Hero from '../../components/Hero.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import LeadForm from '../../components/LeadForm.astro';
+import FAQ from '../../components/FAQ.astro';
+import products from '../../data/product-categories.json';
+import { withBase } from '../../utils/withBase';
+
+export function getStaticPaths() {
+  return products.map((item) => ({ params: { slug: item.slug }, props: { item } }));
+}
+
+const { item } = Astro.props;
+---
+<BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.shortDescription}>
+  <Hero title={item.h1} description={item.shortDescription} primaryLabel="Оставить заявку" secondaryLabel="Изготовление на заказ" secondaryHref={withBase('/izgotovlenie-na-zakaz/')}>
+    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель', href: withBase('/ulichnaya-mebel/') }, { title: item.menuTitle }]} />
+  </Hero>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Примеры решений</h2>
+      <div class="grid grid-3">
+        {item.gallery.map((img) => (
+          <article class="media-block">
+            <img class="media-thumb" src={withBase(img)} alt={item.menuTitle} loading="lazy" />
+            <p class="media-caption">Фото-заглушка до обновления реальными материалами в мае.</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section"><div class="container grid grid-2">
+    <article class="card"><h2>Что влияет на цену</h2><ul>{item.priceFactors.map((factor) => <li>{factor}</li>)}</ul></article>
+    <article class="card"><h2>Варианты исполнения</h2><ul>{item.variants.map((variant) => <li>{variant}</li>)}</ul><p class="lead"><strong>{item.priceLabel}:</strong> {item.priceValue}.</p></article>
+  </div></section>
+
+  <FAQ ids={item.faqIds} />
+  <LeadForm type="shortLead" sourcePage={item.slug} title={`Заявка по направлению «${item.menuTitle}»`} />
+</BaseLayout>

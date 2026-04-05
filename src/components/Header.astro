@@ -1,0 +1,17 @@
+---
+import navItems from '../data/navigation.json';
+import { withBase } from '../utils/withBase';
+---
+<header class="header">
+  <div class="container header-inner">
+    <a href={withBase('/')} class="logo-link" aria-label="СМУ-1 на главную">
+      <img class="logo" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
+    </a>
+    <nav class="nav" aria-label="Основная навигация">
+      {navItems.map((item) => (
+        <a class={Astro.url.pathname.endsWith(item.href) ? 'active' : ''} href={withBase(item.href)}>{item.title}</a>
+      ))}
+    </nav>
+    <a href={withBase('/izgotovlenie-na-zakaz/')} class="btn btn-primary">Изготовление на заказ</a>
+  </div>
+</header>

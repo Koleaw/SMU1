@@ -1,0 +1,26 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Hero from '../../components/Hero.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import objects from '../../data/objects.json';
+import { withBase } from '../../utils/withBase';
+
+export function getStaticPaths() {
+  return objects.map((item) => ({ params: { slug: item.slug }, props: { item } }));
+}
+
+const { item } = Astro.props;
+---
+<BaseLayout title={`${item.title} — СМУ-1`} description={item.task}>
+  <Hero title={item.title} description={`${item.workType} · ${item.city}, ${item.region}`} primaryLabel="Обсудить похожую задачу" secondaryLabel="Контакты" secondaryHref={withBase('/kontakty/')}>
+    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Выполненные объекты', href: withBase('/vypolnennye-obekty/') }, { title: item.title }]} />
+  </Hero>
+  <section class="section"><div class="container grid grid-2">
+    {item.gallery.map((img) => <article class="media-block"><img class="media-thumb" src={withBase(img)} alt={item.title} /><p class="media-caption">Иллюстрация до обновления реальными фото.</p></article>)}
+  </div></section>
+  <section class="section"><div class="container grid grid-3">
+    <article class="card"><h2>Задача</h2><p class="lead">{item.task}</p></article>
+    <article class="card"><h2>Что сделали</h2><p class="lead">{item.whatWasDone}</p></article>
+    <article class="card"><h2>Результат</h2><p class="lead">{item.result}</p></article>
+  </div></section>
+</BaseLayout>

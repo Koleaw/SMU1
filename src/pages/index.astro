@@ -1,0 +1,90 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import LeadForm from '../components/LeadForm.astro';
+import categories from '../data/categories.json';
+import projects from '../data/project-pages.json';
+import { withBase } from '../utils/withBase';
+---
+<BaseLayout title="СМУ-1 — изделия, металлоконструкции и проектные работы" description="Сайт СМУ-1: уличная мебель, навесы, металлоконструкции, благоустройство, строительство и ремонты.">
+  <Hero
+    kicker="СМУ-1"
+    title="Изделия, металлоконструкции и проектные работы под реальные задачи"
+    description="Разводим сценарии покупки: каталог повторяемых изделий, проектные услуги и доверительный контур с объектами и производством."
+    primaryLabel="Оставить заявку"
+    secondaryLabel="Связаться"
+    secondaryHref={withBase('/kontakty/')}
+  />
+
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Быстрые входы по направлениям</h2>
+      <div class="grid grid-3">
+        <a class="card" href={withBase('/ulichnaya-mebel/')}><h3>Уличная мебель</h3><p class="lead">Лавочки, урны, вазоны, велопарковки, перголы.</p></a>
+        {projects.map((project) => <a class="card" href={withBase(`/${project.slug}/`)}><h3>{project.menuTitle}</h3><p class="lead">{project.offer}</p></a>)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Категории изделий</h2>
+      <div class="grid grid-3">
+        {categories[0].subcategories.map((sub) => (
+          <a class="card" href={withBase(`/ulichnaya-mebel/${sub.slug}/`)}>
+            <h3>{sub.title}</h3>
+            <p class="lead">Рабочая карточка раздела с примерами решений и формой заявки.</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container grid grid-2">
+      <article class="card"><h2>Выполненные объекты</h2><p class="lead">Детальные карточки кейсов с задачей, составом работ и результатом. Часть карточек пока в честном формате «контент уточняется».</p><a class="btn btn-secondary" href={withBase('/vypolnennye-obekty/')}>Смотреть объекты</a></article>
+      <article class="card"><h2>Производство</h2><p class="lead">Показываем цех, производственные возможности и подход к качеству без маркетингового шума.</p><a class="btn btn-secondary" href={withBase('/proizvodstvo/')}>Перейти к производству</a></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Места под реальные фото (майское наполнение)</h2>
+      <div class="grid grid-3">
+        <article class="media-block">
+          <img class="media-thumb" src={withBase('/assets/images/products/benches-1.svg')} alt="Будущее фото продукции" />
+          <p class="media-caption">Продукция: карточки изделий и категорий.</p>
+        </article>
+        <article class="media-block">
+          <img class="media-thumb" src={withBase('/assets/images/objects/object-1.svg')} alt="Будущее фото объектов" />
+          <p class="media-caption">Объекты: кейсы с реальной средой и результатом.</p>
+        </article>
+        <article class="media-block">
+          <img class="media-thumb" src={withBase('/assets/images/production/process-1.svg')} alt="Будущее фото цеха" />
+          <p class="media-caption">Цех: производственный процесс и возможности.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Как работаем</h2>
+      <div class="grid grid-3">
+        <article class="card"><span class="badge">Шаг 1</span><h3>Собираем вводные</h3><p class="lead">Понимаем задачу, сроки и ограничения объекта.</p></article>
+        <article class="card"><span class="badge">Шаг 2</span><h3>Готовим решение и расчет</h3><p class="lead">Подбираем формат: типовые изделия или проектная реализация.</p></article>
+        <article class="card"><span class="badge">Шаг 3</span><h3>Изготавливаем и сопровождаем</h3><p class="lead">Даем прозрачный статус по этапам изготовления и поставки.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <LeadForm type="shortLead" sourcePage="home" title="Оставьте заявку по вашему сценарию" />
+
+  <section class="section">
+    <div class="container card">
+      <h2 class="section-title">Контакты</h2>
+      <p class="lead">Телефон, мессенджеры, форма и география работ — на отдельной странице.</p>
+      <a class="btn btn-secondary" href={withBase('/kontakty/')}>Открыть контакты</a>
+    </div>
+  </section>
+</BaseLayout>

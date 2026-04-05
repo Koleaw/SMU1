@@ -1,0 +1,19 @@
+[
+  {
+    "internalName": "street-furniture",
+    "menuTitle": "Уличная мебель",
+    "slug": "ulichnaya-mebel",
+    "h1": "Уличная мебель для общественных и коммерческих пространств",
+    "shortDescription": "Производим и поставляем уличную мебель под задачи ЖК, парков, коммерческих территорий и частных объектов.",
+    "heroImage": "/assets/images/placeholders/street-furniture.svg",
+    "ctaPrimary": "Подобрать решение",
+    "ctaSecondary": "Рассчитать стоимость",
+    "subcategories": [
+      { "title": "Лавочки и скамейки", "slug": "lavochki-i-skameyki" },
+      { "title": "Урны", "slug": "urny" },
+      { "title": "Вазоны и цветочницы", "slug": "vazony-i-tsvetochnitsy" },
+      { "title": "Велопарковки", "slug": "veloparkovki" },
+      { "title": "Качели, шезлонги, перголы", "slug": "kachali-shezlongi-pergoly" }
+    ]
+  }
+]
