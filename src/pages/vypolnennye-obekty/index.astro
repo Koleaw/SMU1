@@ -1,0 +1,20 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Hero from '../../components/Hero.astro';
+import objects from '../../data/objects.json';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+---
+<BaseLayout title="Выполненные объекты — СМУ-1" description="Подтверждаем опыт через реальные объекты: задача, выполненные работы, результат.">
+  <Hero title="Выполненные объекты" description="Листинг кейсов. Часть карточек до мая находится в статусе «контент уточняется», чтобы не публиковать выдуманные данные.">
+    <Breadcrumbs items={[{ title: 'Главная', href: '/' }, { title: 'Выполненные объекты' }]} />
+  </Hero>
+  <section class="section"><div class="container grid grid-2">
+    {objects.map((obj) => (
+      <a class="card" href={`/vypolnennye-obekty/${obj.slug}/`}>
+        <h2>{obj.title}</h2>
+        <p class="lead">{obj.city}, {obj.region}</p>
+        <p class="lead"><strong>Тип работ:</strong> {obj.workType}</p>
+      </a>
+    ))}
+  </div></section>
+</BaseLayout>

@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import LeadForm from '../components/LeadForm.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+---
+<BaseLayout title="Изготовление на заказ — СМУ-1" description="Страница для нестандартных задач: что можно изготовить, какие вводные нужны, как отправить материалы.">
+  <Hero title="Изготовление на заказ" description="Для задач, которые не укладываются в типовые категории: принимаем вводные, эскизы и фото, готовим решение и расчет." primaryLabel="Отправить задачу" secondaryLabel="Каталог изделий" secondaryHref="/ulichnaya-mebel/">
+    <Breadcrumbs items={[{ title: 'Главная', href: '/' }, { title: 'Изготовление на заказ' }]} />
+  </Hero>
+  <section class="section"><div class="container grid grid-2">
+    <article class="card"><h2>Что можно изготовить</h2><ul><li>индивидуальные изделия для территории</li><li>нестандартные металлоконструкции</li><li>адаптации под существующий объект</li></ul></article>
+    <article class="card"><h2>Что нужно прислать</h2><ul><li>описание задачи</li><li>размеры или ориентиры</li><li>фото/эскиз</li><li>город и срок</li></ul></article>
+  </div></section>
+  <section class="section"><div class="container card"><h2>Примеры кастомных задач</h2><p class="lead">Блок подготовлен под реальные примеры из практики. До мая используется честная заглушка без выдуманных кейсов.</p></div></section>
+  <LeadForm type="customOrderForm" sourcePage="izgotovlenie-na-zakaz" title="Форма на изготовление" />
+</BaseLayout>
