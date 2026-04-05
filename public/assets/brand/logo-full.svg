@@ -1,0 +1,7 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 72'>
+  <rect width='360' height='72' rx='10' fill='#ffffff' stroke='#d7dee6'/>
+  <rect x='10' y='10' width='52' height='52' rx='10' fill='#1f5d86'/>
+  <path d='M22 47V25h6l8 10 8-10h6v22h-5V33l-9 11-9-11v14h-5z' fill='white'/>
+  <text x='78' y='32' font-size='18' fill='#1c2733' font-family='Arial' font-weight='700'>СМУ-1</text>
+  <text x='78' y='50' font-size='12' fill='#5f6c79' font-family='Arial'>Место для финального логотипа в мае</text>
+</svg>

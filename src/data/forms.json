@@ -1,0 +1,5 @@
+{
+  "endpoint": "#",
+  "providerNote": "Подключите URL внешнего form backend (Formspree/Web3Forms/аналог) в src/data/forms.json.",
+  "successText": "Свяжемся, уточним задачу и подготовим расчет."
+}

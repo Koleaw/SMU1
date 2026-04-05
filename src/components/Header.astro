@@ -1,0 +1,14 @@
+---
+import navItems from '../data/navigation.json';
+---
+<header class="header">
+  <div class="container header-inner">
+    <a href="/" class="logo-slot" aria-label="СМУ-1 на главную">СМУ-1 · место под логотип</a>
+    <nav class="nav" aria-label="Основная навигация">
+      {navItems.map((item) => (
+        <a class={Astro.url.pathname === item.href ? 'active' : ''} href={item.href}>{item.title}</a>
+      ))}
+    </nav>
+    <a href="/izgotovlenie-na-zakaz/" class="btn btn-primary">Изготовление на заказ</a>
+  </div>
+</header>

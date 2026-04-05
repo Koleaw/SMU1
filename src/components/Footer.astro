@@ -1,0 +1,19 @@
+---
+import site from '../data/site.json';
+---
+<footer class="footer">
+  <div class="container grid grid-3">
+    <div>
+      <strong>{site.companyName}</strong>
+      <p class="form-note">B2B-first сайт: изделия, проектные услуги, доверительный контур.</p>
+    </div>
+    <div>
+      <p><strong>Телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
+      <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
+    </div>
+    <div>
+      <p><strong>Город:</strong> {site.city}</p>
+      <small>© {new Date().getFullYear()} {site.companyName}. Каркас сайта для публикации на GitHub Pages.</small>
+    </div>
+  </div>
+</footer>
