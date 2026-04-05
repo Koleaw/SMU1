@@ -1,0 +1,26 @@
+[
+  {
+    "slug": "objekt-parkovaya-zona",
+    "title": "Объект: парковая зона (контент уточняется)",
+    "workType": "Уличная мебель и элементы благоустройства",
+    "city": "Краснодар",
+    "region": "Краснодарский край",
+    "gallery": ["/assets/images/objects/object-1.svg", "/assets/images/objects/object-2.svg"],
+    "task": "Подготовить территорию к сезонной нагрузке и обновить точки отдыха.",
+    "whatWasDone": "Изготовлены и смонтированы типовые элементы. Финальные объемы и состав будут дополнены после сверки в мае.",
+    "result": "Территория приведена к единому визуальному и эксплуатационному стандарту.",
+    "relatedPages": ["ulichnaya-mebel", "blagoustroystvo-territoriy"]
+  },
+  {
+    "slug": "objekt-vhodnaya-gruppa",
+    "title": "Объект: входная группа (контент уточняется)",
+    "workType": "Металлоконструкции",
+    "city": "Краснодар",
+    "region": "Краснодарский край",
+    "gallery": ["/assets/images/objects/object-3.svg", "/assets/images/objects/object-4.svg"],
+    "task": "Усилить и обновить входную группу коммерческого объекта.",
+    "whatWasDone": "Собрана конструкция с учетом эксплуатационных требований. Технические детали и итоговые метрики будут добавлены позже.",
+    "result": "Получено рабочее и устойчивое решение, готовое к ежедневной нагрузке.",
+    "relatedPages": ["metallokonstruktsii-dlya-biznesa", "navesy-i-kozyrki"]
+  }
+]

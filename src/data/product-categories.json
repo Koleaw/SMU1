@@ -1,0 +1,32 @@
+[
+  {
+    "internalName": "benches",
+    "parentCategory": "street-furniture",
+    "menuTitle": "Лавочки и скамейки",
+    "slug": "lavochki-i-skameyki",
+    "h1": "Лавочки и скамейки для парков, дворов и коммерческих объектов",
+    "shortDescription": "Типовые и полутиповые решения с подбором длины, опор и покрытия под условия объекта.",
+    "priceMode": "from",
+    "priceLabel": "Цена от",
+    "priceValue": "по запросу после выбора конфигурации",
+    "gallery": ["/assets/images/products/benches-1.svg", "/assets/images/products/benches-2.svg", "/assets/images/products/benches-3.svg"],
+    "priceFactors": ["габариты и длина", "материал (металл/дерево)", "тип покрытия", "объем партии", "монтаж"],
+    "variants": ["классические парковые", "антивандальные", "со спинкой и без", "индивидуальная геометрия"],
+    "faqIds": ["delivery", "timing", "coating"]
+  },
+  {
+    "internalName": "bins",
+    "parentCategory": "street-furniture",
+    "menuTitle": "Урны",
+    "slug": "urny",
+    "h1": "Урны для общественных пространств и коммерческих территорий",
+    "shortDescription": "Урны с учетом трафика, условий эксплуатации и требований по обслуживанию.",
+    "priceMode": "from",
+    "priceLabel": "Цена от",
+    "priceValue": "по запросу после выбора модели",
+    "gallery": ["/assets/images/products/bins-1.svg", "/assets/images/products/bins-2.svg", "/assets/images/products/bins-3.svg"],
+    "priceFactors": ["объем", "тип крепления", "материал и толщина", "покрытие", "объем закупки"],
+    "variants": ["стационарные", "с крышкой", "раздельный сбор", "антивандальные"],
+    "faqIds": ["delivery", "timing"]
+  }
+]

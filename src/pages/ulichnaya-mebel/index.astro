@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Hero from '../../components/Hero.astro';
+import LeadForm from '../../components/LeadForm.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import categories from '../../data/categories.json';
+
+const category = categories[0];
+---
+<BaseLayout title="Уличная мебель — СМУ-1" description={category.shortDescription}>
+  <Hero title={category.h1} description={category.shortDescription} primaryLabel={category.ctaPrimary} secondaryLabel={category.ctaSecondary} secondaryHref="/navesy-i-kozyrki/">
+    <Breadcrumbs items={[{ title: 'Главная', href: '/' }, { title: 'Уличная мебель' }]} />
+  </Hero>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Быстрый выбор подкатегорий</h2>
+      <div class="grid grid-3">
+        {category.subcategories.map((sub) => (
+          <a class="card" href={`/ulichnaya-mebel/${sub.slug}/`}>
+            <h3>{sub.title}</h3>
+            <p class="lead">Каркас страницы готов, контент можно детализировать по мере появления фото и матрицы ассортимента.</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container grid grid-2">
+      <article class="card"><h3>Для каких объектов</h3><p class="lead">ЖК, общественные пространства, коммерческие территории, базы отдыха и частные участки.</p></article>
+      <article class="card"><h3>Изготавливаем на заказ</h3><p class="lead">Если типового решения недостаточно, собираем вариант под габариты и требования объекта.</p><a class="btn btn-secondary" href="/izgotovlenie-na-zakaz/">На страницу заказа</a></article>
+    </div>
+  </section>
+
+  <LeadForm type="shortLead" sourcePage="street-furniture" title="Заявка по уличной мебели" />
+</BaseLayout>

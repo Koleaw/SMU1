@@ -1,0 +1,34 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import LeadForm from '../components/LeadForm.astro';
+import FAQ from '../components/FAQ.astro';
+import projects from '../data/project-pages.json';
+
+export function getStaticPaths() {
+  return projects.map((item) => ({ params: { slug: item.slug }, props: { item } }));
+}
+
+const { item } = Astro.props;
+---
+<BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.offer}>
+  <Hero kicker="Проектное направление" title={item.h1} description={item.offer} primaryLabel="Рассчитать стоимость" secondaryLabel="Показать объекты" secondaryHref="/vypolnennye-obekty/">
+    <Breadcrumbs items={[{ title: 'Главная', href: '/' }, { title: item.menuTitle }]} />
+  </Hero>
+
+  <section class="section"><div class="container grid grid-2">
+    <article class="card"><h2>Какие задачи решаем</h2><ul>{item.tasksSolved.map((task) => <li>{task}</li>)}</ul></article>
+    <article class="card"><h2>Что входит в услугу</h2><ul>{item.serviceIncludes.map((part) => <li>{part}</li>)}</ul></article>
+  </div></section>
+
+  <section class="section"><div class="container grid grid-2">
+    <article class="card"><h2>Для каких объектов</h2><ul>{item.targetObjects.map((obj) => <li>{obj}</li>)}</ul></article>
+    <article class="card"><h2>Что нужно для расчета</h2><ul>{item.calculationInputs.map((input) => <li>{input}</li>)}</ul></article>
+  </div></section>
+
+  <section class="section"><div class="container card"><h2>Почему СМУ-1</h2><p class="lead">Без фейковых обещаний: показываем производственный контур, открыто говорим о вводных и считаем стоимость после проработки задачи.</p></div></section>
+
+  <FAQ ids={item.faqIds} />
+  <LeadForm type="calculationForm" sourcePage={item.slug} title="Форма расчета" />
+</BaseLayout>
