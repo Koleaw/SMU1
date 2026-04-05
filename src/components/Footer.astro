@@ -1,10 +1,13 @@
 ---
 import site from '../data/site.json';
+import { withBase } from '../utils/withBase';
 ---
 <footer class="footer">
   <div class="container grid grid-3">
     <div>
-      <strong>{site.companyName}</strong>
+      <a href={withBase('/')} class="logo-link footer-logo-link" aria-label="СМУ-1 на главную">
+        <img class="logo footer-logo" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
+      </a>
       <p class="form-note">B2B-first сайт: изделия, проектные услуги, доверительный контур.</p>
     </div>
     <div>

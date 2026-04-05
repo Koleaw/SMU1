@@ -2,14 +2,15 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
+import { withBase } from '../utils/withBase';
 ---
 <BaseLayout title="Производство — СМУ-1" description="Производственный контур СМУ-1: возможности цеха, подход к качеству, география работ.">
-  <Hero title="Производство" description="Показываем производственный контур без декоративного шума: что можем делать в цехе, как контролируем качество и где работаем." primaryLabel="Отправить задачу" secondaryLabel="Контакты" secondaryHref="/kontakty/">
-    <Breadcrumbs items={[{ title: 'Главная', href: '/' }, { title: 'Производство' }]} />
+  <Hero title="Производство" description="Показываем производственный контур без декоративного шума: что можем делать в цехе, как контролируем качество и где работаем." primaryLabel="Отправить задачу" secondaryLabel="Контакты" secondaryHref={withBase('/kontakty/')}>
+    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Производство' }]} />
   </Hero>
   <section class="section"><div class="container grid grid-2">
     <article class="card"><h2>Что делаем в цехе</h2><ul><li>сварочные работы по типовым и проектным решениям</li><li>подготовка и сборка металлоконструкций</li><li>адаптация под специфику объекта</li></ul></article>
     <article class="card"><h2>Подход к качеству</h2><ul><li>поэтапная проверка узлов</li><li>согласование материалов и покрытий</li><li>контроль перед отгрузкой</li></ul></article>
   </div></section>
-  <section class="section"><div class="container card"><h2>Фото процесса</h2><p class="lead">Блок готов к замене на реальные фото цеха в мае: <code>public/assets/images/production/</code>.</p></div></section>
+  <section class="section"><div class="container"><h2 class="section-title">Фото процесса</h2><div class="grid grid-2"><article class="media-block"><img class="media-thumb" src={withBase('/assets/images/production/process-1.svg')} alt="Производство СМУ-1" /><p class="media-caption">Здесь размещаются реальные фото цеха и этапов производства.</p></article><article class="card"><p class="lead">Блок готов к замене на реальные фото цеха в мае: <code>public/assets/images/production/</code>.</p></article></div></div></section>
 </BaseLayout>

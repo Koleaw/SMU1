@@ -1,12 +1,13 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { withBase } from '../utils/withBase';
 ---
 <BaseLayout title="Страница не найдена — СМУ-1" description="Запрашиваемая страница не найдена.">
   <section class="section">
     <div class="container card">
       <h1>Страница не найдена</h1>
       <p class="lead">Проверьте адрес или перейдите на главную страницу.</p>
-      <a class="btn btn-primary" href="/">На главную</a>
+      <a class="btn btn-primary" href={withBase('/')}>На главную</a>
     </div>
   </section>
 </BaseLayout>

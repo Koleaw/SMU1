@@ -1,2 +1,4 @@
 ---
-return Astro.redirect('/ulichnaya-mebel/urny/', 301);
+import { withBase } from '../utils/withBase';
+return Astro.redirect(withBase('/ulichnaya-mebel/urny/'), 301);
+---

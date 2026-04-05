@@ -5,6 +5,7 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
 import LeadForm from '../components/LeadForm.astro';
 import FAQ from '../components/FAQ.astro';
 import projects from '../data/project-pages.json';
+import { withBase } from '../utils/withBase';
 
 export function getStaticPaths() {
   return projects.map((item) => ({ params: { slug: item.slug }, props: { item } }));
@@ -13,14 +14,28 @@ export function getStaticPaths() {
 const { item } = Astro.props;
 ---
 <BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.offer}>
-  <Hero kicker="Проектное направление" title={item.h1} description={item.offer} primaryLabel="Рассчитать стоимость" secondaryLabel="Показать объекты" secondaryHref="/vypolnennye-obekty/">
-    <Breadcrumbs items={[{ title: 'Главная', href: '/' }, { title: item.menuTitle }]} />
+  <Hero kicker="Проектное направление" title={item.h1} description={item.offer} primaryLabel="Рассчитать стоимость" secondaryLabel="Показать объекты" secondaryHref={withBase('/vypolnennye-obekty/')}>
+    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: item.menuTitle }]} />
   </Hero>
 
   <section class="section"><div class="container grid grid-2">
     <article class="card"><h2>Какие задачи решаем</h2><ul>{item.tasksSolved.map((task) => <li>{task}</li>)}</ul></article>
     <article class="card"><h2>Что входит в услугу</h2><ul>{item.serviceIncludes.map((part) => <li>{part}</li>)}</ul></article>
   </div></section>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Будущие фото объектов и решений</h2>
+      <div class="grid grid-3">
+        {item.heroImages.map((img) => (
+          <article class="media-block">
+            <img class="media-thumb" src={withBase(img)} alt={item.menuTitle} />
+            <p class="media-caption">Зона под реальные фото проекта и результата.</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
 
   <section class="section"><div class="container grid grid-2">
     <article class="card"><h2>Для каких объектов</h2><ul>{item.targetObjects.map((obj) => <li>{obj}</li>)}</ul></article>

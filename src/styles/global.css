@@ -9,9 +9,13 @@
   --accent-strong: #144566;
   --radius: 14px;
   --shadow: 0 10px 24px rgb(31 53 73 / 8%);
+  --font-ui: "Manrope", "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-head: "Montserrat", "Manrope", "Inter", "Segoe UI", Arial, sans-serif;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; font-family: Inter, "Segoe UI", Arial, sans-serif; color: var(--text); background: var(--bg); }
+html, body { margin: 0; padding: 0; font-family: var(--font-ui); color: var(--text); background: var(--bg); text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: var(--font-head); letter-spacing: 0.01em; line-height: 1.25; margin-top: 0; }
+p, li { line-height: 1.65; }
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
 .container { width: min(1140px, 92vw); margin: 0 auto; }
@@ -34,7 +38,10 @@ img { max-width: 100%; display: block; }
 .kicker { color: var(--accent); font-weight: 600; margin-bottom: .4rem; }
 .header { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
 .header-inner { min-height: 72px; display: flex; gap: 1rem; align-items: center; justify-content: space-between; }
-.logo-slot { font-weight: 700; border: 1px dashed var(--border); border-radius: 10px; padding: .6rem .8rem; color: var(--muted); white-space: nowrap; }
+.logo-link { display: inline-flex; align-items: center; }
+.logo { width: auto; height: 46px; max-width: 220px; object-fit: contain; }
+.footer-logo-link { margin-bottom: .6rem; }
+.footer-logo { height: 40px; max-width: 200px; }
 .nav { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; }
 .nav a { color: var(--muted); font-size: .95rem; }
 .nav a.active, .nav a:hover { color: var(--text); }
@@ -48,6 +55,10 @@ img { max-width: 100%; display: block; }
 }
 .form-note { color: var(--muted); font-size: .92rem; margin: 0; }
 .badge { display: inline-block; padding: .25rem .6rem; border-radius: 999px; background: var(--surface-alt); color: var(--muted); font-size: .8rem; }
+.media-block { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface-alt); }
+.media-thumb { aspect-ratio: 16 / 10; width: 100%; object-fit: cover; background: linear-gradient(160deg, #d7e1eb 0%, #ecf1f6 45%, #dbe5ef 100%); }
+.media-caption { padding: .8rem 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .92rem; }
 @media (max-width: 900px) {
   .header-inner { align-items: flex-start; flex-direction: column; padding: .7rem 0; }
+  .logo { height: 40px; }
 }

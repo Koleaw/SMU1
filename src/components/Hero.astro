@@ -8,7 +8,8 @@ interface Props {
   secondaryLabel?: string;
   secondaryHref?: string;
 }
-const { kicker, title, description, primaryLabel, primaryHref = '#lead', secondaryLabel, secondaryHref = '/kontakty/' } = Astro.props;
+import { withBase } from '../utils/withBase';
+const { kicker, title, description, primaryLabel, primaryHref = '#lead', secondaryLabel, secondaryHref = withBase('/kontakty/') } = Astro.props;
 ---
 <section class="hero">
   <div class="container">

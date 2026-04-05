@@ -5,6 +5,7 @@ import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import LeadForm from '../../components/LeadForm.astro';
 import FAQ from '../../components/FAQ.astro';
 import products from '../../data/product-categories.json';
+import { withBase } from '../../utils/withBase';
 
 export function getStaticPaths() {
   return products.map((item) => ({ params: { slug: item.slug }, props: { item } }));
@@ -13,8 +14,8 @@ export function getStaticPaths() {
 const { item } = Astro.props;
 ---
 <BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.shortDescription}>
-  <Hero title={item.h1} description={item.shortDescription} primaryLabel="Оставить заявку" secondaryLabel="Изготовление на заказ" secondaryHref="/izgotovlenie-na-zakaz/">
-    <Breadcrumbs items={[{ title: 'Главная', href: '/' }, { title: 'Уличная мебель', href: '/ulichnaya-mebel/' }, { title: item.menuTitle }]} />
+  <Hero title={item.h1} description={item.shortDescription} primaryLabel="Оставить заявку" secondaryLabel="Изготовление на заказ" secondaryHref={withBase('/izgotovlenie-na-zakaz/')}>
+    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель', href: withBase('/ulichnaya-mebel/') }, { title: item.menuTitle }]} />
   </Hero>
 
   <section class="section">
@@ -22,9 +23,9 @@ const { item } = Astro.props;
       <h2 class="section-title">Примеры решений</h2>
       <div class="grid grid-3">
         {item.gallery.map((img) => (
-          <article class="card">
-            <img src={img} alt={item.menuTitle} loading="lazy" />
-            <p class="lead">Фото-заглушка до обновления реальными материалами в мае.</p>
+          <article class="media-block">
+            <img class="media-thumb" src={withBase(img)} alt={item.menuTitle} loading="lazy" />
+            <p class="media-caption">Фото-заглушка до обновления реальными материалами в мае.</p>
           </article>
         ))}
       </div>
