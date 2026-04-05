@@ -24,6 +24,8 @@ npm run preview
 3. Запушить изменения — workflow `.github/workflows/deploy.yml` соберет сайт и опубликует `dist/`.
 4. Для кастомного домена задайте `SITE_URL` и/или правьте `astro.config.mjs`.
 
+> Если оставить Source не на GitHub Actions, GitHub попытается собирать репозиторий через Jekyll и упадет на `.astro` файлах.
+
 ## Где менять контент
 
 - Тексты и базовые данные: `src/data/*.json`
