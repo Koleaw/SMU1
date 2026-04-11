@@ -835,3 +835,240 @@ small {
     display: none;
   }
 }
+
+.hero--catalog {
+  background: #f3f4f3;
+}
+
+.hero--project {
+  min-height: 460px;
+  display: flex;
+  align-items: flex-end;
+  padding: 96px 0 64px;
+  border: none;
+}
+
+.hero--project .hero-content {
+  max-width: 780px;
+}
+
+.hero--project .kicker,
+.hero--project h1,
+.hero--project .hero-description,
+.hero--project .breadcrumbs,
+.hero--project .breadcrumbs a {
+  color: #ffffff;
+}
+
+.hero--project .btn-secondary {
+  color: #ffffff;
+  border-color: rgb(255 255 255 / 70%);
+  background: rgb(255 255 255 / 8%);
+}
+
+.hero--trust,
+.hero--service {
+  padding: 64px 0 48px;
+}
+
+.category-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.category-choice-card {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-max);
+  background: #ffffff;
+  box-shadow: var(--shadow-card);
+}
+
+.category-choice-card__body {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.category-choice-card__body p {
+  color: var(--color-text-secondary);
+}
+
+.product-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.product-showcase-card {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: #ffffff;
+  box-shadow: var(--shadow-card);
+  min-height: 100%;
+}
+
+.product-showcase-card__media-wrap {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.product-showcase-card__media {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: repeating-linear-gradient(135deg, #f1f1f1 0, #f1f1f1 12px, #e8e8e8 12px, #e8e8e8 24px);
+}
+
+.product-showcase-card__body {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.product-showcase-card__descriptor {
+  color: var(--color-text-secondary);
+  min-height: 48px;
+}
+
+.product-showcase-card__price {
+  font-weight: 700;
+}
+
+.project-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.project-block--solve {
+  border-color: #ccdacc;
+  background: #f7fbf7;
+}
+
+.project-media-block {
+  grid-column: 1 / -1;
+}
+
+.workflow-grid--project .workflow-step {
+  border-top: 3px solid #d6e7d7;
+}
+
+.project-block--inputs {
+  border-color: #d4d4d4;
+}
+
+.object-list-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.object-list-card {
+  display: grid;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-max);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.object-list-card__body {
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.object-list-card__body p {
+  color: var(--color-text-secondary);
+}
+
+.object-hero-media {
+  display: grid;
+  gap: 24px;
+}
+
+.object-hero-media .media-block:first-child .media-thumb {
+  min-height: 420px;
+}
+
+.object-story-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.production-media-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 20px;
+}
+
+.production-media-grid .media-block:first-child .media-thumb {
+  min-height: 360px;
+}
+
+.production-facts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.contacts-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+}
+
+.contacts-main-card {
+  grid-row: span 2;
+}
+
+.contacts-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.contacts-map-block .media-thumb {
+  min-height: 260px;
+}
+
+@media (max-width: 1024px) {
+  .category-choice-grid,
+  .product-catalog-grid,
+  .production-facts-grid,
+  .object-story-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .production-media-grid,
+  .project-content-grid,
+  .contacts-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .contacts-main-card {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .category-choice-grid,
+  .product-catalog-grid,
+  .object-list-grid,
+  .production-facts-grid,
+  .object-story-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero--project {
+    min-height: 420px;
+    padding: 84px 0 56px;
+  }
+}

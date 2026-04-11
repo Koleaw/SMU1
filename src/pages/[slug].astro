@@ -14,36 +14,64 @@ export function getStaticPaths() {
 const { item } = Astro.props;
 ---
 <BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.offer}>
-  <Hero kicker="Проектное направление" title={item.h1} description={item.offer} primaryLabel="Рассчитать стоимость" secondaryLabel="Показать объекты" secondaryHref={withBase('/vypolnennye-obekty/')}>
+  <Hero
+    kicker="Проектное направление"
+    className="hero--project"
+    title={item.h1}
+    description={item.offer}
+    primaryLabel="Рассчитать стоимость"
+    secondaryLabel="Показать объекты"
+    secondaryHref={withBase('/vypolnennye-obekty/')}
+    mediaImage={withBase(item.heroImages[0])}
+    mediaAlt={item.menuTitle}
+    mediaCaption="Плейсхолдер под реальные фото объектов и этапов работ."
+  >
     <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: item.menuTitle }]} />
   </Hero>
 
-  <section class="section"><div class="container grid grid-2">
-    <article class="card"><h2>Какие задачи решаем</h2><ul>{item.tasksSolved.map((task) => <li>{task}</li>)}</ul></article>
-    <article class="card"><h2>Что входит в услугу</h2><ul>{item.serviceIncludes.map((part) => <li>{part}</li>)}</ul></article>
-  </div></section>
-
   <section class="section">
+    <div class="container project-content-grid">
+      <article class="card project-block project-block--solve">
+        <h2>Что решаем</h2>
+        <ul>{item.tasksSolved.map((task) => <li>{task}</li>)}</ul>
+      </article>
+      <article class="card project-block">
+        <h2>Что входит в услугу</h2>
+        <ul>{item.serviceIncludes.map((part) => <li>{part}</li>)}</ul>
+      </article>
+      <article class="media-block media-block--objects media-block--strong project-media-block">
+        <img class="media-thumb" src={withBase(item.heroImages[0])} alt={item.menuTitle} loading="lazy" />
+        <p class="media-caption">Зона для кейсовых фото: объект, узлы, этапы монтажа.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section section--soft">
     <div class="container">
-      <h2 class="section-title">Будущие фото объектов и решений</h2>
-      <div class="grid grid-3">
-        {item.heroImages.map((img) => (
-          <article class="media-block media-block--hero">
-            <img class="media-thumb" src={withBase(img)} alt={item.menuTitle} />
-            <p class="media-caption">Зона под реальные фото проекта и результата.</p>
-          </article>
-        ))}
+      <div class="section-heading">
+        <h2 class="section-title">Как работаем</h2>
+      </div>
+      <div class="workflow-grid workflow-grid--project">
+        <article class="workflow-step"><span class="badge">Этап 1</span><h3>Фиксируем исходные данные</h3><p>Объект, ограничения площадки, режим эксплуатации и сроки запуска.</p></article>
+        <article class="workflow-step"><span class="badge">Этап 2</span><h3>Собираем конструктив и смету</h3><p>Уточняем решения, показываем объем материалов, этапность и бюджет.</p></article>
+        <article class="workflow-step"><span class="badge">Этап 3</span><h3>Изготавливаем и выводим на объект</h3><p>Ведем проект в производстве и сопровождаем монтаж до результата.</p></article>
       </div>
     </div>
   </section>
 
-  <section class="section"><div class="container grid grid-2">
-    <article class="card"><h2>Для каких объектов</h2><ul>{item.targetObjects.map((obj) => <li>{obj}</li>)}</ul></article>
-    <article class="card"><h2>Что нужно для расчета</h2><ul>{item.calculationInputs.map((input) => <li>{input}</li>)}</ul></article>
-  </div></section>
-
-  <section class="section"><div class="container trust-block"><h2>Почему СМУ-1</h2><p class="lead">Без фейковых обещаний: показываем производственный контур, открыто говорим о вводных и считаем стоимость после проработки задачи.</p></div></section>
+  <section class="section">
+    <div class="container grid grid-2">
+      <article class="card"><h2>Для каких объектов</h2><ul>{item.targetObjects.map((obj) => <li>{obj}</li>)}</ul></article>
+      <article class="card project-block project-block--inputs"><h2>Что нужно для расчета</h2><ul>{item.calculationInputs.map((input) => <li>{input}</li>)}</ul></article>
+    </div>
+  </section>
 
   <FAQ ids={item.faqIds} />
-  <LeadForm type="calculationForm" sourcePage={item.slug} title="Форма расчета" />
+  <section class="section">
+    <div class="container form-block form-block--serious">
+      <h2 class="section-title">Форма расчета</h2>
+      <p class="lead">Заполните базовые вводные — вернемся с рабочим вариантом решения и предварительной стоимостью.</p>
+    </div>
+  </section>
+  <LeadForm type="calculationForm" sourcePage={item.slug} title="Запросить расчет проекта" />
 </BaseLayout>
