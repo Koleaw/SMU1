@@ -333,10 +333,16 @@ small {
 }
 
 .header-inner {
-  min-height: 78px;
+  min-height: 86px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+}
+
+.header-brand {
   display: flex;
   align-items: center;
-  gap: 16px;
 }
 
 .logo-link {
@@ -347,33 +353,56 @@ small {
 
 .logo {
   width: auto;
-  height: 46px;
-  max-width: 220px;
+  height: 48px;
+  max-width: 240px;
   object-fit: contain;
 }
 
-.nav {
-  margin-left: auto;
+.header-nav-wrap {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  justify-content: center;
+  min-width: 0;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
   align-items: center;
+  justify-content: center;
 }
 
 .nav a {
   color: #454545;
-  font-size: var(--font-size-small);
-  font-weight: 500;
-  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  padding: 9px 10px;
+  white-space: nowrap;
   border-radius: var(--radius-base);
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
-.nav a.active,
+.nav a.active {
+  color: #1f1f1f;
+  background: #eef3ee;
+}
+
 .nav a:hover,
 .nav a:focus-visible {
   color: var(--color-text-primary);
-  background: #f3f5f3;
+  background: #f5f6f5;
+}
+
+.header-cta {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.header-cta .btn {
+  padding: 11px 16px;
+  font-size: 15px;
+  white-space: nowrap;
 }
 
 .mobile-menu-toggle,
@@ -749,12 +778,26 @@ small {
   }
 
   .header-inner {
-    min-height: 72px;
-    flex-wrap: wrap;
+    min-height: 78px;
+    gap: 14px;
+  }
+
+  .logo {
+    height: 40px;
   }
 
   .nav {
-    gap: 12px;
+    gap: 2px;
+  }
+
+  .nav a {
+    font-size: 12px;
+    padding: 8px 8px;
+  }
+
+  .header-cta .btn {
+    padding: 10px 12px;
+    font-size: 14px;
   }
 }
 
@@ -824,11 +867,16 @@ small {
   }
 
   .header-inner {
-    min-height: 68px;
+    min-height: 70px;
+    display: flex;
     justify-content: space-between;
   }
 
-  .header .btn.btn-primary {
+  .logo {
+    height: 34px;
+  }
+
+  .header-cta {
     display: none;
   }
 
