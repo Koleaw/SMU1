@@ -1,5 +1,6 @@
 ---
 interface Props {
+  className?: string;
   kicker?: string;
   title: string;
   description: string;
@@ -7,15 +8,53 @@ interface Props {
   primaryHref?: string;
   secondaryLabel?: string;
   secondaryHref?: string;
+  mediaType?: 'image' | 'video';
+  mediaImage?: string;
+  mediaVideo?: string;
+  mediaPoster?: string;
+  mediaAlt?: string;
+  mediaCaption?: string;
 }
 import { withBase } from '../utils/withBase';
-const { kicker, title, description, primaryLabel, primaryHref = '#lead', secondaryLabel, secondaryHref = withBase('/kontakty/') } = Astro.props;
+
+const {
+  className,
+  kicker,
+  title,
+  description,
+  primaryLabel,
+  primaryHref = '#lead',
+  secondaryLabel,
+  secondaryHref = withBase('/kontakty/'),
+  mediaType,
+  mediaImage,
+  mediaVideo,
+  mediaPoster,
+  mediaAlt = 'Фоновое изображение первого экрана',
+  mediaCaption
+} = Astro.props;
+
+const heroClass = ['hero', className].filter(Boolean).join(' ');
 ---
-<section class="hero">
-  <div class="container">
+<section class={heroClass}>
+  {(mediaImage || mediaPoster) && (
+    <div class="hero-media" aria-hidden="true">
+      {mediaType === 'video' && mediaVideo ? (
+        <video class="hero-media__video" autoplay muted loop playsinline poster={mediaPoster}>
+          <source src={mediaVideo} type="video/mp4" />
+        </video>
+      ) : (
+        <img class="hero-media__image" src={mediaImage ?? mediaPoster} alt={mediaAlt} loading="eager" />
+      )}
+      <div class="hero-media__overlay"></div>
+      {mediaCaption && <p class="hero-media__caption">{mediaCaption}</p>}
+    </div>
+  )}
+
+  <div class="container hero-content">
     {kicker && <p class="kicker">{kicker}</p>}
     <h1>{title}</h1>
-    <p>{description}</p>
+    <p class="hero-description">{description}</p>
     <div class="hero-actions">
       {primaryLabel && <a class="btn btn-primary" href={primaryHref}>{primaryLabel}</a>}
       {secondaryLabel && <a class="btn btn-secondary" href={secondaryHref}>{secondaryLabel}</a>}
