@@ -3,88 +3,191 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import LeadForm from '../components/LeadForm.astro';
 import categories from '../data/categories.json';
-import projects from '../data/project-pages.json';
 import { withBase } from '../utils/withBase';
+
+const keyDirections = [
+  {
+    title: 'Каталог изделий для благоустройства',
+    description: 'Лавочки, урны, вазоны, велопарковки, ограждения и элементы среды для типовых задач объектов.',
+    href: withBase('/ulichnaya-mebel/'),
+    media: withBase('/assets/images/products/benches-2.svg'),
+    mediaLabel: 'Серийные и полутиповые изделия цеха'
+  },
+  {
+    title: 'Навесы и козырьки',
+    description: 'Проектируем, изготавливаем и монтируем решения под входные группы, парковки, коммерческие и общественные зоны.',
+    href: withBase('/navesy-i-kozyrki/'),
+    media: withBase('/assets/images/placeholders/canopies.svg'),
+    mediaLabel: 'Зона для фото реализованных навесов'
+  },
+  {
+    title: 'Металлоконструкции для бизнеса',
+    description: 'Каркасы, фермы, входные группы и локальные конструкции под требования площадки, нагрузки и сроки запуска.',
+    href: withBase('/metallokonstruktsii-dlya-biznesa/'),
+    media: withBase('/assets/images/placeholders/metal-business.svg'),
+    mediaLabel: 'Зона для фото проектных металлоконструкций'
+  },
+  {
+    title: 'Благоустройство территорий',
+    description: 'Комплексный подряд: изделия, монтаж, покрытие и узлы территории в едином рабочем графике.',
+    href: withBase('/blagoustroystvo-territoriy/'),
+    media: withBase('/assets/images/placeholders/landscaping.svg'),
+    mediaLabel: 'Зона для фото благоустройства объектов'
+  }
+];
 ---
-<BaseLayout title="СМУ-1 — изделия, металлоконструкции и проектные работы" description="Сайт СМУ-1: уличная мебель, навесы, металлоконструкции, благоустройство, строительство и ремонты.">
-  <Hero
-    kicker="СМУ-1"
-    title="Изделия, металлоконструкции и проектные работы под реальные задачи"
-    description="Разводим сценарии покупки: каталог повторяемых изделий, проектные услуги и доверительный контур с объектами и производством."
-    primaryLabel="Оставить заявку"
-    secondaryLabel="Связаться"
-    secondaryHref={withBase('/kontakty/')}
-  />
+<BaseLayout title="СМУ-1 — производство изделий, металлоконструкции и благоустройство" description="СМУ-1 в Кургане: изделия, навесы, металлоконструкции, строительство и благоустройство территорий для коммерческих и общественных объектов.">
+  <div class="home-page">
+    <Hero
+      className="hero--media"
+      kicker="СМУ-1 · Курган"
+      title="Закрываем объект комплексно: от изделий и металлоконструкций до строительства и благоустройства"
+      description="Работаем с коммерческими и общественными площадками: считаем задачу, подбираем формат работ, изготавливаем в цехе и сопровождаем реализацию на объекте."
+      primaryLabel="Получить расчет"
+      secondaryLabel="Наши объекты"
+      secondaryHref={withBase('/vypolnennye-obekty/')}
+      mediaType="video"
+      mediaPoster={withBase('/assets/images/placeholders/construction.svg')}
+      mediaAlt="Производственно-строительные работы СМУ-1"
+      mediaCaption="Hero video-ready: до майского обновления используется постер, после загрузки финального ролика блок автоматически работает как фоновое видео без звука."
+    />
 
-  <section class="section">
-    <div class="container">
-      <h2 class="section-title">Быстрые входы по направлениям</h2>
-      <div class="grid grid-3">
-        <a class="card" href={withBase('/ulichnaya-mebel/')}><h3>Уличная мебель</h3><p class="lead">Лавочки, урны, вазоны, велопарковки, перголы.</p></a>
-        {projects.map((project) => <a class="card" href={withBase(`/${project.slug}/`)}><h3>{project.menuTitle}</h3><p class="lead">{project.offer}</p></a>)}
+    <section class="section section--tight section--dark quick-entry-section">
+      <div class="container">
+        <div class="section-heading section-heading--light">
+          <h2 class="section-title">Быстрые входы по направлениям</h2>
+          <p class="lead">Четыре рабочих сценария для B2B-заказчика: изделия, проектные металлоконструкции, навесы и комплексное благоустройство.</p>
+        </div>
+        <div class="quick-entry-grid">
+          {keyDirections.map((item) => (
+            <a class="quick-entry-card" href={item.href}>
+              <div class="media-block media-block--strong">
+                <img class="media-thumb" src={item.media} alt={item.mediaLabel} loading="lazy" />
+                <p class="media-caption">{item.mediaLabel}</p>
+              </div>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </a>
+          ))}
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section">
-    <div class="container">
-      <h2 class="section-title">Категории изделий</h2>
-      <div class="grid grid-3">
-        {categories[0].subcategories.map((sub) => (
-          <a class="card" href={withBase(`/ulichnaya-mebel/${sub.slug}/`)}>
-            <h3>{sub.title}</h3>
-            <p class="lead">Рабочая карточка раздела с примерами решений и формой заявки.</p>
-          </a>
-        ))}
+    <section class="section section--soft">
+      <div class="container">
+        <div class="section-heading">
+          <h2 class="section-title">Категории изделий</h2>
+          <p class="lead">Повторяемые и полутиповые позиции для дворов, парков, коммерческих и общественных территорий. Подбираем под задачу и бюджет объекта.</p>
+        </div>
+        <div class="grid grid-3 product-grid">
+          {categories[0].subcategories.map((sub, index) => (
+            <a class="product-entry" href={withBase(`/ulichnaya-mebel/${sub.slug}/`)}>
+              <img
+                class="product-entry__media"
+                src={withBase(index % 2 === 0 ? '/assets/images/products/benches-1.svg' : '/assets/images/products/bins-1.svg')}
+                alt={`Раздел ${sub.title}`}
+                loading="lazy"
+              />
+              <div class="product-entry__body">
+                <h3>{sub.title}</h3>
+                <p>Карточка с вариантами исполнения, параметрами и расчетом под задачи площадки.</p>
+              </div>
+            </a>
+          ))}
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section">
-    <div class="container grid grid-2">
-      <article class="card"><h2>Выполненные объекты</h2><p class="lead">Детальные карточки кейсов с задачей, составом работ и результатом. Часть карточек пока в честном формате «контент уточняется».</p><a class="btn btn-secondary" href={withBase('/vypolnennye-obekty/')}>Смотреть объекты</a></article>
-      <article class="card"><h2>Производство</h2><p class="lead">Показываем цех, производственные возможности и подход к качеству без маркетингового шума.</p><a class="btn btn-secondary" href={withBase('/proizvodstvo/')}>Перейти к производству</a></article>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="container">
-      <h2 class="section-title">Места под реальные фото (майское наполнение)</h2>
-      <div class="grid grid-3">
-        <article class="media-block media-block--products">
-          <img class="media-thumb" src={withBase('/assets/images/products/benches-1.svg')} alt="Будущее фото продукции" />
-          <p class="media-caption">Продукция: карточки изделий и категорий.</p>
+    <section class="section section--split">
+      <div class="container project-sections">
+        <article class="project-feature">
+          <div class="media-block media-block--products media-block--strong">
+            <img class="media-thumb" src={withBase('/assets/images/placeholders/canopies.svg')} alt="Навесы и козырьки" loading="lazy" />
+            <p class="media-caption">Плейсхолдер под фото реализованных навесов, входных групп и козырьков.</p>
+          </div>
+          <div>
+            <h2>Навесы и козырьки</h2>
+            <p class="lead">Отдельное проектное направление: от замера и чертежей до изготовления, доставки и монтажа на объекте.</p>
+            <a class="btn btn-secondary" href={withBase('/navesy-i-kozyrki/')}>Перейти в раздел</a>
+          </div>
         </article>
-        <article class="media-block media-block--objects">
-          <img class="media-thumb" src={withBase('/assets/images/objects/object-1.svg')} alt="Будущее фото объектов" />
-          <p class="media-caption">Объекты: кейсы с реальной средой и результатом.</p>
+
+        <article class="project-feature">
+          <div class="media-block media-block--products media-block--strong">
+            <img class="media-thumb" src={withBase('/assets/images/placeholders/metal-business.svg')} alt="Металлоконструкции для бизнеса" loading="lazy" />
+            <p class="media-caption">Плейсхолдер под фото каркасов, ферм и входных групп в реальной среде.</p>
+          </div>
+          <div>
+            <h2>Металлоконструкции для бизнеса</h2>
+            <p class="lead">Собираем решения под эксплуатационную задачу: считаем нагрузки, подбираем конструкцию и ведем объект до запуска.</p>
+            <a class="btn btn-secondary" href={withBase('/metallokonstruktsii-dlya-biznesa/')}>Смотреть направление</a>
+          </div>
         </article>
-        <article class="media-block media-block--production">
-          <img class="media-thumb" src={withBase('/assets/images/production/process-1.svg')} alt="Будущее фото цеха" />
-          <p class="media-caption">Цех: производственный процесс и возможности.</p>
+
+        <article class="project-feature project-feature--wide">
+          <div class="media-block media-block--strong media-block--objects">
+            <img class="media-thumb" src={withBase('/assets/images/placeholders/landscaping.svg')} alt="Благоустройство территорий" loading="lazy" />
+            <p class="media-caption">Плейсхолдер под фото комплексного благоустройства коммерческих и общественных территорий.</p>
+          </div>
+          <div>
+            <h2>Благоустройство территорий</h2>
+            <p class="lead">Комплексно закрываем территорию: изделия, металлоконструкции, монтаж, покрытие и сопутствующие строительные работы в одном договоре.</p>
+            <a class="btn btn-secondary" href={withBase('/blagoustroystvo-territoriy/')}>Открыть страницу благоустройства</a>
+          </div>
         </article>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section">
-    <div class="container">
-      <h2 class="section-title">Как работаем</h2>
-      <div class="grid grid-3">
-        <article class="card"><span class="badge">Шаг 1</span><h3>Собираем вводные</h3><p class="lead">Понимаем задачу, сроки и ограничения объекта.</p></article>
-        <article class="card"><span class="badge">Шаг 2</span><h3>Готовим решение и расчет</h3><p class="lead">Подбираем формат: типовые изделия или проектная реализация.</p></article>
-        <article class="card"><span class="badge">Шаг 3</span><h3>Изготавливаем и сопровождаем</h3><p class="lead">Даем прозрачный статус по этапам изготовления и поставки.</p></article>
+    <section class="section section--dark">
+      <div class="container grid grid-2 trust-media-grid">
+        <article class="trust-media trust-media--objects">
+          <div class="media-block media-block--objects media-block--strong">
+            <img class="media-thumb" src={withBase('/assets/images/objects/object-2.svg')} alt="Выполненные объекты СМУ-1" loading="lazy" />
+            <p class="media-caption">Майское наполнение: фото реализованных объектов и фактические результаты работ.</p>
+          </div>
+          <h2>Выполненные объекты</h2>
+          <p>Показываем не рендеры, а реальные площадки: задачу, объем работ, комплектацию и итог на объекте.</p>
+          <a class="btn btn-primary" href={withBase('/vypolnennye-obekty/')}>Наши объекты</a>
+        </article>
+
+        <article class="trust-media trust-media--production">
+          <div class="media-block media-block--production media-block--strong">
+            <img class="media-thumb" src={withBase('/assets/images/production/process-1.svg')} alt="Производство СМУ-1" loading="lazy" />
+            <p class="media-caption">Майское наполнение: фото цеха, этапов изготовления и контрольных операций.</p>
+          </div>
+          <h2>Производство</h2>
+          <p>Показываем ресурсы цеха и процесс изготовления, чтобы заказчик видел реальную производственную базу и темп работы.</p>
+          <a class="btn btn-primary" href={withBase('/proizvodstvo/')}>Смотреть производство</a>
+        </article>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <LeadForm type="shortLead" sourcePage="home" title="Оставьте заявку по вашему сценарию" />
+    <section class="section section--soft">
+      <div class="container">
+        <div class="section-heading">
+          <h2 class="section-title">Как мы работаем</h2>
+          <p class="lead">Понятный и управляемый процесс: от вводных и расчета до производства и сопровождения объекта.</p>
+        </div>
+        <div class="workflow-grid">
+          <article class="workflow-step">
+            <span class="badge">Шаг 1</span>
+            <h3>Фиксируем задачу и параметры объекта</h3>
+            <p>Собираем вводные, уточняем ограничения площадки и определяем состав работ.</p>
+          </article>
+          <article class="workflow-step">
+            <span class="badge">Шаг 2</span>
+            <h3>Готовим решение и расчет</h3>
+            <p>Показываем варианты исполнения, объем материалов, этапы и сроки реализации.</p>
+          </article>
+          <article class="workflow-step">
+            <span class="badge">Шаг 3</span>
+            <h3>Изготавливаем и выводим на объект</h3>
+            <p>Изготавливаем в цехе, организуем поставку и сопровождаем монтаж с рабочей коммуникацией.</p>
+          </article>
+        </div>
+      </div>
+    </section>
 
-  <section class="section">
-    <div class="container cta-section">
-      <h2 class="section-title">Контакты</h2>
-      <p class="lead">Телефон, мессенджеры, форма и география работ — на отдельной странице.</p>
-      <a class="btn btn-secondary" href={withBase('/kontakty/')}>Открыть контакты</a>
-    </div>
-  </section>
+    <LeadForm type="shortLead" sourcePage="home" title="Получите расчет по вашему объекту" />
+  </div>
 </BaseLayout>
