@@ -51,15 +51,15 @@ import { withBase } from '../utils/withBase';
     <div class="container">
       <h2 class="section-title">Места под реальные фото (майское наполнение)</h2>
       <div class="grid grid-3">
-        <article class="media-block">
+        <article class="media-block media-block--products">
           <img class="media-thumb" src={withBase('/assets/images/products/benches-1.svg')} alt="Будущее фото продукции" />
           <p class="media-caption">Продукция: карточки изделий и категорий.</p>
         </article>
-        <article class="media-block">
+        <article class="media-block media-block--objects">
           <img class="media-thumb" src={withBase('/assets/images/objects/object-1.svg')} alt="Будущее фото объектов" />
           <p class="media-caption">Объекты: кейсы с реальной средой и результатом.</p>
         </article>
-        <article class="media-block">
+        <article class="media-block media-block--production">
           <img class="media-thumb" src={withBase('/assets/images/production/process-1.svg')} alt="Будущее фото цеха" />
           <p class="media-caption">Цех: производственный процесс и возможности.</p>
         </article>
@@ -81,7 +81,7 @@ import { withBase } from '../utils/withBase';
   <LeadForm type="shortLead" sourcePage="home" title="Оставьте заявку по вашему сценарию" />
 
   <section class="section">
-    <div class="container card">
+    <div class="container cta-section">
       <h2 class="section-title">Контакты</h2>
       <p class="lead">Телефон, мессенджеры, форма и география работ — на отдельной странице.</p>
       <a class="btn btn-secondary" href={withBase('/kontakty/')}>Открыть контакты</a>

@@ -16,7 +16,7 @@ const { item } = Astro.props;
     <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Выполненные объекты', href: withBase('/vypolnennye-obekty/') }, { title: item.title }]} />
   </Hero>
   <section class="section"><div class="container grid grid-2">
-    {item.gallery.map((img) => <article class="media-block"><img class="media-thumb" src={withBase(img)} alt={item.title} /><p class="media-caption">Иллюстрация до обновления реальными фото.</p></article>)}
+    {item.gallery.map((img) => <article class="media-block media-block--objects"><img class="media-thumb" src={withBase(img)} alt={item.title} /><p class="media-caption">Иллюстрация до обновления реальными фото.</p></article>)}
   </div></section>
   <section class="section"><div class="container grid grid-3">
     <article class="card"><h2>Задача</h2><p class="lead">{item.task}</p></article>

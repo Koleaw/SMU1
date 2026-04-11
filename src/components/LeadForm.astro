@@ -6,7 +6,7 @@ const isCalculation = type === 'calculationForm';
 const isCustom = type === 'customOrderForm';
 ---
 <section id="lead" class="section">
-  <div class="container card">
+  <div class="container form-block">
     <h2 class="section-title">{title}</h2>
     <form class="form" method="POST" action={forms.endpoint}>
       <input type="hidden" name="formType" value={type} />

@@ -28,7 +28,7 @@ const { item } = Astro.props;
       <h2 class="section-title">Будущие фото объектов и решений</h2>
       <div class="grid grid-3">
         {item.heroImages.map((img) => (
-          <article class="media-block">
+          <article class="media-block media-block--hero">
             <img class="media-thumb" src={withBase(img)} alt={item.menuTitle} />
             <p class="media-caption">Зона под реальные фото проекта и результата.</p>
           </article>
@@ -42,7 +42,7 @@ const { item } = Astro.props;
     <article class="card"><h2>Что нужно для расчета</h2><ul>{item.calculationInputs.map((input) => <li>{input}</li>)}</ul></article>
   </div></section>
 
-  <section class="section"><div class="container card"><h2>Почему СМУ-1</h2><p class="lead">Без фейковых обещаний: показываем производственный контур, открыто говорим о вводных и считаем стоимость после проработки задачи.</p></div></section>
+  <section class="section"><div class="container trust-block"><h2>Почему СМУ-1</h2><p class="lead">Без фейковых обещаний: показываем производственный контур, открыто говорим о вводных и считаем стоимость после проработки задачи.</p></div></section>
 
   <FAQ ids={item.faqIds} />
   <LeadForm type="calculationForm" sourcePage={item.slug} title="Форма расчета" />
