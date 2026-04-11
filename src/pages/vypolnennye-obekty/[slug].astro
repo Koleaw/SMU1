@@ -12,15 +12,36 @@ export function getStaticPaths() {
 const { item } = Astro.props;
 ---
 <BaseLayout title={`${item.title} — СМУ-1`} description={item.task}>
-  <Hero title={item.title} description={`${item.workType} · ${item.city}, ${item.region}`} primaryLabel="Обсудить похожую задачу" secondaryLabel="Контакты" secondaryHref={withBase('/kontakty/')}>
+  <Hero
+    kicker="Кейс объекта"
+    className="hero--trust"
+    title={item.title}
+    description={`${item.workType} · ${item.city}, ${item.region}`}
+    primaryLabel="Обсудить похожую задачу"
+    secondaryLabel="Все объекты"
+    secondaryHref={withBase('/vypolnennye-obekty/')}
+  >
     <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Выполненные объекты', href: withBase('/vypolnennye-obekty/') }, { title: item.title }]} />
   </Hero>
-  <section class="section"><div class="container grid grid-2">
-    {item.gallery.map((img) => <article class="media-block media-block--objects"><img class="media-thumb" src={withBase(img)} alt={item.title} /><p class="media-caption">Иллюстрация до обновления реальными фото.</p></article>)}
-  </div></section>
-  <section class="section"><div class="container grid grid-3">
-    <article class="card"><h2>Задача</h2><p class="lead">{item.task}</p></article>
-    <article class="card"><h2>Что сделали</h2><p class="lead">{item.whatWasDone}</p></article>
-    <article class="card"><h2>Результат</h2><p class="lead">{item.result}</p></article>
-  </div></section>
+
+  <section class="section">
+    <div class="container object-hero-media">
+      <article class="media-block media-block--objects media-block--strong">
+        <img class="media-thumb" src={withBase(item.gallery[0])} alt={item.title} />
+        <p class="media-caption">Ключевой кадр объекта — после майского обновления здесь будет реальное фото.</p>
+      </article>
+      <article class="media-block media-block--objects">
+        <img class="media-thumb" src={withBase(item.gallery[1] ?? item.gallery[0])} alt={item.title} />
+        <p class="media-caption">Второй кадр: детали реализации и результат на площадке.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section section--soft">
+    <div class="container object-story-grid">
+      <article class="card"><h2>Задача</h2><p class="lead">{item.task}</p></article>
+      <article class="card"><h2>Что сделали</h2><p class="lead">{item.whatWasDone}</p></article>
+      <article class="card"><h2>Результат</h2><p class="lead">{item.result}</p></article>
+    </div>
+  </section>
 </BaseLayout>

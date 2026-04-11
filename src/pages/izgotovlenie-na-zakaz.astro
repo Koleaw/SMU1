@@ -6,13 +6,33 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { withBase } from '../utils/withBase';
 ---
 <BaseLayout title="Изготовление на заказ — СМУ-1" description="Страница для нестандартных задач: что можно изготовить, какие вводные нужны, как отправить материалы.">
-  <Hero title="Изготовление на заказ" description="Для задач, которые не укладываются в типовые категории: принимаем вводные, эскизы и фото, готовим решение и расчет." primaryLabel="Отправить задачу" secondaryLabel="Каталог изделий" secondaryHref={withBase('/ulichnaya-mebel/')}>
+  <Hero
+    kicker="Служебный сценарий"
+    className="hero--service"
+    title="Изготовление на заказ"
+    description="Если задача не укладывается в каталог, отправьте вводные: фото, размеры, эскиз или описание. Подготовим рабочий вариант и расчет."
+    primaryLabel="Отправить задачу"
+    secondaryLabel="Каталог изделий"
+    secondaryHref={withBase('/ulichnaya-mebel/')}
+  >
     <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Изготовление на заказ' }]} />
   </Hero>
-  <section class="section"><div class="container grid grid-2">
-    <article class="card"><h2>Что можно изготовить</h2><ul><li>индивидуальные изделия для территории</li><li>нестандартные металлоконструкции</li><li>адаптации под существующий объект</li></ul></article>
-    <article class="card"><h2>Что нужно прислать</h2><ul><li>описание задачи</li><li>размеры или ориентиры</li><li>фото/эскиз</li><li>город и срок</li></ul></article>
-  </div></section>
-  <section class="section"><div class="container card"><h2>Примеры кастомных задач</h2><p class="lead">Блок подготовлен под реальные примеры из практики. До мая используется честная заглушка без выдуманных кейсов.</p></div></section>
+
+  <section class="section section--soft">
+    <div class="container grid grid-2">
+      <article class="card"><h2>Что можно прислать</h2><ul><li>фото текущей ситуации</li><li>размеры и привязки</li><li>эскиз или пример</li><li>описание условий эксплуатации</li></ul></article>
+      <article class="card"><h2>Что делаем дальше</h2><ul><li>уточняем недостающие вводные</li><li>предлагаем формат исполнения</li><li>готовим расчет и срок</li></ul></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <article class="media-block media-block--products">
+        <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Кастомное изготовление" loading="lazy" />
+        <p class="media-caption">Плейсхолдер под реальные фото нестандартных изделий и проектных деталей.</p>
+      </article>
+    </div>
+  </section>
+
   <LeadForm type="customOrderForm" sourcePage="izgotovlenie-na-zakaz" title="Форма на изготовление" />
 </BaseLayout>

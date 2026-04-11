@@ -7,20 +7,45 @@ import categories from '../../data/categories.json';
 import { withBase } from '../../utils/withBase';
 
 const category = categories[0];
+const categoryMedia = [
+  '/assets/images/products/benches-1.svg',
+  '/assets/images/products/bins-1.svg',
+  '/assets/images/placeholders/street-furniture.svg',
+  '/assets/images/products/benches-2.svg',
+  '/assets/images/products/bins-2.svg'
+];
 ---
 <BaseLayout title="Уличная мебель — СМУ-1" description={category.shortDescription}>
-  <Hero title={category.h1} description={category.shortDescription} primaryLabel={category.ctaPrimary} secondaryLabel={category.ctaSecondary} secondaryHref={withBase('/navesy-i-kozyrki/')}>
+  <Hero
+    kicker="Каталог изделий"
+    title={category.h1}
+    description={category.shortDescription}
+    primaryLabel={category.ctaPrimary}
+    secondaryLabel={category.ctaSecondary}
+    secondaryHref={withBase('/izgotovlenie-na-zakaz/')}
+    className="hero--catalog"
+  >
     <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель' }]} />
   </Hero>
 
-  <section class="section">
+  <section class="section section--soft">
     <div class="container">
-      <h2 class="section-title">Быстрый выбор подкатегорий</h2>
-      <div class="grid grid-3">
-        {category.subcategories.map((sub) => (
-          <a class="card" href={withBase(`/ulichnaya-mebel/${sub.slug}/`)}>
-            <h3>{sub.title}</h3>
-            <p class="lead">Каркас страницы готов, контент можно детализировать по мере появления фото и матрицы ассортимента.</p>
+      <div class="section-heading">
+        <h2 class="section-title">Выберите направление изделий</h2>
+        <p class="lead">Категория работает как витрина направлений: показываем формат решений, чтобы быстро перейти в нужный подкаталог и запросить расчет под объект.</p>
+      </div>
+      <div class="category-choice-grid">
+        {category.subcategories.map((sub, index) => (
+          <a class="category-choice-card" href={withBase(`/ulichnaya-mebel/${sub.slug}/`)}>
+            <div class="media-block media-block--products media-block--strong">
+              <img class="media-thumb" src={withBase(categoryMedia[index % categoryMedia.length])} alt={sub.title} loading="lazy" />
+              <p class="media-caption">Плейсхолдер под реальные фото/рендеры категории в мае.</p>
+            </div>
+            <div class="category-choice-card__body">
+              <h3>{sub.title}</h3>
+              <p>Линейка изделий с параметрическими конфигурациями и согласованием под задачу площадки.</p>
+              <span class="btn btn-secondary">Открыть подкатегорию</span>
+            </div>
           </a>
         ))}
       </div>
@@ -29,8 +54,19 @@ const category = categories[0];
 
   <section class="section">
     <div class="container grid grid-2">
-      <article class="card"><h3>Для каких объектов</h3><p class="lead">ЖК, общественные пространства, коммерческие территории, базы отдыха и частные участки.</p></article>
-      <article class="card"><h3>Изготавливаем на заказ</h3><p class="lead">Если типового решения недостаточно, собираем вариант под габариты и требования объекта.</p><a class="btn btn-secondary" href={withBase('/izgotovlenie-na-zakaz/')}>На страницу заказа</a></article>
+      <article class="card">
+        <h2>Как использовать каталог</h2>
+        <ul>
+          <li>выберите подкатегорию по сценарию объекта;</li>
+          <li>сравните типовые позиции без перегруза описаниями;</li>
+          <li>отправьте заявку и получите расчет по выбранной конфигурации.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h2>Если нужна нестандартная версия</h2>
+        <p class="lead">Когда типовая позиция не закрывает задачу, переводим запрос в изготовление под размеры, эскиз и требования эксплуатации.</p>
+        <a class="btn btn-secondary" href={withBase('/izgotovlenie-na-zakaz/')}>Перейти в изготовление на заказ</a>
+      </article>
     </div>
   </section>
 

@@ -5,12 +5,42 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { withBase } from '../utils/withBase';
 ---
 <BaseLayout title="Производство — СМУ-1" description="Производственный контур СМУ-1: возможности цеха, подход к качеству, география работ.">
-  <Hero title="Производство" description="Показываем производственный контур без декоративного шума: что можем делать в цехе, как контролируем качество и где работаем." primaryLabel="Отправить задачу" secondaryLabel="Контакты" secondaryHref={withBase('/kontakty/')}>
+  <Hero
+    kicker="Доверительный контур"
+    className="hero--trust"
+    title="Производство"
+    description="Цех и процесс как главный аргумент: показываем, как реально изготавливаем конструкции и контролируем качество на каждом этапе."
+    primaryLabel="Отправить задачу"
+    secondaryLabel="Контакты"
+    secondaryHref={withBase('/kontakty/')}
+  >
     <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Производство' }]} />
   </Hero>
-  <section class="section"><div class="container grid grid-2">
-    <article class="card"><h2>Что делаем в цехе</h2><ul><li>сварочные работы по типовым и проектным решениям</li><li>подготовка и сборка металлоконструкций</li><li>адаптация под специфику объекта</li></ul></article>
-    <article class="card"><h2>Подход к качеству</h2><ul><li>поэтапная проверка узлов</li><li>согласование материалов и покрытий</li><li>контроль перед отгрузкой</li></ul></article>
-  </div></section>
-  <section class="section"><div class="container"><h2 class="section-title">Фото процесса</h2><div class="grid grid-2"><article class="media-block media-block--production"><img class="media-thumb" src={withBase('/assets/images/production/process-1.svg')} alt="Производство СМУ-1" /><p class="media-caption">Здесь размещаются реальные фото цеха и этапов производства.</p></article><article class="card"><p class="lead">Блок готов к замене на реальные фото цеха в мае: <code>public/assets/images/production/</code>.</p></article></div></div></section>
+
+  <section class="section">
+    <div class="container production-media-grid">
+      <article class="media-block media-block--production media-block--strong">
+        <img class="media-thumb" src={withBase('/assets/images/production/process-1.svg')} alt="Производственный процесс" />
+        <p class="media-caption">Ключевой кадр цеха: зона сварки и сборки.</p>
+      </article>
+      <article class="media-block media-block--production">
+        <img class="media-thumb" src={withBase('/assets/images/placeholders/construction.svg')} alt="Контроль изготовления" />
+        <p class="media-caption">Кадр этапа контроля качества и подготовки к отгрузке.</p>
+      </article>
+      <article class="media-block media-block--production">
+        <img class="media-thumb" src={withBase('/assets/images/placeholders/metal-business.svg')} alt="Покраска и финиш" />
+        <p class="media-caption">Кадр покраски и финишной подготовки изделий.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section section--soft">
+    <div class="container production-facts-grid">
+      <article class="card"><h2>Возможности</h2><p class="lead">Изготовление типовых и проектных металлоконструкций, узлов и изделий для коммерческих и общественных объектов.</p></article>
+      <article class="card"><h2>Качество</h2><p class="lead">Поэтапная проверка геометрии, узлов и покрытия до выхода продукции на объект.</p></article>
+      <article class="card"><h2>Подход</h2><p class="lead">Производство в рабочем графике проекта: без перегруза обещаниями, с прозрачной коммуникацией по срокам.</p></article>
+      <article class="card"><h2>Покраска</h2><p class="lead">Подбор схемы защиты и финиша по условиям эксплуатации и визуальному стандарту объекта.</p></article>
+      <article class="card"><h2>Изготовление</h2><p class="lead">Серийные партии и нестандартные единичные изделия в одном производственном контуре.</p></article>
+    </div>
+  </section>
 </BaseLayout>

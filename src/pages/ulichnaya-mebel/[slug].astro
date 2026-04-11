@@ -12,30 +12,51 @@ export function getStaticPaths() {
 }
 
 const { item } = Astro.props;
+const cardMedia = item.gallery?.length ? item.gallery : ['/assets/images/placeholders/street-furniture.svg'];
 ---
 <BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.shortDescription}>
-  <Hero title={item.h1} description={item.shortDescription} primaryLabel="Оставить заявку" secondaryLabel="Изготовление на заказ" secondaryHref={withBase('/izgotovlenie-na-zakaz/')}>
+  <Hero
+    kicker="Подкатегория изделий"
+    title={item.h1}
+    description={item.shortDescription}
+    primaryLabel="Оставить заявку"
+    secondaryLabel="Изготовление на заказ"
+    secondaryHref={withBase('/izgotovlenie-na-zakaz/')}
+    className="hero--catalog"
+  >
     <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель', href: withBase('/ulichnaya-mebel/') }, { title: item.menuTitle }]} />
   </Hero>
 
   <section class="section">
     <div class="container">
-      <h2 class="section-title">Примеры решений</h2>
-      <div class="grid grid-3">
-        {item.gallery.map((img) => (
-          <article class="media-block">
-            <img class="media-thumb" src={withBase(img)} alt={item.menuTitle} loading="lazy" />
-            <p class="media-caption">Фото-заглушка до обновления реальными материалами в мае.</p>
+      <div class="section-heading">
+        <h2 class="section-title">Линейка изделий</h2>
+        <p class="lead">Строгая витрина типовых решений: единая карточка, параметрический дескриптор и понятная логика цены без маркетплейс-подачи.</p>
+      </div>
+      <div class="product-catalog-grid">
+        {item.products?.map((product, index) => (
+          <article class="product-showcase-card">
+            <div class="product-showcase-card__media-wrap">
+              <img class="product-showcase-card__media" src={withBase(cardMedia[index % cardMedia.length])} alt={product.name} loading="lazy" />
+            </div>
+            <div class="product-showcase-card__body">
+              <h3>{product.name}</h3>
+              <p class="product-showcase-card__descriptor">{product.descriptor}</p>
+              <p class="product-showcase-card__price">{product.price}</p>
+              <a class="btn btn-primary" href="#lead">{product.cta}</a>
+            </div>
           </article>
         ))}
       </div>
     </div>
   </section>
 
-  <section class="section"><div class="container grid grid-2">
-    <article class="card"><h2>Что влияет на цену</h2><ul>{item.priceFactors.map((factor) => <li>{factor}</li>)}</ul></article>
-    <article class="card"><h2>Варианты исполнения</h2><ul>{item.variants.map((variant) => <li>{variant}</li>)}</ul><p class="lead"><strong>{item.priceLabel}:</strong> {item.priceValue}.</p></article>
-  </div></section>
+  <section class="section section--soft">
+    <div class="container grid grid-2">
+      <article class="card"><h2>Что влияет на цену</h2><ul>{item.priceFactors.map((factor) => <li>{factor}</li>)}</ul></article>
+      <article class="card"><h2>Варианты исполнения</h2><ul>{item.variants.map((variant) => <li>{variant}</li>)}</ul><p class="lead"><strong>{item.priceLabel}:</strong> {item.priceValue}.</p></article>
+    </div>
+  </section>
 
   <FAQ ids={item.faqIds} />
   <LeadForm type="shortLead" sourcePage={item.slug} title={`Заявка по направлению «${item.menuTitle}»`} />

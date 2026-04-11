@@ -7,12 +7,46 @@ import site from '../data/site.json';
 import { withBase } from '../utils/withBase';
 ---
 <BaseLayout title="Контакты — СМУ-1" description="Контакты СМУ-1: телефон, мессенджеры, email, география работ и форма связи.">
-  <Hero title="Контакты" description="Свяжитесь удобным способом: телефон, мессенджеры, email или форма на сайте." primaryLabel="Позвонить" primaryHref={`tel:${site.phone}`} secondaryLabel="Написать" secondaryHref={`mailto:${site.email}`}>
+  <Hero
+    kicker="Связь"
+    className="hero--service"
+    title="Контакты"
+    description="Страница прямой связи: телефон, почта, мессенджеры, город и рабочая география без лишней маркетинговой оболочки."
+    primaryLabel="Позвонить"
+    primaryHref={`tel:${site.phone}`}
+    secondaryLabel="Написать"
+    secondaryHref={`mailto:${site.email}`}
+  >
     <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Контакты' }]} />
   </Hero>
-  <section class="section"><div class="container grid grid-2">
-    <article class="card"><h2>Контактные данные</h2><p><strong>Телефон:</strong> {site.phone}</p><p><strong>Email:</strong> {site.email}</p><p><strong>Город:</strong> {site.city}</p><p><strong>Адрес:</strong> {site.address}</p></article>
-    <article class="card"><h2>География</h2><ul>{site.regions.map((r) => <li>{r}</li>)}</ul><p class="lead">Карта и точный адрес добавляются после финального согласования данных.</p><p class="lead">{site.legalInfo}</p></article>
-  </div></section>
+
+  <section class="section">
+    <div class="container contacts-layout">
+      <article class="card contacts-main-card">
+        <h2>Контактный блок</h2>
+        <p><strong>Телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
+        <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
+        <p><strong>Город:</strong> {site.city}</p>
+        <p><strong>Адрес:</strong> {site.address}</p>
+        <div class="contacts-links">
+          {site.messengers.map((messenger) => (
+            <a class="btn btn-secondary" href={messenger.url}>{messenger.title}</a>
+          ))}
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>География работ</h2>
+        <ul>{site.regions.map((r) => <li>{r}</li>)}</ul>
+        <p class="lead">Работаем по согласованному графику выездов и поставок.</p>
+      </article>
+
+      <article class="media-block media-block--objects contacts-map-block">
+        <img class="media-thumb" src={withBase('/assets/images/placeholders/landscaping.svg')} alt="Карта расположения" loading="lazy" />
+        <p class="media-caption">Зона под карту и финальные координаты после подтверждения адреса.</p>
+      </article>
+    </div>
+  </section>
+
   <LeadForm type="shortLead" sourcePage="kontakty" title="Форма связи" />
 </BaseLayout>
