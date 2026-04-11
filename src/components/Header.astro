@@ -1,17 +1,33 @@
 ---
 import navItems from '../data/navigation.json';
 import { withBase } from '../utils/withBase';
+
+const isActive = (href: string) => href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href);
 ---
 <header class="header">
   <div class="container header-inner">
     <a href={withBase('/')} class="logo-link" aria-label="СМУ-1 на главную">
       <img class="logo" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
     </a>
+
+    <input id="mobile-menu-toggle" class="mobile-menu-toggle" type="checkbox" aria-hidden="true" />
+    <label for="mobile-menu-toggle" class="mobile-menu-button" aria-label="Открыть меню">Меню</label>
+
     <nav class="nav" aria-label="Основная навигация">
       {navItems.map((item) => (
-        <a class={Astro.url.pathname.endsWith(item.href) ? 'active' : ''} href={withBase(item.href)}>{item.title}</a>
+        <a class={isActive(item.href) ? 'active' : ''} href={withBase(item.href)}>{item.title}</a>
       ))}
     </nav>
+
     <a href={withBase('/izgotovlenie-na-zakaz/')} class="btn btn-primary">Изготовление на заказ</a>
+
+    <div class="mobile-menu-panel">
+      <nav class="mobile-nav" aria-label="Мобильная навигация">
+        {navItems.map((item) => (
+          <a class={isActive(item.href) ? 'active' : ''} href={withBase(item.href)}>{item.title}</a>
+        ))}
+        <a class="btn btn-primary" href={withBase('/izgotovlenie-na-zakaz/')}>Изготовление на заказ</a>
+      </nav>
+    </div>
   </div>
 </header>
