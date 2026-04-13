@@ -407,10 +407,13 @@ small {
   white-space: nowrap;
 }
 
-.mobile-menu-toggle,
 .mobile-menu-button,
-.mobile-menu-panel {
+.mobile-drawer {
   display: none;
+}
+
+body.mobile-nav-open {
+  overflow: hidden;
 }
 
 .footer {
@@ -887,9 +890,11 @@ small {
 
   .mobile-menu-button {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-base);
-    padding: 11px 12px;
+    padding: 10px 14px;
     background: #ffffff;
     color: var(--color-text-primary);
     font-size: var(--font-size-small);
@@ -899,25 +904,61 @@ small {
     min-height: 42px;
   }
 
-  .mobile-menu-panel {
-    display: none;
-    width: 100%;
-    padding: 12px 0 16px;
-    border-top: 1px solid var(--color-border);
+  .mobile-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    background: rgb(255 255 255 / 98%);
+    overflow-y: auto;
+  }
+
+  .mobile-drawer__panel {
+    display: grid;
+    grid-template-rows: auto auto auto auto;
+    gap: 18px;
+    padding: 16px 0 28px;
+    min-height: 100dvh;
+  }
+
+  .mobile-drawer__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .logo--mobile {
+    height: 38px;
+  }
+
+  .mobile-drawer__close {
+    border: 1px solid var(--color-border);
+    background: #ffffff;
+    color: var(--color-text-primary);
+    border-radius: var(--radius-base);
+    min-height: 40px;
+    padding: 8px 14px;
+    font: inherit;
+    font-size: var(--font-size-small);
+    font-weight: 700;
+    cursor: pointer;
   }
 
   .mobile-nav {
     display: grid;
-    gap: 10px;
+    gap: 8px;
   }
 
   .mobile-nav a {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-base);
-    padding: 10px 12px;
+    padding: 12px 14px;
     color: var(--color-text-primary);
     background: #ffffff;
-    font-size: var(--font-size-small);
+    font-size: 17px;
+    font-weight: 500;
   }
 
   .mobile-nav a.active {
@@ -925,12 +966,22 @@ small {
     border-color: var(--color-accent-primary);
   }
 
-  .mobile-nav .btn {
+  .mobile-drawer__cta {
     min-height: 44px;
+    width: 100%;
   }
 
-  .mobile-menu-toggle:checked ~ .mobile-menu-panel {
-    display: block;
+  .mobile-drawer__contacts {
+    display: grid;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .mobile-drawer__contacts p,
+  .mobile-drawer__contacts a {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-small);
   }
 
   .nav {

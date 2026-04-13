@@ -3,7 +3,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import Hero from '../../components/Hero.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import LeadForm from '../../components/LeadForm.astro';
-import FAQ from '../../components/FAQ.astro';
 import products from '../../data/product-categories.json';
 import { withBase } from '../../utils/withBase';
 
@@ -58,6 +57,5 @@ const cardMedia = item.gallery?.length ? item.gallery : ['/assets/images/placeho
     </div>
   </section>
 
-  <FAQ ids={item.faqIds} />
   <LeadForm type="shortLead" sourcePage={item.slug} title={`Заявка по направлению «${item.menuTitle}»`} />
 </BaseLayout>

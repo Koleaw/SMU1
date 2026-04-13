@@ -3,7 +3,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import LeadForm from '../components/LeadForm.astro';
-import FAQ from '../components/FAQ.astro';
 import projects from '../data/project-pages.json';
 import { withBase } from '../utils/withBase';
 
@@ -66,7 +65,6 @@ const { item } = Astro.props;
     </div>
   </section>
 
-  <FAQ ids={item.faqIds} />
   <section class="section">
     <div class="container form-block form-block--serious">
       <h2 class="section-title">Форма расчета</h2>
