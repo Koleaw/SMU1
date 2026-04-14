@@ -908,16 +908,33 @@ body.mobile-nav-open {
     position: fixed;
     inset: 0;
     z-index: 120;
-    background: rgb(255 255 255 / 98%);
-    overflow-y: auto;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-fast);
+  }
+
+  .header.is-mobile-menu-open .mobile-drawer {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .mobile-drawer__backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: rgb(255 255 255 / 96%);
+    cursor: default;
   }
 
   .mobile-drawer__panel {
+    position: relative;
+    z-index: 1;
     display: grid;
     grid-template-rows: auto auto auto auto;
     gap: 18px;
     padding: 16px 0 28px;
     min-height: 100dvh;
+    overflow-y: auto;
   }
 
   .mobile-drawer__top {
