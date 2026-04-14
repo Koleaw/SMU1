@@ -1,19 +1,19 @@
 ---
 import navItems from '../data/navigation.json';
+import site from '../data/site.json';
 import { withBase } from '../utils/withBase';
 
 const isActive = (href: string) => href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href);
 ---
-<header class="header">
+<header class="header" data-mobile-open="false">
   <div class="container header-inner">
     <div class="header-brand">
       <a href={withBase('/')} class="logo-link" aria-label="СМУ-1 на главную">
-        <img class="logo" src={withBase('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" />
+        <img class="logo" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
       </a>
     </div>
 
-    <input id="mobile-menu-toggle" class="mobile-menu-toggle" type="checkbox" aria-hidden="true" />
-    <label for="mobile-menu-toggle" class="mobile-menu-button" aria-label="Открыть меню">Меню</label>
+    <button class="mobile-menu-button" type="button" aria-controls="mobile-drawer" aria-expanded="false" data-mobile-menu-open>Меню</button>
 
     <div class="header-nav-wrap">
       <nav class="nav" aria-label="Основная навигация">
@@ -26,14 +26,67 @@ const isActive = (href: string) => href === '/' ? Astro.url.pathname === '/' : A
     <div class="header-cta">
       <a href={withBase('/izgotovlenie-na-zakaz/')} class="btn btn-primary">Изготовление на заказ</a>
     </div>
+  </div>
 
-    <div class="mobile-menu-panel">
+  <div class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
+    <button class="mobile-drawer__backdrop" type="button" aria-label="Закрыть меню" data-mobile-menu-close></button>
+    <div class="mobile-drawer__panel container" role="dialog" aria-modal="true" aria-label="Мобильное меню">
+      <div class="mobile-drawer__top">
+        <a href={withBase('/')} class="logo-link" aria-label="СМУ-1 на главную">
+          <img class="logo logo--mobile" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
+        </a>
+        <button class="mobile-drawer__close" type="button" data-mobile-menu-close>Закрыть</button>
+      </div>
+
       <nav class="mobile-nav" aria-label="Мобильная навигация">
         {navItems.map((item) => (
-          <a class={isActive(item.href) ? 'active' : ''} href={withBase(item.href)}>{item.title}</a>
+          <a class={isActive(item.href) ? 'active' : ''} href={withBase(item.href)} data-mobile-menu-link>{item.title}</a>
         ))}
-        <a class="btn btn-primary" href={withBase('/izgotovlenie-na-zakaz/')}>Изготовление на заказ</a>
       </nav>
+
+      <a class="btn btn-primary mobile-drawer__cta" href={withBase('/izgotovlenie-na-zakaz/')} data-mobile-menu-link>Изготовление на заказ</a>
+
+      <div class="mobile-drawer__contacts">
+        <p><strong>Телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
+        <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
+        <p><strong>Telegram:</strong> <a href={site.messengers[1]?.url ?? '#'}>Написать</a></p>
+      </div>
     </div>
   </div>
 </header>
+
+<script>
+  const initMobileMenu = () => {
+    const header = document.querySelector('.header');
+    if (!header || header.dataset.mobileMenuReady === 'true') return;
+
+    const drawer = header.querySelector('#mobile-drawer');
+    const openButton = header.querySelector('[data-mobile-menu-open]');
+    const closeButtons = header.querySelectorAll('[data-mobile-menu-close]');
+    const navLinks = header.querySelectorAll('[data-mobile-menu-link]');
+
+    if (!drawer || !openButton) return;
+
+    const setOpenState = (isOpen) => {
+      header.classList.toggle('is-mobile-menu-open', isOpen);
+      header.setAttribute('data-mobile-open', isOpen ? 'true' : 'false');
+      drawer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      openButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      document.body.classList.toggle('mobile-nav-open', isOpen);
+    };
+
+    openButton.addEventListener('click', () => setOpenState(true));
+    closeButtons.forEach((button) => button.addEventListener('click', () => setOpenState(false)));
+    navLinks.forEach((link) => link.addEventListener('click', () => setOpenState(false)));
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') setOpenState(false);
+    });
+
+    header.dataset.mobileMenuReady = 'true';
+    setOpenState(false);
+  };
+
+  initMobileMenu();
+  document.addEventListener('DOMContentLoaded', initMobileMenu);
+  document.addEventListener('astro:page-load', initMobileMenu);
+</script>
