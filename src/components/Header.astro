@@ -13,7 +13,16 @@ const isActive = (href: string) => href === '/' ? Astro.url.pathname === '/' : A
       </a>
     </div>
 
-    <button class="mobile-menu-button" type="button" aria-controls="mobile-drawer" aria-expanded="false" data-mobile-menu-open>Меню</button>
+    <button
+      class="mobile-menu-button"
+      type="button"
+      aria-controls="mobile-drawer"
+      aria-expanded="false"
+      aria-label="Открыть меню"
+      data-mobile-menu-open
+    >
+      <img src={withBase('/assets/icons/menu.svg')} alt="" aria-hidden="true" />
+    </button>
 
     <div class="header-nav-wrap">
       <nav class="nav" aria-label="Основная навигация">
@@ -30,26 +39,45 @@ const isActive = (href: string) => href === '/' ? Astro.url.pathname === '/' : A
 
   <div class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
     <button class="mobile-drawer__backdrop" type="button" aria-label="Закрыть меню" data-mobile-menu-close></button>
-    <div class="mobile-drawer__panel container" role="dialog" aria-modal="true" aria-label="Мобильное меню">
-      <div class="mobile-drawer__top">
-        <a href={withBase('/')} class="logo-link" aria-label="СМУ-1 на главную">
+    <div class="mobile-drawer__panel" role="dialog" aria-modal="true" aria-label="Мобильное меню">
+      <div class="mobile-drawer__top container">
+        <a href={withBase('/')} class="logo-link" aria-label="СМУ-1 на главную" data-mobile-menu-link>
           <img class="logo logo--mobile" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
         </a>
-        <button class="mobile-drawer__close" type="button" data-mobile-menu-close>Закрыть</button>
+        <button class="mobile-drawer__close" type="button" aria-label="Закрыть меню" data-mobile-menu-close>
+          <img src={withBase('/assets/icons/x.svg')} alt="" aria-hidden="true" />
+        </button>
       </div>
 
-      <nav class="mobile-nav" aria-label="Мобильная навигация">
-        {navItems.map((item) => (
-          <a class={isActive(item.href) ? 'active' : ''} href={withBase(item.href)} data-mobile-menu-link>{item.title}</a>
-        ))}
-      </nav>
+      <div class="mobile-drawer__content container">
+        <nav class="mobile-nav" aria-label="Мобильная навигация">
+          {navItems.map((item) => (
+            <a class={isActive(item.href) ? 'active' : ''} href={withBase(item.href)} data-mobile-menu-link>{item.title}</a>
+          ))}
+        </nav>
 
-      <a class="btn btn-primary mobile-drawer__cta" href={withBase('/izgotovlenie-na-zakaz/')} data-mobile-menu-link>Изготовление на заказ</a>
+        <a class="btn btn-primary mobile-drawer__cta" href={withBase('/izgotovlenie-na-zakaz/')} data-mobile-menu-link>
+          Изготовление на заказ
+        </a>
 
-      <div class="mobile-drawer__contacts">
-        <p><strong>Телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
-        <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
-        <p><strong>Telegram:</strong> <a href={site.messengers[1]?.url ?? '#'}>Написать</a></p>
+        <div class="mobile-drawer__contacts">
+          <a href={`tel:${site.phone}`}>
+            <img src={withBase('/assets/icons/phone.svg')} alt="" aria-hidden="true" />
+            <span>{site.phone}</span>
+          </a>
+          <a href={`mailto:${site.email}`}>
+            <img src={withBase('/assets/icons/mail.svg')} alt="" aria-hidden="true" />
+            <span>{site.email}</span>
+          </a>
+          <a href={site.messengers[1]?.url ?? '#'}>
+            <img src={withBase('/assets/icons/send.svg')} alt="" aria-hidden="true" />
+            <span>Telegram</span>
+          </a>
+          <p>
+            <img src={withBase('/assets/icons/map-pin.svg')} alt="" aria-hidden="true" />
+            <span>{site.address}</span>
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -67,17 +95,48 @@ const isActive = (href: string) => href === '/' ? Astro.url.pathname === '/' : A
 
     if (!drawer || !openButton) return;
 
+    let scrollTop = 0;
+
+    const lockBodyScroll = () => {
+      scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+      document.body.classList.add('mobile-nav-open');
+      document.body.style.top = `-${scrollTop}px`;
+    };
+
+    const unlockBodyScroll = () => {
+      document.body.classList.remove('mobile-nav-open');
+      const top = document.body.style.top;
+      document.body.style.top = '';
+      window.scrollTo(0, top ? Math.abs(parseInt(top, 10)) : scrollTop);
+    };
+
     const setOpenState = (isOpen) => {
       header.classList.toggle('is-mobile-menu-open', isOpen);
       header.setAttribute('data-mobile-open', isOpen ? 'true' : 'false');
       drawer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
       openButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      document.body.classList.toggle('mobile-nav-open', isOpen);
+
+      if (isOpen) {
+        lockBodyScroll();
+      } else {
+        unlockBodyScroll();
+      }
     };
 
-    openButton.addEventListener('click', () => setOpenState(true));
-    closeButtons.forEach((button) => button.addEventListener('click', () => setOpenState(false)));
+    const onToggleOpen = (event) => {
+      event.preventDefault();
+      setOpenState(true);
+    };
+
+    const onToggleClose = (event) => {
+      event.preventDefault();
+      setOpenState(false);
+    };
+
+    openButton.addEventListener('click', onToggleOpen, { passive: false });
+    closeButtons.forEach((button) => button.addEventListener('click', onToggleClose, { passive: false }));
     navLinks.forEach((link) => link.addEventListener('click', () => setOpenState(false)));
+
     window.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') setOpenState(false);
     });
@@ -87,6 +146,5 @@ const isActive = (href: string) => href === '/' ? Astro.url.pathname === '/' : A
   };
 
   initMobileMenu();
-  document.addEventListener('DOMContentLoaded', initMobileMenu);
   document.addEventListener('astro:page-load', initMobileMenu);
 </script>
