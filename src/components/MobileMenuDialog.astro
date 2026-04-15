@@ -1,0 +1,95 @@
+---
+import navItems from '../data/navigation.json';
+import site from '../data/site.json';
+import { withBase } from '../utils/withBase';
+
+const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href));
+---
+<dialog class="mobile-menu-dialog" id="mobile-menu-dialog" aria-label="Мобильное меню">
+  <div class="mobile-menu-dialog__sheet">
+    <div class="container mobile-menu-dialog__top">
+      <a href={withBase('/')} class="site-header__logo-link" aria-label="СМУ-1 на главную" data-mobile-menu-close-link>
+        <img class="site-header__logo site-header__logo--mobile" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
+      </a>
+
+      <button class="mobile-menu-dialog__close" type="button" aria-label="Закрыть меню" data-mobile-menu-close>
+        <img src={withBase('/assets/icons/x.svg')} alt="" aria-hidden="true" />
+      </button>
+    </div>
+
+    <div class="container mobile-menu-dialog__content">
+      <nav class="mobile-menu-dialog__nav" aria-label="Мобильная навигация">
+        {navItems.map((item) => (
+          <a class={isActive(item.href) ? 'active' : ''} href={withBase(item.href)} data-mobile-menu-close-link>{item.title}</a>
+        ))}
+      </nav>
+
+      <a class="btn btn-primary mobile-menu-dialog__cta" href={withBase('/izgotovlenie-na-zakaz/')} data-mobile-menu-close-link>
+        Изготовление на заказ
+      </a>
+
+      <div class="mobile-menu-dialog__contacts">
+        <a href={`tel:${site.phone}`}>
+          <img src={withBase('/assets/icons/phone.svg')} alt="" aria-hidden="true" />
+          <span>{site.phone}</span>
+        </a>
+        <a href={`mailto:${site.email}`}>
+          <img src={withBase('/assets/icons/mail.svg')} alt="" aria-hidden="true" />
+          <span>{site.email}</span>
+        </a>
+        <a href={site.messengers[1]?.url ?? '#'}>
+          <img src={withBase('/assets/icons/send.svg')} alt="" aria-hidden="true" />
+          <span>Telegram</span>
+        </a>
+        <p>
+          <img src={withBase('/assets/icons/map-pin.svg')} alt="" aria-hidden="true" />
+          <span>{site.address}</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  const initMobileMenuDialog = () => {
+    const dialog = document.getElementById('mobile-menu-dialog');
+    if (!(dialog instanceof HTMLDialogElement)) return;
+
+    const openButtons = document.querySelectorAll('[data-mobile-menu-trigger]');
+    const closeButtons = dialog.querySelectorAll('[data-mobile-menu-close]');
+    const closeLinks = dialog.querySelectorAll('[data-mobile-menu-close-link]');
+
+    openButtons.forEach((button) => {
+      if (button instanceof HTMLElement && button.dataset.mobileMenuBound !== 'true') {
+        button.addEventListener('click', () => dialog.showModal());
+        button.dataset.mobileMenuBound = 'true';
+      }
+    });
+
+    closeButtons.forEach((button) => {
+      if (button instanceof HTMLElement && button.dataset.mobileMenuBound !== 'true') {
+        button.addEventListener('click', () => dialog.close());
+        button.dataset.mobileMenuBound = 'true';
+      }
+    });
+
+    closeLinks.forEach((link) => {
+      if (link instanceof HTMLElement && link.dataset.mobileMenuBound !== 'true') {
+        link.addEventListener('click', () => dialog.close());
+        link.dataset.mobileMenuBound = 'true';
+      }
+    });
+
+    if (dialog.dataset.mobileMenuBound !== 'true') {
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) {
+          dialog.close();
+        }
+      });
+      dialog.dataset.mobileMenuBound = 'true';
+    }
+  };
+
+  initMobileMenuDialog();
+  document.addEventListener('astro:page-load', initMobileMenuDialog);
+</script>

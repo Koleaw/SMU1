@@ -1,11 +1,10 @@
 ---
 import navItems from '../data/navigation.json';
-import site from '../data/site.json';
 import { withBase } from '../utils/withBase';
 
 const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href));
 ---
-<header class="site-header" data-mobile-open="false">
+<header class="site-header">
   <div class="container site-header__desktop">
     <a href={withBase('/')} class="site-header__logo-link" aria-label="СМУ-1 на главную">
       <img class="site-header__logo" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
@@ -28,95 +27,11 @@ const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : 
     <button
       class="site-header__menu-button"
       type="button"
-      aria-controls="mobile-menu-drawer"
-      aria-expanded="false"
+      aria-controls="mobile-menu-dialog"
       aria-label="Открыть меню"
-      data-mobile-menu-open
+      data-mobile-menu-trigger
     >
       <img src={withBase('/assets/icons/menu.svg')} alt="" aria-hidden="true" />
     </button>
   </div>
-
-  <div class="mobile-menu-drawer" id="mobile-menu-drawer" aria-hidden="true">
-    <div class="mobile-menu-drawer__inner">
-      <div class="container mobile-menu-drawer__top">
-        <a href={withBase('/')} class="site-header__logo-link" aria-label="СМУ-1 на главную" data-mobile-menu-link>
-          <img class="site-header__logo site-header__logo--mobile" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
-        </a>
-
-        <button class="mobile-menu-drawer__close" type="button" aria-label="Закрыть меню" data-mobile-menu-close>
-          <img src={withBase('/assets/icons/x.svg')} alt="" aria-hidden="true" />
-        </button>
-      </div>
-
-      <div class="container mobile-menu-drawer__content">
-        <nav class="mobile-menu-drawer__nav" aria-label="Мобильная навигация">
-          {navItems.map((item) => (
-            <a class={isActive(item.href) ? 'active' : ''} href={withBase(item.href)} data-mobile-menu-link>{item.title}</a>
-          ))}
-        </nav>
-
-        <a class="btn btn-primary mobile-menu-drawer__cta" href={withBase('/izgotovlenie-na-zakaz/')} data-mobile-menu-link>
-          Изготовление на заказ
-        </a>
-
-        <div class="mobile-menu-drawer__contacts">
-          <a href={`tel:${site.phone}`}>
-            <img src={withBase('/assets/icons/phone.svg')} alt="" aria-hidden="true" />
-            <span>{site.phone}</span>
-          </a>
-          <a href={`mailto:${site.email}`}>
-            <img src={withBase('/assets/icons/mail.svg')} alt="" aria-hidden="true" />
-            <span>{site.email}</span>
-          </a>
-          <a href={site.messengers[1]?.url ?? '#'}>
-            <img src={withBase('/assets/icons/send.svg')} alt="" aria-hidden="true" />
-            <span>Telegram</span>
-          </a>
-          <p>
-            <img src={withBase('/assets/icons/map-pin.svg')} alt="" aria-hidden="true" />
-            <span>{site.address}</span>
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
 </header>
-
-<script>
-  const initMobileMenu = () => {
-    const header = document.querySelector('.site-header');
-    if (!header || header.dataset.mobileMenuReady === 'true') return;
-
-    const drawer = header.querySelector('#mobile-menu-drawer');
-    const openButton = header.querySelector('[data-mobile-menu-open]');
-    const closeButton = header.querySelector('[data-mobile-menu-close]');
-    const links = header.querySelectorAll('[data-mobile-menu-link]');
-
-    if (!drawer || !openButton || !closeButton) return;
-
-    const setOpenState = (isOpen) => {
-      header.classList.toggle('is-mobile-menu-open', isOpen);
-      header.setAttribute('data-mobile-open', isOpen ? 'true' : 'false');
-      drawer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
-      openButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      document.body.classList.toggle('mobile-menu-lock', isOpen);
-    };
-
-    openButton.addEventListener('click', () => setOpenState(true));
-    closeButton.addEventListener('click', () => setOpenState(false));
-    links.forEach((link) => link.addEventListener('click', () => setOpenState(false)));
-
-    window.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        setOpenState(false);
-      }
-    });
-
-    setOpenState(false);
-    header.dataset.mobileMenuReady = 'true';
-  };
-
-  initMobileMenu();
-  document.addEventListener('astro:page-load', initMobileMenu);
-</script>
