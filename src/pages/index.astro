@@ -2,8 +2,19 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import LeadForm from '../components/LeadForm.astro';
+import SectionNavigator from '../components/SectionNavigator.astro';
 import categories from '../data/categories.json';
 import { withBase } from '../utils/withBase';
+
+
+const sectionNavItems = [
+  { id: 'home-directions', label: 'Быстрые входы' },
+  { id: 'home-categories', label: 'Категории изделий' },
+  { id: 'home-projects', label: 'Проектные направления' },
+  { id: 'home-trust', label: 'Объекты и производство' },
+  { id: 'home-workflow', label: 'Как мы работаем' },
+  { id: 'lead', label: 'Форма заявки' }
+];
 
 const keyDirections = [
   {
@@ -38,6 +49,8 @@ const keyDirections = [
 ---
 <BaseLayout title="СМУ-1 — производство изделий, металлоконструкции и благоустройство" description="СМУ-1 в Кургане: изделия, навесы, металлоконструкции, строительство и благоустройство территорий для коммерческих и общественных объектов.">
   <div class="home-page">
+    <SectionNavigator items={sectionNavItems} />
+
     <Hero
       className="hero--media"
       kicker="СМУ-1 · Курган"
@@ -52,7 +65,7 @@ const keyDirections = [
       mediaCaption="Hero video-ready: до майского обновления используется постер, после загрузки финального ролика блок автоматически работает как фоновое видео без звука."
     />
 
-    <section class="section section--tight section--dark quick-entry-section">
+    <section id="home-directions" class="section section--tight section--dark quick-entry-section">
       <div class="container">
         <div class="section-heading section-heading--light">
           <h2 class="section-title">Быстрые входы по направлениям</h2>
@@ -73,7 +86,7 @@ const keyDirections = [
       </div>
     </section>
 
-    <section class="section section--soft">
+    <section id="home-categories" class="section section--soft">
       <div class="container">
         <div class="section-heading">
           <h2 class="section-title">Категории изделий</h2>
@@ -98,7 +111,7 @@ const keyDirections = [
       </div>
     </section>
 
-    <section class="section section--split">
+    <section id="home-projects" class="section section--split">
       <div class="container project-sections">
         <article class="project-feature">
           <div class="media-block media-block--products media-block--strong">
@@ -138,7 +151,7 @@ const keyDirections = [
       </div>
     </section>
 
-    <section class="section section--dark">
+    <section id="home-trust" class="section section--dark">
       <div class="container grid grid-2 trust-media-grid">
         <article class="trust-media trust-media--objects">
           <div class="media-block media-block--objects media-block--strong">
@@ -162,7 +175,7 @@ const keyDirections = [
       </div>
     </section>
 
-    <section class="section section--soft">
+    <section id="home-workflow" class="section section--soft">
       <div class="container">
         <div class="section-heading">
           <h2 class="section-title">Как мы работаем</h2>

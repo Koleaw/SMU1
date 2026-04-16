@@ -1,0 +1,173 @@
+---
+import { withBase } from '../utils/withBase';
+
+interface SectionNavItem {
+  id: string;
+  label: string;
+}
+
+interface Props {
+  items: SectionNavItem[];
+  title?: string;
+}
+
+const { items, title = 'Содержание страницы' } = Astro.props;
+const safeItems = items.filter((item) => item?.id && item?.label);
+
+if (!safeItems.length) {
+  throw new Error('SectionNavigator requires at least one section item');
+}
+---
+<div class="section-nav" data-section-nav>
+  <nav class="section-nav__desktop" aria-label="Навигация по разделам страницы" data-section-nav-desktop>
+    <ol class="section-nav__list">
+      {safeItems.map((item) => (
+        <li>
+          <a href={`#${item.id}`} data-section-nav-link={item.id}>{item.label}</a>
+        </li>
+      ))}
+    </ol>
+  </nav>
+
+  <button class="section-nav__mobile-toggle" type="button" aria-expanded="false" aria-controls="section-nav-sheet" data-section-nav-toggle>
+    Содержание
+  </button>
+
+  <div class="section-nav__sheet-backdrop" aria-hidden="true" hidden data-section-nav-backdrop></div>
+
+  <section class="section-nav__sheet" id="section-nav-sheet" aria-hidden="true" hidden data-section-nav-sheet>
+    <div class="section-nav__sheet-header">
+      <h2>{title}</h2>
+      <button class="section-nav__sheet-close" type="button" aria-label="Закрыть содержание" data-section-nav-close>
+        <img src={withBase('/assets/icons/x.svg')} alt="" aria-hidden="true" />
+      </button>
+    </div>
+    <nav aria-label="Содержание страницы">
+      <ol class="section-nav__sheet-list">
+        {safeItems.map((item) => (
+          <li>
+            <a href={`#${item.id}`} data-section-nav-link={item.id}>{item.label}</a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  </section>
+</div>
+
+<script>
+  const initSectionNavigator = () => {
+    const navRoot = document.querySelector('[data-section-nav]');
+    if (!navRoot || navRoot.dataset.sectionNavReady === 'true') return;
+
+    const links = Array.from(navRoot.querySelectorAll('[data-section-nav-link]'));
+    if (!links.length) return;
+
+    const toggleButton = navRoot.querySelector('[data-section-nav-toggle]');
+    const closeButton = navRoot.querySelector('[data-section-nav-close]');
+    const sheet = navRoot.querySelector('[data-section-nav-sheet]');
+    const backdrop = navRoot.querySelector('[data-section-nav-backdrop]');
+
+    const getHeaderOffset = () => {
+      const header = document.querySelector('.site-header');
+      if (!header) return 0;
+      return Math.ceil(header.getBoundingClientRect().height) + 14;
+    };
+
+    const sectionIds = [...new Set(links.map((link) => link.getAttribute('data-section-nav-link')).filter(Boolean))];
+    const sections = sectionIds
+      .map((id) => ({ id, el: document.getElementById(id) }))
+      .filter((item) => item.el);
+
+    if (!sections.length) return;
+
+    const closeSheet = () => {
+      if (!sheet || !backdrop || !toggleButton) return;
+      sheet.hidden = true;
+      backdrop.hidden = true;
+      sheet.setAttribute('aria-hidden', 'true');
+      backdrop.setAttribute('aria-hidden', 'true');
+      toggleButton.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('section-nav-sheet-open');
+    };
+
+    const openSheet = () => {
+      if (!sheet || !backdrop || !toggleButton) return;
+      sheet.hidden = false;
+      backdrop.hidden = false;
+      sheet.setAttribute('aria-hidden', 'false');
+      backdrop.setAttribute('aria-hidden', 'false');
+      toggleButton.setAttribute('aria-expanded', 'true');
+      document.body.classList.add('section-nav-sheet-open');
+    };
+
+    const setActive = (activeId) => {
+      links.forEach((link) => {
+        const isActive = link.getAttribute('data-section-nav-link') === activeId;
+        link.classList.toggle('is-active', isActive);
+        if (isActive) {
+          link.setAttribute('aria-current', 'true');
+        } else {
+          link.removeAttribute('aria-current');
+        }
+      });
+    };
+
+    const scrollToSection = (sectionId) => {
+      const target = sections.find((item) => item.id === sectionId)?.el;
+      if (!target) return;
+      const offset = getHeaderOffset();
+      const top = target.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+      closeSheet();
+    };
+
+    links.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const sectionId = link.getAttribute('data-section-nav-link');
+        if (!sectionId) return;
+        event.preventDefault();
+        scrollToSection(sectionId);
+      });
+    });
+
+    sections.forEach((item) => {
+      item.el.style.scrollMarginTop = `${getHeaderOffset() + 8}px`;
+    });
+
+    const updateActiveByScroll = () => {
+      const offset = getHeaderOffset() + 20;
+      let activeId = sections[0]?.id;
+
+      for (const section of sections) {
+        const top = section.el.getBoundingClientRect().top;
+        if (top - offset <= 0) activeId = section.id;
+      }
+
+      setActive(activeId);
+    };
+
+    window.addEventListener('scroll', updateActiveByScroll, { passive: true });
+    window.addEventListener('resize', updateActiveByScroll);
+
+    toggleButton?.addEventListener('click', () => {
+      if (!sheet || sheet.hidden) {
+        openSheet();
+      } else {
+        closeSheet();
+      }
+    });
+
+    closeButton?.addEventListener('click', closeSheet);
+    backdrop?.addEventListener('click', closeSheet);
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeSheet();
+    });
+
+    updateActiveByScroll();
+    navRoot.dataset.sectionNavReady = 'true';
+  };
+
+  initSectionNavigator();
+  document.addEventListener('astro:page-load', initSectionNavigator);
+</script>
