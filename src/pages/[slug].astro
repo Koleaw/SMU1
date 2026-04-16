@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import LeadForm from '../components/LeadForm.astro';
+import SectionNavigator from '../components/SectionNavigator.astro';
 import projects from '../data/project-pages.json';
 import { withBase } from '../utils/withBase';
 
@@ -11,8 +12,19 @@ export function getStaticPaths() {
 }
 
 const { item } = Astro.props;
+
+const sectionNavItems = [
+  { id: 'project-scope', label: 'Что решаем и состав услуги' },
+  { id: 'project-workflow', label: 'Как работаем' },
+  { id: 'project-targets', label: 'Для каких объектов' },
+  { id: 'project-form', label: 'Форма расчета' },
+  { id: 'lead', label: 'Отправить запрос' }
+];
+
 ---
 <BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.offer}>
+  <SectionNavigator items={sectionNavItems} />
+
   <Hero
     kicker="Проектное направление"
     className="hero--project"
@@ -28,7 +40,7 @@ const { item } = Astro.props;
     <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: item.menuTitle }]} />
   </Hero>
 
-  <section class="section">
+  <section id="project-scope" class="section">
     <div class="container project-content-grid">
       <article class="card project-block project-block--solve">
         <h2>Что решаем</h2>
@@ -45,7 +57,7 @@ const { item } = Astro.props;
     </div>
   </section>
 
-  <section class="section section--soft">
+  <section id="project-workflow" class="section section--soft">
     <div class="container">
       <div class="section-heading">
         <h2 class="section-title">Как работаем</h2>
@@ -58,14 +70,14 @@ const { item } = Astro.props;
     </div>
   </section>
 
-  <section class="section">
+  <section id="project-targets" class="section">
     <div class="container grid grid-2">
       <article class="card"><h2>Для каких объектов</h2><ul>{item.targetObjects.map((obj) => <li>{obj}</li>)}</ul></article>
       <article class="card project-block project-block--inputs"><h2>Что нужно для расчета</h2><ul>{item.calculationInputs.map((input) => <li>{input}</li>)}</ul></article>
     </div>
   </section>
 
-  <section class="section">
+  <section id="project-form" class="section">
     <div class="container form-block form-block--serious">
       <h2 class="section-title">Форма расчета</h2>
       <p class="lead">Заполните базовые вводные — вернемся с рабочим вариантом решения и предварительной стоимостью.</p>

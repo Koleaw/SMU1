@@ -3,9 +3,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import LeadForm from '../components/LeadForm.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
+import SectionNavigator from '../components/SectionNavigator.astro';
 import { withBase } from '../utils/withBase';
+
+const sectionNavItems = [
+  { id: 'custom-order-inputs', label: 'Что прислать и как работаем' },
+  { id: 'custom-order-examples', label: 'Примеры и формат задачи' },
+  { id: 'lead', label: 'Форма на изготовление' }
+];
+
 ---
 <BaseLayout title="Изготовление на заказ — СМУ-1" description="Страница для нестандартных задач: что можно изготовить, какие вводные нужны, как отправить материалы.">
+  <SectionNavigator items={sectionNavItems} />
+
   <Hero
     kicker="Служебный сценарий"
     className="hero--service"
@@ -18,14 +28,14 @@ import { withBase } from '../utils/withBase';
     <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Изготовление на заказ' }]} />
   </Hero>
 
-  <section class="section section--soft">
+  <section id="custom-order-inputs" class="section section--soft">
     <div class="container grid grid-2">
       <article class="card"><h2>Что можно прислать</h2><ul><li>фото текущей ситуации</li><li>размеры и привязки</li><li>эскиз или пример</li><li>описание условий эксплуатации</li></ul></article>
       <article class="card"><h2>Что делаем дальше</h2><ul><li>уточняем недостающие вводные</li><li>предлагаем формат исполнения</li><li>готовим расчет и срок</li></ul></article>
     </div>
   </section>
 
-  <section class="section">
+  <section id="custom-order-examples" class="section">
     <div class="container">
       <article class="media-block media-block--products">
         <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Кастомное изготовление" loading="lazy" />

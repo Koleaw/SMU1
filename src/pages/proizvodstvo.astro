@@ -2,9 +2,18 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
+import SectionNavigator from '../components/SectionNavigator.astro';
 import { withBase } from '../utils/withBase';
+
+const sectionNavItems = [
+  { id: 'production-media', label: 'Производственный контур' },
+  { id: 'production-facts', label: 'Возможности и подход' }
+];
+
 ---
 <BaseLayout title="Производство — СМУ-1" description="Производственный контур СМУ-1: возможности цеха, подход к качеству, география работ.">
+  <SectionNavigator items={sectionNavItems} />
+
   <Hero
     kicker="Доверительный контур"
     className="hero--trust"
@@ -17,7 +26,7 @@ import { withBase } from '../utils/withBase';
     <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Производство' }]} />
   </Hero>
 
-  <section class="section">
+  <section id="production-media" class="section">
     <div class="container production-media-grid">
       <article class="media-block media-block--production media-block--strong">
         <img class="media-thumb" src={withBase('/assets/images/production/process-1.svg')} alt="Производственный процесс" />
@@ -34,7 +43,7 @@ import { withBase } from '../utils/withBase';
     </div>
   </section>
 
-  <section class="section section--soft">
+  <section id="production-facts" class="section section--soft">
     <div class="container production-facts-grid">
       <article class="card"><h2>Возможности</h2><p class="lead">Изготовление типовых и проектных металлоконструкций, узлов и изделий для коммерческих и общественных объектов.</p></article>
       <article class="card"><h2>Качество</h2><p class="lead">Поэтапная проверка геометрии, узлов и покрытия до выхода продукции на объект.</p></article>
