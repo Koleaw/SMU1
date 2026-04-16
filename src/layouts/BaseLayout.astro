@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import MobileMenu from '../components/MobileMenu.astro';
 import { withBase } from '../utils/withBase';
 
 interface Props {
@@ -34,6 +35,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   </head>
   <body>
     <Header />
+    <MobileMenu />
     <main>
       <slot />
     </main>

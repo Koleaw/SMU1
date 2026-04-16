@@ -1,0 +1,88 @@
+---
+import navItems from '../data/navigation.json';
+import site from '../data/site.json';
+import { withBase } from '../utils/withBase';
+
+const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href));
+---
+<div class="mobile-menu-layer" id="mobile-menu-layer" aria-hidden="true" data-mobile-menu-layer>
+  <div class="container mobile-menu-layer__top">
+    <a href={withBase('/')} class="site-header__logo-link" aria-label="СМУ-1 на главную" data-mobile-menu-link>
+      <img class="site-header__logo site-header__logo--mobile" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
+    </a>
+
+    <button class="mobile-menu-layer__close" type="button" aria-label="Закрыть меню" data-mobile-menu-close>
+      <img src={withBase('/assets/icons/x.svg')} alt="" aria-hidden="true" />
+    </button>
+  </div>
+
+  <div class="container mobile-menu-layer__content">
+    <nav class="mobile-menu-layer__nav" aria-label="Мобильная навигация">
+      {navItems.map((item) => (
+        <a class={isActive(item.href) ? 'active' : ''} href={withBase(item.href)} data-mobile-menu-link>{item.title}</a>
+      ))}
+    </nav>
+
+    <a class="btn btn-primary mobile-menu-layer__cta" href={withBase('/izgotovlenie-na-zakaz/')} data-mobile-menu-link>
+      Изготовление на заказ
+    </a>
+
+    <div class="mobile-menu-layer__contacts">
+      <a href={`tel:${site.phone}`}>
+        <img src={withBase('/assets/icons/phone.svg')} alt="" aria-hidden="true" />
+        <span>{site.phone}</span>
+      </a>
+      <a href={`mailto:${site.email}`}>
+        <img src={withBase('/assets/icons/mail.svg')} alt="" aria-hidden="true" />
+        <span>{site.email}</span>
+      </a>
+      <a href={site.messengers[1]?.url ?? '#'}>
+        <img src={withBase('/assets/icons/send.svg')} alt="" aria-hidden="true" />
+        <span>Telegram</span>
+      </a>
+      <p>
+        <img src={withBase('/assets/icons/map-pin.svg')} alt="" aria-hidden="true" />
+        <span>{site.address}</span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const initMobileMenuLayer = () => {
+    const menuLayer = document.querySelector('[data-mobile-menu-layer]');
+    const openButton = document.querySelector('[data-mobile-menu-open]');
+    const closeButton = document.querySelector('[data-mobile-menu-close]');
+
+    if (!menuLayer || !openButton || !closeButton) return;
+    if (menuLayer.dataset.mobileMenuReady === 'true') return;
+
+    const links = menuLayer.querySelectorAll('[data-mobile-menu-link]');
+
+    const openMenu = () => {
+      menuLayer.style.display = 'flex';
+      menuLayer.setAttribute('aria-hidden', 'false');
+      openButton.setAttribute('aria-expanded', 'true');
+    };
+
+    const closeMenu = () => {
+      menuLayer.style.display = 'none';
+      menuLayer.setAttribute('aria-hidden', 'true');
+      openButton.setAttribute('aria-expanded', 'false');
+    };
+
+    openButton.addEventListener('click', openMenu);
+    closeButton.addEventListener('click', closeMenu);
+    links.forEach((link) => link.addEventListener('click', closeMenu));
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeMenu();
+    });
+
+    closeMenu();
+    menuLayer.dataset.mobileMenuReady = 'true';
+  };
+
+  initMobileMenuLayer();
+  document.addEventListener('astro:page-load', initMobileMenuLayer);
+</script>
