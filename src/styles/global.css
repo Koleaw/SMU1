@@ -1280,14 +1280,9 @@ small {
 .section-nav__desktop {
   position: fixed;
   top: 112px;
-  right: clamp(12px, calc((100vw - var(--container-max-width)) / 2 - 190px), 28px);
+  right: clamp(10px, calc((100vw - var(--container-max-width)) / 2 + 12px), 26px);
   z-index: 80;
-  width: 186px;
-  padding: 13px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 6%);
+  width: 182px;
 }
 
 .section-nav__list,
@@ -1300,7 +1295,7 @@ small {
 .section-nav__list {
   position: relative;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   padding-left: 14px;
 }
 
@@ -1311,7 +1306,18 @@ small {
   bottom: 2px;
   left: 0;
   width: 1px;
-  background: #d1d5db;
+  background: #b6c0b8;
+}
+
+.section-nav__marker {
+  position: absolute;
+  left: -2px;
+  top: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--color-accent-primary);
+  transition: transform 180ms ease;
 }
 
 .section-nav__desktop a,
@@ -1321,32 +1327,20 @@ small {
   font-size: 13px;
   line-height: 1.35;
   font-weight: 400;
-  color: #4b5563;
-  transition: color var(--transition-fast), font-weight var(--transition-fast);
+  color: #5b6470;
+  transition: color var(--transition-fast), font-size var(--transition-fast), font-weight var(--transition-fast);
 }
 
 .section-nav__desktop a.is-active,
 .section-nav__sheet a.is-active {
-  color: #111827;
+  color: #1f2933;
   font-size: 14px;
   font-weight: 500;
 }
 
-.section-nav__desktop a.is-active::before {
-  content: '';
-  position: absolute;
-  left: -16px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--color-accent-primary);
-}
-
 .section-nav__desktop a:not(.is-active):hover,
 .section-nav__sheet a:not(.is-active):hover {
-  color: #1f2937;
+  color: #434c58;
 }
 
 .section-nav__mobile-toggle,
@@ -1358,14 +1352,14 @@ small {
 .section-nav__mobile-toggle {
   position: fixed;
   right: 16px;
-  bottom: 16px;
+  bottom: 18px;
   z-index: 140;
-  width: 48px;
-  height: 48px;
+  width: 47px;
+  height: 47px;
   border: 1px solid #d1d5db;
   border-radius: 999px;
   background: #ffffff;
-  box-shadow: 0 4px 10px rgb(0 0 0 / 12%);
+  box-shadow: 0 4px 12px rgb(17 24 39 / 14%);
   padding: 0;
   align-items: center;
   justify-content: center;
@@ -1392,9 +1386,9 @@ small {
   z-index: 142;
   margin: 0 auto;
   width: min(760px, 100%);
-  height: 36dvh;
-  max-height: 40dvh;
-  min-height: 270px;
+  height: 34dvh;
+  max-height: 38dvh;
+  min-height: 250px;
   background: #ffffff;
   border-top: 1px solid #e5e7eb;
   border-radius: 10px 10px 0 0;
@@ -1446,7 +1440,7 @@ small {
 }
 
 .section-nav__sheet nav {
-  max-height: calc(36dvh - 74px);
+  max-height: calc(34dvh - 74px);
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -1458,7 +1452,7 @@ small {
 
 @media (max-width: 1400px) {
   .section-nav__desktop {
-    right: 10px;
+    right: 8px;
   }
 }
 

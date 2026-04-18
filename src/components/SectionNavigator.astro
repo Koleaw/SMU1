@@ -19,9 +19,10 @@ const shouldRender = safeItems.length >= 4;
   <div class="section-nav" data-section-nav>
     <nav class="section-nav__desktop" aria-label="Навигация по разделам страницы">
       <ol class="section-nav__list">
+        <span class="section-nav__marker" aria-hidden="true" data-section-nav-marker></span>
         {safeItems.map((item) => (
           <li>
-            <a href={`#${item.id}`} data-section-nav-link={item.id}>{item.label}</a>
+            <a href={`#${item.id}`} data-section-nav-link={item.id} data-section-nav-desktop-link={item.id}>{item.label}</a>
           </li>
         ))}
       </ol>
@@ -47,7 +48,7 @@ const shouldRender = safeItems.length >= 4;
         <ol class="section-nav__sheet-list">
           {safeItems.map((item) => (
             <li>
-              <a href={`#${item.id}`} data-section-nav-link={item.id}>{item.label}</a>
+              <a href={`#${item.id}`} data-section-nav-link={item.id} data-section-nav-sheet-link={item.id}>{item.label}</a>
             </li>
           ))}
         </ol>
@@ -65,12 +66,14 @@ const shouldRender = safeItems.length >= 4;
       if (navRoot.dataset.sectionNavReady === 'true') return;
 
       const links = Array.from(navRoot.querySelectorAll('[data-section-nav-link]'));
+      const desktopLinks = Array.from(navRoot.querySelectorAll('[data-section-nav-desktop-link]'));
       if (!links.length) return;
 
       const toggleButton = navRoot.querySelector('[data-section-nav-toggle]');
       const closeButton = navRoot.querySelector('[data-section-nav-close]');
       const sheet = navRoot.querySelector('[data-section-nav-sheet]');
       const backdrop = navRoot.querySelector('[data-section-nav-backdrop]');
+      const marker = navRoot.querySelector('[data-section-nav-marker]');
       const mobileQuery = window.matchMedia('(max-width: 900px)');
 
       const getHeaderOffset = () => {
@@ -123,6 +126,15 @@ const shouldRender = safeItems.length >= 4;
             link.removeAttribute('aria-current');
           }
         });
+
+        const activeDesktopLink = desktopLinks.find(
+          (link) => link.getAttribute('data-section-nav-desktop-link') === activeId
+        );
+
+        if (marker instanceof HTMLElement && activeDesktopLink instanceof HTMLElement) {
+          const markerTop = activeDesktopLink.offsetTop + (activeDesktopLink.offsetHeight / 2) - (marker.offsetHeight / 2);
+          marker.style.transform = `translateY(${Math.round(markerTop)}px)`;
+        }
       };
 
       const updateScrollMargins = () => {
@@ -184,7 +196,10 @@ const shouldRender = safeItems.length >= 4;
         });
       });
 
-      toggleButton?.addEventListener('click', () => setSheetState(true));
+      toggleButton?.addEventListener('click', () => {
+        if (!mobileQuery.matches) return;
+        setSheetState(true);
+      });
       closeButton?.addEventListener('click', () => setSheetState(false));
       backdrop?.addEventListener('click', () => setSheetState(false));
 
@@ -195,6 +210,7 @@ const shouldRender = safeItems.length >= 4;
         updateActiveByScroll();
         updateToggleVisibility();
       });
+      mobileQuery.addEventListener('change', updateToggleVisibility);
 
       window.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
