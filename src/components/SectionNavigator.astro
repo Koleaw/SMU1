@@ -1,6 +1,4 @@
 ---
-import { withBase } from '../utils/withBase';
-
 interface SectionNavItem {
   id: string;
   label: string;
@@ -8,53 +6,25 @@ interface SectionNavItem {
 
 interface Props {
   items: SectionNavItem[];
-  title?: string;
 }
 
-const { items, title = 'Разделы страницы' } = Astro.props;
+const { items } = Astro.props;
 const safeItems = items.filter((item) => item?.id && item?.label);
 const shouldRender = safeItems.length >= 4;
 ---
 {shouldRender && (
-  <div class="section-nav" data-section-nav>
+  <aside class="section-nav" data-section-nav data-section-theme="light">
     <nav class="section-nav__desktop" aria-label="Навигация по разделам страницы">
       <ol class="section-nav__list">
         <span class="section-nav__marker" aria-hidden="true" data-section-nav-marker></span>
         {safeItems.map((item) => (
           <li>
-            <a href={`#${item.id}`} data-section-nav-link={item.id} data-section-nav-desktop-link={item.id}>{item.label}</a>
+            <a href={`#${item.id}`} data-section-nav-link={item.id}>{item.label}</a>
           </li>
         ))}
       </ol>
     </nav>
-
-    <button class="section-nav__mobile-toggle" type="button" aria-expanded="false" aria-controls="section-nav-sheet" data-section-nav-toggle hidden>
-      <img src={withBase('/assets/icons/menu.svg')} alt="Открыть разделы страницы" />
-    </button>
-
-    <div class="section-nav__sheet-backdrop" aria-hidden="true" data-section-nav-backdrop hidden></div>
-
-    <section class="section-nav__sheet" id="section-nav-sheet" aria-hidden="true" data-section-nav-sheet hidden>
-      <div class="section-nav__sheet-header">
-        <span class="section-nav__sheet-handle" aria-hidden="true"></span>
-        <div class="section-nav__sheet-title-row">
-          <h2>{title}</h2>
-          <button class="section-nav__sheet-close" type="button" aria-label="Закрыть разделы страницы" data-section-nav-close>
-            <img src={withBase('/assets/icons/x.svg')} alt="" aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-      <nav aria-label="Разделы страницы">
-        <ol class="section-nav__sheet-list">
-          {safeItems.map((item) => (
-            <li>
-              <a href={`#${item.id}`} data-section-nav-link={item.id} data-section-nav-sheet-link={item.id}>{item.label}</a>
-            </li>
-          ))}
-        </ol>
-      </nav>
-    </section>
-  </div>
+  </aside>
 )}
 
 <script>
@@ -66,15 +36,9 @@ const shouldRender = safeItems.length >= 4;
       if (navRoot.dataset.sectionNavReady === 'true') return;
 
       const links = Array.from(navRoot.querySelectorAll('[data-section-nav-link]'));
-      const desktopLinks = Array.from(navRoot.querySelectorAll('[data-section-nav-desktop-link]'));
       if (!links.length) return;
 
-      const toggleButton = navRoot.querySelector('[data-section-nav-toggle]');
-      const closeButton = navRoot.querySelector('[data-section-nav-close]');
-      const sheet = navRoot.querySelector('[data-section-nav-sheet]');
-      const backdrop = navRoot.querySelector('[data-section-nav-backdrop]');
       const marker = navRoot.querySelector('[data-section-nav-marker]');
-      const mobileQuery = window.matchMedia('(max-width: 900px)');
 
       const getHeaderOffset = () => {
         const header = document.querySelector('.site-header');
@@ -89,37 +53,27 @@ const shouldRender = safeItems.length >= 4;
       const sections = sectionIds
         .map((id) => {
           const element = id ? document.getElementById(id) : null;
-          return element ? { id, el: element } : null;
+          if (!element) return null;
+
+          const theme = element.dataset.sectionTheme === 'dark' || element.classList.contains('section--dark')
+            ? 'dark'
+            : 'light';
+
+          return { id, el: element, theme };
         })
         .filter(Boolean);
 
-      if (!sections.length) return;
-
-      let isSheetOpen = false;
-
-      const setSheetState = (open) => {
-        isSheetOpen = open;
-
-        if (sheet instanceof HTMLElement) {
-          sheet.hidden = !open;
-          sheet.setAttribute('aria-hidden', open ? 'false' : 'true');
-        }
-
-        if (backdrop instanceof HTMLElement) {
-          backdrop.hidden = !open;
-          backdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
-        }
-
-        if (toggleButton instanceof HTMLElement) {
-          toggleButton.setAttribute('aria-expanded', open ? 'true' : 'false');
-        }
-      };
+      if (sections.length < 4) {
+        navRoot.remove();
+        return;
+      }
 
       const setActive = (activeId) => {
         links.forEach((link) => {
           if (!(link instanceof HTMLAnchorElement)) return;
           const isActive = link.getAttribute('data-section-nav-link') === activeId;
           link.classList.toggle('is-active', isActive);
+
           if (isActive) {
             link.setAttribute('aria-current', 'true');
           } else {
@@ -127,12 +81,13 @@ const shouldRender = safeItems.length >= 4;
           }
         });
 
-        const activeDesktopLink = desktopLinks.find(
-          (link) => link.getAttribute('data-section-nav-desktop-link') === activeId
-        );
+        const activeSection = sections.find((section) => section.id === activeId);
+        navRoot.dataset.sectionTheme = activeSection?.theme === 'dark' ? 'dark' : 'light';
 
-        if (marker instanceof HTMLElement && activeDesktopLink instanceof HTMLElement) {
-          const markerTop = activeDesktopLink.offsetTop + (activeDesktopLink.offsetHeight / 2) - (marker.offsetHeight / 2);
+        const activeLink = links.find((link) => link.getAttribute('data-section-nav-link') === activeId);
+
+        if (marker instanceof HTMLElement && activeLink instanceof HTMLElement) {
+          const markerTop = activeLink.offsetTop + (activeLink.offsetHeight / 2) - (marker.offsetHeight / 2);
           marker.style.transform = `translateY(${Math.round(markerTop)}px)`;
         }
       };
@@ -151,7 +106,6 @@ const shouldRender = safeItems.length >= 4;
         const offset = getHeaderOffset();
         const top = target.getBoundingClientRect().top + window.scrollY - offset;
         window.scrollTo({ top, behavior: 'smooth' });
-        setSheetState(false);
       };
 
       const updateActiveByScroll = () => {
@@ -168,60 +122,25 @@ const shouldRender = safeItems.length >= 4;
         if (activeId) setActive(activeId);
       };
 
-      const updateToggleVisibility = () => {
-        if (!(toggleButton instanceof HTMLElement)) return;
-
-        if (!mobileQuery.matches) {
-          toggleButton.hidden = true;
-          if (isSheetOpen) setSheetState(false);
-          return;
-        }
-
-        const showAfter = window.innerHeight * 0.65;
-        const shouldShow = window.scrollY > showAfter;
-        toggleButton.hidden = !shouldShow;
-
-        if (!shouldShow && isSheetOpen) {
-          setSheetState(false);
-        }
-      };
-
       links.forEach((link) => {
         if (!(link instanceof HTMLAnchorElement)) return;
         link.addEventListener('click', (event) => {
           const sectionId = link.getAttribute('data-section-nav-link');
           if (!sectionId) return;
+
           event.preventDefault();
           scrollToSection(sectionId);
         });
       });
 
-      toggleButton?.addEventListener('click', () => {
-        if (!mobileQuery.matches) return;
-        setSheetState(true);
-      });
-      closeButton?.addEventListener('click', () => setSheetState(false));
-      backdrop?.addEventListener('click', () => setSheetState(false));
-
       window.addEventListener('scroll', updateActiveByScroll, { passive: true });
-      window.addEventListener('scroll', updateToggleVisibility, { passive: true });
       window.addEventListener('resize', () => {
         updateScrollMargins();
         updateActiveByScroll();
-        updateToggleVisibility();
-      });
-      mobileQuery.addEventListener('change', updateToggleVisibility);
-
-      window.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          setSheetState(false);
-        }
       });
 
-      setSheetState(false);
       updateScrollMargins();
       updateActiveByScroll();
-      updateToggleVisibility();
       navRoot.dataset.sectionNavReady = 'true';
     });
   };
