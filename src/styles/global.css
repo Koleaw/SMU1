@@ -1284,7 +1284,10 @@ small {
   z-index: 70;
   width: min(220px, 18vw);
   padding-left: 14px;
-  border-left: 1px solid #d7d7d7;
+  border-left: 1px solid rgb(255 255 255 / 44%);
+  background: rgb(17 17 17 / 52%);
+  border-radius: 0 var(--radius-base) var(--radius-base) 0;
+  backdrop-filter: blur(2px);
 }
 
 .section-nav__list,
@@ -1301,15 +1304,22 @@ small {
   display: inline-block;
   font-size: 13px;
   line-height: 1.35;
-  color: #5d5d5d;
-  transition: color var(--transition-fast), font-size var(--transition-fast);
+  color: rgb(255 255 255 / 80%);
+  font-weight: 400;
+  transition: color var(--transition-fast), opacity var(--transition-fast);
+  opacity: 0.94;
 }
 
 .section-nav__desktop a.is-active,
 .section-nav__sheet a.is-active {
-  font-size: 15px;
-  color: #2f2f2f;
+  color: #ffffff;
   font-weight: 500;
+  opacity: 1;
+}
+
+.section-nav__desktop a:not(.is-active):hover,
+.section-nav__sheet a:not(.is-active):hover {
+  color: #ffffff;
 }
 
 .section-nav__mobile-toggle,
@@ -1325,21 +1335,21 @@ small {
   transform: translateX(-50%);
   z-index: 120;
   border: 1px solid var(--color-border);
-  background: #ffffff;
+  background: rgb(255 255 255 / 94%);
   color: var(--color-text-primary);
   border-radius: var(--radius-base);
-  padding: 9px 14px;
+  padding: 8px 12px;
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.2;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
 }
 
 .section-nav__sheet-backdrop {
   position: fixed;
   inset: 0;
   z-index: 121;
-  background: rgb(0 0 0 / 10%);
+  background: rgb(0 0 0 / 14%);
 }
 
 .section-nav__sheet {
@@ -1350,10 +1360,11 @@ small {
   z-index: 122;
   margin: 0 auto;
   width: min(760px, 100%);
-  max-height: min(50dvh, 480px);
+  height: min(40dvh, 420px);
+  max-height: min(45dvh, 420px);
   background: #ffffff;
   border-top: 1px solid var(--color-border);
-  border-radius: 12px 12px 0 0;
+  border-radius: 10px 10px 0 0;
   padding: 14px 16px 16px;
 }
 
@@ -1387,7 +1398,7 @@ small {
 }
 
 .section-nav__sheet nav {
-  max-height: calc(min(50dvh, 480px) - 72px);
+  max-height: calc(min(40dvh, 420px) - 72px);
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -1403,7 +1414,7 @@ small {
   }
 
   .section-nav__desktop a.is-active {
-    font-size: 14px;
+    font-size: 12px;
   }
 }
 
@@ -1419,7 +1430,8 @@ small {
   }
 
   .section-nav__sheet-backdrop,
-  .section-nav__sheet {
+  .section-nav__sheet:not([hidden]),
+  .section-nav__sheet-backdrop:not([hidden]) {
     display: block;
   }
 
