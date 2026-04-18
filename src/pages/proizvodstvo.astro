@@ -2,18 +2,10 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import SectionNavigator from '../components/SectionNavigator.astro';
 import { withBase } from '../utils/withBase';
-
-const sectionNavItems = [
-  { id: 'production-media', label: 'Производственный контур' },
-  { id: 'production-facts', label: 'Возможности и подход' }
-];
 
 ---
 <BaseLayout title="Производство — СМУ-1" description="Производственный контур СМУ-1: возможности цеха, подход к качеству, география работ.">
-  <SectionNavigator items={sectionNavItems} />
-
   <Hero
     kicker="Доверительный контур"
     className="hero--trust"

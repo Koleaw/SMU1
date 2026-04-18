@@ -3,19 +3,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import LeadForm from '../components/LeadForm.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import SectionNavigator from '../components/SectionNavigator.astro';
 import { withBase } from '../utils/withBase';
-
-const sectionNavItems = [
-  { id: 'custom-order-inputs', label: 'Что прислать и как работаем' },
-  { id: 'custom-order-examples', label: 'Примеры и формат задачи' },
-  { id: 'lead', label: 'Форма на изготовление' }
-];
 
 ---
 <BaseLayout title="Изготовление на заказ — СМУ-1" description="Страница для нестандартных задач: что можно изготовить, какие вводные нужны, как отправить материалы.">
-  <SectionNavigator items={sectionNavItems} />
-
   <Hero
     kicker="Служебный сценарий"
     className="hero--service"

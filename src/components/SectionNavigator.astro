@@ -11,13 +11,13 @@ interface Props {
   title?: string;
 }
 
-const { items, title = 'Содержание страницы' } = Astro.props;
+const { items, title = 'Разделы страницы' } = Astro.props;
 const safeItems = items.filter((item) => item?.id && item?.label);
 const shouldRender = safeItems.length >= 4;
 ---
 {shouldRender && (
   <div class="section-nav" data-section-nav>
-    <nav class="section-nav__desktop" aria-label="Навигация по разделам страницы" data-section-nav-desktop>
+    <nav class="section-nav__desktop" aria-label="Навигация по разделам страницы">
       <ol class="section-nav__list">
         {safeItems.map((item) => (
           <li>
@@ -27,20 +27,23 @@ const shouldRender = safeItems.length >= 4;
       </ol>
     </nav>
 
-    <button class="section-nav__mobile-toggle" type="button" aria-expanded="false" aria-controls="section-nav-sheet" data-section-nav-toggle>
-      Содержание
+    <button class="section-nav__mobile-toggle" type="button" aria-expanded="false" aria-controls="section-nav-sheet" data-section-nav-toggle hidden>
+      <img src={withBase('/assets/icons/menu.svg')} alt="Открыть разделы страницы" />
     </button>
 
-    <div class="section-nav__sheet-backdrop" aria-hidden="true" hidden data-section-nav-backdrop></div>
+    <div class="section-nav__sheet-backdrop" aria-hidden="true" data-section-nav-backdrop hidden></div>
 
-    <section class="section-nav__sheet" id="section-nav-sheet" aria-hidden="true" hidden data-section-nav-sheet>
+    <section class="section-nav__sheet" id="section-nav-sheet" aria-hidden="true" data-section-nav-sheet hidden>
       <div class="section-nav__sheet-header">
-        <h2>{title}</h2>
-        <button class="section-nav__sheet-close" type="button" aria-label="Закрыть содержание" data-section-nav-close>
-          <img src={withBase('/assets/icons/x.svg')} alt="" aria-hidden="true" />
-        </button>
+        <span class="section-nav__sheet-handle" aria-hidden="true"></span>
+        <div class="section-nav__sheet-title-row">
+          <h2>{title}</h2>
+          <button class="section-nav__sheet-close" type="button" aria-label="Закрыть разделы страницы" data-section-nav-close>
+            <img src={withBase('/assets/icons/x.svg')} alt="" aria-hidden="true" />
+          </button>
+        </div>
       </div>
-      <nav aria-label="Содержание страницы">
+      <nav aria-label="Разделы страницы">
         <ol class="section-nav__sheet-list">
           {safeItems.map((item) => (
             <li>
@@ -58,6 +61,7 @@ const shouldRender = safeItems.length >= 4;
     const navRoots = Array.from(document.querySelectorAll('[data-section-nav]'));
 
     navRoots.forEach((navRoot) => {
+      if (!(navRoot instanceof HTMLElement)) return;
       if (navRoot.dataset.sectionNavReady === 'true') return;
 
       const links = Array.from(navRoot.querySelectorAll('[data-section-nav-link]'));
@@ -67,42 +71,50 @@ const shouldRender = safeItems.length >= 4;
       const closeButton = navRoot.querySelector('[data-section-nav-close]');
       const sheet = navRoot.querySelector('[data-section-nav-sheet]');
       const backdrop = navRoot.querySelector('[data-section-nav-backdrop]');
+      const mobileQuery = window.matchMedia('(max-width: 900px)');
 
       const getHeaderOffset = () => {
         const header = document.querySelector('.site-header');
-        if (!header) return 0;
+        if (!(header instanceof HTMLElement)) return 0;
         return Math.ceil(header.getBoundingClientRect().height) + 14;
       };
 
-      const sectionIds = [...new Set(links.map((link) => link.getAttribute('data-section-nav-link')).filter(Boolean))];
+      const sectionIds = [
+        ...new Set(links.map((link) => link.getAttribute('data-section-nav-link')).filter(Boolean))
+      ];
+
       const sections = sectionIds
-        .map((id) => ({ id, el: document.getElementById(id) }))
-        .filter((item) => item.el);
+        .map((id) => {
+          const element = id ? document.getElementById(id) : null;
+          return element ? { id, el: element } : null;
+        })
+        .filter(Boolean);
 
       if (!sections.length) return;
 
-      const closeSheet = () => {
-        if (!sheet || !backdrop || !toggleButton) return;
-        sheet.hidden = true;
-        backdrop.hidden = true;
-        sheet.setAttribute('aria-hidden', 'true');
-        backdrop.setAttribute('aria-hidden', 'true');
-        toggleButton.setAttribute('aria-expanded', 'false');
-        document.body.classList.remove('section-nav-sheet-open');
-      };
+      let isSheetOpen = false;
 
-      const openSheet = () => {
-        if (!sheet || !backdrop || !toggleButton) return;
-        sheet.hidden = false;
-        backdrop.hidden = false;
-        sheet.setAttribute('aria-hidden', 'false');
-        backdrop.setAttribute('aria-hidden', 'false');
-        toggleButton.setAttribute('aria-expanded', 'true');
-        document.body.classList.add('section-nav-sheet-open');
+      const setSheetState = (open) => {
+        isSheetOpen = open;
+
+        if (sheet instanceof HTMLElement) {
+          sheet.hidden = !open;
+          sheet.setAttribute('aria-hidden', open ? 'false' : 'true');
+        }
+
+        if (backdrop instanceof HTMLElement) {
+          backdrop.hidden = !open;
+          backdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+        }
+
+        if (toggleButton instanceof HTMLElement) {
+          toggleButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
       };
 
       const setActive = (activeId) => {
         links.forEach((link) => {
+          if (!(link instanceof HTMLAnchorElement)) return;
           const isActive = link.getAttribute('data-section-nav-link') === activeId;
           link.classList.toggle('is-active', isActive);
           if (isActive) {
@@ -113,16 +125,57 @@ const shouldRender = safeItems.length >= 4;
         });
       };
 
+      const updateScrollMargins = () => {
+        const margin = `${getHeaderOffset() + 8}px`;
+        sections.forEach((section) => {
+          section.el.style.scrollMarginTop = margin;
+        });
+      };
+
       const scrollToSection = (sectionId) => {
-        const target = sections.find((item) => item.id === sectionId)?.el;
-        if (!target) return;
+        const target = sections.find((section) => section.id === sectionId)?.el;
+        if (!(target instanceof HTMLElement)) return;
+
         const offset = getHeaderOffset();
         const top = target.getBoundingClientRect().top + window.scrollY - offset;
         window.scrollTo({ top, behavior: 'smooth' });
-        closeSheet();
+        setSheetState(false);
+      };
+
+      const updateActiveByScroll = () => {
+        const offset = getHeaderOffset() + 18;
+        let activeId = sections[0]?.id;
+
+        sections.forEach((section) => {
+          const top = section.el.getBoundingClientRect().top;
+          if (top - offset <= 0) {
+            activeId = section.id;
+          }
+        });
+
+        if (activeId) setActive(activeId);
+      };
+
+      const updateToggleVisibility = () => {
+        if (!(toggleButton instanceof HTMLElement)) return;
+
+        if (!mobileQuery.matches) {
+          toggleButton.hidden = true;
+          if (isSheetOpen) setSheetState(false);
+          return;
+        }
+
+        const showAfter = window.innerHeight * 0.65;
+        const shouldShow = window.scrollY > showAfter;
+        toggleButton.hidden = !shouldShow;
+
+        if (!shouldShow && isSheetOpen) {
+          setSheetState(false);
+        }
       };
 
       links.forEach((link) => {
+        if (!(link instanceof HTMLAnchorElement)) return;
         link.addEventListener('click', (event) => {
           const sectionId = link.getAttribute('data-section-nav-link');
           if (!sectionId) return;
@@ -131,42 +184,28 @@ const shouldRender = safeItems.length >= 4;
         });
       });
 
-      sections.forEach((item) => {
-        item.el.style.scrollMarginTop = `${getHeaderOffset() + 8}px`;
-      });
-
-      const updateActiveByScroll = () => {
-        const offset = getHeaderOffset() + 20;
-        let activeId = sections[0]?.id;
-
-        for (const section of sections) {
-          const top = section.el.getBoundingClientRect().top;
-          if (top - offset <= 0) activeId = section.id;
-        }
-
-        setActive(activeId);
-      };
+      toggleButton?.addEventListener('click', () => setSheetState(true));
+      closeButton?.addEventListener('click', () => setSheetState(false));
+      backdrop?.addEventListener('click', () => setSheetState(false));
 
       window.addEventListener('scroll', updateActiveByScroll, { passive: true });
-      window.addEventListener('resize', updateActiveByScroll);
+      window.addEventListener('scroll', updateToggleVisibility, { passive: true });
+      window.addEventListener('resize', () => {
+        updateScrollMargins();
+        updateActiveByScroll();
+        updateToggleVisibility();
+      });
 
-      toggleButton?.addEventListener('click', () => {
-        if (!sheet || sheet.hidden) {
-          openSheet();
-        } else {
-          closeSheet();
+      window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          setSheetState(false);
         }
       });
 
-      closeButton?.addEventListener('click', closeSheet);
-      backdrop?.addEventListener('click', closeSheet);
-
-      window.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeSheet();
-      });
-
-      closeSheet();
+      setSheetState(false);
+      updateScrollMargins();
       updateActiveByScroll();
+      updateToggleVisibility();
       navRoot.dataset.sectionNavReady = 'true';
     });
   };
