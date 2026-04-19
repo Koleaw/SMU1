@@ -4,7 +4,11 @@ import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import LeadForm from '../components/LeadForm.astro';
 import site from '../data/site.json';
+import yandex from '../data/yandex.json';
 import { withBase } from '../utils/withBase';
+
+const yandexMapsCompanyUrl = yandex.links.yandexMapsCompanyUrl;
+const yandexReviewUrl = yandex.links.yandexReviewUrl;
 ---
 <BaseLayout title="Контакты — СМУ-1" description="Контакты СМУ-1: телефон, мессенджеры, email, география работ и форма связи.">
   <Hero
@@ -41,9 +45,32 @@ import { withBase } from '../utils/withBase';
         <p class="lead">Работаем по согласованному графику выездов и поставок.</p>
       </article>
 
-      <article class="media-block media-block--objects contacts-map-block">
-        <img class="media-thumb" src={withBase('/assets/images/placeholders/landscaping.svg')} alt="Карта расположения" loading="lazy" />
-        <p class="media-caption">Зона под карту и финальные координаты после подтверждения адреса.</p>
+      <article class="card contacts-map-card">
+        <h2>Мы на карте</h2>
+        <div class="contacts-map-embed">
+          <script type="text/javascript" charset="utf-8" async src={yandex.map.constructorSrc}></script>
+        </div>
+        <div class="contacts-yandex-actions">
+          {yandexMapsCompanyUrl && (
+            <a class="btn btn-secondary" href={yandexMapsCompanyUrl} target="_blank" rel="noopener noreferrer">
+              Открыть в Яндекс Картах
+            </a>
+          )}
+          {yandexReviewUrl && (
+            <a class="btn btn-secondary" href={yandexReviewUrl} target="_blank" rel="noopener noreferrer">
+              Оставить отзыв
+            </a>
+          )}
+        </div>
+        <iframe
+          class="contacts-yandex-badge"
+          src={yandex.ratingBadge.src}
+          width={yandex.ratingBadge.width}
+          height={yandex.ratingBadge.height}
+          frameborder="0"
+          title="Рейтинг в Яндекс Бизнес"
+          loading="lazy"
+        ></iframe>
       </article>
     </div>
   </section>

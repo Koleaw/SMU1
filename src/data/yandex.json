@@ -1,0 +1,27 @@
+{
+  "metrika": {
+    "counterId": 108664754,
+    "scriptSrc": "https://mc.yandex.ru/metrika/tag.js?id=108664754",
+    "init": {
+      "ssr": true,
+      "webvisor": true,
+      "clickmap": true,
+      "ecommerce": "dataLayer",
+      "accurateTrackBounce": true,
+      "trackLinks": true
+    }
+  },
+  "map": {
+    "constructorSrc": "https://api-maps.yandex.ru/services/constructor/1.0/js/?um=constructor%3Aca887405ce74342784b43229f8bdac691fceefd5cbebc53bc6209bca88dd8046&width=100%25&height=480&lang=ru_RU&scroll=true",
+    "height": 480
+  },
+  "ratingBadge": {
+    "src": "https://yandex.ru/sprav/widget/rating-badge/118308060531?type=rating",
+    "width": 150,
+    "height": 50
+  },
+  "links": {
+    "yandexMapsCompanyUrl": null,
+    "yandexReviewUrl": null
+  }
+}
