@@ -769,7 +769,7 @@ small {
 }
 
 .trust-media--objects .media-thumb {
-  --media-ratio: 16 / 10;
+  --media-ratio: 12 / 5;
 }
 
 .workflow-grid {
