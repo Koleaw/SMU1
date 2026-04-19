@@ -783,6 +783,7 @@ small {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-max);
   box-shadow: var(--shadow-card);
+  min-height: 232px;
   padding: 20px;
   display: flex;
   flex-direction: column;
