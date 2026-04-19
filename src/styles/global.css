@@ -749,11 +749,9 @@ small {
   margin-bottom: 16px;
 }
 
-.project-feature--wide {
-  grid-template-columns: minmax(340px, 1.2fr) minmax(300px, 1fr);
-}
-
 .trust-media-grid {
+  display: grid;
+  grid-template-columns: 1fr;
   align-items: start;
 }
 
@@ -818,8 +816,7 @@ small {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .project-feature,
-  .project-feature--wide {
+  .project-feature {
     grid-template-columns: 1fr;
   }
 
@@ -1613,10 +1610,13 @@ small {
 .quick-entry-card .media-block {
   display: grid;
   grid-template-rows: 188px auto;
+  min-height: 224px;
 }
 
 .quick-entry-card .media-thumb {
+  display: block;
   height: 188px;
+  min-height: 188px;
   aspect-ratio: auto;
 }
 
