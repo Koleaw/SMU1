@@ -14,6 +14,12 @@ const { item } = Astro.props;
 const cardMedia = item.gallery?.length ? item.gallery : ['/assets/images/placeholders/street-furniture.svg'];
 ---
 <BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.shortDescription}>
+  <div class="breadcrumbs-bar">
+    <div class="container">
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель', href: withBase('/ulichnaya-mebel/') }, { title: item.menuTitle }]} />
+    </div>
+  </div>
+
   <Hero
     kicker="Подкатегория изделий"
     title={item.h1}
@@ -22,9 +28,7 @@ const cardMedia = item.gallery?.length ? item.gallery : ['/assets/images/placeho
     secondaryLabel="Изготовление на заказ"
     secondaryHref={withBase('/izgotovlenie-na-zakaz/')}
     className="hero--catalog"
-  >
-    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель', href: withBase('/ulichnaya-mebel/') }, { title: item.menuTitle }]} />
-  </Hero>
+  />
 
   <section class="section">
     <div class="container">

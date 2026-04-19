@@ -11,38 +11,45 @@ const yandexMapsCompanyUrl = yandex.links.yandexMapsCompanyUrl;
 const yandexReviewUrl = yandex.links.yandexReviewUrl;
 ---
 <BaseLayout title="Контакты — СМУ-1" description="Контакты СМУ-1: телефон, мессенджеры, email, география работ и форма связи.">
+  <div class="breadcrumbs-bar">
+    <div class="container">
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Контакты' }]} />
+    </div>
+  </div>
+
   <Hero
     kicker="Связь"
     className="hero--service"
     title="Контакты"
-    description="Страница прямой связи: телефон, почта, мессенджеры, город и рабочая география без лишней маркетинговой оболочки."
+    description="Прямая связь с СМУ-1: рабочие телефоны, Telegram, почта, адрес и карта для быстрого старта проекта."
     primaryLabel="Позвонить"
     primaryHref={`tel:${site.phone}`}
     secondaryLabel="Написать"
     secondaryHref={`mailto:${site.email}`}
-  >
-    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Контакты' }]} />
-  </Hero>
+  />
 
-  <section class="section">
-    <div class="container contacts-layout">
+  <section class="section section--soft">
+    <div class="container contacts-trust-grid">
       <article class="card contacts-main-card">
         <h2>Свяжитесь с СМУ-1</h2>
-        <p><strong>Телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
-        <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
-        <p><strong>Город:</strong> {site.city}</p>
-        <p><strong>Адрес:</strong> {site.address}</p>
+        <div class="contacts-list">
+          <p><strong>Основной телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
+          <p><strong>Дополнительный:</strong> <a href={`tel:${site.phoneSecondary}`}>{site.phoneSecondary}</a> <span>· руководитель</span></p>
+          <p><strong>Telegram:</strong> <a href={site.telegramUrl} target="_blank" rel="noopener noreferrer">{site.telegram}</a></p>
+          <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
+          <p><strong>Город:</strong> {site.city}</p>
+          <p><strong>Адрес:</strong> {site.address}</p>
+        </div>
         <div class="contacts-links">
-          {site.messengers.map((messenger) => (
-            <a class="btn btn-secondary" href={messenger.url}>{messenger.title}</a>
-          ))}
+          <a class="btn btn-secondary" href={site.telegramUrl} target="_blank" rel="noopener noreferrer">Telegram</a>
+          <a class="btn btn-secondary" href={`mailto:${site.email}`}>Написать на почту</a>
         </div>
       </article>
 
-      <article class="card">
+      <article class="card contacts-support-card">
         <h2>География работ</h2>
         <ul>{site.regions.map((r) => <li>{r}</li>)}</ul>
-        <p class="lead">Работаем по согласованному графику выездов и поставок.</p>
+        <p class="lead">Работаем по согласованному графику выездов, поставок и монтажных этапов.</p>
       </article>
 
       <article class="card contacts-map-card">

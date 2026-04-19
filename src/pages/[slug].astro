@@ -25,6 +25,12 @@ const sectionNavItems = [
 <BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.offer}>
   <SectionNavigator items={sectionNavItems} />
 
+  <div class="breadcrumbs-bar">
+    <div class="container">
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: item.menuTitle }]} />
+    </div>
+  </div>
+
   <Hero
     kicker="Проектное направление"
     className="hero--project"
@@ -35,10 +41,8 @@ const sectionNavItems = [
     secondaryHref={withBase('/vypolnennye-obekty/')}
     mediaImage={withBase(item.heroImages[0])}
     mediaAlt={item.menuTitle}
-    mediaCaption="Плейсхолдер под реальные фото объектов и этапов работ."
-  >
-    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: item.menuTitle }]} />
-  </Hero>
+    mediaCaption="Фотоматериалы по проекту дополняются: здесь размещается фактура объекта и этапы работ."
+  />
 
   <section id="project-scope" class="section">
     <div class="container project-content-grid">
@@ -52,12 +56,12 @@ const sectionNavItems = [
       </article>
       <article class="media-block media-block--objects media-block--strong project-media-block">
         <img class="media-thumb" src={withBase(item.heroImages[0])} alt={item.menuTitle} loading="lazy" />
-        <p class="media-caption">Зона для кейсовых фото: объект, узлы, этапы монтажа.</p>
+        <p class="media-caption">Фото будут обновлены в мае: объект, узлы, этапы монтажа.</p>
       </article>
     </div>
   </section>
 
-  <section id="project-workflow" class="section section--soft">
+  <section id="project-workflow" class="section section--soft" data-section-theme="light">
     <div class="container">
       <div class="section-heading">
         <h2 class="section-title">Как работаем</h2>
@@ -70,14 +74,14 @@ const sectionNavItems = [
     </div>
   </section>
 
-  <section id="project-targets" class="section">
+  <section id="project-targets" class="section" data-section-theme="light">
     <div class="container grid grid-2">
       <article class="card"><h2>Для каких объектов</h2><ul>{item.targetObjects.map((obj) => <li>{obj}</li>)}</ul></article>
       <article class="card project-block project-block--inputs"><h2>Что нужно для расчета</h2><ul>{item.calculationInputs.map((input) => <li>{input}</li>)}</ul></article>
     </div>
   </section>
 
-  <section id="project-form" class="section">
+  <section id="project-form" class="section" data-section-theme="light">
     <div class="container form-block form-block--serious">
       <h2 class="section-title">Форма расчета</h2>
       <p class="lead">Заполните базовые вводные — вернемся с рабочим вариантом решения и предварительной стоимостью.</p>

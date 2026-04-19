@@ -50,14 +50,34 @@ const shouldRender = safeItems.length >= 4;
         ...new Set(links.map((link) => link.getAttribute('data-section-nav-link')).filter(Boolean))
       ];
 
+      const getThemeFromSection = (element) => {
+        if (!(element instanceof HTMLElement)) return 'light';
+
+        const host = element.closest('[data-section-theme], .section, .hero') ?? element;
+        if (!(host instanceof HTMLElement)) return 'light';
+
+        if (host.dataset.sectionTheme === 'dark' || host.classList.contains('section--dark')) {
+          return 'dark';
+        }
+
+        if (host.dataset.sectionTheme === 'light') {
+          return 'light';
+        }
+
+        const bgColor = window.getComputedStyle(host).backgroundColor;
+        const rgb = bgColor.match(/\d+/g)?.slice(0, 3).map(Number);
+        if (!rgb || rgb.length < 3) return 'light';
+
+        const [r, g, b] = rgb;
+        const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+        return luminance < 0.53 ? 'dark' : 'light';
+      };
+
       const sections = sectionIds
         .map((id) => {
           const element = id ? document.getElementById(id) : null;
           if (!element) return null;
-
-          const theme = element.dataset.sectionTheme === 'dark' || element.classList.contains('section--dark')
-            ? 'dark'
-            : 'light';
+          const theme = getThemeFromSection(element);
 
           return { id, el: element, theme };
         })

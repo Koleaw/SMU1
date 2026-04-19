@@ -1,5 +1,6 @@
 ---
 import navItems from '../data/navigation.json';
+import site from '../data/site.json';
 import { withBase } from '../utils/withBase';
 
 const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href));
@@ -16,7 +17,16 @@ const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : 
       ))}
     </nav>
 
-    <a href={withBase('/izgotovlenie-na-zakaz/')} class="btn btn-primary site-header__cta">Изготовление на заказ</a>
+    <div class="site-header__actions">
+      <div class="site-header__contacts" aria-label="Контакты">
+        <a class="site-header__phone" href={`tel:${site.phone}`}>{site.phone}</a>
+        <a class="site-header__telegram" href={site.telegramUrl} target="_blank" rel="noopener noreferrer" aria-label="Telegram СМУ-1">
+          <img src={withBase('/assets/icons/send.svg')} alt="" aria-hidden="true" />
+          <span>{site.telegram}</span>
+        </a>
+      </div>
+      <a href={withBase('/izgotovlenie-na-zakaz/')} class="btn btn-primary site-header__cta">Изготовление на заказ</a>
+    </div>
   </div>
 
   <div class="container site-header__mobile-bar">

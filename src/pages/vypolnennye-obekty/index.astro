@@ -6,6 +6,12 @@ import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import { withBase } from '../../utils/withBase';
 ---
 <BaseLayout title="Выполненные объекты — СМУ-1" description="Подтверждаем опыт через реальные объекты: задача, выполненные работы, результат.">
+  <div class="breadcrumbs-bar">
+    <div class="container">
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Выполненные объекты' }]} />
+    </div>
+  </div>
+
   <Hero
     kicker="Доверительный контур"
     className="hero--trust"
@@ -14,16 +20,14 @@ import { withBase } from '../../utils/withBase';
     primaryLabel="Обсудить похожий проект"
     secondaryLabel="Контакты"
     secondaryHref={withBase('/kontakty/')}
-  >
-    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Выполненные объекты' }]} />
-  </Hero>
+  />
   <section class="section">
     <div class="container object-list-grid">
       {objects.map((obj) => (
         <a class="object-list-card" href={withBase(`/vypolnennye-obekty/${obj.slug}/`)}>
           <div class="media-block media-block--objects">
             <img class="media-thumb" src={withBase(obj.gallery[0])} alt={obj.title} loading="lazy" />
-            <p class="media-caption">Плейсхолдер под главное фото кейса.</p>
+            <p class="media-caption">Фото кейса будут обновлены в мае.</p>
           </div>
           <div class="object-list-card__body">
             <h2>{obj.title}</h2>
