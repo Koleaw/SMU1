@@ -1,9 +1,47 @@
 ---
 import navItems from '../data/navigation.json';
-import site from '../data/site.json';
 import { withBase } from '../utils/withBase';
 
-const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href));
+const normalizePath = (path: string) => {
+  const base = import.meta.env.BASE_URL || '/';
+  const normalizedBase = base === '/' ? '/' : base.replace(/\/$/, '');
+
+  if (path === '/') return '/';
+
+  let normalized = path;
+  if (normalizedBase !== '/' && normalized.startsWith(normalizedBase)) {
+    normalized = normalized.slice(normalizedBase.length) || '/';
+  }
+
+  if (!normalized.startsWith('/')) normalized = `/${normalized}`;
+  if (normalized !== '/' && !normalized.endsWith('/')) normalized = `${normalized}/`;
+
+  return normalized;
+};
+
+const activePathMap: Record<string, string[]> = {
+  '/ulichnaya-mebel/': ['/ulichnaya-mebel/'],
+  '/ograzhdeniya-i-zabory/': ['/ograzhdeniya-i-zabory/', '/ograzhdeniya/'],
+  '/navesy-i-kozyrki/': ['/navesy-i-kozyrki/', '/navesy/'],
+  '/metallokonstruktsii-dlya-biznesa/': ['/metallokonstruktsii-dlya-biznesa/', '/metallokonstruktsii/'],
+  '/topiarii/': ['/topiarii/'],
+  '/blagoustroystvo-territoriy/': ['/blagoustroystvo-territoriy/', '/blagoustroystvo/'],
+  '/stroitelstvo-i-remonty/': ['/stroitelstvo-i-remonty/', '/stroitelstvo/'],
+  '/vypolnennye-obekty/': ['/vypolnennye-obekty/', '/obekty/'],
+  '/kontakty/': ['/kontakty/']
+};
+
+const currentPathname = normalizePath(Astro.url.pathname);
+
+const isActive = (href: string) => {
+  const normalizedHref = normalizePath(href);
+  const candidates = activePathMap[normalizedHref] ?? [normalizedHref];
+
+  return candidates.some((candidate) => {
+    if (candidate === '/') return currentPathname === '/';
+    return currentPathname === candidate || currentPathname.startsWith(`${candidate}`);
+  });
+};
 ---
 <header class="site-header">
   <div class="container site-header__desktop">
@@ -23,12 +61,11 @@ const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : 
 
     <div class="site-header__right">
       <div class="site-header__actions" aria-label="Контакты">
-        <a class="site-header__phone" href={`tel:${site.phone}`}>{site.phone}</a>
-        <a class="site-header__telegram" href={site.telegramUrl} target="_blank" rel="noopener noreferrer" aria-label="Telegram СМУ-1">
+        <a class="site-header__phone" href="tel:+79129735006">+7 (912) 973-50-06</a>
+        <a class="site-header__telegram" href="https://t.me/smu1build" target="_blank" rel="noopener noreferrer" aria-label="Telegram СМУ-1">
           <img src={withBase('/assets/icons/send.svg')} alt="" aria-hidden="true" />
-          <span>{site.telegram}</span>
+          <span>@smu1build</span>
         </a>
-        <a href={withBase('/izgotovlenie-na-zakaz/')} class="btn btn-primary site-header__cta">Изготовление на заказ</a>
       </div>
     </div>
   </div>

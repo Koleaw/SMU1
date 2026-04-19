@@ -348,9 +348,9 @@ small {
 .site-header__desktop {
   min-height: 88px;
   display: grid;
-  grid-template-columns: minmax(180px, auto) minmax(0, 1fr) minmax(280px, auto);
+  grid-template-columns: minmax(220px, auto) minmax(0, 1fr) minmax(210px, auto);
   align-items: center;
-  column-gap: 10px;
+  column-gap: 8px;
 }
 
 .site-header__left {
@@ -383,33 +383,33 @@ small {
   align-items: center;
   justify-content: center;
   flex-wrap: nowrap;
-  gap: 1px;
+  gap: 0;
   min-width: 0;
   overflow: hidden;
 }
 
 .site-header__nav a {
-  color: #454545;
-  font-size: 13px;
+  color: #575757;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
-  padding: 7px 6px;
+  padding: 6px 5px;
   border-radius: var(--radius-base);
   white-space: nowrap;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  transition: color var(--transition-fast);
 }
 
 .site-header__nav a.active {
-  color: #1f1f1f;
+  color: #232323;
   background: transparent;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .site-header__nav a:hover,
 .site-header__nav a:focus-visible {
-  color: var(--color-text-primary);
-  background: #f5f6f5;
+  color: #303030;
+  background: transparent;
 }
 
 .site-header__cta {
@@ -422,7 +422,7 @@ small {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -841,7 +841,8 @@ small {
 
   .site-header__desktop {
     min-height: 82px;
-    column-gap: 8px;
+    grid-template-columns: minmax(200px, auto) minmax(0, 1fr) minmax(190px, auto);
+    column-gap: 6px;
   }
 
   .site-header__logo {
@@ -850,21 +851,16 @@ small {
   }
 
   .site-header__nav {
-    gap: 1px;
+    gap: 0;
   }
 
   .site-header__nav a {
-    font-size: 12px;
-    padding: 6px 5px;
+    font-size: 11px;
+    padding: 5px 4px;
   }
 
-  .site-header__contacts {
-    font-size: 12px;
-    gap: 8px;
-  }
-
-  .site-header__cta {
-    padding: 8px 9px;
+  .site-header__phone,
+  .site-header__telegram {
     font-size: 12px;
   }
 }
@@ -1535,8 +1531,8 @@ small {
 
 .site-header__nav a.active {
   background: transparent;
-  color: #1f1f1f;
-  font-size: 14px;
+  color: #232323;
+  font-size: 13px;
   font-weight: 700;
 }
 
