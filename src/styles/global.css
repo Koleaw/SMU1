@@ -784,7 +784,9 @@ small {
   border-radius: var(--radius-max);
   box-shadow: var(--shadow-card);
   padding: 20px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   gap: 12px;
 }
 
