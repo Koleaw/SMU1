@@ -11,7 +11,7 @@ const sectionNavItems = [
   { id: 'home-directions', label: 'Быстрые входы' },
   { id: 'home-categories', label: 'Категории изделий' },
   { id: 'home-projects', label: 'Проектные направления' },
-  { id: 'home-trust', label: 'Объекты и производство' },
+  { id: 'home-trust', label: 'Выполненные объекты' },
   { id: 'home-workflow', label: 'Как мы работаем' },
   { id: 'lead', label: 'Форма заявки' }
 ];
@@ -140,7 +140,7 @@ const keyDirections = [
           </div>
         </article>
 
-        <article class="project-feature project-feature--wide">
+        <article class="project-feature">
           <div class="media-block placeholder placeholder--wide-feature">
             <img class="media-thumb" src={withBase('/assets/images/placeholders/landscaping.svg')} alt="Благоустройство территорий" loading="lazy" />
             <p class="media-caption">Плейсхолдер под фото комплексного благоустройства коммерческих и общественных территорий.</p>
@@ -167,7 +167,7 @@ const keyDirections = [
     </section>
 
     <section id="home-trust" class="section section--dark">
-      <div class="container grid grid-2 trust-media-grid">
+      <div class="container trust-media-grid">
         <article class="trust-media trust-media--objects">
           <div class="media-block placeholder placeholder--card">
             <img class="media-thumb" src={withBase('/assets/images/objects/object-2.svg')} alt="Выполненные объекты СМУ-1" loading="lazy" />
@@ -178,14 +178,6 @@ const keyDirections = [
           <a class="btn btn-primary" href={withBase('/vypolnennye-obekty/')}>Наши объекты</a>
         </article>
 
-        <article class="trust-media trust-media--production">
-          <div class="media-block placeholder placeholder--card">
-            <img class="media-thumb" src={withBase('/assets/images/production/process-1.svg')} alt="Производство СМУ-1" loading="lazy" />
-            <p class="media-caption">Майское наполнение: фото цеха, этапов изготовления и контрольных операций.</p>
-          </div>
-          <h2>Производство</h2>
-          <p>Показываем ресурсы цеха и процесс изготовления, чтобы заказчик видел реальную производственную базу и темп работы.</p>
-        </article>
       </div>
     </section>
 
@@ -197,17 +189,14 @@ const keyDirections = [
         </div>
         <div class="workflow-grid">
           <article class="workflow-step">
-            <span class="badge">Шаг 1</span>
             <h3>Фиксируем задачу и параметры объекта</h3>
             <p>Собираем вводные, уточняем ограничения площадки и определяем состав работ.</p>
           </article>
           <article class="workflow-step">
-            <span class="badge">Шаг 2</span>
             <h3>Готовим решение и расчет</h3>
             <p>Показываем варианты исполнения, объем материалов, этапы и сроки реализации.</p>
           </article>
           <article class="workflow-step">
-            <span class="badge">Шаг 3</span>
             <h3>Изготавливаем и выводим на объект</h3>
             <p>Изготавливаем в цехе, организуем поставку и сопровождаем монтаж с рабочей коммуникацией.</p>
           </article>
