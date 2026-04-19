@@ -114,7 +114,7 @@ const shouldRender = safeItems.length >= 4;
         return;
       }
 
-      const setActive = (activeId) => {
+      const setActive = (activeId, forcedTheme) => {
         links.forEach((link) => {
           if (!(link instanceof HTMLAnchorElement)) return;
           const isActive = link.getAttribute('data-section-nav-link') === activeId;
@@ -128,7 +128,8 @@ const shouldRender = safeItems.length >= 4;
         });
 
         const activeSection = sections.find((section) => section.id === activeId);
-        navRoot.dataset.sectionTheme = getThemeFromSection(activeSection?.el) === 'dark' ? 'dark' : 'light';
+        const resolvedTheme = forcedTheme ?? getThemeFromSection(activeSection?.el);
+        navRoot.dataset.sectionTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
 
         const activeLink = links.find((link) => link.getAttribute('data-section-nav-link') === activeId);
 
@@ -159,15 +160,26 @@ const shouldRender = safeItems.length >= 4;
       const updateActiveByScroll = () => {
         const offset = getStickyOffset() + SECTION_SCROLL_MARGIN_GAP;
         let activeId = sections[0]?.id;
+        let passedFirstSection = false;
 
         sections.forEach((section) => {
           const top = section.el.getBoundingClientRect().top;
           if (top - offset <= 0) {
             activeId = section.id;
+            passedFirstSection = true;
           }
         });
 
-        if (activeId) setActive(activeId);
+        if (!activeId) return;
+
+        if (!passedFirstSection) {
+          const hero = document.querySelector('.hero');
+          const heroTheme = hero instanceof HTMLElement ? getThemeFromSection(hero) : undefined;
+          setActive(activeId, heroTheme);
+          return;
+        }
+
+        setActive(activeId);
       };
 
       links.forEach((link) => {
