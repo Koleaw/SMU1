@@ -1496,6 +1496,77 @@ small {
   }
 }
 
+
+/* Vertical rhythm corrective pass */
+.hero + .section {
+  padding-top: 56px;
+}
+
+.section + .section {
+  padding-top: 48px;
+}
+
+.section-heading {
+  margin-bottom: 20px;
+}
+
+#project-form.section {
+  padding-bottom: 32px;
+}
+
+#project-form + #lead.section {
+  padding-top: 32px;
+}
+
+#custom-order-examples + #lead.section,
+#home-workflow + #lead.section,
+.section--soft + #lead.section {
+  padding-top: 48px;
+}
+
+
+@media (max-width: 1024px) {
+  .hero + .section {
+    padding-top: 48px;
+  }
+
+  .section + .section {
+    padding-top: 40px;
+  }
+
+  #project-form.section {
+    padding-bottom: 24px;
+  }
+
+  #project-form + #lead.section,
+  #custom-order-examples + #lead.section,
+  #home-workflow + #lead.section,
+  .section--soft + #lead.section {
+    padding-top: 40px;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero + .section {
+    padding-top: 40px;
+  }
+
+  .section + .section {
+    padding-top: 32px;
+  }
+
+  #project-form.section {
+    padding-bottom: 20px;
+  }
+
+  #project-form + #lead.section,
+  #custom-order-examples + #lead.section,
+  #home-workflow + #lead.section,
+  .section--soft + #lead.section {
+    padding-top: 32px;
+  }
+}
+
 /* System corrective pass */
 :root {
   --line-height-headings: 1.2;
@@ -1507,7 +1578,7 @@ small {
 }
 
 .section-heading {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   gap: 10px;
 }
 
