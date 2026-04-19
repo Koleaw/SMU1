@@ -1665,15 +1665,18 @@ small {
 }
 
 .contacts-trust-grid {
-  grid-template-columns: 1.1fr 1fr;
-  gap: 20px;
+  grid-template-columns: 46% 54%;
+  gap: clamp(16px, 2.4vw, 28px);
+  align-items: start;
 }
 
 .contacts-main-card {
+  grid-row: auto;
   gap: 10px;
 }
 
 .contacts-list {
+  display: grid;
   gap: 6px;
 }
 
@@ -1683,12 +1686,23 @@ small {
   line-height: 1.4;
 }
 
+.contacts-note {
+  margin-left: 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
 .contacts-links {
-  margin-top: 4px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin-top: 6px;
 }
 
 .contacts-links .btn {
-  min-width: 180px;
+  min-width: 170px;
+  width: auto;
+  white-space: nowrap;
 }
 
 .contacts-right-column {
@@ -1699,14 +1713,22 @@ small {
 .contacts-right-column h3 {
   font-size: 18px;
   font-weight: 500;
+  margin-top: 4px;
+}
+
+.contacts-geo-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
 }
 
 .contacts-map-embed {
-  min-height: 360px;
+  min-height: 380px;
 }
 
 .contacts-yandex-badge {
   max-width: 300px;
+  margin-top: 2px;
 }
 
 .section-nav {
@@ -1753,5 +1775,9 @@ small {
 @media (max-width: 1024px) {
   .contacts-trust-grid {
     grid-template-columns: 1fr;
+  }
+
+  .contacts-links {
+    flex-wrap: wrap;
   }
 }
