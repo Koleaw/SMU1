@@ -749,11 +749,9 @@ small {
   margin-bottom: 16px;
 }
 
-.project-feature--wide {
-  grid-template-columns: minmax(340px, 1.2fr) minmax(300px, 1fr);
-}
-
 .trust-media-grid {
+  display: grid;
+  grid-template-columns: 1fr;
   align-items: start;
 }
 
@@ -770,6 +768,10 @@ small {
   width: fit-content;
 }
 
+.trust-media--objects .placeholder--card .media-thumb {
+  --media-ratio: 12 / 5;
+}
+
 .workflow-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -781,8 +783,11 @@ small {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-max);
   box-shadow: var(--shadow-card);
+  min-height: 232px;
   padding: 20px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   gap: 12px;
 }
 
@@ -794,6 +799,10 @@ small {
 
 .workflow-step .badge {
   margin-bottom: 2px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0 10px;
+  line-height: 1;
 }
 
 .workflow-step p {
@@ -818,8 +827,7 @@ small {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .project-feature,
-  .project-feature--wide {
+  .project-feature {
     grid-template-columns: 1fr;
   }
 
@@ -1607,16 +1615,40 @@ small {
   grid-template-rows: auto 1fr auto;
   gap: 12px;
   padding: 16px;
+  min-height: 100%;
+}
+
+.quick-entry-card .media-block {
+  display: grid;
+  grid-template-rows: 188px auto;
+  min-height: 224px;
+}
+
+.quick-entry-card .media-thumb {
+  display: block;
+  height: 188px;
+  min-height: 188px;
+  aspect-ratio: auto;
+}
+
+.quick-entry-card .media-caption {
+  height: 36px;
+  padding: 8px 12px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #9a9a9a;
+  overflow: hidden;
 }
 
 .quick-entry-card__body {
   display: grid;
   gap: 8px;
   align-content: start;
+  min-height: 148px;
 }
 
 .quick-entry-card__body p {
-  min-height: 72px;
+  min-height: 88px;
 }
 
 .quick-entry-card__cta {
