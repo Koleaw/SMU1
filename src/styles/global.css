@@ -768,6 +768,14 @@ small {
   width: fit-content;
 }
 
+.trust-media--objects .media-block {
+  width: min(100%, 560px);
+}
+
+.trust-media--objects .media-thumb {
+  --media-ratio: 16 / 10;
+}
+
 .workflow-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1621,11 +1629,12 @@ small {
 }
 
 .quick-entry-card .media-caption {
-  min-height: 36px;
+  height: 36px;
   padding: 8px 12px;
   font-size: 11px;
   line-height: 1.3;
   color: #9a9a9a;
+  overflow: hidden;
 }
 
 .quick-entry-card__body {
