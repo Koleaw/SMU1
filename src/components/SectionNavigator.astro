@@ -29,6 +29,9 @@ const shouldRender = safeItems.length >= 4;
 
 <script>
   const initSectionNavigator = () => {
+    const SECTION_NAV_CLEARANCE = 24;
+    const SECTION_SCROLL_MARGIN_GAP = 12;
+
     const navRoots = Array.from(document.querySelectorAll('[data-section-nav]'));
 
     navRoots.forEach((navRoot) => {
@@ -40,17 +43,39 @@ const shouldRender = safeItems.length >= 4;
 
       const marker = navRoot.querySelector('[data-section-nav-marker]');
 
-      const getHeaderOffset = () => {
+      const getStickyOffset = () => {
         const header = document.querySelector('.site-header');
         const breadcrumbs = document.querySelector('.breadcrumbs-bar');
         const headerHeight = header instanceof HTMLElement ? Math.ceil(header.getBoundingClientRect().height) : 0;
         const breadcrumbsHeight = breadcrumbs instanceof HTMLElement ? Math.ceil(breadcrumbs.getBoundingClientRect().height) : 0;
-        return headerHeight + breadcrumbsHeight + 14;
+        return headerHeight + breadcrumbsHeight + SECTION_NAV_CLEARANCE;
       };
 
       const sectionIds = [
         ...new Set(links.map((link) => link.getAttribute('data-section-nav-link')).filter(Boolean))
       ];
+
+      const parseColorChannels = (value) => {
+        const matches = value.match(/[\d.]+/g);
+        if (!matches || matches.length < 3) return null;
+
+        const [r, g, b, alpha = '1'] = matches;
+        return {
+          r: Number(r),
+          g: Number(g),
+          b: Number(b),
+          alpha: Number(alpha)
+        };
+      };
+
+      const resolveThemeFromColor = (colorValue) => {
+        const channels = parseColorChannels(colorValue);
+        if (!channels) return null;
+        if (channels.alpha === 0) return null;
+
+        const luminance = (0.2126 * channels.r + 0.7152 * channels.g + 0.0722 * channels.b) / 255;
+        return luminance < 0.53 ? 'dark' : 'light';
+      };
 
       const getThemeFromSection = (element) => {
         if (!(element instanceof HTMLElement)) return 'light';
@@ -66,22 +91,21 @@ const shouldRender = safeItems.length >= 4;
           return 'light';
         }
 
-        const bgColor = window.getComputedStyle(host).backgroundColor;
-        const rgb = bgColor.match(/\d+/g)?.slice(0, 3).map(Number);
-        if (!rgb || rgb.length < 3) return 'light';
+        let current = host;
+        while (current instanceof HTMLElement && current !== document.body) {
+          const colorTheme = resolveThemeFromColor(window.getComputedStyle(current).backgroundColor);
+          if (colorTheme) return colorTheme;
+          current = current.parentElement;
+        }
 
-        const [r, g, b] = rgb;
-        const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-        return luminance < 0.53 ? 'dark' : 'light';
+        return resolveThemeFromColor(window.getComputedStyle(document.body).backgroundColor) ?? 'light';
       };
 
       const sections = sectionIds
         .map((id) => {
           const element = id ? document.getElementById(id) : null;
           if (!element) return null;
-          const theme = getThemeFromSection(element);
-
-          return { id, el: element, theme };
+          return { id, el: element };
         })
         .filter(Boolean);
 
@@ -104,7 +128,7 @@ const shouldRender = safeItems.length >= 4;
         });
 
         const activeSection = sections.find((section) => section.id === activeId);
-        navRoot.dataset.sectionTheme = activeSection?.theme === 'dark' ? 'dark' : 'light';
+        navRoot.dataset.sectionTheme = getThemeFromSection(activeSection?.el) === 'dark' ? 'dark' : 'light';
 
         const activeLink = links.find((link) => link.getAttribute('data-section-nav-link') === activeId);
 
@@ -115,8 +139,9 @@ const shouldRender = safeItems.length >= 4;
       };
 
       const updateScrollMargins = () => {
-        const margin = `${getHeaderOffset() + 8}px`;
-        navRoot.style.setProperty('--section-nav-sticky-top', `${getHeaderOffset()}px`);
+        const stickyOffset = getStickyOffset();
+        const margin = `${stickyOffset + SECTION_SCROLL_MARGIN_GAP}px`;
+        navRoot.style.setProperty('--section-nav-sticky-top', `${stickyOffset}px`);
         sections.forEach((section) => {
           section.el.style.scrollMarginTop = margin;
         });
@@ -126,13 +151,13 @@ const shouldRender = safeItems.length >= 4;
         const target = sections.find((section) => section.id === sectionId)?.el;
         if (!(target instanceof HTMLElement)) return;
 
-        const offset = getHeaderOffset();
+        const offset = getStickyOffset();
         const top = target.getBoundingClientRect().top + window.scrollY - offset;
         window.scrollTo({ top, behavior: 'smooth' });
       };
 
       const updateActiveByScroll = () => {
-        const offset = getHeaderOffset() + 18;
+        const offset = getStickyOffset() + SECTION_SCROLL_MARGIN_GAP;
         let activeId = sections[0]?.id;
 
         sections.forEach((section) => {
