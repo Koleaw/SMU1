@@ -74,12 +74,15 @@ const keyDirections = [
         <div class="quick-entry-grid">
           {keyDirections.map((item) => (
             <a class="quick-entry-card" href={item.href}>
-              <div class="media-block media-block--products media-block--strong">
+              <div class="media-block placeholder placeholder--card">
                 <img class="media-thumb" src={item.media} alt={item.mediaLabel} loading="lazy" />
                 <p class="media-caption">{item.mediaLabel}</p>
               </div>
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
+              <div class="quick-entry-card__body">
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </div>
+              <span class="btn btn-secondary quick-entry-card__cta">Перейти в раздел</span>
             </a>
           ))}
         </div>
@@ -114,7 +117,7 @@ const keyDirections = [
     <section id="home-projects" class="section section--split">
       <div class="container project-sections">
         <article class="project-feature">
-          <div class="media-block media-block--products media-block--strong">
+          <div class="media-block placeholder placeholder--wide-feature">
             <img class="media-thumb" src={withBase('/assets/images/placeholders/canopies.svg')} alt="Навесы и козырьки" loading="lazy" />
             <p class="media-caption">Плейсхолдер под фото реализованных навесов, входных групп и козырьков.</p>
           </div>
@@ -126,38 +129,38 @@ const keyDirections = [
         </article>
 
         <article class="project-feature">
-          <div class="media-block media-block--products media-block--strong">
+          <div class="media-block placeholder placeholder--wide-feature">
             <img class="media-thumb" src={withBase('/assets/images/placeholders/metal-business.svg')} alt="Металлоконструкции для бизнеса" loading="lazy" />
             <p class="media-caption">Плейсхолдер под фото каркасов, ферм и входных групп в реальной среде.</p>
           </div>
           <div>
             <h2>Металлоконструкции для бизнеса</h2>
             <p class="lead">Собираем решения под эксплуатационную задачу: считаем нагрузки, подбираем конструкцию и ведем объект до запуска.</p>
-            <a class="btn btn-secondary" href={withBase('/metallokonstruktsii-dlya-biznesa/')}>Смотреть направление</a>
+            <a class="btn btn-secondary" href={withBase('/metallokonstruktsii-dlya-biznesa/')}>Перейти в раздел</a>
           </div>
         </article>
 
         <article class="project-feature project-feature--wide">
-          <div class="media-block media-block--strong media-block--objects">
+          <div class="media-block placeholder placeholder--wide-feature">
             <img class="media-thumb" src={withBase('/assets/images/placeholders/landscaping.svg')} alt="Благоустройство территорий" loading="lazy" />
             <p class="media-caption">Плейсхолдер под фото комплексного благоустройства коммерческих и общественных территорий.</p>
           </div>
           <div>
             <h2>Благоустройство территорий</h2>
             <p class="lead">Комплексно закрываем территорию: изделия, металлоконструкции, монтаж, покрытие и сопутствующие строительные работы в одном договоре.</p>
-            <a class="btn btn-secondary" href={withBase('/blagoustroystvo-territoriy/')}>Открыть страницу благоустройства</a>
+            <a class="btn btn-secondary" href={withBase('/blagoustroystvo-territoriy/')}>Перейти в раздел</a>
           </div>
         </article>
 
         <article class="project-feature">
-          <div class="media-block media-block--objects media-block--strong">
+          <div class="media-block placeholder placeholder--wide-feature">
             <img class="media-thumb" src={withBase('/assets/images/placeholders/landscaping.svg')} alt="Топиарии на заказ" loading="lazy" />
             <p class="media-caption">Фото будут обновлены в мае: топиарные формы и монтаж на объекте.</p>
           </div>
           <div>
             <h2>Топиарии на заказ</h2>
             <p class="lead">Отдельное заказное направление: проектируем и изготавливаем топиарные конструкции под входные группы, парки и коммерческие территории.</p>
-            <a class="btn btn-secondary" href={withBase('/topiarii/')}>Перейти в направление</a>
+            <a class="btn btn-secondary" href={withBase('/topiarii/')}>Перейти в раздел</a>
           </div>
         </article>
       </div>
@@ -166,7 +169,7 @@ const keyDirections = [
     <section id="home-trust" class="section section--dark">
       <div class="container grid grid-2 trust-media-grid">
         <article class="trust-media trust-media--objects">
-          <div class="media-block media-block--objects media-block--strong">
+          <div class="media-block placeholder placeholder--card">
             <img class="media-thumb" src={withBase('/assets/images/objects/object-2.svg')} alt="Выполненные объекты СМУ-1" loading="lazy" />
             <p class="media-caption">Майское наполнение: фото реализованных объектов и фактические результаты работ.</p>
           </div>
@@ -176,13 +179,13 @@ const keyDirections = [
         </article>
 
         <article class="trust-media trust-media--production">
-          <div class="media-block media-block--production media-block--strong">
+          <div class="media-block placeholder placeholder--card">
             <img class="media-thumb" src={withBase('/assets/images/production/process-1.svg')} alt="Производство СМУ-1" loading="lazy" />
             <p class="media-caption">Майское наполнение: фото цеха, этапов изготовления и контрольных операций.</p>
           </div>
           <h2>Производство</h2>
           <p>Показываем ресурсы цеха и процесс изготовления, чтобы заказчик видел реальную производственную базу и темп работы.</p>
-          <a class="btn btn-primary" href={withBase('/proizvodstvo/')}>Смотреть производство</a>
+          <a class="btn btn-primary" href={withBase('/proizvodstvo/')}>Перейти в раздел</a>
         </article>
       </div>
     </section>

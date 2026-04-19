@@ -41,7 +41,7 @@ const categoryMedia = [
       <div class="category-choice-grid">
         {category.subcategories.map((sub, index) => (
           <a class="category-choice-card" href={withBase(`/ulichnaya-mebel/${sub.slug}/`)}>
-            <div class="media-block media-block--products media-block--strong">
+            <div class="media-block placeholder placeholder--card">
               <img class="media-thumb" src={withBase(categoryMedia[index % categoryMedia.length])} alt={sub.title} loading="lazy" />
               <p class="media-caption">Фото будут обновлены в мае: материалы по категории.</p>
             </div>

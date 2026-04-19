@@ -6,7 +6,7 @@ const { items } = Astro.props;
 <nav class="breadcrumbs" aria-label="Хлебные крошки">
   {items.map((item, idx) => (
     <>
-      {idx > 0 && ' / '}
+      {idx > 0 && <span class="breadcrumbs__separator" aria-hidden="true">/</span>}
       {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
     </>
   ))}
