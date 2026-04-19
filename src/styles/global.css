@@ -768,10 +768,6 @@ small {
   width: fit-content;
 }
 
-.trust-media--objects .media-block {
-  width: min(100%, 560px);
-}
-
 .trust-media--objects .media-thumb {
   --media-ratio: 16 / 10;
 }
