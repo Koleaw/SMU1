@@ -11,11 +11,14 @@ import { withBase } from '../utils/withBase';
       <p class="form-note">B2B-first сайт: изделия, проектные услуги, доверительный контур.</p>
     </div>
     <div>
-      <p><strong>Телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
+      <p><strong>Основной телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
+      <p><strong>Дополнительный:</strong> <a href={`tel:${site.phoneSecondary}`}>{site.phoneSecondary}</a></p>
+      <p><strong>Telegram:</strong> <a href={site.telegramUrl} target="_blank" rel="noopener noreferrer">{site.telegram}</a></p>
       <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
     </div>
     <div>
       <p><strong>Город:</strong> {site.city}</p>
+      <p><strong>Адрес:</strong> {site.address}</p>
       <p class="form-note">{site.legalInfo}</p>
       <small>© {new Date().getFullYear()} {site.companyName}. Каркас сайта для публикации на GitHub Pages.</small>
     </div>

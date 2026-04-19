@@ -6,6 +6,12 @@ import { withBase } from '../utils/withBase';
 
 ---
 <BaseLayout title="Производство — СМУ-1" description="Производственный контур СМУ-1: возможности цеха, подход к качеству, география работ.">
+  <div class="breadcrumbs-bar">
+    <div class="container">
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Производство' }]} />
+    </div>
+  </div>
+
   <Hero
     kicker="Доверительный контур"
     className="hero--trust"
@@ -14,9 +20,7 @@ import { withBase } from '../utils/withBase';
     primaryLabel="Отправить задачу"
     secondaryLabel="Контакты"
     secondaryHref={withBase('/kontakty/')}
-  >
-    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Производство' }]} />
-  </Hero>
+  />
 
   <section id="production-media" class="section">
     <div class="container production-media-grid">

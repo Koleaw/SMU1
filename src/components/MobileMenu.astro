@@ -32,13 +32,17 @@ const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : 
         <img src={withBase('/assets/icons/phone.svg')} alt="" aria-hidden="true" />
         <span>{site.phone}</span>
       </a>
+      <a href={`tel:${site.phoneSecondary}`}>
+        <img src={withBase('/assets/icons/phone.svg')} alt="" aria-hidden="true" />
+        <span>{site.phoneSecondary} · руководитель</span>
+      </a>
       <a href={`mailto:${site.email}`}>
         <img src={withBase('/assets/icons/mail.svg')} alt="" aria-hidden="true" />
         <span>{site.email}</span>
       </a>
-      <a href={site.messengers[1]?.url ?? '#'}>
+      <a href={site.telegramUrl} target="_blank" rel="noopener noreferrer">
         <img src={withBase('/assets/icons/send.svg')} alt="" aria-hidden="true" />
-        <span>Telegram</span>
+        <span>{site.telegram}</span>
       </a>
       <p>
         <img src={withBase('/assets/icons/map-pin.svg')} alt="" aria-hidden="true" />

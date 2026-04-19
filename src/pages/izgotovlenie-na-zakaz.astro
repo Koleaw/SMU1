@@ -7,6 +7,12 @@ import { withBase } from '../utils/withBase';
 
 ---
 <BaseLayout title="Изготовление на заказ — СМУ-1" description="Страница для нестандартных задач: что можно изготовить, какие вводные нужны, как отправить материалы.">
+  <div class="breadcrumbs-bar">
+    <div class="container">
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Изготовление на заказ' }]} />
+    </div>
+  </div>
+
   <Hero
     kicker="Служебный сценарий"
     className="hero--service"
@@ -15,9 +21,7 @@ import { withBase } from '../utils/withBase';
     primaryLabel="Отправить задачу"
     secondaryLabel="Каталог изделий"
     secondaryHref={withBase('/ulichnaya-mebel/')}
-  >
-    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Изготовление на заказ' }]} />
-  </Hero>
+  />
 
   <section id="custom-order-inputs" class="section section--soft">
     <div class="container grid grid-2">
@@ -30,7 +34,7 @@ import { withBase } from '../utils/withBase';
     <div class="container">
       <article class="media-block media-block--products">
         <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Кастомное изготовление" loading="lazy" />
-        <p class="media-caption">Плейсхолдер под реальные фото нестандартных изделий и проектных деталей.</p>
+        <p class="media-caption">Фото будут обновлены в мае: нестандартные изделия и проектные детали.</p>
       </article>
     </div>
   </section>

@@ -16,6 +16,12 @@ const categoryMedia = [
 ];
 ---
 <BaseLayout title="Уличная мебель — СМУ-1" description={category.shortDescription}>
+  <div class="breadcrumbs-bar">
+    <div class="container">
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель' }]} />
+    </div>
+  </div>
+
   <Hero
     kicker="Каталог изделий"
     title={category.h1}
@@ -24,9 +30,7 @@ const categoryMedia = [
     secondaryLabel={category.ctaSecondary}
     secondaryHref={withBase('/izgotovlenie-na-zakaz/')}
     className="hero--catalog"
-  >
-    <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель' }]} />
-  </Hero>
+  />
 
   <section class="section section--soft">
     <div class="container">
@@ -39,7 +43,7 @@ const categoryMedia = [
           <a class="category-choice-card" href={withBase(`/ulichnaya-mebel/${sub.slug}/`)}>
             <div class="media-block media-block--products media-block--strong">
               <img class="media-thumb" src={withBase(categoryMedia[index % categoryMedia.length])} alt={sub.title} loading="lazy" />
-              <p class="media-caption">Плейсхолдер под реальные фото/рендеры категории в мае.</p>
+              <p class="media-caption">Фото будут обновлены в мае: материалы по категории.</p>
             </div>
             <div class="category-choice-card__body">
               <h3>{sub.title}</h3>

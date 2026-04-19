@@ -74,7 +74,7 @@ const keyDirections = [
         <div class="quick-entry-grid">
           {keyDirections.map((item) => (
             <a class="quick-entry-card" href={item.href}>
-              <div class="media-block media-block--strong">
+              <div class="media-block media-block--products media-block--strong">
                 <img class="media-thumb" src={item.media} alt={item.mediaLabel} loading="lazy" />
                 <p class="media-caption">{item.mediaLabel}</p>
               </div>
@@ -146,6 +146,18 @@ const keyDirections = [
             <h2>Благоустройство территорий</h2>
             <p class="lead">Комплексно закрываем территорию: изделия, металлоконструкции, монтаж, покрытие и сопутствующие строительные работы в одном договоре.</p>
             <a class="btn btn-secondary" href={withBase('/blagoustroystvo-territoriy/')}>Открыть страницу благоустройства</a>
+          </div>
+        </article>
+
+        <article class="project-feature">
+          <div class="media-block media-block--objects media-block--strong">
+            <img class="media-thumb" src={withBase('/assets/images/placeholders/landscaping.svg')} alt="Топиарии на заказ" loading="lazy" />
+            <p class="media-caption">Фото будут обновлены в мае: топиарные формы и монтаж на объекте.</p>
+          </div>
+          <div>
+            <h2>Топиарии на заказ</h2>
+            <p class="lead">Отдельное заказное направление: проектируем и изготавливаем топиарные конструкции под входные группы, парки и коммерческие территории.</p>
+            <a class="btn btn-secondary" href={withBase('/topiarii/')}>Перейти в направление</a>
           </div>
         </article>
       </div>
