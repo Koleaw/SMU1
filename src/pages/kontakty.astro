@@ -34,7 +34,8 @@ const yandexReviewUrl = yandex.links.yandexReviewUrl;
         <h2>Свяжитесь с СМУ-1</h2>
         <div class="contacts-list">
           <p><strong>Основной телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
-          <p><strong>Дополнительный:</strong> <a href={`tel:${site.phoneSecondary}`}>{site.phoneSecondary}</a> <span>· руководитель</span></p>
+          <p><strong>Дополнительный телефон:</strong> <a href={`tel:${site.phoneSecondary}`}>{site.phoneSecondary}</a></p>
+          <p><strong>Подпись:</strong> руководитель</p>
           <p><strong>Telegram:</strong> <a href={site.telegramUrl} target="_blank" rel="noopener noreferrer">{site.telegram}</a></p>
           <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
           <p><strong>Город:</strong> {site.city}</p>
@@ -46,17 +47,23 @@ const yandexReviewUrl = yandex.links.yandexReviewUrl;
         </div>
       </article>
 
-      <article class="card contacts-support-card">
+      <article class="card contacts-right-column">
         <h2>География работ</h2>
         <ul>{site.regions.map((r) => <li>{r}</li>)}</ul>
-        <p class="lead">Работаем по согласованному графику выездов, поставок и монтажных этапов.</p>
-      </article>
-
-      <article class="card contacts-map-card">
-        <h2>Мы на карте</h2>
+        <h3>Карта</h3>
         <div class="contacts-map-embed">
           <script type="text/javascript" charset="utf-8" async src={yandex.map.constructorSrc}></script>
         </div>
+        <h3>Рейтинг</h3>
+        <iframe
+          class="contacts-yandex-badge"
+          src={yandex.ratingBadge.src}
+          width={yandex.ratingBadge.width}
+          height={yandex.ratingBadge.height}
+          frameborder="0"
+          title="Рейтинг в Яндекс Бизнес"
+          loading="lazy"
+        ></iframe>
         <div class="contacts-yandex-actions">
           {yandexMapsCompanyUrl && (
             <a class="btn btn-secondary" href={yandexMapsCompanyUrl} target="_blank" rel="noopener noreferrer">
@@ -69,15 +76,6 @@ const yandexReviewUrl = yandex.links.yandexReviewUrl;
             </a>
           )}
         </div>
-        <iframe
-          class="contacts-yandex-badge"
-          src={yandex.ratingBadge.src}
-          width={yandex.ratingBadge.width}
-          height={yandex.ratingBadge.height}
-          frameborder="0"
-          title="Рейтинг в Яндекс Бизнес"
-          loading="lazy"
-        ></iframe>
       </article>
     </div>
   </section>

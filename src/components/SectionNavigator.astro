@@ -42,8 +42,10 @@ const shouldRender = safeItems.length >= 4;
 
       const getHeaderOffset = () => {
         const header = document.querySelector('.site-header');
-        if (!(header instanceof HTMLElement)) return 0;
-        return Math.ceil(header.getBoundingClientRect().height) + 14;
+        const breadcrumbs = document.querySelector('.breadcrumbs-bar');
+        const headerHeight = header instanceof HTMLElement ? Math.ceil(header.getBoundingClientRect().height) : 0;
+        const breadcrumbsHeight = breadcrumbs instanceof HTMLElement ? Math.ceil(breadcrumbs.getBoundingClientRect().height) : 0;
+        return headerHeight + breadcrumbsHeight + 14;
       };
 
       const sectionIds = [
@@ -114,6 +116,7 @@ const shouldRender = safeItems.length >= 4;
 
       const updateScrollMargins = () => {
         const margin = `${getHeaderOffset() + 8}px`;
+        navRoot.style.setProperty('--section-nav-sticky-top', `${getHeaderOffset()}px`);
         sections.forEach((section) => {
           section.el.style.scrollMarginTop = margin;
         });

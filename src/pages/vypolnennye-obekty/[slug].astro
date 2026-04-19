@@ -30,11 +30,11 @@ const { item } = Astro.props;
 
   <section class="section">
     <div class="container object-hero-media">
-      <article class="media-block media-block--objects media-block--strong">
+      <article class="media-block placeholder placeholder--card">
         <img class="media-thumb" src={withBase(item.gallery[0])} alt={item.title} />
         <p class="media-caption">Ключевой кадр объекта будет заменен на фактическое фото в мае.</p>
       </article>
-      <article class="media-block media-block--objects">
+      <article class="media-block placeholder placeholder--card">
         <img class="media-thumb" src={withBase(item.gallery[1] ?? item.gallery[0])} alt={item.title} />
         <p class="media-caption">Второй кадр: детали реализации и результат на площадке.</p>
       </article>
