@@ -1234,8 +1234,30 @@ small {
   margin-top: 8px;
 }
 
-.contacts-map-block .media-thumb {
-  min-height: 260px;
+.contacts-map-card {
+  align-content: start;
+}
+
+.contacts-map-embed {
+  position: relative;
+  width: 100%;
+  min-height: 480px;
+  overflow: hidden;
+  border-radius: var(--radius-base);
+}
+
+.contacts-map-embed script {
+  display: block;
+}
+
+.contacts-yandex-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.contacts-yandex-badge {
+  border: 0;
 }
 
 @media (max-width: 1024px) {
@@ -1366,4 +1388,3 @@ small {
     display: none;
   }
 }
-
