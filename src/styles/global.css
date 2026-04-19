@@ -348,9 +348,21 @@ small {
 .site-header__desktop {
   min-height: 88px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(180px, auto) minmax(0, 1fr) minmax(280px, auto);
   align-items: center;
-  gap: 12px;
+  column-gap: 10px;
+}
+
+.site-header__left {
+  min-width: 0;
+}
+
+.site-header__center {
+  min-width: 0;
+}
+
+.site-header__right {
+  min-width: 0;
 }
 
 .site-header__logo-link {
@@ -371,8 +383,9 @@ small {
   align-items: center;
   justify-content: center;
   flex-wrap: nowrap;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .site-header__nav a {
@@ -380,7 +393,7 @@ small {
   font-size: 13px;
   font-weight: 500;
   line-height: 1.2;
-  padding: 8px 7px;
+  padding: 7px 6px;
   border-radius: var(--radius-base);
   white-space: nowrap;
   transition: background-color var(--transition-fast), color var(--transition-fast);
@@ -388,7 +401,9 @@ small {
 
 .site-header__nav a.active {
   color: #1f1f1f;
-  background: #eef3ee;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .site-header__nav a:hover,
@@ -404,9 +419,11 @@ small {
 }
 
 .site-header__actions {
-  display: grid;
-  justify-items: end;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
 }
 
 .site-header__contacts {
@@ -428,8 +445,7 @@ small {
   gap: 5px;
   color: #3f3f3f;
   font-weight: 500;
-  padding-left: 10px;
-  border-left: 1px solid #d9d9d9;
+  padding-left: 8px;
 }
 
 .site-header__telegram img {
@@ -825,7 +841,7 @@ small {
 
   .site-header__desktop {
     min-height: 82px;
-    gap: 8px;
+    column-gap: 8px;
   }
 
   .site-header__logo {
@@ -839,7 +855,7 @@ small {
 
   .site-header__nav a {
     font-size: 12px;
-    padding: 7px 6px;
+    padding: 6px 5px;
   }
 
   .site-header__contacts {
@@ -848,7 +864,7 @@ small {
   }
 
   .site-header__cta {
-    padding: 8px 10px;
+    padding: 8px 9px;
     font-size: 12px;
   }
 }
@@ -1515,13 +1531,6 @@ small {
 .btn-secondary:hover,
 .btn-secondary:focus-visible {
   transform: none;
-}
-
-.site-header__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
 }
 
 .site-header__nav a.active {
