@@ -2116,7 +2116,7 @@ small {
 .site-header--home.is-scrolled .site-header__phone,
 .site-header--home.is-scrolled .site-header__telegram,
 .site-header--home.is-scrolled .site-header__menu-button {
-  color: var(--color-text-secondary);
+  color: var(--color-text);
 }
 
 .site-header--home.is-scrolled .site-header__nav a.active,
@@ -2151,6 +2151,7 @@ small {
   .home-page .hero--media .hero-content {
     text-align: left;
     margin-inline: 0;
+    padding-inline: 8px;
   }
 
   .home-page .hero--media h1,
@@ -2168,36 +2169,54 @@ small {
     width: 100%;
   }
 
-  .mobile-menu-layer--home {
+  .mobile-menu-layer {
     background: #13181c;
     color: #ffffff;
   }
 
-  .mobile-menu-layer--home .mobile-menu-layer__top,
-  .mobile-menu-layer--home .mobile-menu-layer__nav,
-  .mobile-menu-layer--home .mobile-menu-layer__nav a,
-  .mobile-menu-layer--home .mobile-menu-layer__contacts {
+  .mobile-menu-layer .mobile-menu-layer__top,
+  .mobile-menu-layer .mobile-menu-layer__nav,
+  .mobile-menu-layer .mobile-menu-layer__nav a,
+  .mobile-menu-layer .mobile-menu-layer__contacts {
     border-color: rgb(255 255 255 / 16%);
   }
 
-  .mobile-menu-layer--home .site-header__logo,
-  .mobile-menu-layer--home .mobile-menu-layer__close img,
-  .mobile-menu-layer--home .mobile-menu-layer__contacts img {
+  .mobile-menu-layer .site-header__logo,
+  .mobile-menu-layer .mobile-menu-layer__close img,
+  .mobile-menu-layer .mobile-menu-layer__contacts img {
     filter: brightness(0) invert(1);
   }
 
-  .mobile-menu-layer--home .mobile-menu-layer__close {
+  .mobile-menu-layer .mobile-menu-layer__close {
     background: transparent;
     border-color: rgb(255 255 255 / 24%);
   }
 
-  .mobile-menu-layer--home .mobile-menu-layer__nav a,
-  .mobile-menu-layer--home .mobile-menu-layer__contacts a,
-  .mobile-menu-layer--home .mobile-menu-layer__contacts p {
+  .mobile-menu-layer .mobile-menu-layer__nav a,
+  .mobile-menu-layer .mobile-menu-layer__contacts a,
+  .mobile-menu-layer .mobile-menu-layer__contacts p {
     color: #ffffff;
   }
 
-  .mobile-menu-layer--home .mobile-menu-layer__nav a.active {
+  .mobile-menu-layer .mobile-menu-layer__nav a.active {
     background: rgb(255 255 255 / 8%);
   }
+}
+
+.site-header__desktop {
+  padding-inline: clamp(8px, 1vw, 14px);
+}
+
+.site-header__nav a,
+.site-header__telegram {
+  color: var(--color-text);
+}
+
+.quick-entry-card__body {
+  grid-template-rows: minmax(124px, auto) minmax(96px, 1fr);
+  min-height: 200px;
+}
+
+.quick-entry-card__body p {
+  min-height: 96px;
 }
