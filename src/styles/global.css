@@ -2205,11 +2205,24 @@ small {
 
 .site-header__desktop {
   padding-inline: clamp(8px, 1vw, 14px);
+  grid-template-columns: minmax(196px, 260px) minmax(0, 1fr) minmax(260px, 300px);
 }
 
 .site-header__nav a,
 .site-header__telegram {
   color: var(--color-text);
+}
+
+.site-header__logo-link {
+  margin-left: 10px;
+}
+
+.site-header__actions {
+  justify-content: flex-start;
+}
+
+.site-header__phone {
+  white-space: nowrap;
 }
 
 .quick-entry-card__body {
@@ -2219,4 +2232,15 @@ small {
 
 .quick-entry-card__body p {
   min-height: 96px;
+}
+
+.quick-entry-card .media-block {
+  grid-template-rows: 188px 52px;
+  min-height: 240px;
+}
+
+.quick-entry-card .media-caption {
+  height: 52px;
+  display: flex;
+  align-items: center;
 }
