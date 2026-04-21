@@ -38,11 +38,14 @@ const heroClass = ['hero', className].filter(Boolean).join(' ');
 ---
 <section class={heroClass}>
   {(mediaImage || mediaPoster) && (
-    <div class="hero-media" aria-hidden="true">
+    <div class="hero-media" aria-hidden="true" data-hero-media>
       {mediaType === 'video' && mediaVideo ? (
-        <video class="hero-media__video" autoplay muted loop playsinline poster={mediaPoster}>
-          <source src={mediaVideo} type="video/mp4" />
-        </video>
+        <>
+          <video class="hero-media__video" autoplay muted loop playsinline poster={mediaPoster} data-hero-video>
+            <source src={mediaVideo} type="video/mp4" />
+          </video>
+          {mediaPoster && <img class="hero-media__fallback" src={mediaPoster} alt={mediaAlt} loading="eager" />}
+        </>
       ) : (
         <img class="hero-media__image" src={mediaImage ?? mediaPoster} alt={mediaAlt} loading="eager" />
       )}
@@ -62,3 +65,29 @@ const heroClass = ['hero', className].filter(Boolean).join(' ');
     <slot />
   </div>
 </section>
+
+<script>
+  const initHeroVideoFallback = () => {
+    const heroMedias = Array.from(document.querySelectorAll('[data-hero-media]'));
+
+    heroMedias.forEach((heroMedia) => {
+      if (!(heroMedia instanceof HTMLElement)) return;
+      const heroVideo = heroMedia.querySelector('[data-hero-video]');
+      if (!(heroVideo instanceof HTMLVideoElement)) return;
+      if (heroMedia.dataset.heroVideoReady === 'true') return;
+
+      heroVideo.addEventListener('error', () => {
+        heroMedia.dataset.videoFailed = 'true';
+      });
+
+      heroVideo.addEventListener('stalled', () => {
+        if (!heroVideo.currentSrc) heroMedia.dataset.videoFailed = 'true';
+      });
+
+      heroMedia.dataset.heroVideoReady = 'true';
+    });
+  };
+
+  initHeroVideoFallback();
+  document.addEventListener('astro:page-load', initHeroVideoFallback);
+</script>
