@@ -2243,7 +2243,21 @@ small {
   height: 52px;
   display: flex;
   align-items: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.quick-entry-card,
+.quick-entry-card .media-block,
+.quick-entry-card__body,
+.quick-entry-card__cta {
+  min-width: 0;
+}
+
+.quick-entry-card h3,
+.quick-entry-card p,
+.quick-entry-card .media-caption {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
