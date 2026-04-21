@@ -4,8 +4,21 @@ import site from '../data/site.json';
 import { withBase } from '../utils/withBase';
 
 const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href));
+const normalizePath = (path: string) => {
+  const base = import.meta.env.BASE_URL || '/';
+  const normalizedBase = base === '/' ? '/' : base.replace(/\/$/, '');
+  if (path === '/') return '/';
+  let normalized = path;
+  if (normalizedBase !== '/' && normalized.startsWith(normalizedBase)) {
+    normalized = normalized.slice(normalizedBase.length) || '/';
+  }
+  if (!normalized.startsWith('/')) normalized = `/${normalized}`;
+  if (normalized !== '/' && !normalized.endsWith('/')) normalized = `${normalized}/`;
+  return normalized;
+};
+const isHomePage = normalizePath(Astro.url.pathname) === '/';
 ---
-<div class="mobile-menu-layer" id="mobile-menu-layer" aria-hidden="true" data-mobile-menu-layer>
+<div class={`mobile-menu-layer${isHomePage ? ' mobile-menu-layer--home' : ''}`} id="mobile-menu-layer" aria-hidden="true" data-mobile-menu-layer>
   <div class="container mobile-menu-layer__top">
     <a href={withBase('/')} class="site-header__logo-link" aria-label="СМУ-1 на главную" data-mobile-menu-link>
       <img class="site-header__logo site-header__logo--mobile" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
