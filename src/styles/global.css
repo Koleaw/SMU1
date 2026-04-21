@@ -2043,3 +2043,161 @@ small {
     flex-wrap: wrap;
   }
 }
+
+/* Home hero + header overlay pass */
+.home-page .hero--media {
+  min-height: 100svh;
+  display: flex;
+  align-items: flex-end;
+  padding: clamp(136px, 18vh, 196px) 0 clamp(56px, 9vh, 94px);
+}
+
+.home-page .hero--media .hero-content {
+  max-width: min(820px, 100%);
+}
+
+.home-page .hero-media__overlay {
+  background:
+    linear-gradient(112deg, rgb(8 12 16 / 70%) 6%, rgb(11 15 20 / 58%) 44%, rgb(12 16 20 / 42%) 100%),
+    linear-gradient(180deg, rgb(5 8 11 / 48%) 0%, rgb(7 10 14 / 20%) 54%, rgb(7 10 14 / 6%) 100%);
+}
+
+.hero-media__fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.hero-media[data-video-failed='true'] .hero-media__video {
+  opacity: 0;
+}
+
+.hero-media[data-video-failed='true'] .hero-media__fallback {
+  opacity: 1;
+}
+
+.site-header--home {
+  position: fixed;
+  inset: 0 0 auto 0;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.site-header--home .site-header__nav a,
+.site-header--home .site-header__phone,
+.site-header--home .site-header__telegram,
+.site-header--home .site-header__menu-button {
+  color: #ffffff;
+}
+
+.site-header--home .site-header__menu-button {
+  background: transparent;
+  border-color: rgb(255 255 255 / 56%);
+}
+
+.site-header--home .site-header__logo,
+.site-header--home .site-header__telegram img,
+.site-header--home .site-header__menu-button img {
+  filter: brightness(0) invert(1);
+}
+
+.site-header--home.is-scrolled {
+  background: #ffffff;
+  border-bottom-color: rgb(15 23 42 / 10%);
+  box-shadow: 0 6px 18px rgb(15 23 42 / 5%);
+}
+
+.site-header--home.is-scrolled .site-header__nav a,
+.site-header--home.is-scrolled .site-header__phone,
+.site-header--home.is-scrolled .site-header__telegram,
+.site-header--home.is-scrolled .site-header__menu-button {
+  color: var(--color-text-secondary);
+}
+
+.site-header--home.is-scrolled .site-header__nav a.active,
+.site-header--home.is-scrolled .site-header__nav a:hover,
+.site-header--home.is-scrolled .site-header__nav a:focus-visible {
+  color: var(--color-text);
+}
+
+.site-header--home.is-scrolled .site-header__menu-button {
+  background: #ffffff;
+  border-color: var(--color-border);
+}
+
+.site-header--home.is-scrolled .site-header__logo,
+.site-header--home.is-scrolled .site-header__telegram img,
+.site-header--home.is-scrolled .site-header__menu-button img {
+  filter: none;
+}
+
+.section-nav.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .home-page .hero--media {
+    min-height: 92svh;
+    align-items: flex-end;
+    padding: 110px 0 34px;
+  }
+
+  .home-page .hero--media .hero-content {
+    text-align: left;
+    margin-inline: 0;
+  }
+
+  .home-page .hero--media h1,
+  .home-page .hero--media .hero-description {
+    margin-inline: 0;
+    max-width: 100%;
+  }
+
+  .home-page .hero--media .hero-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .home-page .hero--media .hero-actions .btn {
+    width: 100%;
+  }
+
+  .mobile-menu-layer--home {
+    background: #13181c;
+    color: #ffffff;
+  }
+
+  .mobile-menu-layer--home .mobile-menu-layer__top,
+  .mobile-menu-layer--home .mobile-menu-layer__nav,
+  .mobile-menu-layer--home .mobile-menu-layer__nav a,
+  .mobile-menu-layer--home .mobile-menu-layer__contacts {
+    border-color: rgb(255 255 255 / 16%);
+  }
+
+  .mobile-menu-layer--home .site-header__logo,
+  .mobile-menu-layer--home .mobile-menu-layer__close img,
+  .mobile-menu-layer--home .mobile-menu-layer__contacts img {
+    filter: brightness(0) invert(1);
+  }
+
+  .mobile-menu-layer--home .mobile-menu-layer__close {
+    background: transparent;
+    border-color: rgb(255 255 255 / 24%);
+  }
+
+  .mobile-menu-layer--home .mobile-menu-layer__nav a,
+  .mobile-menu-layer--home .mobile-menu-layer__contacts a,
+  .mobile-menu-layer--home .mobile-menu-layer__contacts p {
+    color: #ffffff;
+  }
+
+  .mobile-menu-layer--home .mobile-menu-layer__nav a.active {
+    background: rgb(255 255 255 / 8%);
+  }
+}
