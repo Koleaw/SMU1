@@ -182,6 +182,23 @@ const shouldRender = safeItems.length >= 4;
         setActive(activeId);
       };
 
+      const updateHomeHeroVisibility = () => {
+        const isHomePage = Boolean(document.querySelector('.home-page'));
+        if (!isHomePage) {
+          navRoot.classList.remove('is-hidden');
+          return;
+        }
+
+        const hero = document.querySelector('.hero');
+        const header = document.querySelector('.site-header');
+        if (!(hero instanceof HTMLElement)) return;
+
+        const headerHeight = header instanceof HTMLElement ? header.offsetHeight : 0;
+        const heroBottom = hero.getBoundingClientRect().bottom;
+        const hideNavigator = heroBottom > headerHeight + 24;
+        navRoot.classList.toggle('is-hidden', hideNavigator);
+      };
+
       links.forEach((link) => {
         if (!(link instanceof HTMLAnchorElement)) return;
         link.addEventListener('click', (event) => {
@@ -193,14 +210,19 @@ const shouldRender = safeItems.length >= 4;
         });
       });
 
-      window.addEventListener('scroll', updateActiveByScroll, { passive: true });
+      window.addEventListener('scroll', () => {
+        updateActiveByScroll();
+        updateHomeHeroVisibility();
+      }, { passive: true });
       window.addEventListener('resize', () => {
         updateScrollMargins();
         updateActiveByScroll();
+        updateHomeHeroVisibility();
       });
 
       updateScrollMargins();
       updateActiveByScroll();
+      updateHomeHeroVisibility();
       navRoot.dataset.sectionNavReady = 'true';
     });
   };
