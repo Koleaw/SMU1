@@ -1,8 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
-import LeadForm from '../components/LeadForm.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
+import DirectContactBlock from '../components/DirectContactBlock.astro';
 import { withBase } from '../utils/withBase';
 ---
 <BaseLayout title="Ограждения и заборы — СМУ-1" description="Ограждения, заборы, калитки и ворота под задачи безопасности и эксплуатации.">
@@ -12,11 +12,12 @@ import { withBase } from '../utils/withBase';
     </div>
   </div>
 
-  <Hero title="Ограждения и заборы" description="Сильная страница направления без дробления на пустые URL: ограждения, заборы, калитки и ворота." primaryLabel="Рассчитать стоимость" secondaryLabel="Изготовление на заказ" secondaryHref={withBase('/izgotovlenie-na-zakaz/')} />
+  <Hero className="hero--catalog hero--catalog-clean" title="Ограждения и заборы" description="Ограждения, заборы, калитки и ворота под задачи безопасности и эксплуатации." />
 
   <section class="section"><div class="container grid grid-2">
     <article class="card"><h2>Форматы решений</h2><ul><li>секционные и сварные ограждения</li><li>заборы для коммерческих территорий</li><li>калитки и ворота</li><li>комбинированные решения</li></ul></article>
     <article class="card"><h2>Логика цены</h2><p class="lead">Для типовых секций возможна модель «цена от». Для проектных конфигураций — «по запросу» после уточнения параметров.</p></article>
   </div></section>
-  <LeadForm type="shortLead" sourcePage="ograzhdeniya-i-zabory" title="Заявка по ограждениям" />
+
+  <DirectContactBlock />
 </BaseLayout>

@@ -3,7 +3,7 @@ interface Props {
   className?: string;
   kicker?: string;
   title: string;
-  description: string;
+  description?: string;
   primaryLabel?: string;
   primaryHref?: string;
   secondaryLabel?: string;
@@ -57,7 +57,7 @@ const heroClass = ['hero', className].filter(Boolean).join(' ');
   <div class="container hero-content">
     {kicker && <p class="kicker">{kicker}</p>}
     <h1>{title}</h1>
-    <p class="hero-description">{description}</p>
+    {description && <p class="hero-description">{description}</p>}
     <div class="hero-actions">
       {primaryLabel && <a class="btn btn-primary" href={primaryHref}>{primaryLabel}</a>}
       {secondaryLabel && <a class="btn btn-secondary" href={secondaryHref}>{secondaryLabel}</a>}
