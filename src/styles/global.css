@@ -2410,3 +2410,28 @@ small {
     grid-template-columns: 1fr;
   }
 }
+
+/* Street furniture catalog: aggressive vertical compaction per feedback */
+.hero.hero--catalog-clean {
+  padding: 8px 0 0;
+}
+
+.hero.hero--catalog-clean .hero-content {
+  padding-top: 0;
+}
+
+.hero.hero--catalog-clean .kicker {
+  margin-bottom: 6px;
+}
+
+.hero.hero--catalog-clean h1 {
+  margin-bottom: 10px;
+}
+
+.hero.hero--catalog-clean .hero-description {
+  margin-bottom: 0;
+}
+
+.hero.hero--catalog-clean + .section {
+  padding-top: 0;
+}
