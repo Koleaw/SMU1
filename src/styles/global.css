@@ -1232,7 +1232,15 @@ small {
 
 .hero--catalog-clean {
   border-bottom: 0;
-  padding: 44px 0 20px;
+  padding: 20px 0 4px;
+}
+
+.hero--catalog-clean .kicker {
+  margin-bottom: 8px;
+}
+
+.hero--catalog-clean h1 {
+  margin-bottom: 12px;
 }
 
 .hero--catalog-clean .hero-description {
@@ -1240,7 +1248,7 @@ small {
 }
 
 .hero--catalog-clean + .section {
-  padding-top: 20px;
+  padding-top: 8px;
 }
 
 .hero--project {
