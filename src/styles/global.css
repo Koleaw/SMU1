@@ -2413,7 +2413,7 @@ small {
 
 /* Street furniture catalog: aggressive vertical compaction per feedback */
 .hero.hero--catalog-clean {
-  padding: 8px 0 0;
+  padding: 14px 0 0;
 }
 
 .hero.hero--catalog-clean .hero-content {
@@ -2425,7 +2425,7 @@ small {
 }
 
 .hero.hero--catalog-clean h1 {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .hero.hero--catalog-clean .hero-description {
