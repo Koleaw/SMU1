@@ -2,7 +2,6 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import LeadForm from '../components/LeadForm.astro';
 import site from '../data/site.json';
 import yandex from '../data/yandex.json';
 import { withBase } from '../utils/withBase';
@@ -18,42 +17,39 @@ const addressWithoutCity = site.address.replace(new RegExp(`,\\s*${site.city}\\s
 
   <Hero
     kicker="Связь"
-    className="hero--service"
+    className="hero--catalog-clean"
     title="Контакты"
-    description="Прямая связь с СМУ-1: рабочие телефоны, Telegram, почта, адрес и карта для быстрого старта проекта."
-    primaryLabel="Позвонить"
-    primaryHref={`tel:${site.phone}`}
-    secondaryLabel="Написать"
-    secondaryHref={`mailto:${site.email}`}
+    description="Телефоны, Telegram, почта, адрес и карта для быстрого старта проекта."
   />
 
   <section class="section section--soft">
-    <div class="container contacts-trust-grid">
-      <article class="card contacts-main-card">
-        <h2>Свяжитесь с СМУ-1</h2>
-        <div class="contacts-list">
-          <p><strong>Основной телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
-          <p>
-            <strong>Дополнительный телефон:</strong> <a href={`tel:${site.phoneSecondary}`}>{site.phoneSecondary}</a>
-            <span class="contacts-note">руководитель</span>
-          </p>
-          <p><strong>Telegram:</strong> <a href={site.telegramUrl} target="_blank" rel="noopener noreferrer">{site.telegram}</a></p>
-          <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
-          <p><strong>Город:</strong> {site.city}</p>
-          <p><strong>Адрес:</strong> {addressWithoutCity}</p>
-        </div>
-        <div class="contacts-links">
-          <a class="btn btn-secondary" href={site.telegramUrl} target="_blank" rel="noopener noreferrer">Telegram</a>
-          <a class="btn btn-secondary" href={`mailto:${site.email}`}>Написать на почту</a>
-        </div>
-      </article>
+    <div class="container contacts-layout-grid">
+      <div class="contacts-top-grid">
+        <article class="card contacts-main-card">
+          <h2>Свяжитесь с СМУ-1</h2>
+          <div class="contacts-list">
+            <p><strong>Основной телефон:</strong> <a href={`tel:${site.phone}`}>{site.phone}</a></p>
+            <p>
+              <strong>Дополнительный телефон:</strong> <a href={`tel:${site.phoneSecondary}`}>{site.phoneSecondary}</a>
+              <span class="contacts-note">руководитель</span>
+            </p>
+            <p><strong>Telegram:</strong> <a href={site.telegramUrl} target="_blank" rel="noopener noreferrer">{site.telegram}</a></p>
+            <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
+            <p><strong>Город:</strong> {site.city}</p>
+            <p><strong>Адрес:</strong> {addressWithoutCity}</p>
+          </div>
+        </article>
 
-      <article class="card contacts-right-column">
-        <h2>География работ</h2>
-        <ul>{site.regions.map((r) => <li>{r}</li>)}</ul>
-        <p class="contacts-geo-note">Работаем по Кургану, области и по согласованию выезжаем в соседние регионы.</p>
-        <h3>Мы на карте</h3>
-        <div class="contacts-map-embed">
+        <article class="card contacts-right-column">
+          <h2>География работ</h2>
+          <ul>{site.regions.map((r) => <li>{r}</li>)}</ul>
+          <p class="contacts-geo-note">Работаем по Кургану, области и по согласованию выезжаем в соседние регионы.</p>
+        </article>
+      </div>
+
+      <article class="card contacts-map-card">
+        <h2>Мы на карте</h2>
+        <div class="contacts-map-embed contacts-map-embed--wide">
           <script type="text/javascript" charset="utf-8" async src={yandex.map.constructorSrc}></script>
         </div>
         <iframe
@@ -68,6 +64,4 @@ const addressWithoutCity = site.address.replace(new RegExp(`,\\s*${site.city}\\s
       </article>
     </div>
   </section>
-
-  <LeadForm type="shortLead" sourcePage="kontakty" title="Форма связи" />
 </BaseLayout>
