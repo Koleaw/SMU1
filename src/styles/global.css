@@ -2272,7 +2272,7 @@ small {
   display: grid;
   gap: 0.75rem;
   padding: 1rem;
-  border: 1px solid rgba(13, 31, 61, 0.12);
+  border: 1px solid #0d1f3d;
   border-radius: 1rem;
   background: #ffffff;
   color: inherit;
@@ -2283,7 +2283,7 @@ small {
 .home-product-card:hover,
 .home-product-card:focus-visible {
   transform: translateY(-2px);
-  border-color: rgba(13, 31, 61, 0.2);
+  border-color: #0d1f3d;
   box-shadow: 0 12px 24px rgba(8, 18, 38, 0.08);
 }
 
@@ -2321,7 +2321,7 @@ small {
   padding: 1.5rem;
   border-radius: 1.25rem;
   background: #ffffff;
-  border: 1px solid rgba(13, 31, 61, 0.1);
+  border: 1px solid #0d1f3d;
 }
 
 .home-service-card .media-block {
