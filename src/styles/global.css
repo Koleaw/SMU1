@@ -1230,6 +1230,27 @@ small {
   background: var(--color-surface);
 }
 
+.hero--catalog-clean {
+  border-bottom: 0;
+  padding: 20px 0 4px;
+}
+
+.hero--catalog-clean .kicker {
+  margin-bottom: 8px;
+}
+
+.hero--catalog-clean h1 {
+  margin-bottom: 12px;
+}
+
+.hero--catalog-clean .hero-description {
+  margin-bottom: 0;
+}
+
+.hero--catalog-clean + .section {
+  padding-top: 8px;
+}
+
 .hero--project {
   min-height: 460px;
   display: flex;
@@ -1304,8 +1325,8 @@ small {
 }
 
 .product-showcase-card {
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--color-border);
   border-top: 1px solid var(--color-border);
   border-radius: var(--radius-base);
@@ -1323,30 +1344,36 @@ small {
 }
 
 .product-showcase-card__media-wrap {
+  height: 220px;
   border-bottom: 1px solid var(--color-border);
 }
 
 .product-showcase-card__media {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  height: 100%;
   object-fit: cover;
   background: repeating-linear-gradient(135deg, #f1f1f1 0, #f1f1f1 12px, #e8e8e8 12px, #e8e8e8 24px);
 }
 
 .product-showcase-card__body {
+  flex: 1;
   padding: 16px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-content: start;
 }
 
 .product-showcase-card__descriptor {
   color: var(--color-text);
-  min-height: 48px;
 }
 
 .product-showcase-card__price {
+  margin-top: auto;
   font-weight: 700;
+}
+
+.catalog-price-factors {
+  max-width: 760px;
 }
 
 .project-content-grid {
@@ -2382,4 +2409,29 @@ small {
   .home-products-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Street furniture catalog: aggressive vertical compaction per feedback */
+.hero.hero--catalog-clean {
+  padding: 8px 0 0;
+}
+
+.hero.hero--catalog-clean .hero-content {
+  padding-top: 0;
+}
+
+.hero.hero--catalog-clean .kicker {
+  margin-bottom: 6px;
+}
+
+.hero.hero--catalog-clean h1 {
+  margin-bottom: 10px;
+}
+
+.hero.hero--catalog-clean .hero-description {
+  margin-bottom: 0;
+}
+
+.hero.hero--catalog-clean + .section {
+  padding-top: 0;
 }
