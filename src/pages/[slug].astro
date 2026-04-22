@@ -2,8 +2,8 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import LeadForm from '../components/LeadForm.astro';
 import SectionNavigator from '../components/SectionNavigator.astro';
+import DirectContactBlock from '../components/DirectContactBlock.astro';
 import projects from '../data/project-pages.json';
 import { withBase } from '../utils/withBase';
 
@@ -17,8 +17,7 @@ const sectionNavItems = [
   { id: 'project-scope', label: 'Что решаем и состав услуги' },
   { id: 'project-workflow', label: 'Как работаем' },
   { id: 'project-targets', label: 'Для каких объектов' },
-  { id: 'project-form', label: 'Форма расчета' },
-  { id: 'lead', label: 'Отправить запрос' }
+  { id: 'direct-contact', label: 'Связаться напрямую' }
 ];
 
 ---
@@ -36,9 +35,6 @@ const sectionNavItems = [
     className="hero--project"
     title={item.h1}
     description={item.offer}
-    primaryLabel="Рассчитать стоимость"
-    secondaryLabel="Показать объекты"
-    secondaryHref={withBase('/vypolnennye-obekty/')}
     mediaImage={withBase(item.heroImages[0])}
     mediaAlt={item.menuTitle}
     mediaCaption="Фотоматериалы по проекту дополняются: здесь размещается фактура объекта и этапы работ."
@@ -81,11 +77,5 @@ const sectionNavItems = [
     </div>
   </section>
 
-  <section id="project-form" class="section" data-section-theme="light">
-    <div class="container form-block form-block--serious">
-      <h2 class="section-title">Форма расчета</h2>
-      <p class="lead">Заполните базовые вводные — вернемся с рабочим вариантом решения и предварительной стоимостью.</p>
-    </div>
-  </section>
-  <LeadForm type="calculationForm" sourcePage={item.slug} title="Запросить расчет проекта" />
+  <DirectContactBlock />
 </BaseLayout>
