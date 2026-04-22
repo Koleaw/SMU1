@@ -1230,6 +1230,10 @@ small {
   background: var(--color-surface);
 }
 
+.hero--catalog-clean {
+  border-bottom: 0;
+}
+
 .hero--project {
   min-height: 460px;
   display: flex;

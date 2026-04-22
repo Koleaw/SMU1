@@ -25,18 +25,11 @@ const categoryMedia = [
     kicker="Каталог изделий"
     title={category.h1}
     description={category.shortDescription}
-    primaryLabel="Смотреть категории"
-    primaryHref="#categories"
-    secondaryLabel="Связаться"
-    secondaryHref="#direct-contact"
-    className="hero--catalog"
+    className="hero--catalog hero--catalog-clean"
   />
 
   <section id="categories" class="section section--soft">
     <div class="container">
-      <div class="section-heading">
-        <h2 class="section-title">Категории изделий</h2>
-      </div>
       <div class="category-choice-grid">
         {category.subcategories.map((sub, index) => (
           <a class="category-choice-card" href={withBase(`/ulichnaya-mebel/${sub.slug}/`)}>
