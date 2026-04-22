@@ -2,7 +2,6 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import LeadForm from '../components/LeadForm.astro';
 import site from '../data/site.json';
 import yandex from '../data/yandex.json';
 import { withBase } from '../utils/withBase';
@@ -20,11 +19,7 @@ const addressWithoutCity = site.address.replace(new RegExp(`,\\s*${site.city}\\s
     kicker="Связь"
     className="hero--service"
     title="Контакты"
-    description="Прямая связь с СМУ-1: рабочие телефоны, Telegram, почта, адрес и карта для быстрого старта проекта."
-    primaryLabel="Позвонить"
-    primaryHref={`tel:${site.phone}`}
-    secondaryLabel="Написать"
-    secondaryHref={`mailto:${site.email}`}
+    description="Телефоны, Telegram, почта, адрес и карта для быстрого старта проекта."
   />
 
   <section class="section section--soft">
@@ -41,10 +36,6 @@ const addressWithoutCity = site.address.replace(new RegExp(`,\\s*${site.city}\\s
           <p><strong>Email:</strong> <a href={`mailto:${site.email}`}>{site.email}</a></p>
           <p><strong>Город:</strong> {site.city}</p>
           <p><strong>Адрес:</strong> {addressWithoutCity}</p>
-        </div>
-        <div class="contacts-links">
-          <a class="btn btn-secondary" href={site.telegramUrl} target="_blank" rel="noopener noreferrer">Telegram</a>
-          <a class="btn btn-secondary" href={`mailto:${site.email}`}>Написать на почту</a>
         </div>
       </article>
 
@@ -68,6 +59,4 @@ const addressWithoutCity = site.address.replace(new RegExp(`,\\s*${site.city}\\s
       </article>
     </div>
   </section>
-
-  <LeadForm type="shortLead" sourcePage="kontakty" title="Форма связи" />
 </BaseLayout>

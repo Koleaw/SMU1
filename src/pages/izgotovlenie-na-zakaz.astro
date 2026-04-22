@@ -1,8 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
-import LeadForm from '../components/LeadForm.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
+import DirectContactBlock from '../components/DirectContactBlock.astro';
 import { withBase } from '../utils/withBase';
 
 ---
@@ -17,10 +17,7 @@ import { withBase } from '../utils/withBase';
     kicker="Служебный сценарий"
     className="hero--service"
     title="Изготовление на заказ"
-    description="Если задача не укладывается в каталог, отправьте вводные: фото, размеры, эскиз или описание. Подготовим рабочий вариант и расчет."
-    primaryLabel="Отправить задачу"
-    secondaryLabel="Каталог изделий"
-    secondaryHref={withBase('/ulichnaya-mebel/')}
+    description="Если задача не укладывается в каталог, присылайте фото, размеры, эскиз или описание. Подготовим рабочий вариант и расчет."
   />
 
   <section id="custom-order-inputs" class="section section--soft">
@@ -39,5 +36,5 @@ import { withBase } from '../utils/withBase';
     </div>
   </section>
 
-  <LeadForm type="customOrderForm" sourcePage="izgotovlenie-na-zakaz" title="Форма на изготовление" />
+  <DirectContactBlock />
 </BaseLayout>
