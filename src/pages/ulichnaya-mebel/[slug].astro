@@ -2,7 +2,6 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Hero from '../../components/Hero.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
-import LeadForm from '../../components/LeadForm.astro';
 import products from '../../data/product-categories.json';
 import { withBase } from '../../utils/withBase';
 
@@ -24,17 +23,17 @@ const cardMedia = item.gallery?.length ? item.gallery : ['/assets/images/placeho
     kicker="Подкатегория изделий"
     title={item.h1}
     description={item.shortDescription}
-    primaryLabel="Оставить заявку"
-    secondaryLabel="Изготовление на заказ"
-    secondaryHref={withBase('/izgotovlenie-na-zakaz/')}
+    primaryLabel="Смотреть изделия"
+    primaryHref="#products"
+    secondaryLabel="Связаться"
+    secondaryHref="#direct-contact"
     className="hero--catalog"
   />
 
-  <section class="section">
+  <section id="products" class="section">
     <div class="container">
       <div class="section-heading">
         <h2 class="section-title">Линейка изделий</h2>
-        <p class="lead">Строгая витрина типовых решений: единая карточка, параметрический дескриптор и понятная логика цены без маркетплейс-подачи.</p>
       </div>
       <div class="product-catalog-grid">
         {item.products?.map((product, index) => (
@@ -46,7 +45,7 @@ const cardMedia = item.gallery?.length ? item.gallery : ['/assets/images/placeho
               <h3>{product.name}</h3>
               <p class="product-showcase-card__descriptor">{product.descriptor}</p>
               <p class="product-showcase-card__price">{product.price}</p>
-              <a class="btn btn-primary" href="#lead">{product.cta}</a>
+              <a class="btn btn-primary" href="#direct-contact">Уточнить стоимость</a>
             </div>
           </article>
         ))}
@@ -55,11 +54,25 @@ const cardMedia = item.gallery?.length ? item.gallery : ['/assets/images/placeho
   </section>
 
   <section class="section section--soft">
-    <div class="container grid grid-2">
-      <article class="card"><h2>Что влияет на цену</h2><ul>{item.priceFactors.map((factor) => <li>{factor}</li>)}</ul></article>
-      <article class="card"><h2>Варианты исполнения</h2><ul>{item.variants.map((variant) => <li>{variant}</li>)}</ul><p class="lead"><strong>{item.priceLabel}:</strong> {item.priceValue}.</p></article>
+    <div class="container">
+      <article class="card catalog-price-factors">
+        <h2>Что влияет на цену</h2>
+        <ul>{item.priceFactors.map((factor) => <li>{factor}</li>)}</ul>
+      </article>
     </div>
   </section>
 
-  <LeadForm type="shortLead" sourcePage={item.slug} title={`Заявка по направлению «${item.menuTitle}»`} />
+  <section id="direct-contact" class="section">
+    <div class="container">
+      <article class="home-contact-card">
+        <h2 class="section-title">Не нашли, что искали?</h2>
+        <p class="lead">Если типовая категория не закрывает задачу, напишите нам. Подберем решение под объект, референс, ТЗ или чертеж.</p>
+        <div class="home-contact-actions">
+          <a class="btn btn-primary" href="https://t.me/smu1build" target="_blank" rel="noreferrer">@smu1build · Написать в Telegram</a>
+          <a class="btn btn-secondary" href="mailto:smu1.kurgan@yandex.ru">smu1.kurgan@yandex.ru · Написать на почту</a>
+          <a class="btn btn-secondary" href="tel:+79129735006">+7 (912) 973-50-06 · Позвонить</a>
+        </div>
+      </article>
+    </div>
+  </section>
 </BaseLayout>
