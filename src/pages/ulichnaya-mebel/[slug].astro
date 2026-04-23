@@ -11,6 +11,7 @@ export function getStaticPaths() {
 
 const { item } = Astro.props;
 const cardMedia = item.gallery?.length ? item.gallery : ['/assets/images/placeholders/street-furniture.svg'];
+const isPriceOnRequest = (price: string) => price.trim().toLowerCase() === 'по запросу';
 ---
 <BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.shortDescription}>
   <div class="breadcrumbs-bar">
@@ -40,8 +41,7 @@ const cardMedia = item.gallery?.length ? item.gallery : ['/assets/images/placeho
             <div class="product-showcase-card__body">
               <h3>{product.name}</h3>
               <p class="product-showcase-card__descriptor">{product.descriptor}</p>
-              <p class="product-showcase-card__price">{product.price}</p>
-              <a class="btn btn-primary" href="#direct-contact">Уточнить стоимость</a>
+              <p class="product-showcase-card__price">{isPriceOnRequest(product.price) ? 'Цена по запросу' : product.price}</p>
             </div>
           </article>
         ))}
