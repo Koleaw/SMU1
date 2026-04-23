@@ -4,26 +4,104 @@ import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { withBase } from '../utils/withBase';
 ---
-<BaseLayout title="Ограждения и заборы — СМУ-1" description="Ограждения, заборы, калитки и ворота под задачи безопасности и эксплуатации.">
+<BaseLayout title="Ограждения и заборы — СМУ-1" description="Проектируем и изготавливаем ограждения для частных, коммерческих и общественных объектов под задачу, размеры и условия эксплуатации.">
   <div class="breadcrumbs-bar">
     <div class="container">
       <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Ограждения и заборы' }]} />
     </div>
   </div>
 
-  <Hero className="hero--catalog hero--catalog-clean" title="Ограждения и заборы" description="Ограждения, заборы, калитки и ворота под задачи безопасности и эксплуатации." />
+  <Hero
+    className="hero--catalog hero--catalog-clean"
+    title="Ограждения под заказ"
+    description="Проектируем и изготавливаем ограждения для частных, коммерческих и общественных объектов. Подбираем конструкцию под задачу, размеры и условия эксплуатации."
+  />
 
   <section class="section">
     <div class="container">
-      <article class="card">
-        <h2>Что изготавливаем</h2>
-        <ul>
-          <li>заборы</li>
-          <li>секционные ограждения</li>
-          <li>декоративные ограждения</li>
-          <li>ограждения для частных территорий</li>
-          <li>ограждения для коммерческих объектов</li>
-          <li>ограждения по индивидуальным размерам и задачам</li>
+      <div class="section-heading">
+        <h2 class="section-title">Что изготавливаем</h2>
+      </div>
+      <div class="ograzhdeniya-solutions-grid">
+        <article class="ograzhdeniya-solution-card">
+          <div class="media-block placeholder placeholder--card">
+            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Заборы" loading="lazy" />
+            <p class="media-caption">Фото по направлению добавляются.</p>
+          </div>
+          <h3>Заборы</h3>
+          <p>Базовые и усиленные решения для ограждения частных и коммерческих участков.</p>
+        </article>
+        <article class="ograzhdeniya-solution-card">
+          <div class="media-block placeholder placeholder--card">
+            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Секционные ограждения" loading="lazy" />
+            <p class="media-caption">Фото по направлению добавляются.</p>
+          </div>
+          <h3>Секционные ограждения</h3>
+          <p>Секции под требуемую длину периметра, тип крепления и условия монтажа.</p>
+        </article>
+        <article class="ograzhdeniya-solution-card">
+          <div class="media-block placeholder placeholder--card">
+            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Декоративные ограждения" loading="lazy" />
+            <p class="media-caption">Фото по направлению добавляются.</p>
+          </div>
+          <h3>Декоративные ограждения</h3>
+          <p>Акцентные конструкции для дворов, входных зон и общественных пространств.</p>
+        </article>
+        <article class="ograzhdeniya-solution-card">
+          <div class="media-block placeholder placeholder--card">
+            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Ограждения для частных территорий" loading="lazy" />
+            <p class="media-caption">Фото по направлению добавляются.</p>
+          </div>
+          <h3>Для частных территорий</h3>
+          <p>Форматы для домов и участков с учетом приватности, проездов и рельефа.</p>
+        </article>
+        <article class="ograzhdeniya-solution-card">
+          <div class="media-block placeholder placeholder--card">
+            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Ограждения для коммерческих объектов" loading="lazy" />
+            <p class="media-caption">Фото по направлению добавляются.</p>
+          </div>
+          <h3>Для коммерческих объектов</h3>
+          <p>Ограждения для территорий бизнеса с учетом режима эксплуатации и безопасности.</p>
+        </article>
+        <article class="ograzhdeniya-solution-card">
+          <div class="media-block placeholder placeholder--card">
+            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Нестандартные ограждения" loading="lazy" />
+            <p class="media-caption">Фото по направлению добавляются.</p>
+          </div>
+          <h3>Нестандартные ограждения</h3>
+          <p>Изготовление по индивидуальным размерам, задаче объекта, ТЗ или чертежу.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--soft">
+    <div class="container">
+      <article class="card ograzhdeniya-compact-panel">
+        <h2>Где применяются</h2>
+        <ul class="ograzhdeniya-list">
+          <li>частные дома и участки</li>
+          <li>многоквартирные дома</li>
+          <li>общественные пространства</li>
+          <li>коммерческие территории</li>
+          <li>производственные и складские объекты</li>
+          <li>периметральное ограждение и благоустройство</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <article class="card ograzhdeniya-compact-panel">
+        <h2>Что влияет на стоимость</h2>
+        <ul class="ograzhdeniya-list">
+          <li>размеры и протяженность</li>
+          <li>тип конструкции</li>
+          <li>материал изготовления</li>
+          <li>тип заполнения</li>
+          <li>покрытие и окраска</li>
+          <li>монтаж / логистика / индивидуальные требования</li>
         </ul>
       </article>
     </div>
@@ -31,16 +109,8 @@ import { withBase } from '../utils/withBase';
 
   <section class="section section--soft">
     <div class="container">
-      <article class="card">
-        <h2>Где применяются</h2>
-        <ul>
-          <li>частные дома и участки</li>
-          <li>многоквартирные дома</li>
-          <li>общественные пространства</li>
-          <li>коммерческие территории</li>
-          <li>производственные и складские объекты</li>
-          <li>благоустройство и периметральное ограждение</li>
-        </ul>
+      <article class="card ograzhdeniya-trust-note">
+        <p class="lead">Работаем по размерам объекта, ТЗ, референсу или чертежу. Подбираем конструкцию под задачу и условия эксплуатации.</p>
       </article>
     </div>
   </section>
@@ -75,3 +145,66 @@ import { withBase } from '../utils/withBase';
     </div>
   </section>
 </BaseLayout>
+
+<style>
+  .ograzhdeniya-solutions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .ograzhdeniya-solution-card {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-base);
+    background: var(--color-surface);
+  }
+
+  .ograzhdeniya-solution-card h3 {
+    font-size: clamp(22px, 2vw, 24px);
+  }
+
+  .ograzhdeniya-solution-card p {
+    color: var(--color-text-secondary);
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .ograzhdeniya-solution-card .media-caption {
+    min-height: 36px;
+  }
+
+  .ograzhdeniya-compact-panel {
+    max-width: 920px;
+    gap: 12px;
+  }
+
+  .ograzhdeniya-list {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    gap: 6px;
+  }
+
+  .ograzhdeniya-trust-note {
+    max-width: 920px;
+  }
+
+  .ograzhdeniya-trust-note .lead {
+    max-width: none;
+  }
+
+  @media (max-width: 1024px) {
+    .ograzhdeniya-solutions-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 700px) {
+    .ograzhdeniya-solutions-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
