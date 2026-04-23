@@ -701,6 +701,73 @@ small {
   color: #f6f6f6;
 }
 
+.section--dark .card,
+.section--dark .workflow-step,
+.section--dark .product-showcase-card,
+.section--dark .category-choice-card,
+.section--dark .object-list-card,
+[data-section-theme='dark'] .card,
+[data-section-theme='dark'] .workflow-step {
+  background: var(--color-panel-dark);
+  border-color: var(--color-border-dark);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+}
+
+.section--dark .card:hover,
+.section--dark .workflow-step:hover,
+.section--dark .product-showcase-card:hover,
+.section--dark .category-choice-card:hover,
+.section--dark .object-list-card:hover,
+[data-section-theme='dark'] .card:hover,
+[data-section-theme='dark'] .workflow-step:hover {
+  border-color: #3a4650;
+  box-shadow: 0 5px 14px rgb(0 0 0 / 24%);
+}
+
+.section--dark .card h2,
+.section--dark .card h3,
+.section--dark .card p,
+.section--dark .card li,
+.section--dark .workflow-step h3,
+.section--dark .workflow-step p,
+.section--dark .category-choice-card__body p,
+.section--dark .product-showcase-card__descriptor,
+.section--dark .product-showcase-card__price,
+.section--dark .object-list-card__body p,
+[data-section-theme='dark'] .card h2,
+[data-section-theme='dark'] .card h3,
+[data-section-theme='dark'] .card p,
+[data-section-theme='dark'] .card li,
+[data-section-theme='dark'] .workflow-step h3,
+[data-section-theme='dark'] .workflow-step p {
+  color: #f2f5f7;
+}
+
+.section--dark .card .lead,
+.section--dark .workflow-step .lead,
+.section--dark .category-choice-card__body p,
+.section--dark .product-showcase-card__descriptor,
+.section--dark .object-list-card__body p,
+[data-section-theme='dark'] .card .lead,
+[data-section-theme='dark'] .workflow-step .lead {
+  color: rgb(242 245 247 / 86%);
+}
+
+.section--dark .btn-secondary,
+[data-section-theme='dark'] .btn-secondary {
+  background: #11181f;
+  border-color: var(--color-border-dark);
+  color: #f2f5f7;
+}
+
+.section--dark .btn-secondary:hover,
+.section--dark .btn-secondary:focus-visible,
+[data-section-theme='dark'] .btn-secondary:hover,
+[data-section-theme='dark'] .btn-secondary:focus-visible {
+  background: #17202a;
+  border-color: #3a4650;
+}
+
 .section-heading {
   margin-bottom: 32px;
   display: grid;
@@ -1923,8 +1990,8 @@ small {
 
 .project-dark-band .workflow-step,
 .project-dark-band .card {
-  background: #ffffff;
-  border: 1px solid #1c2733;
+  background: var(--color-panel-dark);
+  border: 1px solid var(--color-border-dark);
 }
 
 .project-dark-band .workflow-step h3,
@@ -1932,7 +1999,7 @@ small {
 .project-dark-band .card h2,
 .project-dark-band .card p,
 .project-dark-band .card li {
-  color: var(--color-text);
+  color: #f2f5f7;
 }
 
 #project-workflow.project-dark-band + #project-targets.project-dark-band {
