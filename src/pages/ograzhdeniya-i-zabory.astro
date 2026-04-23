@@ -17,7 +17,7 @@ import { withBase } from '../utils/withBase';
     description="Проектируем и изготавливаем ограждения для частных, коммерческих и общественных объектов. Подбираем конструкцию под задачу, размеры и условия эксплуатации."
   />
 
-  <section class="section">
+  <section class="section ograzhdeniya-section">
     <div class="container">
       <div class="section-heading">
         <h2 class="section-title">Что изготавливаем</h2>
@@ -75,7 +75,7 @@ import { withBase } from '../utils/withBase';
     </div>
   </section>
 
-  <section class="section section--soft">
+  <section class="section section--soft ograzhdeniya-section">
     <div class="container">
       <article class="card ograzhdeniya-compact-panel">
         <h2>Где применяются</h2>
@@ -91,7 +91,7 @@ import { withBase } from '../utils/withBase';
     </div>
   </section>
 
-  <section class="section">
+  <section class="section section--dark ograzhdeniya-section" data-section-theme="dark">
     <div class="container">
       <article class="card ograzhdeniya-compact-panel">
         <h2>Что влияет на стоимость</h2>
@@ -104,29 +104,8 @@ import { withBase } from '../utils/withBase';
           <li>монтаж / логистика / индивидуальные требования</li>
         </ul>
       </article>
-    </div>
-  </section>
-
-  <section class="section section--soft">
-    <div class="container">
       <article class="card ograzhdeniya-trust-note">
         <p class="lead">Работаем по размерам объекта, ТЗ, референсу или чертежу. Подбираем конструкцию под задачу и условия эксплуатации.</p>
-      </article>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="container">
-      <article class="card">
-        <h2>Что влияет на стоимость</h2>
-        <ul>
-          <li>размеры и протяженность</li>
-          <li>тип конструкции</li>
-          <li>материал изготовления</li>
-          <li>тип заполнения</li>
-          <li>покрытие и окраска</li>
-          <li>монтаж / логистика / индивидуальные требования</li>
-        </ul>
       </article>
     </div>
   </section>
@@ -147,19 +126,31 @@ import { withBase } from '../utils/withBase';
 </BaseLayout>
 
 <style>
+  .ograzhdeniya-section {
+    padding-block: clamp(42px, 7vw, 68px);
+  }
+
   .ograzhdeniya-solutions-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
+    gap: 14px;
   }
 
   .ograzhdeniya-solution-card {
     display: grid;
-    gap: 10px;
+    gap: 8px;
     padding: 14px;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-base);
     background: var(--color-surface);
+  }
+
+  .ograzhdeniya-solution-card .media-block {
+    box-shadow: none;
+  }
+
+  .ograzhdeniya-solution-card .media-thumb {
+    aspect-ratio: 16 / 9;
   }
 
   .ograzhdeniya-solution-card h3 {
@@ -179,6 +170,10 @@ import { withBase } from '../utils/withBase';
   .ograzhdeniya-compact-panel {
     max-width: 920px;
     gap: 12px;
+  }
+
+  .ograzhdeniya-compact-panel + .ograzhdeniya-trust-note {
+    margin-top: 14px;
   }
 
   .ograzhdeniya-list {
