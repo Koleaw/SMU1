@@ -2,7 +2,6 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import DirectContactBlock from '../components/DirectContactBlock.astro';
 import { withBase } from '../utils/withBase';
 ---
 <BaseLayout title="Ограждения и заборы — СМУ-1" description="Ограждения, заборы, калитки и ворота под задачи безопасности и эксплуатации.">
@@ -14,10 +13,65 @@ import { withBase } from '../utils/withBase';
 
   <Hero className="hero--catalog hero--catalog-clean" title="Ограждения и заборы" description="Ограждения, заборы, калитки и ворота под задачи безопасности и эксплуатации." />
 
-  <section class="section"><div class="container grid grid-2">
-    <article class="card"><h2>Форматы решений</h2><ul><li>секционные и сварные ограждения</li><li>заборы для коммерческих территорий</li><li>калитки и ворота</li><li>комбинированные решения</li></ul></article>
-    <article class="card"><h2>Логика цены</h2><p class="lead">Для типовых секций возможна модель «цена от». Для проектных конфигураций — «по запросу» после уточнения параметров.</p></article>
-  </div></section>
+  <section class="section">
+    <div class="container">
+      <article class="card">
+        <h2>Что изготавливаем</h2>
+        <ul>
+          <li>заборы</li>
+          <li>секционные ограждения</li>
+          <li>декоративные ограждения</li>
+          <li>ограждения для частных территорий</li>
+          <li>ограждения для коммерческих объектов</li>
+          <li>ограждения по индивидуальным размерам и задачам</li>
+        </ul>
+      </article>
+    </div>
+  </section>
 
-  <DirectContactBlock />
+  <section class="section section--soft">
+    <div class="container">
+      <article class="card">
+        <h2>Где применяются</h2>
+        <ul>
+          <li>частные дома и участки</li>
+          <li>многоквартирные дома</li>
+          <li>общественные пространства</li>
+          <li>коммерческие территории</li>
+          <li>производственные и складские объекты</li>
+          <li>благоустройство и периметральное ограждение</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <article class="card">
+        <h2>Что влияет на стоимость</h2>
+        <ul>
+          <li>размеры и протяженность</li>
+          <li>тип конструкции</li>
+          <li>материал изготовления</li>
+          <li>тип заполнения</li>
+          <li>покрытие и окраска</li>
+          <li>монтаж / логистика / индивидуальные требования</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section id="direct-contact" class="section">
+    <div class="container">
+      <article class="home-contact-card">
+        <h2 class="section-title">Свяжитесь с нами напрямую</h2>
+        <p class="lead">Напишите в Telegram, на почту или позвоните — уточним задачу и подготовим расчет под ваш объект.</p>
+        <div class="home-contact-actions">
+          <a class="btn btn-primary" href="https://t.me/smu1build" target="_blank" rel="noreferrer">@smu1build · Написать в Telegram</a>
+          <a class="btn btn-secondary" href="mailto:smu1.kurgan@yandex.ru">smu1.kurgan@yandex.ru · Написать на почту</a>
+          <a class="btn btn-secondary" href="tel:+79129735006">+7 (912) 973-50-06 · Позвонить</a>
+        </div>
+      </article>
+    </div>
+  </section>
 </BaseLayout>
