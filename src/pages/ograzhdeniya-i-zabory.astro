@@ -2,7 +2,6 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import DirectContactBlock from '../components/DirectContactBlock.astro';
 import { withBase } from '../utils/withBase';
 ---
 <BaseLayout title="Ограждения и заборы — СМУ-1" description="Проектируем и изготавливаем ограждения для частных, коммерческих и общественных объектов под задачу, размеры и условия эксплуатации.">
@@ -116,7 +115,35 @@ import { withBase } from '../utils/withBase';
     </div>
   </section>
 
-  <DirectContactBlock />
+  <section class="section">
+    <div class="container">
+      <article class="card">
+        <h2>Что влияет на стоимость</h2>
+        <ul>
+          <li>размеры и протяженность</li>
+          <li>тип конструкции</li>
+          <li>материал изготовления</li>
+          <li>тип заполнения</li>
+          <li>покрытие и окраска</li>
+          <li>монтаж / логистика / индивидуальные требования</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section id="direct-contact" class="section">
+    <div class="container">
+      <article class="home-contact-card">
+        <h2 class="section-title">Свяжитесь с нами напрямую</h2>
+        <p class="lead">Напишите в Telegram, на почту или позвоните — уточним задачу и подготовим расчет под ваш объект.</p>
+        <div class="home-contact-actions">
+          <a class="btn btn-primary" href="https://t.me/smu1build" target="_blank" rel="noreferrer">@smu1build · Написать в Telegram</a>
+          <a class="btn btn-secondary" href="mailto:smu1.kurgan@yandex.ru">smu1.kurgan@yandex.ru · Написать на почту</a>
+          <a class="btn btn-secondary" href="tel:+79129735006">+7 (912) 973-50-06 · Позвонить</a>
+        </div>
+      </article>
+    </div>
+  </section>
 </BaseLayout>
 
 <style>
