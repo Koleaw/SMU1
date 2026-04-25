@@ -1,0 +1,102 @@
+---
+import { withBase } from '../utils/withBase';
+---
+<div class="cookie-banner" data-cookie-banner hidden>
+  <p>
+    Сайт использует Яндекс Метрику и аналитические cookies для анализа посещаемости и улучшения работы сайта.
+    Вы можете принять аналитические cookies или оставить только необходимые.
+  </p>
+  <div class="cookie-banner__actions">
+    <a href={withBase('/politika-konfidencialnosti/')} class="cookie-banner__more">Политика конфиденциальности</a>
+    <div class="cookie-banner__buttons">
+      <button type="button" class="btn btn-secondary" data-consent-choice="necessary">Только необходимые</button>
+      <button type="button" class="btn btn-primary" data-consent-choice="accepted">Принять</button>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  (() => {
+    const consentKey = 'smu1_cookie_consent';
+    const banner = document.querySelector('[data-cookie-banner]');
+    if (!banner) return;
+
+    const hideBanner = () => {
+      banner.hidden = true;
+      banner.setAttribute('hidden', 'hidden');
+    };
+
+    const showBanner = () => {
+      banner.hidden = false;
+      banner.removeAttribute('hidden');
+    };
+
+    const readConsent = () => {
+      try {
+        return localStorage.getItem(consentKey);
+      } catch {
+        return null;
+      }
+    };
+
+    const writeConsent = (value) => {
+      try {
+        localStorage.setItem(consentKey, value);
+      } catch {
+        // storage может быть недоступен, но кнопки должны продолжать работать
+      }
+    };
+
+    const clearConsent = () => {
+      try {
+        localStorage.removeItem(consentKey);
+      } catch {
+        // ignore
+      }
+    };
+
+    const applyChoice = (value) => {
+      if (value !== 'accepted' && value !== 'necessary') return;
+      writeConsent(value);
+      hideBanner();
+      document.dispatchEvent(new CustomEvent('smu1:cookie-consent-changed', { detail: value }));
+    };
+
+    const savedValue = readConsent();
+    if (savedValue === 'accepted' || savedValue === 'necessary') {
+      hideBanner();
+    } else {
+      showBanner();
+    }
+
+    banner.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      const choiceTrigger = target.closest('[data-consent-choice]');
+      if (!choiceTrigger) return;
+
+      event.preventDefault();
+      applyChoice(choiceTrigger.getAttribute('data-consent-choice'));
+    });
+
+    const openCookieSettings = () => {
+      clearConsent();
+      showBanner();
+      banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    window.smu1OpenCookieSettings = openCookieSettings;
+
+    document.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      const trigger = target.closest('[data-open-cookie-settings]');
+      if (!trigger) return;
+
+      event.preventDefault();
+      openCookieSettings();
+    });
+  })();
+</script>
