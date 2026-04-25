@@ -14,9 +14,11 @@ import { withBase } from '../utils/withBase';
       <p>Дата регистрации: {settings.registrationDate}</p>
     </div>
 
-    <div class="footer-requisites">
-      <p><strong>Юридический адрес:</strong></p>
-      <p>{settings.legalAddress}</p>
+    <div class="footer-company-links">
+      <p><strong>Компания:</strong></p>
+      <a href={withBase('/vypolnennye-obekty/')}>Выполненные объекты</a>
+      <a href={withBase('/kontakty/')}>Контакты</a>
+      <a href={withBase('/vakansii/')}>Вакансии</a>
     </div>
 
     <div class="footer-contacts">
