@@ -7,12 +7,85 @@ import SectionNavigator from '../components/SectionNavigator.astro';
 import DirectContactBlock from '../components/DirectContactBlock.astro';
 import { withBase } from '../utils/withBase';
 
-const sectionNavItems = [
+const defaultProjectNavItems = [
   { id: 'project-scope', label: 'Что решаем и состав услуги' },
   { id: 'project-workflow', label: 'Как работаем' },
   { id: 'project-targets', label: 'Для каких объектов' },
   { id: 'direct-contact', label: 'Связаться напрямую' }
 ];
+
+const navesyContent = {
+  navItems: [
+    { id: 'navesy-types', label: 'Какие навесы делаем' },
+    { id: 'navesy-targets', label: 'Для каких объектов' },
+    { id: 'navesy-workflow', label: 'Как работаем' },
+    { id: 'navesy-pricing', label: 'Что влияет на стоимость' },
+    { id: 'direct-contact', label: 'Связаться напрямую' }
+  ],
+  canopyTypes: [
+    {
+      title: 'Входные навесы',
+      description: 'Для крылец, проходов, входных групп и зон перед дверями.'
+    },
+    {
+      title: 'Навесы для велопарковок',
+      description: 'Крытые решения для велосипедов у ЖК, офисов, школ и предприятий.'
+    },
+    {
+      title: 'Навесы для контейнерных площадок',
+      description: 'Кровля и защитные конструкции для площадок ТКО и хозяйственных зон.'
+    },
+    {
+      title: 'Навесы для зон ожидания',
+      description: 'Для проходных, остановок, территорий предприятий и общественных пространств.'
+    },
+    {
+      title: 'Парковочные навесы',
+      description: 'Для автомобилей, спецтехники и хозяйственных площадок.'
+    },
+    {
+      title: 'Теневые навесы',
+      description: 'Для дворов, парков, зон отдыха и общественных пространств.'
+    },
+    {
+      title: 'Хозяйственные навесы',
+      description: 'Для складских, производственных и технических зон.'
+    },
+    {
+      title: 'Павильоны и укрытия',
+      description: 'Индивидуальные конструкции под задачу объекта.'
+    }
+  ],
+  objectTypes: [
+    'частные дома и участки',
+    'многоквартирные дома и дворы',
+    'коммерческие территории',
+    'предприятия и складские объекты',
+    'общественные пространства',
+    'базы отдыха и загородные объекты',
+    'контейнерные площадки и хозяйственные зоны'
+  ],
+  workflow: [
+    'уточняем назначение и габариты',
+    'учитываем основание, крепление и условия монтажа',
+    'подбираем конструкцию каркаса и тип кровли',
+    'согласуем внешний вид, цвет и покрытие',
+    'изготавливаем и монтируем конструкцию'
+  ],
+  costFactors: [
+    'габариты и площадь покрытия',
+    'количество опор и схема каркаса',
+    'материал каркаса',
+    'тип кровли',
+    'боковые экраны и ограждения',
+    'покрытие и окраска',
+    'основание, монтаж и условия объекта',
+    'индивидуальные требования к внешнему виду'
+  ],
+  contactTitle: 'Нужен навес под конкретный объект?',
+  contactDescription:
+    'Напишите нам, и мы подберем конструкцию под размеры площадки, назначение, внешний вид территории и условия монтажа.'
+};
 
 export async function getStaticPaths() {
   const productSections = await getCollection('product-sections');
@@ -32,6 +105,9 @@ export async function getStaticPaths() {
 const { item, itemType } = Astro.props;
 const isCatalogHub = itemType === 'product-section' && item.mode === 'catalog-hub';
 const isProjectDirection = itemType === 'product-section' && item.mode === 'custom-direction';
+const isNavesyPage = itemType === 'product-section' && item.slug === 'navesy-i-kozyrki';
+
+const sectionNavItems = isNavesyPage ? navesyContent.navItems : defaultProjectNavItems;
 
 const categories = isCatalogHub
   ? (await getCollection('product-categories'))
@@ -40,10 +116,15 @@ const categories = isCatalogHub
       .sort((a, b) => a.order - b.order)
   : [];
 
-const contactTitle =
-  item.slug === 'ograzhdeniya-i-zabory' ? 'Нужно ограждение под конкретный объект?' : 'Не нашли, что искали?';
-const contactDescription =
-  item.slug === 'ograzhdeniya-i-zabory'
+const contactTitle = isNavesyPage
+  ? navesyContent.contactTitle
+  : item.slug === 'ograzhdeniya-i-zabory'
+    ? 'Нужно ограждение под конкретный объект?'
+    : 'Не нашли, что искали?';
+
+const contactDescription = isNavesyPage
+  ? navesyContent.contactDescription
+  : item.slug === 'ograzhdeniya-i-zabory'
     ? 'Напишите нам, и мы подберем конструкцию под размеры, задачу, внешний вид территории и условия монтажа.'
     : 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.';
 ---
@@ -58,12 +139,12 @@ const contactDescription =
 
   <Hero
     kicker={isCatalogHub ? 'Каталог направлений' : 'Проектное направление'}
-    className={isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
+    className={isNavesyPage ? 'hero--media navesy-hero' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
     title={item.heroTitle}
     description={item.heroDescription}
     mediaImage={isCatalogHub ? undefined : withBase(item.image)}
     mediaAlt={isCatalogHub ? undefined : item.title}
-    mediaCaption={isCatalogHub ? undefined : item.placeholderLabel}
+    mediaCaption={isCatalogHub || isNavesyPage ? undefined : item.placeholderLabel}
   />
 
   {isCatalogHub ? (
@@ -104,6 +185,63 @@ const contactDescription =
               <li>покрытие и цвет;</li>
               <li>ворота, калитки и фурнитура;</li>
               <li>монтаж и условия объекта.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+    </>
+  ) : isNavesyPage ? (
+    <>
+      <section id="navesy-types" class="section section--dark" data-section-theme="dark">
+        <div class="container">
+          <div class="section-heading section-heading--light">
+            <h2 class="section-title">Какие навесы делаем</h2>
+          </div>
+          <div class="navesy-type-grid">
+            {navesyContent.canopyTypes.map((canopyType) => (
+              <article class="card navesy-type-card">
+                <h3>{canopyType.title}</h3>
+                <p>{canopyType.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="navesy-targets" class="section section--soft navesy-section-compact">
+        <div class="container">
+          <article class="card navesy-panel">
+            <h2>Для каких объектов</h2>
+            <ul class="navesy-columns-list">
+              {navesyContent.objectTypes.map((objectType) => (
+                <li>{objectType}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="navesy-workflow" class="section navesy-section-compact">
+        <div class="container navesy-workflow-layout">
+          <article class="card navesy-panel navesy-process-card">
+            <h2>Как работаем</h2>
+            <ol>
+              {navesyContent.workflow.map((step) => (
+                <li>{step}</li>
+              ))}
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section id="navesy-pricing" class="section section--dark navesy-section-compact" data-section-theme="dark">
+        <div class="container">
+          <article class="card navesy-panel navesy-pricing-panel">
+            <h2>Что влияет на стоимость</h2>
+            <ul class="navesy-columns-list navesy-columns-list--pricing">
+              {navesyContent.costFactors.map((factor) => (
+                <li>{factor}</li>
+              ))}
             </ul>
           </article>
         </div>
@@ -160,3 +298,121 @@ const contactDescription =
 
   <DirectContactBlock title={contactTitle} description={contactDescription} />
 </BaseLayout>
+
+<style>
+  .navesy-section-compact {
+    --section-gap-desktop: 72px;
+    --section-gap-tablet: 56px;
+    --section-gap-mobile: 44px;
+  }
+
+  .navesy-hero :global(.hero-content) {
+    max-width: 760px;
+  }
+
+  .navesy-hero :global(.hero-description) {
+    max-width: 60ch;
+    color: rgb(255 255 255 / 92%);
+  }
+
+  .navesy-type-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .navesy-type-card {
+    align-content: start;
+    min-height: 172px;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .navesy-type-card h3 {
+    font-size: 22px;
+    line-height: 1.2;
+  }
+
+  .navesy-type-card p {
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .navesy-panel {
+    gap: 14px;
+    padding: 20px;
+  }
+
+  .navesy-columns-list {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 20px;
+  }
+
+  .navesy-columns-list li {
+    margin: 0;
+  }
+
+  .navesy-workflow-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 860px);
+    gap: 20px;
+    align-items: start;
+    justify-content: start;
+  }
+
+  .navesy-process-card ol {
+    margin: 0;
+    padding-left: 22px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .navesy-process-card li,
+  .navesy-pricing-panel li {
+    line-height: 1.45;
+  }
+
+  .navesy-columns-list--pricing {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 1200px) {
+    .navesy-type-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 900px) {
+    .navesy-type-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .navesy-columns-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .navesy-workflow-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .navesy-type-grid,
+    .navesy-columns-list,
+    .navesy-columns-list--pricing {
+      grid-template-columns: 1fr;
+    }
+
+    .navesy-type-card {
+      min-height: 0;
+    }
+
+    .navesy-panel {
+      padding: 16px;
+    }
+  }
+</style>
