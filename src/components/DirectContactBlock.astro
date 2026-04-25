@@ -2,11 +2,17 @@
 interface Props {
   title?: string;
   description?: string;
+  telegramLabel?: string;
+  emailLabel?: string;
+  phoneLabel?: string;
 }
 
 const {
   title = 'Не нашли, что искали?',
-  description = 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.'
+  description = 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.',
+  telegramLabel = '@smu1build · Написать в Telegram',
+  emailLabel = 'smu1.kurgan@yandex.ru · Написать на почту',
+  phoneLabel = '+7 (912) 973-50-06 · Позвонить'
 } = Astro.props as Props;
 ---
 <section id="direct-contact" class="section">
@@ -15,9 +21,9 @@ const {
       <h2 class="section-title">{title}</h2>
       <p class="lead">{description}</p>
       <div class="home-contact-actions">
-        <a class="btn btn-primary" href="https://t.me/smu1build" target="_blank" rel="noreferrer">@smu1build · Написать в Telegram</a>
-        <a class="btn btn-secondary" href="mailto:smu1.kurgan@yandex.ru">smu1.kurgan@yandex.ru · Написать на почту</a>
-        <a class="btn btn-secondary" href="tel:+79129735006">+7 (912) 973-50-06 · Позвонить</a>
+        <a class="btn btn-primary" href="https://t.me/smu1build" target="_blank" rel="noreferrer">{telegramLabel}</a>
+        <a class="btn btn-secondary" href="mailto:smu1.kurgan@yandex.ru">{emailLabel}</a>
+        <a class="btn btn-secondary" href="tel:+79129735006">{phoneLabel}</a>
       </div>
     </article>
   </div>
