@@ -7,12 +7,61 @@ import SectionNavigator from '../components/SectionNavigator.astro';
 import DirectContactBlock from '../components/DirectContactBlock.astro';
 import { withBase } from '../utils/withBase';
 
-const sectionNavItems = [
+const defaultProjectNavItems = [
   { id: 'project-scope', label: 'Что решаем и состав услуги' },
   { id: 'project-workflow', label: 'Как работаем' },
   { id: 'project-targets', label: 'Для каких объектов' },
   { id: 'direct-contact', label: 'Связаться напрямую' }
 ];
+
+const navesyContent = {
+  navItems: [
+    { id: 'navesy-types', label: 'Какие навесы делаем' },
+    { id: 'navesy-targets', label: 'Для каких объектов' },
+    { id: 'navesy-workflow', label: 'Как работаем' },
+    { id: 'navesy-pricing', label: 'Что влияет на стоимость' },
+    { id: 'direct-contact', label: 'Связаться напрямую' }
+  ],
+  canopyTypes: [
+    'входные навесы',
+    'навесы для велопарковок',
+    'навесы для контейнерных площадок',
+    'навесы для зон ожидания',
+    'парковочные навесы',
+    'теневые навесы для дворов и общественных пространств',
+    'навесы для хозяйственных и производственных зон',
+    'павильоны и укрытия по индивидуальной задаче'
+  ],
+  objectTypes: [
+    'частные дома и участки',
+    'многоквартирные дома и дворы',
+    'коммерческие территории',
+    'предприятия и складские объекты',
+    'общественные пространства',
+    'базы отдыха и загородные объекты',
+    'контейнерные площадки и хозяйственные зоны'
+  ],
+  workflow: [
+    'уточняем назначение и габариты',
+    'учитываем основание, крепление и условия монтажа',
+    'подбираем конструкцию каркаса и тип кровли',
+    'согласуем внешний вид, цвет и покрытие',
+    'изготавливаем и монтируем конструкцию'
+  ],
+  costFactors: [
+    'габариты и площадь покрытия',
+    'количество опор и схема каркаса',
+    'материал каркаса',
+    'тип кровли',
+    'боковые экраны и ограждения',
+    'покрытие и окраска',
+    'основание, монтаж и условия объекта',
+    'индивидуальные требования к внешнему виду'
+  ],
+  contactTitle: 'Нужен навес под конкретный объект?',
+  contactDescription:
+    'Напишите нам, и мы подберем конструкцию под размеры площадки, назначение, внешний вид территории и условия монтажа.'
+};
 
 export async function getStaticPaths() {
   const productSections = await getCollection('product-sections');
@@ -32,6 +81,9 @@ export async function getStaticPaths() {
 const { item, itemType } = Astro.props;
 const isCatalogHub = itemType === 'product-section' && item.mode === 'catalog-hub';
 const isProjectDirection = itemType === 'product-section' && item.mode === 'custom-direction';
+const isNavesyPage = itemType === 'product-section' && item.slug === 'navesy-i-kozyrki';
+
+const sectionNavItems = isNavesyPage ? navesyContent.navItems : defaultProjectNavItems;
 
 const categories = isCatalogHub
   ? (await getCollection('product-categories'))
@@ -40,10 +92,15 @@ const categories = isCatalogHub
       .sort((a, b) => a.order - b.order)
   : [];
 
-const contactTitle =
-  item.slug === 'ograzhdeniya-i-zabory' ? 'Нужно ограждение под конкретный объект?' : 'Не нашли, что искали?';
-const contactDescription =
-  item.slug === 'ograzhdeniya-i-zabory'
+const contactTitle = isNavesyPage
+  ? navesyContent.contactTitle
+  : item.slug === 'ograzhdeniya-i-zabory'
+    ? 'Нужно ограждение под конкретный объект?'
+    : 'Не нашли, что искали?';
+
+const contactDescription = isNavesyPage
+  ? navesyContent.contactDescription
+  : item.slug === 'ograzhdeniya-i-zabory'
     ? 'Напишите нам, и мы подберем конструкцию под размеры, задачу, внешний вид территории и условия монтажа.'
     : 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.';
 ---
@@ -58,12 +115,12 @@ const contactDescription =
 
   <Hero
     kicker={isCatalogHub ? 'Каталог направлений' : 'Проектное направление'}
-    className={isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
+    className={isNavesyPage ? 'hero--catalog hero--catalog-clean' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
     title={item.heroTitle}
     description={item.heroDescription}
-    mediaImage={isCatalogHub ? undefined : withBase(item.image)}
-    mediaAlt={isCatalogHub ? undefined : item.title}
-    mediaCaption={isCatalogHub ? undefined : item.placeholderLabel}
+    mediaImage={isCatalogHub || isNavesyPage ? undefined : withBase(item.image)}
+    mediaAlt={isCatalogHub || isNavesyPage ? undefined : item.title}
+    mediaCaption={isCatalogHub || isNavesyPage ? undefined : item.placeholderLabel}
   />
 
   {isCatalogHub ? (
@@ -104,6 +161,62 @@ const contactDescription =
               <li>покрытие и цвет;</li>
               <li>ворота, калитки и фурнитура;</li>
               <li>монтаж и условия объекта.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+    </>
+  ) : isNavesyPage ? (
+    <>
+      <section id="navesy-types" class="section">
+        <div class="container">
+          <div class="section-heading">
+            <h2 class="section-title">Какие навесы делаем</h2>
+          </div>
+          <div class="grid grid-3">
+            {navesyContent.canopyTypes.map((itemName) => (
+              <article class="card">
+                <p>{itemName}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="navesy-targets" class="section section--soft">
+        <div class="container">
+          <article class="card">
+            <h2>Для каких объектов</h2>
+            <ul>
+              {navesyContent.objectTypes.map((objectType) => (
+                <li>{objectType}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="navesy-workflow" class="section">
+        <div class="container">
+          <article class="card">
+            <h2>Как работаем</h2>
+            <ul>
+              {navesyContent.workflow.map((step) => (
+                <li>{step}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="navesy-pricing" class="section section--soft">
+        <div class="container">
+          <article class="card catalog-price-factors">
+            <h2>Что влияет на стоимость</h2>
+            <ul>
+              {navesyContent.costFactors.map((factor) => (
+                <li>{factor}</li>
+              ))}
             </ul>
           </article>
         </div>
