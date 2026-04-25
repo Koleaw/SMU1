@@ -28,6 +28,7 @@ const { item } = Astro.props;
     title={item.title}
     description={`${item.shortDescription} · ${item.city}, ${item.year}`}
     primaryLabel="Обсудить похожую задачу"
+    primaryHref={withBase('/kontakty/')}
     secondaryLabel="Все объекты"
     secondaryHref={withBase('/vypolnennye-obekty/')}
   />
