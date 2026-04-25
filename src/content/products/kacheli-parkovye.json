@@ -1,0 +1,17 @@
+{
+  "title": "Качели парковые",
+  "slug": "kacheli-parkovye",
+  "productCategorySlug": "kachali-shezlongi-pergoly",
+  "shortDescription": "Металлокаркас с защитным покрытием.",
+  "leadText": "Для зон отдыха и общественных пространств.",
+  "priceMode": "on_request",
+  "priceFrom": null,
+  "currency": "RUB",
+  "image": "/assets/images/placeholders/street-furniture.svg",
+  "placeholderLabel": "Фото изделия будут обновлены в мае.",
+  "order": 1,
+  "isActive": true,
+  "showInCatalog": true,
+  "seoTitle": "Качели парковые",
+  "seoDescription": "Качели парковые для зон отдыха и общественных пространств."
+}

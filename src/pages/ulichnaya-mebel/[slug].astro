@@ -1,74 +1,82 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Hero from '../../components/Hero.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
-import products from '../../data/product-categories.json';
+import DirectContactBlock from '../../components/DirectContactBlock.astro';
 import { withBase } from '../../utils/withBase';
 
-export function getStaticPaths() {
-  return products.map((item) => ({ params: { slug: item.slug }, props: { item } }));
+export async function getStaticPaths() {
+  const allCategories = await getCollection('product-categories');
+
+  return allCategories
+    .filter(({ data }) => data.parentSectionSlug === 'ulichnaya-mebel' && data.isActive)
+    .map(({ data }) => ({ params: { slug: data.slug }, props: { category: data } }));
 }
 
-const { item } = Astro.props;
-const cardMedia = item.gallery?.length ? item.gallery : ['/assets/images/placeholders/street-furniture.svg'];
-const isPriceOnRequest = (price: string) => price.trim().toLowerCase() === 'по запросу';
+const { category } = Astro.props;
+
+const products = (await getCollection('products'))
+  .map(({ data }) => data)
+  .filter((item) => item.productCategorySlug === category.slug && item.isActive && item.showInCatalog)
+  .sort((a, b) => a.order - b.order);
+
+const formatPrice = (item: (typeof products)[number]) => {
+  if (item.priceMode === 'from' && typeof item.priceFrom === 'number') {
+    return `от ${item.priceFrom.toLocaleString('ru-RU')} ₽`;
+  }
+
+  if (item.priceMode === 'on_request') return 'Цена по запросу';
+
+  return '';
+};
 ---
-<BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.shortDescription}>
+<BaseLayout title={category.seoTitle} description={category.seoDescription}>
   <div class="breadcrumbs-bar">
     <div class="container">
-      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель', href: withBase('/ulichnaya-mebel/') }, { title: item.menuTitle }]} />
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель', href: withBase('/ulichnaya-mebel/') }, { title: category.title }]} />
     </div>
   </div>
 
   <Hero
     kicker="Подкатегория изделий"
-    title={item.h1}
-    description={item.shortDescription}
+    title={category.heroTitle}
+    description={category.heroDescription}
     className="hero--catalog hero--catalog-clean"
   />
 
-  <section id="products" class="section">
-    <div class="container">
-      <div class="section-heading">
-        <h2 class="section-title">Линейка изделий</h2>
-      </div>
-      <div class="product-catalog-grid">
-        {item.products?.map((product, index) => (
-          <article class="product-showcase-card">
-            <div class="product-showcase-card__media-wrap">
-              <img class="product-showcase-card__media" src={withBase(cardMedia[index % cardMedia.length])} alt={product.name} loading="lazy" />
-            </div>
-            <div class="product-showcase-card__body">
-              <h3>{product.name}</h3>
-              <p class="product-showcase-card__descriptor">{product.descriptor}</p>
-              <p class="product-showcase-card__price">{isPriceOnRequest(product.price) ? 'Цена по запросу' : product.price}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <section class="section section--soft">
-    <div class="container">
-      <article class="card catalog-price-factors">
-        <h2>Что влияет на цену</h2>
-        <ul>{item.priceFactors.map((factor) => <li>{factor}</li>)}</ul>
-      </article>
-    </div>
-  </section>
-
-  <section id="direct-contact" class="section">
-    <div class="container">
-      <article class="home-contact-card">
-        <h2 class="section-title">Не нашли, что искали?</h2>
-        <p class="lead">Если типовая категория не закрывает задачу, напишите нам. Подберем решение под объект, референс, ТЗ или чертеж.</p>
-        <div class="home-contact-actions">
-          <a class="btn btn-primary" href="https://t.me/smu1build" target="_blank" rel="noreferrer">@smu1build · Написать в Telegram</a>
-          <a class="btn btn-secondary" href="mailto:smu1.kurgan@yandex.ru">smu1.kurgan@yandex.ru · Написать на почту</a>
-          <a class="btn btn-secondary" href="tel:+79129735006">+7 (912) 973-50-06 · Позвонить</a>
+  {category.mode === 'catalog-list' ? (
+    <section id="products" class="section">
+      <div class="container">
+        <div class="section-heading">
+          <h2 class="section-title">Линейка изделий</h2>
         </div>
-      </article>
-    </div>
-  </section>
+        <div class="product-catalog-grid">
+          {products.map((product) => (
+            <article class="product-showcase-card">
+              <div class="product-showcase-card__media-wrap">
+                <img class="product-showcase-card__media" src={withBase(product.image)} alt={product.title} loading="lazy" />
+              </div>
+              <div class="product-showcase-card__body">
+                <h3>{product.title}</h3>
+                <p class="product-showcase-card__descriptor">{product.shortDescription}</p>
+                {formatPrice(product) && <p class="product-showcase-card__price">{formatPrice(product)}</p>}
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  ) : (
+    <section class="section section--soft">
+      <div class="container">
+        <article class="card catalog-price-factors">
+          <h2>Категория под заказ</h2>
+          <p class="lead">{category.shortDescription}</p>
+        </article>
+      </div>
+    </section>
+  )}
+
+  <DirectContactBlock />
 </BaseLayout>

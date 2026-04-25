@@ -1,0 +1,17 @@
+{
+  "title": "Урна антивандальная",
+  "slug": "urna-antivandalnaya",
+  "productCategorySlug": "urny",
+  "shortDescription": "Утолщенный металл, усиленный замок.",
+  "leadText": "Для территорий с повышенными требованиями к прочности.",
+  "priceMode": "on_request",
+  "priceFrom": null,
+  "currency": "RUB",
+  "image": "/assets/images/products/bins-3.svg",
+  "placeholderLabel": "Фото изделия будут обновлены в мае.",
+  "order": 3,
+  "isActive": true,
+  "showInCatalog": true,
+  "seoTitle": "Урна антивандальная",
+  "seoDescription": "Антивандальная урна для территорий с повышенными требованиями к прочности."
+}

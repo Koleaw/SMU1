@@ -1,44 +1,48 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Hero from '../../components/Hero.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
-import categories from '../../data/categories.json';
 import { withBase } from '../../utils/withBase';
 
-const category = categories[0];
-const categoryMedia = [
-  '/assets/images/products/benches-1.svg',
-  '/assets/images/products/bins-1.svg',
-  '/assets/images/placeholders/street-furniture.svg',
-  '/assets/images/products/benches-2.svg',
-  '/assets/images/products/bins-2.svg'
-];
+const section = (await getCollection('product-sections')).find(
+  ({ data }) => data.slug === 'ulichnaya-mebel' && data.isActive
+);
+
+if (!section) {
+  throw new Error('Active section ulichnaya-mebel not found in content collection.');
+}
+
+const categories = (await getCollection('product-categories'))
+  .map(({ data }) => data)
+  .filter((item) => item.parentSectionSlug === section.data.slug && item.isActive && item.showInSectionGrid)
+  .sort((a, b) => a.order - b.order);
 ---
-<BaseLayout title="Уличная мебель — СМУ-1" description={category.shortDescription}>
+<BaseLayout title={section.data.seoTitle} description={section.data.seoDescription}>
   <div class="breadcrumbs-bar">
     <div class="container">
-      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель' }]} />
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: section.data.title }]} />
     </div>
   </div>
 
   <Hero
     kicker="Каталог изделий"
-    title={category.h1}
-    description={category.shortDescription}
+    title={section.data.heroTitle}
+    description={section.data.heroDescription}
     className="hero--catalog hero--catalog-clean"
   />
 
   <section id="categories" class="section section--soft">
     <div class="container">
       <div class="category-choice-grid">
-        {category.subcategories.map((sub, index) => (
-          <a class="category-choice-card" href={withBase(`/ulichnaya-mebel/${sub.slug}/`)}>
+        {categories.map((category) => (
+          <a class="category-choice-card" href={withBase(`/ulichnaya-mebel/${category.slug}/`)}>
             <div class="media-block placeholder placeholder--card">
-              <img class="media-thumb" src={withBase(categoryMedia[index % categoryMedia.length])} alt={sub.title} loading="lazy" />
-              <p class="media-caption">Фото будут обновлены в мае: материалы по категории.</p>
+              <img class="media-thumb" src={withBase(category.image)} alt={category.title} loading="lazy" />
+              <p class="media-caption">{category.placeholderLabel}</p>
             </div>
             <div class="category-choice-card__body">
-              <h3>{sub.title}</h3>
+              <h3>{category.title}</h3>
               <p>Типовые решения и адаптация под задачу объекта.</p>
               <span class="btn btn-secondary">Открыть подкатегорию</span>
             </div>

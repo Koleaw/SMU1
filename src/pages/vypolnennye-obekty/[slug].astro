@@ -1,17 +1,21 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Hero from '../../components/Hero.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
-import objects from '../../data/objects.json';
 import { withBase } from '../../utils/withBase';
 
-export function getStaticPaths() {
-  return objects.map((item) => ({ params: { slug: item.slug }, props: { item } }));
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+
+  return projects
+    .filter(({ data }) => data.isActive)
+    .map(({ data }) => ({ params: { slug: data.slug }, props: { item: data } }));
 }
 
 const { item } = Astro.props;
 ---
-<BaseLayout title={`${item.title} — СМУ-1`} description={item.task}>
+<BaseLayout title={item.seoTitle} description={item.seoDescription}>
   <div class="breadcrumbs-bar">
     <div class="container">
       <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Выполненные объекты', href: withBase('/vypolnennye-obekty/') }, { title: item.title }]} />
@@ -22,7 +26,7 @@ const { item } = Astro.props;
     kicker="Кейс объекта"
     className="hero--trust"
     title={item.title}
-    description={`${item.workType} · ${item.city}, ${item.region}`}
+    description={`${item.shortDescription} · ${item.city}, ${item.year}`}
     primaryLabel="Обсудить похожую задачу"
     secondaryLabel="Все объекты"
     secondaryHref={withBase('/vypolnennye-obekty/')}
@@ -31,11 +35,11 @@ const { item } = Astro.props;
   <section class="section">
     <div class="container object-hero-media">
       <article class="media-block placeholder placeholder--card">
-        <img class="media-thumb" src={withBase(item.gallery[0])} alt={item.title} />
+        <img class="media-thumb" src={withBase(item.image)} alt={item.title} />
         <p class="media-caption">Ключевой кадр объекта будет заменен на фактическое фото в мае.</p>
       </article>
       <article class="media-block placeholder placeholder--card">
-        <img class="media-thumb" src={withBase(item.gallery[1] ?? item.gallery[0])} alt={item.title} />
+        <img class="media-thumb" src={withBase(item.gallery[1] ?? item.gallery[0] ?? item.image)} alt={item.title} />
         <p class="media-caption">Второй кадр: детали реализации и результат на площадке.</p>
       </article>
     </div>
@@ -43,9 +47,9 @@ const { item } = Astro.props;
 
   <section class="section section--soft">
     <div class="container object-story-grid">
-      <article class="card"><h2>Задача</h2><p class="lead">{item.task}</p></article>
+      <article class="card"><h2>Кратко</h2><p class="lead">{item.shortDescription}</p></article>
       <article class="card"><h2>Что сделали</h2><p class="lead">{item.whatWasDone}</p></article>
-      <article class="card"><h2>Результат</h2><p class="lead">{item.result}</p></article>
+      <article class="card"><h2>Город</h2><p class="lead">{item.city}</p></article>
     </div>
   </section>
 </BaseLayout>

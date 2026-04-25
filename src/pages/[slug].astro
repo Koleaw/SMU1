@@ -1,17 +1,11 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import SectionNavigator from '../components/SectionNavigator.astro';
 import DirectContactBlock from '../components/DirectContactBlock.astro';
-import projects from '../data/project-pages.json';
 import { withBase } from '../utils/withBase';
-
-export function getStaticPaths() {
-  return projects.map((item) => ({ params: { slug: item.slug }, props: { item } }));
-}
-
-const { item } = Astro.props;
 
 const sectionNavItems = [
   { id: 'project-scope', label: 'Что решаем и состав услуги' },
@@ -20,39 +14,63 @@ const sectionNavItems = [
   { id: 'direct-contact', label: 'Связаться напрямую' }
 ];
 
+export async function getStaticPaths() {
+  const productSections = await getCollection('product-sections');
+  const services = await getCollection('services');
+
+  const customProductSectionPaths = productSections
+    .filter(({ data }) => data.mode === 'custom-direction' && data.isActive)
+    .map(({ data }) => ({ params: { slug: data.slug }, props: { item: data } }));
+
+  const servicePaths = services
+    .filter(({ data }) => data.isActive)
+    .map(({ data }) => ({ params: { slug: data.slug }, props: { item: data } }));
+
+  return [...customProductSectionPaths, ...servicePaths];
+}
+
+const { item } = Astro.props;
 ---
-<BaseLayout title={`${item.menuTitle} — СМУ-1`} description={item.offer}>
+<BaseLayout title={item.seoTitle} description={item.seoDescription}>
   <SectionNavigator items={sectionNavItems} />
 
   <div class="breadcrumbs-bar">
     <div class="container">
-      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: item.menuTitle }]} />
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: item.title }]} />
     </div>
   </div>
 
   <Hero
     kicker="Проектное направление"
     className="hero--project"
-    title={item.h1}
-    description={item.offer}
-    mediaImage={withBase(item.heroImages[0])}
-    mediaAlt={item.menuTitle}
-    mediaCaption="Фотоматериалы по проекту дополняются: здесь размещается фактура объекта и этапы работ."
+    title={item.heroTitle}
+    description={item.heroDescription}
+    mediaImage={withBase(item.image)}
+    mediaAlt={item.title}
+    mediaCaption={item.placeholderLabel}
   />
 
   <section id="project-scope" class="section">
     <div class="container project-content-grid">
       <article class="card project-block project-block--solve">
         <h2>Что решаем</h2>
-        <ul>{item.tasksSolved.map((task) => <li>{task}</li>)}</ul>
+        <ul>
+          <li>Уточняем задачу объекта и ограничения площадки</li>
+          <li>Подбираем формат реализации под сроки и бюджет</li>
+          <li>Согласуем этапность изготовления и монтажа</li>
+        </ul>
       </article>
       <article class="card project-block">
         <h2>Что входит в услугу</h2>
-        <ul>{item.serviceIncludes.map((part) => <li>{part}</li>)}</ul>
+        <ul>
+          <li>Сбор исходных данных</li>
+          <li>Подготовка состава работ и сметы</li>
+          <li>Изготовление и сопровождение реализации</li>
+        </ul>
       </article>
       <article class="media-block placeholder placeholder--wide-feature project-media-block">
-        <img class="media-thumb" src={withBase(item.heroImages[0])} alt={item.menuTitle} loading="lazy" />
-        <p class="media-caption">Фото будут обновлены в мае: объект, узлы, этапы монтажа.</p>
+        <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
+        <p class="media-caption">{item.placeholderLabel}</p>
       </article>
     </div>
   </section>
@@ -72,8 +90,8 @@ const sectionNavItems = [
 
   <section id="project-targets" class="section section--dark project-dark-band" data-section-theme="dark">
     <div class="container grid grid-2">
-      <article class="card"><h2>Для каких объектов</h2><ul>{item.targetObjects.map((obj) => <li>{obj}</li>)}</ul></article>
-      <article class="card project-block project-block--inputs"><h2>Что нужно для расчета</h2><ul>{item.calculationInputs.map((input) => <li>{input}</li>)}</ul></article>
+      <article class="card"><h2>Для каких объектов</h2><ul><li>Коммерческие площадки</li><li>Общественные территории</li><li>Городские пространства</li><li>Частные объекты</li></ul></article>
+      <article class="card project-block project-block--inputs"><h2>Что нужно для расчета</h2><ul><li>Город и адрес объекта</li><li>Размеры/объем задачи</li><li>Фото зоны или чертеж</li><li>Планируемые сроки</li></ul></article>
     </div>
   </section>
 

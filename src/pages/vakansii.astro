@@ -1,0 +1,52 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import { withBase } from '../utils/withBase';
+
+const jobs = (await getCollection('jobs'))
+  .map(({ data }) => data)
+  .filter((item) => item.isActive)
+  .sort((a, b) => a.order - b.order);
+
+const settingsEntry = (await getCollection('site-settings'))[0];
+
+if (!settingsEntry) {
+  throw new Error('site-settings collection must contain one entry.');
+}
+
+const settings = settingsEntry.data;
+---
+<BaseLayout title="Вакансии — СМУ-1" description="Актуальные вакансии СМУ-1.">
+  <div class="breadcrumbs-bar">
+    <div class="container">
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Вакансии' }]} />
+    </div>
+  </div>
+
+  <Hero kicker="Команда" className="hero--catalog-clean" title="Вакансии" />
+
+  <section class="section section--soft">
+    <div class="container">
+      {jobs.length === 0 ? (
+        <article class="card">
+          <h2>{settings.vacanciesEmptyTitle}</h2>
+          <p class="lead">{settings.vacanciesEmptyText}</p>
+        </article>
+      ) : (
+        <div class="grid grid-2">
+          {jobs.map((job) => (
+            <article class="card">
+              <h2>{job.title}</h2>
+              <p><strong>Город:</strong> {job.city}</p>
+              <p><strong>Формат:</strong> {job.employmentType}</p>
+              <p><strong>Оплата:</strong> {job.salary}</p>
+              <p>{job.shortDescription}</p>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+</BaseLayout>

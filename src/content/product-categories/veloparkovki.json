@@ -1,0 +1,16 @@
+{
+  "title": "Велопарковки",
+  "slug": "veloparkovki",
+  "parentSectionSlug": "ulichnaya-mebel",
+  "shortDescription": "Проектируем и изготавливаем велопарковки под реальную нагрузку, схему трафика и требования объекта.",
+  "heroTitle": "Велопарковки для жилых, коммерческих и общественных объектов",
+  "heroDescription": "Проектируем и изготавливаем велопарковки под реальную нагрузку, схему трафика и требования объекта.",
+  "order": 4,
+  "showInSectionGrid": true,
+  "isActive": true,
+  "image": "/assets/images/placeholders/street-furniture.svg",
+  "placeholderLabel": "Фото будут обновлены в мае: материалы по категории.",
+  "mode": "catalog-list",
+  "seoTitle": "Велопарковки — СМУ-1",
+  "seoDescription": "Велопарковки для жилых, коммерческих и общественных объектов."
+}

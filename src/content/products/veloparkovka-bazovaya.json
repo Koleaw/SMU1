@@ -1,0 +1,17 @@
+{
+  "title": "Велопарковка базовая",
+  "slug": "veloparkovka-bazovaya",
+  "productCategorySlug": "veloparkovki",
+  "shortDescription": "6–8 мест, анкерное крепление.",
+  "leadText": "Подходит для жилых и коммерческих объектов.",
+  "priceMode": "on_request",
+  "priceFrom": null,
+  "currency": "RUB",
+  "image": "/assets/images/placeholders/street-furniture.svg",
+  "placeholderLabel": "Фото изделия будут обновлены в мае.",
+  "order": 1,
+  "isActive": true,
+  "showInCatalog": true,
+  "seoTitle": "Велопарковка базовая",
+  "seoDescription": "Велопарковка базовая на 6–8 мест с анкерным креплением."
+}

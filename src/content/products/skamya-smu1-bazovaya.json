@@ -1,0 +1,17 @@
+{
+  "title": "Скамья СМУ-1 Базовая",
+  "slug": "skamya-smu1-bazovaya",
+  "productCategorySlug": "lavochki-i-skameyki",
+  "shortDescription": "Длина 1.5–2.0 м, стальной каркас.",
+  "leadText": "Типовое решение для парков и дворовых территорий.",
+  "priceMode": "from",
+  "priceFrom": 32000,
+  "currency": "RUB",
+  "image": "/assets/images/products/benches-1.svg",
+  "placeholderLabel": "Фото изделия будут обновлены в мае.",
+  "order": 1,
+  "isActive": true,
+  "showInCatalog": true,
+  "seoTitle": "Скамья СМУ-1 Базовая",
+  "seoDescription": "Скамья СМУ-1 Базовая: типовое решение для парков и дворовых территорий."
+}
