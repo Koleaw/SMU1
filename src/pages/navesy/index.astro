@@ -1,0 +1,15 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { withBase } from '../../utils/withBase';
+
+const target = withBase('/navesy-i-kozyrki/');
+---
+<BaseLayout title="Перенаправление — Навесы" description="Перенаправление на страницу направления «Навесы».">
+  <meta http-equiv="refresh" content={`0;url=${target}`} />
+  <section class="section">
+    <div class="container">
+      <h1>Перенаправляем на страницу «Навесы»</h1>
+      <p><a href={target}>Если переход не сработал, откройте страницу вручную.</a></p>
+    </div>
+  </section>
+</BaseLayout>
