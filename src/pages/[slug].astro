@@ -178,6 +178,90 @@ const metalContent = {
     'Напишите нам, и мы сориентируем по изготовлению, материалу, покрытию, монтажу и срокам. Можно отправить чертеж, эскиз, размеры или описание задачи.'
 };
 
+const topiaryContent = {
+  navItems: [
+    { id: 'topiary-made', label: 'Что изготавливаем' },
+    { id: 'topiary-targets', label: 'Где используют топиарии' },
+    { id: 'topiary-workflow', label: 'Как подбираем решение' },
+    { id: 'topiary-pricing', label: 'Что влияет на стоимость' },
+    { id: 'topiary-installation', label: 'Установка и использование' },
+    { id: 'direct-contact', label: 'Связаться напрямую' }
+  ],
+  madeTypes: [
+    {
+      title: 'Фигуры животных',
+      description: 'Объемные декоративные фигуры для парков, дворов, баз отдыха и общественных пространств.'
+    },
+    {
+      title: 'Геометрические формы',
+      description: 'Шары, конусы, арки и другие формы для входных зон, аллей и благоустройства.'
+    },
+    {
+      title: 'Буквы и логотипы',
+      description: 'Зеленые надписи, брендированные элементы и объемные знаки для территорий и фотозон.'
+    },
+    {
+      title: 'Декоративные композиции',
+      description: 'Составные решения из нескольких фигур, форм и элементов озеленения.'
+    },
+    {
+      title: 'Фотозоны',
+      description: 'Акцентные объекты для мероприятий, парков, торговых и общественных пространств.'
+    },
+    {
+      title: 'Входные группы',
+      description: 'Декоративное оформление входов, фасадных зон и территорий перед объектом.'
+    },
+    {
+      title: 'Сезонный декор',
+      description: 'Фигуры и композиции под праздники, мероприятия и временное оформление.'
+    },
+    {
+      title: 'По референсу',
+      description: 'Индивидуальные фигуры по эскизу, фотографии, ТЗ или описанию задачи.'
+    }
+  ],
+  targetUses: [
+    'входные группы и фасадные зоны',
+    'парки и скверы',
+    'фотозоны для мероприятий',
+    'общественные пространства',
+    'территории жилых комплексов',
+    'коммерческие территории',
+    'базы отдыха и загородные объекты',
+    'сезонное оформление площадок'
+  ],
+  workflow: [
+    'уточняем место установки и задачу',
+    'подбираем форму, размер и композицию',
+    'учитываем улицу или помещение, основание, ветер и крепление',
+    'согласуем внешний вид, цвет и плотность покрытия',
+    'изготавливаем каркас и декоративное покрытие',
+    'при необходимости выполняем монтаж'
+  ],
+  costFactors: [
+    'размер фигуры',
+    'сложность формы',
+    'тип каркаса',
+    'материал декоративного покрытия',
+    'плотность и детализация',
+    'способ крепления и устойчивость',
+    'монтаж и условия объекта',
+    'количество фигур в композиции'
+  ],
+  installation: [
+    'подбираем решение для улицы или помещения',
+    'учитываем основание и способ крепления',
+    'можем делать стационарные или переносные решения',
+    'для уличных объектов учитываем устойчивость и условия эксплуатации',
+    'внешний вид и материалы согласуются под задачу объекта'
+  ],
+  processMediaCaption: 'Фото или рендер топиарной композиции будет добавлен позже',
+  contactTitle: 'Нужен топиарий под конкретный объект?',
+  contactDescription:
+    'Напишите нам, и мы подберем форму, размер, материал покрытия и способ установки под вашу территорию, мероприятие или входную зону.'
+};
+
 export async function getStaticPaths() {
   const productSections = await getCollection('product-sections');
   const services = await getCollection('services');
@@ -198,8 +282,15 @@ const isCatalogHub = itemType === 'product-section' && item.mode === 'catalog-hu
 const isProjectDirection = itemType === 'product-section' && item.mode === 'custom-direction';
 const isNavesyPage = itemType === 'product-section' && item.slug === 'navesy-i-kozyrki';
 const isMetalPage = itemType === 'product-section' && item.slug === 'metallokonstruktsii-dlya-biznesa';
+const isTopiaryPage = itemType === 'product-section' && item.slug === 'topiarii';
 
-const sectionNavItems = isNavesyPage ? navesyContent.navItems : isMetalPage ? metalContent.navItems : defaultProjectNavItems;
+const sectionNavItems = isNavesyPage
+  ? navesyContent.navItems
+  : isMetalPage
+    ? metalContent.navItems
+    : isTopiaryPage
+      ? topiaryContent.navItems
+      : defaultProjectNavItems;
 
 const categories = isCatalogHub
   ? (await getCollection('product-categories'))
@@ -212,7 +303,9 @@ const contactTitle = isNavesyPage
   ? navesyContent.contactTitle
   : isMetalPage
     ? metalContent.contactTitle
-  : item.slug === 'ograzhdeniya-i-zabory'
+    : isTopiaryPage
+      ? topiaryContent.contactTitle
+    : item.slug === 'ograzhdeniya-i-zabory'
     ? 'Нужно ограждение под конкретный объект?'
     : 'Не нашли, что искали?';
 
@@ -220,7 +313,9 @@ const contactDescription = isNavesyPage
   ? navesyContent.contactDescription
   : isMetalPage
     ? metalContent.contactDescription
-  : item.slug === 'ograzhdeniya-i-zabory'
+    : isTopiaryPage
+      ? topiaryContent.contactDescription
+    : item.slug === 'ograzhdeniya-i-zabory'
     ? 'Напишите нам, и мы подберем конструкцию под размеры, задачу, внешний вид территории и условия монтажа.'
     : 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.';
 ---
@@ -235,7 +330,7 @@ const contactDescription = isNavesyPage
 
   <Hero
     kicker={isCatalogHub ? 'Каталог направлений' : 'Проектное направление'}
-    className={isNavesyPage || isMetalPage ? 'hero--media navesy-hero' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
+    className={isTopiaryPage ? 'hero--media navesy-hero topiary-hero' : isNavesyPage || isMetalPage ? 'hero--media navesy-hero' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
     title={item.heroTitle}
     description={item.heroDescription}
     mediaImage={isCatalogHub ? undefined : withBase(item.image)}
@@ -432,6 +527,80 @@ const contactDescription = isNavesyPage
         </div>
       </section>
     </>
+  ) : isTopiaryPage ? (
+    <>
+      <section id="topiary-made" class="section section--dark navesy-section-compact" data-section-theme="dark">
+        <div class="container">
+          <div class="section-heading section-heading--light">
+            <h2 class="section-title">Что изготавливаем</h2>
+          </div>
+          <div class="topiary-made-grid">
+            {topiaryContent.madeTypes.map((madeType) => (
+              <article class="card topiary-made-card">
+                <h3>{madeType.title}</h3>
+                <p>{madeType.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="topiary-targets" class="section section--soft navesy-section-compact">
+        <div class="container">
+          <article class="card topiary-panel topiary-panel--light">
+            <h2>Где используют топиарии</h2>
+            <ul class="topiary-columns-list">
+              {topiaryContent.targetUses.map((targetUse) => (
+                <li>{targetUse}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="topiary-workflow" class="section navesy-section-compact">
+        <div class="container topiary-workflow-layout">
+          <article class="media-block placeholder placeholder--wide-feature">
+            <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
+            <p class="media-caption">{topiaryContent.processMediaCaption}</p>
+          </article>
+          <article class="card topiary-panel topiary-panel--graphite">
+            <h2>Как подбираем решение</h2>
+            <ol class="topiary-list-tight">
+              {topiaryContent.workflow.map((step) => (
+                <li>{step}</li>
+              ))}
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section id="topiary-pricing" class="section section--dark navesy-section-compact" data-section-theme="dark">
+        <div class="container">
+          <article class="card topiary-panel">
+            <h2>Что влияет на стоимость</h2>
+            <ul class="topiary-columns-list topiary-columns-list--pricing">
+              {topiaryContent.costFactors.map((factor) => (
+                <li>{factor}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="topiary-installation" class="section section--soft navesy-section-compact">
+        <div class="container">
+          <article class="card topiary-panel topiary-panel--light">
+            <h2>Установка и использование</h2>
+            <ul class="topiary-list-tight">
+              {topiaryContent.installation.map((itemText) => (
+                <li>{itemText}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+    </>
   ) : (
     <>
       <section id="project-scope" class="section">
@@ -484,9 +653,9 @@ const contactDescription = isNavesyPage
   <DirectContactBlock
     title={contactTitle}
     description={contactDescription}
-    telegramLabel={isMetalPage ? 'Написать в Telegram' : undefined}
-    emailLabel={isMetalPage ? 'Написать на почту' : undefined}
-    phoneLabel={isMetalPage ? 'Позвонить' : undefined}
+    telegramLabel={isMetalPage || isTopiaryPage ? 'Написать в Telegram' : undefined}
+    emailLabel={isMetalPage || isTopiaryPage ? 'Написать на почту' : undefined}
+    phoneLabel={isMetalPage || isTopiaryPage ? 'Позвонить' : undefined}
   />
 </BaseLayout>
 
@@ -637,6 +806,90 @@ const contactDescription = isNavesyPage
     line-height: 1.45;
   }
 
+  .topiary-hero :global(.hero-media__overlay) {
+    background: linear-gradient(130deg, rgb(13 18 22 / 80%) 0%, rgb(15 26 20 / 72%) 48%, rgb(17 22 28 / 82%) 100%);
+  }
+
+  .topiary-made-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .topiary-made-card {
+    align-content: start;
+    min-height: 176px;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .topiary-made-card h3 {
+    font-size: 21px;
+    line-height: 1.2;
+  }
+
+  .topiary-made-card p {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .topiary-panel {
+    gap: 14px;
+    padding: 20px;
+  }
+
+  .topiary-panel--light {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-card);
+  }
+
+  .topiary-panel--graphite {
+    background: var(--color-panel-dark);
+    border-color: var(--color-border-dark);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+  }
+
+  .topiary-panel--graphite h2,
+  .topiary-panel--graphite li {
+    color: #f2f5f7;
+  }
+
+  .topiary-columns-list {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 20px;
+  }
+
+  .topiary-columns-list li {
+    margin: 0;
+  }
+
+  .topiary-columns-list--pricing {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .topiary-workflow-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  .topiary-workflow-layout .media-block {
+    height: 100%;
+  }
+
+  .topiary-list-tight {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    gap: 8px;
+  }
+
   .navesy-workflow-layout {
     display: grid;
     grid-template-columns: minmax(0, 860px);
@@ -669,6 +922,10 @@ const contactDescription = isNavesyPage
     .metal-type-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    .topiary-made-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 900px) {
@@ -699,6 +956,18 @@ const contactDescription = isNavesyPage
     .metal-example-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .topiary-made-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .topiary-columns-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .topiary-workflow-layout {
+      grid-template-columns: 1fr;
+    }
   }
 
   @media (max-width: 600px) {
@@ -728,6 +997,20 @@ const contactDescription = isNavesyPage
     }
 
     .metal-panel {
+      padding: 16px;
+    }
+
+    .topiary-made-grid,
+    .topiary-columns-list,
+    .topiary-columns-list--pricing {
+      grid-template-columns: 1fr;
+    }
+
+    .topiary-made-card {
+      min-height: 0;
+    }
+
+    .topiary-panel {
       padding: 16px;
     }
   }
