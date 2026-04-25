@@ -77,7 +77,15 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
           });
         };
 
-        const savedConsent = localStorage.getItem(consentKey);
+        const readConsent = () => {
+          try {
+            return localStorage.getItem(consentKey);
+          } catch {
+            return null;
+          }
+        };
+
+        const savedConsent = readConsent();
         if (savedConsent === 'accepted') {
           loadMetrika();
         }

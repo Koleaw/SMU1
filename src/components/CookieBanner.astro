@@ -31,14 +31,38 @@ import { withBase } from '../utils/withBase';
       banner.removeAttribute('hidden');
     };
 
+    const readConsent = () => {
+      try {
+        return localStorage.getItem(consentKey);
+      } catch {
+        return null;
+      }
+    };
+
+    const writeConsent = (value) => {
+      try {
+        localStorage.setItem(consentKey, value);
+      } catch {
+        // storage может быть недоступен, но кнопки должны продолжать работать
+      }
+    };
+
+    const clearConsent = () => {
+      try {
+        localStorage.removeItem(consentKey);
+      } catch {
+        // ignore
+      }
+    };
+
     const applyChoice = (value) => {
       if (value !== 'accepted' && value !== 'necessary') return;
-      localStorage.setItem(consentKey, value);
+      writeConsent(value);
       hideBanner();
       document.dispatchEvent(new CustomEvent('smu1:cookie-consent-changed', { detail: value }));
     };
 
-    const savedValue = localStorage.getItem(consentKey);
+    const savedValue = readConsent();
     if (savedValue === 'accepted' || savedValue === 'necessary') {
       hideBanner();
     } else {
@@ -57,7 +81,7 @@ import { withBase } from '../utils/withBase';
     });
 
     const openCookieSettings = () => {
-      localStorage.removeItem(consentKey);
+      clearConsent();
       showBanner();
       banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     };
