@@ -1,0 +1,340 @@
+media:
+  input: public/uploads
+  output: /uploads
+  extensions:
+    - png
+    - jpg
+    - jpeg
+    - webp
+    - svg
+
+content:
+  - name: catalog
+    label: Каталог
+    type: group
+    items:
+      - name: product-sections
+        label: Разделы продукции
+        type: collection
+        path: src/content/product-sections
+        fields:
+          - name: title
+            type: string
+            required: true
+          - name: slug
+            type: string
+            required: true
+          - name: shortDescription
+            type: text
+            required: true
+          - name: heroTitle
+            type: string
+            required: true
+          - name: heroDescription
+            type: text
+            required: true
+          - name: order
+            type: number
+            required: true
+          - name: showOnHome
+            type: boolean
+            required: true
+          - name: isActive
+            type: boolean
+            required: true
+          - name: mode
+            type: select
+            required: true
+            options:
+              values:
+                - value: catalog-hub
+                  label: catalog-hub
+                - value: custom-direction
+                  label: custom-direction
+          - name: image
+            type: image
+          - name: placeholderLabel
+            type: string
+          - name: seoTitle
+            type: string
+          - name: seoDescription
+            type: text
+
+      - name: product-categories
+        label: Категории изделий
+        type: collection
+        path: src/content/product-categories
+        fields:
+          - name: title
+            type: string
+            required: true
+          - name: slug
+            type: string
+            required: true
+          - name: parentSectionSlug
+            type: string
+            required: true
+          - name: shortDescription
+            type: text
+            required: true
+          - name: heroTitle
+            type: string
+            required: true
+          - name: heroDescription
+            type: text
+            required: true
+          - name: order
+            type: number
+            required: true
+          - name: showInSectionGrid
+            type: boolean
+            required: true
+          - name: isActive
+            type: boolean
+            required: true
+          - name: image
+            type: image
+          - name: placeholderLabel
+            type: string
+          - name: mode
+            type: select
+            required: true
+            options:
+              values:
+                - value: catalog-list
+                  label: catalog-list
+                - value: custom-list
+                  label: custom-list
+          - name: seoTitle
+            type: string
+          - name: seoDescription
+            type: text
+
+      - name: products
+        label: Изделия
+        type: collection
+        path: src/content/products
+        fields:
+          - name: title
+            type: string
+            required: true
+          - name: slug
+            type: string
+            required: true
+          - name: productCategorySlug
+            type: string
+            required: true
+          - name: shortDescription
+            type: text
+            required: true
+          - name: leadText
+            type: text
+          - name: priceMode
+            type: select
+            required: true
+            options:
+              values:
+                - value: from
+                  label: from
+                - value: on_request
+                  label: on_request
+                - value: none
+                  label: none
+          - name: priceFrom
+            type: number
+          - name: currency
+            type: string
+            options:
+              default: RUB
+          - name: image
+            type: image
+          - name: placeholderLabel
+            type: string
+          - name: order
+            type: number
+            required: true
+          - name: isActive
+            type: boolean
+            required: true
+          - name: showInCatalog
+            type: boolean
+            required: true
+          - name: seoTitle
+            type: string
+          - name: seoDescription
+            type: text
+
+  - name: company
+    label: Компания
+    type: group
+    items:
+      - name: services
+        label: Услуги
+        type: collection
+        path: src/content/services
+        fields:
+          - name: title
+            type: string
+            required: true
+          - name: slug
+            type: string
+            required: true
+          - name: shortDescription
+            type: text
+            required: true
+          - name: heroTitle
+            type: string
+            required: true
+          - name: heroDescription
+            type: text
+            required: true
+          - name: order
+            type: number
+            required: true
+          - name: showOnHome
+            type: boolean
+            required: true
+          - name: isActive
+            type: boolean
+            required: true
+          - name: image
+            type: image
+          - name: placeholderLabel
+            type: string
+          - name: seoTitle
+            type: string
+          - name: seoDescription
+            type: text
+
+      - name: projects
+        label: Выполненные объекты
+        type: collection
+        path: src/content/projects
+        fields:
+          - name: title
+            type: string
+            required: true
+          - name: slug
+            type: string
+            required: true
+          - name: city
+            type: string
+            required: true
+          - name: shortDescription
+            type: text
+            required: true
+          - name: whatWasDone
+            type: text
+            required: true
+          - name: image
+            type: image
+          - name: gallery
+            type: image
+            list: true
+          - name: order
+            type: number
+            required: true
+          - name: isActive
+            type: boolean
+            required: true
+          - name: year
+            type: number
+          - name: seoTitle
+            type: string
+          - name: seoDescription
+            type: text
+
+      - name: jobs
+        label: Вакансии
+        type: collection
+        path: src/content/jobs
+        fields:
+          - name: title
+            type: string
+            required: true
+          - name: slug
+            type: string
+            required: true
+          - name: city
+            type: string
+            required: true
+          - name: employmentType
+            type: string
+            required: true
+          - name: salary
+            type: string
+          - name: shortDescription
+            type: text
+            required: true
+          - name: responsibilities
+            type: string
+            list: true
+            required: true
+          - name: requirements
+            type: string
+            list: true
+            required: true
+          - name: conditions
+            type: string
+            list: true
+            required: true
+          - name: order
+            type: number
+            required: true
+          - name: isActive
+            type: boolean
+            required: true
+
+  - name: settings
+    label: Настройки
+    type: group
+    items:
+      - name: site-settings
+        label: Настройки сайта
+        type: file
+        path: src/content/site-settings/global.json
+        fields:
+          - name: companyName
+            type: string
+            required: true
+          - name: companyShortName
+            type: string
+            required: true
+          - name: inn
+            type: string
+            required: true
+          - name: kpp
+            type: string
+            required: true
+          - name: ogrn
+            type: string
+            required: true
+          - name: registrationDate
+            type: string
+            required: true
+          - name: legalAddress
+            type: text
+            required: true
+          - name: phonePrimary
+            type: string
+            required: true
+          - name: phoneSecondary
+            type: string
+          - name: telegram
+            type: string
+            required: true
+          - name: email
+            type: string
+            required: true
+          - name: city
+            type: string
+            required: true
+          - name: address
+            type: string
+            required: true
+          - name: vacanciesEmptyTitle
+            type: string
+            required: true
+          - name: vacanciesEmptyText
+            type: text
+            required: true
