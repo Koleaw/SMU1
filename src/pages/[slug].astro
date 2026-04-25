@@ -18,21 +18,37 @@ export async function getStaticPaths() {
   const productSections = await getCollection('product-sections');
   const services = await getCollection('services');
 
-  const customProductSectionPaths = productSections
-    .filter(({ data }) => data.mode === 'custom-direction' && data.isActive)
-    .map(({ data }) => ({ params: { slug: data.slug }, props: { item: data } }));
+  const productSectionPaths = productSections
+    .filter(({ data }) => data.isActive && data.slug !== 'ulichnaya-mebel')
+    .map(({ data }) => ({ params: { slug: data.slug }, props: { item: data, itemType: 'product-section' } }));
 
   const servicePaths = services
     .filter(({ data }) => data.isActive)
-    .map(({ data }) => ({ params: { slug: data.slug }, props: { item: data } }));
+    .map(({ data }) => ({ params: { slug: data.slug }, props: { item: data, itemType: 'service' } }));
 
-  return [...customProductSectionPaths, ...servicePaths];
+  return [...productSectionPaths, ...servicePaths];
 }
 
-const { item } = Astro.props;
+const { item, itemType } = Astro.props;
+const isCatalogHub = itemType === 'product-section' && item.mode === 'catalog-hub';
+const isProjectDirection = itemType === 'product-section' && item.mode === 'custom-direction';
+
+const categories = isCatalogHub
+  ? (await getCollection('product-categories'))
+      .map(({ data }) => data)
+      .filter((category) => category.parentSectionSlug === item.slug && category.isActive && category.showInSectionGrid)
+      .sort((a, b) => a.order - b.order)
+  : [];
+
+const contactTitle =
+  item.slug === 'ograzhdeniya-i-zabory' ? 'Нужно ограждение под конкретный объект?' : 'Не нашли, что искали?';
+const contactDescription =
+  item.slug === 'ograzhdeniya-i-zabory'
+    ? 'Напишите нам, и мы подберем конструкцию под размеры, задачу, внешний вид территории и условия монтажа.'
+    : 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.';
 ---
 <BaseLayout title={item.seoTitle} description={item.seoDescription}>
-  <SectionNavigator items={sectionNavItems} />
+  {isProjectDirection && <SectionNavigator items={sectionNavItems} />}
 
   <div class="breadcrumbs-bar">
     <div class="container">
@@ -41,59 +57,106 @@ const { item } = Astro.props;
   </div>
 
   <Hero
-    kicker="Проектное направление"
-    className="hero--project"
+    kicker={isCatalogHub ? 'Каталог направлений' : 'Проектное направление'}
+    className={isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
     title={item.heroTitle}
     description={item.heroDescription}
-    mediaImage={withBase(item.image)}
-    mediaAlt={item.title}
-    mediaCaption={item.placeholderLabel}
+    mediaImage={isCatalogHub ? undefined : withBase(item.image)}
+    mediaAlt={isCatalogHub ? undefined : item.title}
+    mediaCaption={isCatalogHub ? undefined : item.placeholderLabel}
   />
 
-  <section id="project-scope" class="section">
-    <div class="container project-content-grid">
-      <article class="card project-block project-block--solve">
-        <h2>Что решаем</h2>
-        <ul>
-          <li>Уточняем задачу объекта и ограничения площадки</li>
-          <li>Подбираем формат реализации под сроки и бюджет</li>
-          <li>Согласуем этапность изготовления и монтажа</li>
-        </ul>
-      </article>
-      <article class="card project-block">
-        <h2>Что входит в услугу</h2>
-        <ul>
-          <li>Сбор исходных данных</li>
-          <li>Подготовка состава работ и сметы</li>
-          <li>Изготовление и сопровождение реализации</li>
-        </ul>
-      </article>
-      <article class="media-block placeholder placeholder--wide-feature project-media-block">
-        <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
-        <p class="media-caption">{item.placeholderLabel}</p>
-      </article>
-    </div>
-  </section>
+  {isCatalogHub ? (
+    <>
+      <section id="categories" class="section section--soft">
+        <div class="container">
+          <div class="category-choice-grid">
+            {categories.map((category) => (
+              <a class="category-choice-card" href={withBase(`/${item.slug}/${category.slug}/`)}>
+                <div class="media-block placeholder placeholder--card">
+                  {category.image ? <img class="media-thumb" src={withBase(category.image)} alt={category.title} loading="lazy" /> : null}
+                  <p class="media-caption">{category.placeholderLabel}</p>
+                </div>
+                <div class="category-choice-card__body">
+                  <h3>{category.title}</h3>
+                  <p>{category.shortDescription}</p>
+                  <span class="btn btn-secondary">Открыть подтип</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
 
-  <section id="project-workflow" class="section section--dark project-dark-band" data-section-theme="dark">
-    <div class="container">
-      <div class="section-heading">
-        <h2 class="section-title">Как работаем</h2>
-      </div>
-      <div class="workflow-grid workflow-grid--project">
-        <article class="workflow-step"><span class="badge">Этап 1</span><h3>Фиксируем исходные данные</h3><p>Объект, ограничения площадки, режим эксплуатации и сроки запуска.</p></article>
-        <article class="workflow-step"><span class="badge">Этап 2</span><h3>Собираем конструктив и смету</h3><p>Уточняем решения, показываем объем материалов, этапность и бюджет.</p></article>
-        <article class="workflow-step"><span class="badge">Этап 3</span><h3>Изготавливаем и выводим на объект</h3><p>Ведем проект в производстве и сопровождаем монтаж до результата.</p></article>
-      </div>
-    </div>
-  </section>
+      <section class="section">
+        <div class="container grid grid-2">
+          <article class="card">
+            <h2>Изготавливаем под объект</h2>
+            <p class="lead">Большинство ограждений изготавливается под размеры объекта, тип основания, требования к покрытию и внешний вид территории. Можем работать по референсу, чертежу, ТЗ или замеру.</p>
+          </article>
+          <article class="card catalog-price-factors">
+            <h2>Что влияет на стоимость</h2>
+            <ul>
+              <li>протяженность и высота;</li>
+              <li>тип конструкции;</li>
+              <li>материал и сечение профиля;</li>
+              <li>тип заполнения;</li>
+              <li>покрытие и цвет;</li>
+              <li>ворота, калитки и фурнитура;</li>
+              <li>монтаж и условия объекта.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+    </>
+  ) : (
+    <>
+      <section id="project-scope" class="section">
+        <div class="container project-content-grid">
+          <article class="card project-block project-block--solve">
+            <h2>Что решаем</h2>
+            <ul>
+              <li>Уточняем задачу объекта и ограничения площадки</li>
+              <li>Подбираем формат реализации под сроки и бюджет</li>
+              <li>Согласуем этапность изготовления и монтажа</li>
+            </ul>
+          </article>
+          <article class="card project-block">
+            <h2>Что входит в услугу</h2>
+            <ul>
+              <li>Сбор исходных данных</li>
+              <li>Подготовка состава работ и сметы</li>
+              <li>Изготовление и сопровождение реализации</li>
+            </ul>
+          </article>
+          <article class="media-block placeholder placeholder--wide-feature project-media-block">
+            <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
+            <p class="media-caption">{item.placeholderLabel}</p>
+          </article>
+        </div>
+      </section>
 
-  <section id="project-targets" class="section section--dark project-dark-band" data-section-theme="dark">
-    <div class="container grid grid-2">
-      <article class="card"><h2>Для каких объектов</h2><ul><li>Коммерческие площадки</li><li>Общественные территории</li><li>Городские пространства</li><li>Частные объекты</li></ul></article>
-      <article class="card project-block project-block--inputs"><h2>Что нужно для расчета</h2><ul><li>Город и адрес объекта</li><li>Размеры/объем задачи</li><li>Фото зоны или чертеж</li><li>Планируемые сроки</li></ul></article>
-    </div>
-  </section>
+      <section id="project-workflow" class="section section--dark project-dark-band" data-section-theme="dark">
+        <div class="container">
+          <div class="section-heading">
+            <h2 class="section-title">Как работаем</h2>
+          </div>
+          <div class="workflow-grid workflow-grid--project">
+            <article class="workflow-step"><span class="badge">Этап 1</span><h3>Фиксируем исходные данные</h3><p>Объект, ограничения площадки, режим эксплуатации и сроки запуска.</p></article>
+            <article class="workflow-step"><span class="badge">Этап 2</span><h3>Собираем конструктив и смету</h3><p>Уточняем решения, показываем объем материалов, этапность и бюджет.</p></article>
+            <article class="workflow-step"><span class="badge">Этап 3</span><h3>Изготавливаем и выводим на объект</h3><p>Ведем проект в производстве и сопровождаем монтаж до результата.</p></article>
+          </div>
+        </div>
+      </section>
 
-  <DirectContactBlock />
+      <section id="project-targets" class="section section--dark project-dark-band" data-section-theme="dark">
+        <div class="container grid grid-2">
+          <article class="card"><h2>Для каких объектов</h2><ul><li>Коммерческие площадки</li><li>Общественные территории</li><li>Городские пространства</li><li>Частные объекты</li></ul></article>
+          <article class="card project-block project-block--inputs"><h2>Что нужно для расчета</h2><ul><li>Город и адрес объекта</li><li>Размеры/объем задачи</li><li>Фото зоны или чертеж</li><li>Планируемые сроки</li></ul></article>
+        </div>
+      </section>
+    </>
+  )}
+
+  <DirectContactBlock title={contactTitle} description={contactDescription} />
 </BaseLayout>
