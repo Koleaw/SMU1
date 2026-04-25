@@ -22,10 +22,12 @@ import { withBase } from '../utils/withBase';
     if (!banner) return;
 
     const hideBanner = () => {
+      banner.hidden = true;
       banner.setAttribute('hidden', 'hidden');
     };
 
     const showBanner = () => {
+      banner.hidden = false;
       banner.removeAttribute('hidden');
     };
 

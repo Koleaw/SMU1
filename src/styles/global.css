@@ -2610,6 +2610,10 @@ small {
   box-shadow: 0 12px 24px rgb(0 0 0 / 18%);
 }
 
+.cookie-banner[hidden] {
+  display: none !important;
+}
+
 .cookie-banner p {
   font-size: var(--font-size-caption);
   line-height: var(--line-height-caption);
