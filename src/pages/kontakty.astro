@@ -43,6 +43,10 @@ const addressWithoutCity = site.address.replace(new RegExp(`,\\s*${site.city}\\s
           <h2>География работ</h2>
           <ul>{site.regions.map((r) => <li>{r}</li>)}</ul>
           <p class="contacts-geo-note">Работаем по Кургану, области и по согласованию выезжаем в соседние регионы.</p>
+          <p class="contacts-career-entry">
+            Хотите работать с нами? Посмотрите открытые вакансии.
+            <a href={withBase('/vakansii/')}>Вакансии</a>
+          </p>
         </article>
       </div>
 

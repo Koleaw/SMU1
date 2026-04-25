@@ -1597,6 +1597,18 @@ small {
   margin-top: 8px;
 }
 
+.contacts-career-entry {
+  margin: 2px 0 0;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  color: var(--color-text-secondary);
+}
+
+.contacts-career-entry a {
+  margin-left: 6px;
+  font-weight: 600;
+}
+
 .contacts-map-card {
   align-content: start;
   gap: 14px;
