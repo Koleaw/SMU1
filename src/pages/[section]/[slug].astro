@@ -1,0 +1,108 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Hero from '../../components/Hero.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import DirectContactBlock from '../../components/DirectContactBlock.astro';
+import { withBase } from '../../utils/withBase';
+
+export async function getStaticPaths() {
+  const allCategories = await getCollection('product-categories');
+
+  return allCategories
+    .filter(({ data }) => data.parentSectionSlug !== 'ulichnaya-mebel' && data.isActive)
+    .map(({ data }) => ({
+      params: { section: data.parentSectionSlug, slug: data.slug },
+      props: { category: data }
+    }));
+}
+
+const { category } = Astro.props;
+
+const section = (await getCollection('product-sections'))
+  .map(({ data }) => data)
+  .find((item) => item.slug === category.parentSectionSlug && item.isActive);
+
+if (!section) {
+  throw new Error(`Active section not found for category ${category.slug}`);
+}
+
+const products = (await getCollection('products'))
+  .map(({ data }) => data)
+  .filter((item) => item.productCategorySlug === category.slug && item.isActive && item.showInCatalog)
+  .sort((a, b) => a.order - b.order);
+
+const formatPrice = (item: (typeof products)[number]) => {
+  if (item.priceMode === 'from' && typeof item.priceFrom === 'number') {
+    return `от ${item.priceFrom.toLocaleString('ru-RU')} ₽`;
+  }
+
+  if (item.priceMode === 'on_request') return 'Цена по запросу';
+
+  return '';
+};
+---
+<BaseLayout title={category.seoTitle} description={category.seoDescription}>
+  <div class="breadcrumbs-bar">
+    <div class="container">
+      <Breadcrumbs
+        items={[
+          { title: 'Главная', href: withBase('/') },
+          { title: section.title, href: withBase(`/${section.slug}/`) },
+          { title: category.title }
+        ]}
+      />
+    </div>
+  </div>
+
+  <Hero
+    kicker="Подтип ограждений"
+    title={category.heroTitle}
+    description={category.heroDescription}
+    className="hero--catalog hero--catalog-clean"
+  />
+
+  {category.mode === 'catalog-list' && products.length > 0 ? (
+    <section id="products" class="section">
+      <div class="container">
+        <div class="section-heading">
+          <h2 class="section-title">Линейка изделий</h2>
+        </div>
+        <div class="product-catalog-grid">
+          {products.map((product) => (
+            <article class="product-showcase-card">
+              <div class="product-showcase-card__media-wrap">
+                <img class="product-showcase-card__media" src={withBase(product.image)} alt={product.title} loading="lazy" />
+              </div>
+              <div class="product-showcase-card__body">
+                <h3>{product.title}</h3>
+                <p class="product-showcase-card__descriptor">{product.shortDescription}</p>
+                {formatPrice(product) && <p class="product-showcase-card__price">{formatPrice(product)}</p>}
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  ) : (
+    <section class="section section--soft">
+      <div class="container grid grid-2">
+        <article class="card catalog-price-factors">
+          <h2>Изготавливаем под объект</h2>
+          <p class="lead">Большинство решений из категории изготавливается под размеры объекта, тип основания, требования к покрытию и условия эксплуатации.</p>
+        </article>
+        <article class="card catalog-price-factors">
+          <h2>Что влияет на стоимость</h2>
+          <ul>
+            <li>габариты и конструктив;</li>
+            <li>материалы и покрытие;</li>
+            <li>тип заполнения и комплектующие;</li>
+            <li>сроки изготовления и монтаж.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+  )}
+
+  <DirectContactBlock />
+</BaseLayout>

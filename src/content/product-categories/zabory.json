@@ -1,0 +1,16 @@
+{
+  "title": "Заборы",
+  "slug": "zabory",
+  "parentSectionSlug": "ograzhdeniya-i-zabory",
+  "shortDescription": "Ограждения периметра для частных, коммерческих и производственных территорий.",
+  "heroTitle": "Заборы под заказ",
+  "heroDescription": "Изготавливаем заборы под размеры участка, тип основания, требования к внешнему виду и условия эксплуатации.",
+  "order": 1,
+  "showInSectionGrid": true,
+  "isActive": true,
+  "image": "",
+  "placeholderLabel": "Рендер будет добавлен позже",
+  "mode": "custom-list",
+  "seoTitle": "Заборы под заказ",
+  "seoDescription": "Заборы для частных, коммерческих и производственных территорий под размеры объекта."
+}

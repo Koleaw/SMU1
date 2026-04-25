@@ -1,0 +1,16 @@
+{
+  "title": "Ворота",
+  "slug": "vorota",
+  "parentSectionSlug": "ograzhdeniya-i-zabory",
+  "shortDescription": "Распашные и откатные решения под проем, забор и условия эксплуатации.",
+  "heroTitle": "Ворота под заказ",
+  "heroDescription": "Изготавливаем ворота под проем, конструкцию ограждения, тип открывания и условия эксплуатации.",
+  "order": 2,
+  "showInSectionGrid": true,
+  "isActive": true,
+  "image": "",
+  "placeholderLabel": "Рендер будет добавлен позже",
+  "mode": "custom-list",
+  "seoTitle": "Ворота под заказ",
+  "seoDescription": "Распашные и откатные ворота под размеры проема и требования объекта."
+}
