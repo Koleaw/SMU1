@@ -87,6 +87,97 @@ const navesyContent = {
     'Напишите нам, и мы подберем конструкцию под размеры площадки, назначение, внешний вид территории и условия монтажа.'
 };
 
+const metalContent = {
+  navItems: [
+    { id: 'metal-made', label: 'Что изготавливаем' },
+    { id: 'metal-targets', label: 'Для каких объектов' },
+    { id: 'metal-inputs', label: 'С чем можно обратиться' },
+    { id: 'metal-workflow', label: 'Как работаем' },
+    { id: 'metal-pricing', label: 'Что влияет на стоимость' },
+    { id: 'metal-examples', label: 'Примеры задач' },
+    { id: 'direct-contact', label: 'Связаться напрямую' }
+  ],
+  metalTypes: [
+    {
+      title: 'Каркасы и рамы',
+      description: 'Основания и несущие элементы для хозяйственных, технических и производственных задач.'
+    },
+    {
+      title: 'Фермы и несущие элементы',
+      description: 'Металлические элементы для перекрытий, навесов, пролетов и каркасных решений.'
+    },
+    {
+      title: 'Площадки обслуживания',
+      description: 'Площадки, настилы и опорные конструкции для доступа к оборудованию и рабочим зонам.'
+    },
+    {
+      title: 'Лестницы и марши',
+      description: 'Металлические лестницы, марши и элементы переходов под размеры объекта.'
+    },
+    {
+      title: 'Кронштейны и закладные',
+      description: 'Крепежные, опорные и монтажные элементы по чертежам или задаче.'
+    },
+    {
+      title: 'Опорные конструкции',
+      description: 'Стойки, опоры, рамы и вспомогательные конструкции под нагрузку.'
+    },
+    {
+      title: 'Хозяйственные и производственные помещения',
+      description: 'Каркасы и обшитые конструкции для цехов, складов и хозяйственных зон.'
+    },
+    {
+      title: 'Конструкции по чертежам',
+      description: 'Изготовление нестандартных изделий по ТЗ, эскизу, чертежу или замеру.'
+    }
+  ],
+  objectTypes: [
+    'производственные и складские объекты',
+    'частные участки и хозяйственные постройки',
+    'коммерческие территории',
+    'объекты благоустройства',
+    'технические зоны',
+    'входные группы и вспомогательные конструкции',
+    'нестандартные задачи по чертежам'
+  ],
+  requestInputs: [
+    'чертеж или КМ/КМД, если он уже есть',
+    'эскиз или референс',
+    'размеры и фото места установки',
+    'описание задачи и условий эксплуатации',
+    'необходимость изготовления детали, узла или конструкции',
+    'задача на монтаж или доработку существующей конструкции'
+  ],
+  workflow: [
+    'разбираем задачу, габариты и условия эксплуатации',
+    'работаем по чертежу, ТЗ, эскизу или замеру',
+    'подбираем материал, сечения и конструктив',
+    'согласуем покрытие и внешний вид',
+    'изготавливаем и при необходимости монтируем на объекте'
+  ],
+  costFactors: [
+    'габариты и масса конструкции',
+    'материал и сечение профиля',
+    'сложность сварки и сборки',
+    'требования к покрытию',
+    'наличие монтажа',
+    'транспортировка и условия доступа',
+    'наличие чертежей или необходимость проработки решения',
+    'сроки изготовления'
+  ],
+  examples: [
+    'каркас цеха или хозяйственного помещения',
+    'металлическая площадка обслуживания',
+    'лестница или марш',
+    'опорная рама',
+    'закладные и кронштейны',
+    'нестандартная конструкция по чертежам'
+  ],
+  contactTitle: 'Нужна металлоконструкция под задачу?',
+  contactDescription:
+    'Напишите нам, и мы сориентируем по изготовлению, материалу, покрытию, монтажу и срокам. Можно отправить чертеж, эскиз, размеры или описание задачи.'
+};
+
 export async function getStaticPaths() {
   const productSections = await getCollection('product-sections');
   const services = await getCollection('services');
@@ -106,8 +197,9 @@ const { item, itemType } = Astro.props;
 const isCatalogHub = itemType === 'product-section' && item.mode === 'catalog-hub';
 const isProjectDirection = itemType === 'product-section' && item.mode === 'custom-direction';
 const isNavesyPage = itemType === 'product-section' && item.slug === 'navesy-i-kozyrki';
+const isMetalPage = itemType === 'product-section' && item.slug === 'metallokonstruktsii-dlya-biznesa';
 
-const sectionNavItems = isNavesyPage ? navesyContent.navItems : defaultProjectNavItems;
+const sectionNavItems = isNavesyPage ? navesyContent.navItems : isMetalPage ? metalContent.navItems : defaultProjectNavItems;
 
 const categories = isCatalogHub
   ? (await getCollection('product-categories'))
@@ -118,12 +210,16 @@ const categories = isCatalogHub
 
 const contactTitle = isNavesyPage
   ? navesyContent.contactTitle
+  : isMetalPage
+    ? metalContent.contactTitle
   : item.slug === 'ograzhdeniya-i-zabory'
     ? 'Нужно ограждение под конкретный объект?'
     : 'Не нашли, что искали?';
 
 const contactDescription = isNavesyPage
   ? navesyContent.contactDescription
+  : isMetalPage
+    ? metalContent.contactDescription
   : item.slug === 'ograzhdeniya-i-zabory'
     ? 'Напишите нам, и мы подберем конструкцию под размеры, задачу, внешний вид территории и условия монтажа.'
     : 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.';
@@ -139,7 +235,7 @@ const contactDescription = isNavesyPage
 
   <Hero
     kicker={isCatalogHub ? 'Каталог направлений' : 'Проектное направление'}
-    className={isNavesyPage ? 'hero--media navesy-hero' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
+    className={isNavesyPage || isMetalPage ? 'hero--media navesy-hero' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
     title={item.heroTitle}
     description={item.heroDescription}
     mediaImage={isCatalogHub ? undefined : withBase(item.image)}
@@ -247,6 +343,95 @@ const contactDescription = isNavesyPage
         </div>
       </section>
     </>
+  ) : isMetalPage ? (
+    <>
+      <section id="metal-made" class="section section--dark navesy-section-compact" data-section-theme="dark">
+        <div class="container">
+          <div class="section-heading section-heading--light">
+            <h2 class="section-title">Что изготавливаем</h2>
+          </div>
+          <div class="metal-type-grid">
+            {metalContent.metalTypes.map((metalType) => (
+              <article class="card metal-type-card">
+                <h3>{metalType.title}</h3>
+                <p>{metalType.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="metal-targets" class="section section--soft navesy-section-compact">
+        <div class="container">
+          <article class="card metal-panel">
+            <h2>Для каких объектов</h2>
+            <ul class="metal-columns-list">
+              {metalContent.objectTypes.map((objectType) => (
+                <li>{objectType}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="metal-inputs" class="section navesy-section-compact">
+        <div class="container metal-input-layout">
+          <article class="card metal-panel metal-panel--graphite">
+            <h2>С чем можно обратиться</h2>
+            <ul class="metal-list-tight">
+              {metalContent.requestInputs.map((input) => (
+                <li>{input}</li>
+              ))}
+            </ul>
+          </article>
+          <article class="media-block placeholder placeholder--wide-feature">
+            <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
+            <p class="media-caption">Фото или рендер выполненного объекта будет добавлен позже</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="metal-workflow" class="section section--soft navesy-section-compact">
+        <div class="container">
+          <article class="card metal-panel">
+            <h2>Как работаем</h2>
+            <ol class="metal-list-tight">
+              {metalContent.workflow.map((step) => (
+                <li>{step}</li>
+              ))}
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section id="metal-pricing" class="section section--dark navesy-section-compact" data-section-theme="dark">
+        <div class="container">
+          <article class="card metal-panel">
+            <h2>Что влияет на стоимость</h2>
+            <ul class="metal-columns-list metal-columns-list--pricing">
+              {metalContent.costFactors.map((factor) => (
+                <li>{factor}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="metal-examples" class="section navesy-section-compact">
+        <div class="container">
+          <div class="section-heading">
+            <h2 class="section-title">Примеры задач</h2>
+          </div>
+          <div class="metal-example-grid">
+            {metalContent.examples.map((example) => (
+              <article class="card metal-example-card">
+                <p>{example}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
   ) : (
     <>
       <section id="project-scope" class="section">
@@ -296,7 +481,13 @@ const contactDescription = isNavesyPage
     </>
   )}
 
-  <DirectContactBlock title={contactTitle} description={contactDescription} />
+  <DirectContactBlock
+    title={contactTitle}
+    description={contactDescription}
+    telegramLabel={isMetalPage ? 'Написать в Telegram' : undefined}
+    emailLabel={isMetalPage ? 'Написать на почту' : undefined}
+    phoneLabel={isMetalPage ? 'Позвонить' : undefined}
+  />
 </BaseLayout>
 
 <style>
@@ -344,7 +535,31 @@ const contactDescription = isNavesyPage
     padding: 20px;
   }
 
+  .metal-panel {
+    gap: 14px;
+    padding: 20px;
+  }
+
+  .metal-panel--graphite {
+    background: var(--color-panel-dark);
+    border-color: var(--color-border-dark);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+  }
+
+  .metal-panel--graphite h2,
+  .metal-panel--graphite li {
+    color: #f2f5f7;
+  }
+
   .navesy-columns-list {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 20px;
+  }
+
+  .metal-columns-list {
     margin: 0;
     padding-left: 20px;
     display: grid;
@@ -354,6 +569,72 @@ const contactDescription = isNavesyPage
 
   .navesy-columns-list li {
     margin: 0;
+  }
+
+  .metal-columns-list li {
+    margin: 0;
+  }
+
+  .metal-columns-list--pricing {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metal-type-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .metal-type-card {
+    align-content: start;
+    min-height: 176px;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .metal-type-card h3 {
+    font-size: 21px;
+    line-height: 1.2;
+  }
+
+  .metal-type-card p {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .metal-input-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  .metal-input-layout .media-block {
+    height: 100%;
+  }
+
+  .metal-list-tight {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .metal-example-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .metal-example-card {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .metal-example-card p {
+    margin: 0;
+    line-height: 1.45;
   }
 
   .navesy-workflow-layout {
@@ -384,6 +665,10 @@ const contactDescription = isNavesyPage
     .navesy-type-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    .metal-type-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 900px) {
@@ -397,6 +682,22 @@ const contactDescription = isNavesyPage
 
     .navesy-workflow-layout {
       grid-template-columns: 1fr;
+    }
+
+    .metal-type-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .metal-columns-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .metal-input-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .metal-example-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
@@ -412,6 +713,21 @@ const contactDescription = isNavesyPage
     }
 
     .navesy-panel {
+      padding: 16px;
+    }
+
+    .metal-type-grid,
+    .metal-columns-list,
+    .metal-columns-list--pricing,
+    .metal-example-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .metal-type-card {
+      min-height: 0;
+    }
+
+    .metal-panel {
       padding: 16px;
     }
   }
