@@ -1,4 +1,5 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import SectionNavigator from '../components/SectionNavigator.astro';
@@ -11,60 +12,15 @@ const sectionNavItems = [
   { id: 'home-contact', label: 'Связаться' }
 ];
 
-const productDirections = [
-  {
-    title: 'Уличная мебель',
-    description: 'Направление с серийными и адаптируемыми решениями для общественных и коммерческих территорий.',
-    href: withBase('/ulichnaya-mebel/'),
-    media: withBase('/assets/images/products/benches-2.svg'),
-    mediaAlt: 'Уличная мебель'
-  },
-  {
-    title: 'Ограждения',
-    description: 'Ограждения и заборы под задачи безопасности, навигации и зонирования территории объекта.',
-    href: withBase('/ograzhdeniya-i-zabory/'),
-    media: withBase('/assets/images/placeholders/landscaping.svg'),
-    mediaAlt: 'Ограждения'
-  },
-  {
-    title: 'Навесы',
-    description: 'Проектирование и изготовление навесов и козырьков под нагрузку, размеры и сценарий эксплуатации.',
-    href: withBase('/navesy-i-kozyrki/'),
-    media: withBase('/assets/images/placeholders/canopies.svg'),
-    mediaAlt: 'Навесы'
-  },
-  {
-    title: 'Металлоконструкции',
-    description: 'Каркасные и вспомогательные металлоконструкции для коммерческих и производственных площадок.',
-    href: withBase('/metallokonstruktsii-dlya-biznesa/'),
-    media: withBase('/assets/images/placeholders/metal-business.svg'),
-    mediaAlt: 'Металлоконструкции'
-  },
-  {
-    title: 'Топиарии',
-    description: 'Декоративные топиарные формы под задачи городской среды, парков и коммерческих пространств.',
-    href: withBase('/topiarii/'),
-    media: withBase('/assets/images/placeholders/landscaping.svg'),
-    mediaAlt: 'Топиарии'
-  }
-];
+const productDirections = (await getCollection('product-sections'))
+  .map(({ data }) => data)
+  .filter((item) => item.showOnHome && item.isActive)
+  .sort((a, b) => a.order - b.order);
 
-const serviceDirections = [
-  {
-    title: 'Благоустройство',
-    description: 'Комплексные работы по территории: от состава решений до реализации на объекте и сопровождения этапов.',
-    href: withBase('/blagoustroystvo-territoriy/'),
-    media: withBase('/assets/images/placeholders/landscaping.svg'),
-    mediaAlt: 'Благоустройство территорий'
-  },
-  {
-    title: 'Строительство',
-    description: 'Строительные и ремонтные работы под задачу площадки, график запуска и требования к эксплуатации.',
-    href: withBase('/stroitelstvo-i-remonty/'),
-    media: withBase('/assets/images/placeholders/construction.svg'),
-    mediaAlt: 'Строительство и ремонты'
-  }
-];
+const serviceDirections = (await getCollection('services'))
+  .map(({ data }) => data)
+  .filter((item) => item.showOnHome && item.isActive)
+  .sort((a, b) => a.order - b.order);
 ---
 <BaseLayout title="СМУ-1 — производство изделий, металлоконструкции и благоустройство" description="СМУ-1 в Кургане: изделия, навесы, металлоконструкции, строительство и благоустройство территорий для коммерческих и общественных объектов.">
   <div class="home-page">
@@ -93,13 +49,13 @@ const serviceDirections = [
         </div>
         <div class="home-products-grid">
           {productDirections.map((item) => (
-            <a class="home-product-card" href={item.href}>
+            <a class="home-product-card" href={withBase(`/${item.slug}/`)}>
               <div class="media-block placeholder placeholder--card">
-                <img class="media-thumb" src={item.media} alt={item.mediaAlt} loading="lazy" />
+                <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
               </div>
               <div class="home-product-card__body">
                 <h3>{item.title}</h3>
-                <p>{item.description}</p>
+                <p>{item.shortDescription}</p>
               </div>
               <span class="btn btn-secondary home-product-card__cta">Перейти в раздел</span>
             </a>
@@ -118,12 +74,12 @@ const serviceDirections = [
           {serviceDirections.map((item) => (
             <article class="home-service-card">
               <div class="media-block placeholder placeholder--wide-feature">
-                <img class="media-thumb" src={item.media} alt={item.mediaAlt} loading="lazy" />
+                <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
               </div>
               <div class="home-service-card__body">
                 <h3>{item.title}</h3>
-                <p>{item.description}</p>
-                <a class="btn btn-secondary" href={item.href}>Перейти в раздел</a>
+                <p>{item.shortDescription}</p>
+                <a class="btn btn-secondary" href={withBase(`/${item.slug}/`)}>Перейти в раздел</a>
               </div>
             </article>
           ))}

@@ -1,0 +1,17 @@
+{
+  "title": "Объект: парковая зона (контент уточняется)",
+  "slug": "objekt-parkovaya-zona",
+  "city": "Курган",
+  "shortDescription": "Уличная мебель и элементы благоустройства.",
+  "whatWasDone": "Изготовлены и смонтированы типовые элементы. Финальные объемы и состав будут дополнены после сверки в мае.",
+  "image": "/assets/images/objects/object-1.svg",
+  "gallery": [
+    "/assets/images/objects/object-1.svg",
+    "/assets/images/objects/object-2.svg"
+  ],
+  "order": 1,
+  "isActive": true,
+  "year": 2025,
+  "seoTitle": "Выполненный объект: парковая зона — СМУ-1",
+  "seoDescription": "Кейс: парковая зона в Кургане, уличная мебель и элементы благоустройства."
+}

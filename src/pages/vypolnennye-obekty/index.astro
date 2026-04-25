@@ -1,9 +1,14 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Hero from '../../components/Hero.astro';
-import objects from '../../data/objects.json';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import { withBase } from '../../utils/withBase';
+
+const objects = (await getCollection('projects'))
+  .map(({ data }) => data)
+  .filter((item) => item.isActive)
+  .sort((a, b) => a.order - b.order);
 ---
 <BaseLayout title="Выполненные объекты — СМУ-1" description="Подтверждаем опыт через реальные объекты: задача, выполненные работы, результат.">
   <div class="breadcrumbs-bar">
@@ -12,23 +17,19 @@ import { withBase } from '../../utils/withBase';
     </div>
   </div>
 
-  <Hero
-    kicker="Доверительный контур"
-    className="hero--trust hero--catalog-clean"
-    title="Выполненные объекты"
-  />
+  <Hero kicker="Доверительный контур" className="hero--trust hero--catalog-clean" title="Выполненные объекты" />
   <section class="section">
     <div class="container object-list-grid">
       {objects.map((obj) => (
         <a class="object-list-card" href={withBase(`/vypolnennye-obekty/${obj.slug}/`)}>
           <div class="media-block placeholder placeholder--card">
-            <img class="media-thumb" src={withBase(obj.gallery[0])} alt={obj.title} loading="lazy" />
+            <img class="media-thumb" src={withBase(obj.image)} alt={obj.title} loading="lazy" />
             <p class="media-caption">Фото кейса будут обновлены в мае.</p>
           </div>
           <div class="object-list-card__body">
             <h2>{obj.title}</h2>
-            <p>{obj.city}, {obj.region}</p>
-            <p><strong>Тип работ:</strong> {obj.workType}</p>
+            <p>{obj.city}, {obj.year}</p>
+            <p><strong>Тип работ:</strong> {obj.shortDescription}</p>
           </div>
         </a>
       ))}

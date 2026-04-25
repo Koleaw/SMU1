@@ -1,0 +1,17 @@
+{
+  "title": "Скамья с деревянной спинкой",
+  "slug": "skamya-s-derevyannoy-spinkoy",
+  "productCategorySlug": "lavochki-i-skameyki",
+  "shortDescription": "Порошковая окраска, анкерное крепление.",
+  "leadText": "Для коммерческих и общественных площадок.",
+  "priceMode": "from",
+  "priceFrom": 41000,
+  "currency": "RUB",
+  "image": "/assets/images/products/benches-2.svg",
+  "placeholderLabel": "Фото изделия будут обновлены в мае.",
+  "order": 2,
+  "isActive": true,
+  "showInCatalog": true,
+  "seoTitle": "Скамья с деревянной спинкой",
+  "seoDescription": "Скамья с деревянной спинкой для коммерческих и общественных площадок."
+}

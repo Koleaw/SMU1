@@ -1,0 +1,17 @@
+{
+  "title": "Урна с крышкой 60 л",
+  "slug": "urna-s-kryshkoy-60l",
+  "productCategorySlug": "urny",
+  "shortDescription": "Для территорий с высоким трафиком.",
+  "leadText": "Решение для интенсивной эксплуатации.",
+  "priceMode": "from",
+  "priceFrom": 18900,
+  "currency": "RUB",
+  "image": "/assets/images/products/bins-2.svg",
+  "placeholderLabel": "Фото изделия будут обновлены в мае.",
+  "order": 2,
+  "isActive": true,
+  "showInCatalog": true,
+  "seoTitle": "Урна с крышкой 60 л",
+  "seoDescription": "Урна с крышкой 60 л для интенсивной эксплуатации."
+}

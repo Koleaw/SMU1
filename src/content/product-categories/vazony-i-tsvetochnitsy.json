@@ -1,0 +1,16 @@
+{
+  "title": "Вазоны и цветочницы",
+  "slug": "vazony-i-tsvetochnitsy",
+  "parentSectionSlug": "ulichnaya-mebel",
+  "shortDescription": "Изготавливаем уличные вазоны под сезонное и круглогодичное озеленение с учетом условий эксплуатации.",
+  "heroTitle": "Вазоны и цветочницы для общественных и коммерческих территорий",
+  "heroDescription": "Изготавливаем уличные вазоны под сезонное и круглогодичное озеленение с учетом условий эксплуатации.",
+  "order": 3,
+  "showInSectionGrid": true,
+  "isActive": true,
+  "image": "/assets/images/placeholders/street-furniture.svg",
+  "placeholderLabel": "Фото будут обновлены в мае: материалы по категории.",
+  "mode": "catalog-list",
+  "seoTitle": "Вазоны и цветочницы — СМУ-1",
+  "seoDescription": "Вазоны и цветочницы для общественных и коммерческих территорий."
+}

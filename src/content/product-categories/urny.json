@@ -1,0 +1,16 @@
+{
+  "title": "Урны",
+  "slug": "urny",
+  "parentSectionSlug": "ulichnaya-mebel",
+  "shortDescription": "Урны с учетом трафика, условий эксплуатации и требований по обслуживанию.",
+  "heroTitle": "Урны для общественных пространств и коммерческих территорий",
+  "heroDescription": "Урны с учетом трафика, условий эксплуатации и требований по обслуживанию.",
+  "order": 2,
+  "showInSectionGrid": true,
+  "isActive": true,
+  "image": "/assets/images/products/bins-1.svg",
+  "placeholderLabel": "Фото будут обновлены в мае: материалы по категории.",
+  "mode": "catalog-list",
+  "seoTitle": "Урны — СМУ-1",
+  "seoDescription": "Урны для общественных пространств и коммерческих территорий."
+}

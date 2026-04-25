@@ -1,205 +1,40 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
+import DirectContactBlock from '../components/DirectContactBlock.astro';
 import { withBase } from '../utils/withBase';
+
+const section = (await getCollection('product-sections')).find(
+  ({ data }) => data.slug === 'ograzhdeniya-i-zabory' && data.isActive
+);
+
+if (!section) {
+  throw new Error('Active section ograzhdeniya-i-zabory not found in content collection.');
+}
 ---
-<BaseLayout title="Ограждения и заборы — СМУ-1" description="Проектируем и изготавливаем ограждения для частных, коммерческих и общественных объектов под задачу, размеры и условия эксплуатации.">
+<BaseLayout title={section.data.seoTitle} description={section.data.seoDescription}>
   <div class="breadcrumbs-bar">
     <div class="container">
-      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Ограждения и заборы' }]} />
+      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: section.data.title }]} />
     </div>
   </div>
 
   <Hero
     className="hero--catalog hero--catalog-clean"
-    title="Ограждения под заказ"
-    description="Проектируем и изготавливаем ограждения для частных, коммерческих и общественных объектов. Подбираем конструкцию под задачу, размеры и условия эксплуатации."
+    title={section.data.heroTitle}
+    description={section.data.heroDescription}
   />
 
-  <section class="section ograzhdeniya-section">
+  <section class="section">
     <div class="container">
-      <div class="section-heading">
-        <h2 class="section-title">Что изготавливаем</h2>
-      </div>
-      <div class="ograzhdeniya-solutions-grid">
-        <article class="ograzhdeniya-solution-card">
-          <div class="media-block placeholder placeholder--card">
-            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Заборы" loading="lazy" />
-            <p class="media-caption">Фото по направлению добавляются.</p>
-          </div>
-          <h3>Заборы</h3>
-          <p>Базовые и усиленные решения для ограждения частных и коммерческих участков.</p>
-        </article>
-        <article class="ograzhdeniya-solution-card">
-          <div class="media-block placeholder placeholder--card">
-            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Секционные ограждения" loading="lazy" />
-            <p class="media-caption">Фото по направлению добавляются.</p>
-          </div>
-          <h3>Секционные ограждения</h3>
-          <p>Секции под требуемую длину периметра, тип крепления и условия монтажа.</p>
-        </article>
-        <article class="ograzhdeniya-solution-card">
-          <div class="media-block placeholder placeholder--card">
-            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Декоративные ограждения" loading="lazy" />
-            <p class="media-caption">Фото по направлению добавляются.</p>
-          </div>
-          <h3>Декоративные ограждения</h3>
-          <p>Акцентные конструкции для дворов, входных зон и общественных пространств.</p>
-        </article>
-        <article class="ograzhdeniya-solution-card">
-          <div class="media-block placeholder placeholder--card">
-            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Ограждения для частных территорий" loading="lazy" />
-            <p class="media-caption">Фото по направлению добавляются.</p>
-          </div>
-          <h3>Для частных территорий</h3>
-          <p>Форматы для домов и участков с учетом приватности, проездов и рельефа.</p>
-        </article>
-        <article class="ograzhdeniya-solution-card">
-          <div class="media-block placeholder placeholder--card">
-            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Ограждения для коммерческих объектов" loading="lazy" />
-            <p class="media-caption">Фото по направлению добавляются.</p>
-          </div>
-          <h3>Для коммерческих объектов</h3>
-          <p>Ограждения для территорий бизнеса с учетом режима эксплуатации и безопасности.</p>
-        </article>
-        <article class="ograzhdeniya-solution-card">
-          <div class="media-block placeholder placeholder--card">
-            <img class="media-thumb" src={withBase('/assets/images/placeholders/street-furniture.svg')} alt="Нестандартные ограждения" loading="lazy" />
-            <p class="media-caption">Фото по направлению добавляются.</p>
-          </div>
-          <h3>Нестандартные ограждения</h3>
-          <p>Изготовление по индивидуальным размерам, задаче объекта, ТЗ или чертежу.</p>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <section class="section section--soft ograzhdeniya-section">
-    <div class="container">
-      <article class="card ograzhdeniya-compact-panel">
-        <h2>Где применяются</h2>
-        <ul class="ograzhdeniya-list">
-          <li>частные дома и участки</li>
-          <li>многоквартирные дома</li>
-          <li>общественные пространства</li>
-          <li>коммерческие территории</li>
-          <li>производственные и складские объекты</li>
-          <li>периметральное ограждение и благоустройство</li>
-        </ul>
+      <article class="media-block placeholder placeholder--card">
+        <img class="media-thumb" src={withBase(section.data.image)} alt={section.data.title} loading="lazy" />
+        <p class="media-caption">{section.data.placeholderLabel}</p>
       </article>
     </div>
   </section>
 
-  <section class="section section--dark ograzhdeniya-section" data-section-theme="dark">
-    <div class="container">
-      <article class="card ograzhdeniya-compact-panel">
-        <h2>Что влияет на стоимость</h2>
-        <ul class="ograzhdeniya-list">
-          <li>размеры и протяженность</li>
-          <li>тип конструкции</li>
-          <li>материал изготовления</li>
-          <li>тип заполнения</li>
-          <li>покрытие и окраска</li>
-          <li>монтаж / логистика / индивидуальные требования</li>
-        </ul>
-      </article>
-      <article class="card ograzhdeniya-trust-note">
-        <p class="lead">Работаем по размерам объекта, ТЗ, референсу или чертежу. Подбираем конструкцию под задачу и условия эксплуатации.</p>
-      </article>
-    </div>
-  </section>
-
-  <section id="direct-contact" class="section">
-    <div class="container">
-      <article class="home-contact-card">
-        <h2 class="section-title">Свяжитесь с нами напрямую</h2>
-        <p class="lead">Напишите в Telegram, на почту или позвоните — уточним задачу и подготовим расчет под ваш объект.</p>
-        <div class="home-contact-actions">
-          <a class="btn btn-primary" href="https://t.me/smu1build" target="_blank" rel="noreferrer">@smu1build · Написать в Telegram</a>
-          <a class="btn btn-secondary" href="mailto:smu1.kurgan@yandex.ru">smu1.kurgan@yandex.ru · Написать на почту</a>
-          <a class="btn btn-secondary" href="tel:+79129735006">+7 (912) 973-50-06 · Позвонить</a>
-        </div>
-      </article>
-    </div>
-  </section>
+  <DirectContactBlock />
 </BaseLayout>
-
-<style>
-  .ograzhdeniya-section {
-    padding-block: clamp(42px, 7vw, 68px);
-  }
-
-  .ograzhdeniya-solutions-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-  }
-
-  .ograzhdeniya-solution-card {
-    display: grid;
-    gap: 8px;
-    padding: 14px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-base);
-    background: var(--color-surface);
-  }
-
-  .ograzhdeniya-solution-card .media-block {
-    box-shadow: none;
-  }
-
-  .ograzhdeniya-solution-card .media-thumb {
-    aspect-ratio: 16 / 9;
-  }
-
-  .ograzhdeniya-solution-card h3 {
-    font-size: clamp(22px, 2vw, 24px);
-  }
-
-  .ograzhdeniya-solution-card p {
-    color: var(--color-text-secondary);
-    font-size: 16px;
-    line-height: 1.45;
-  }
-
-  .ograzhdeniya-solution-card .media-caption {
-    min-height: 36px;
-  }
-
-  .ograzhdeniya-compact-panel {
-    max-width: 920px;
-    gap: 12px;
-  }
-
-  .ograzhdeniya-compact-panel + .ograzhdeniya-trust-note {
-    margin-top: 14px;
-  }
-
-  .ograzhdeniya-list {
-    margin: 0;
-    padding-left: 20px;
-    display: grid;
-    gap: 6px;
-  }
-
-  .ograzhdeniya-trust-note {
-    max-width: 920px;
-  }
-
-  .ograzhdeniya-trust-note .lead {
-    max-width: none;
-  }
-
-  @media (max-width: 1024px) {
-    .ograzhdeniya-solutions-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 700px) {
-    .ograzhdeniya-solutions-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>

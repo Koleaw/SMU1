@@ -1,0 +1,16 @@
+{
+  "title": "Лавочки и скамейки",
+  "slug": "lavochki-i-skameyki",
+  "parentSectionSlug": "ulichnaya-mebel",
+  "shortDescription": "Типовые и полутиповые решения с подбором длины, опор и покрытия под условия объекта.",
+  "heroTitle": "Лавочки и скамейки для парков, дворов и коммерческих объектов",
+  "heroDescription": "Типовые и полутиповые решения с подбором длины, опор и покрытия под условия объекта.",
+  "order": 1,
+  "showInSectionGrid": true,
+  "isActive": true,
+  "image": "/assets/images/products/benches-1.svg",
+  "placeholderLabel": "Фото будут обновлены в мае: материалы по категории.",
+  "mode": "catalog-list",
+  "seoTitle": "Лавочки и скамейки — СМУ-1",
+  "seoDescription": "Лавочки и скамейки для парков, дворов и коммерческих объектов."
+}
