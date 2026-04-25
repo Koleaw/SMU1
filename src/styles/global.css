@@ -427,7 +427,7 @@ small {
   font-size: clamp(12px, 0.75vw, 14px);
   font-weight: 500;
   line-height: 1.2;
-  padding: 6px 4px;
+  padding: 6px 3px;
   border-radius: var(--radius-base);
   white-space: nowrap;
   transition: color var(--transition-fast);
@@ -436,7 +436,6 @@ small {
 .site-header__nav a.active {
   color: var(--color-text);
   background: transparent;
-  font-size: 14px;
   font-weight: 700;
 }
 
@@ -1081,7 +1080,7 @@ small {
 
   .site-header__nav a {
     font-size: 12px;
-    padding: 4px 3px;
+    padding: 4px 2px;
   }
 
   .site-header__phone,
@@ -1597,6 +1596,18 @@ small {
   margin-top: 8px;
 }
 
+.contacts-career-entry {
+  margin: 2px 0 0;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  color: var(--color-text-secondary);
+}
+
+.contacts-career-entry a {
+  margin-left: 6px;
+  font-weight: 600;
+}
+
 .contacts-map-card {
   align-content: start;
   gap: 14px;
@@ -1881,7 +1892,6 @@ small {
 .site-header__nav a.active {
   background: transparent;
   color: var(--color-text);
-  font-size: 14px;
   font-weight: 700;
 }
 
