@@ -510,7 +510,8 @@ small {
 .footer .lead,
 .footer p,
 .footer small,
-.footer a {
+.footer a,
+.footer button {
   font-family: var(--font-body);
   color: rgb(255 255 255 / 88%);
   font-size: var(--font-size-caption);
