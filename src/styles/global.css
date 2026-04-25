@@ -2616,18 +2616,22 @@ small {
 }
 
 .cookie-banner__actions {
+  display: grid;
+  gap: 8px;
+}
+
+.cookie-banner__more {
+  width: fit-content;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: var(--font-size-caption);
+}
+
+.cookie-banner__buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
-  align-items: center;
-}
-
-.cookie-banner__more {
-  margin-right: auto;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  font-size: var(--font-size-caption);
 }
 
 .cookie-banner .btn {
@@ -2656,12 +2660,11 @@ small {
     width: calc(100% - 24px);
   }
 
-  .cookie-banner__actions {
+  .cookie-banner__buttons {
     justify-content: flex-start;
   }
 
   .cookie-banner__more {
-    margin-right: 0;
     width: 100%;
   }
 }

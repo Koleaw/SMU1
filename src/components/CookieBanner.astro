@@ -8,8 +8,10 @@ import { withBase } from '../utils/withBase';
   </p>
   <div class="cookie-banner__actions">
     <a href={withBase('/politika-konfidencialnosti/')} class="cookie-banner__more">Политика конфиденциальности</a>
-    <button type="button" class="btn btn-secondary" data-consent-choice="necessary">Только необходимые</button>
-    <button type="button" class="btn btn-primary" data-consent-choice="accepted">Принять</button>
+    <div class="cookie-banner__buttons">
+      <button type="button" class="btn btn-secondary" data-consent-choice="necessary">Только необходимые</button>
+      <button type="button" class="btn btn-primary" data-consent-choice="accepted">Принять</button>
+    </div>
   </div>
 </div>
 
@@ -28,6 +30,7 @@ import { withBase } from '../utils/withBase';
     };
 
     const applyChoice = (value) => {
+      if (value !== 'accepted' && value !== 'necessary') return;
       localStorage.setItem(consentKey, value);
       hideBanner();
       document.dispatchEvent(new CustomEvent('smu1:cookie-consent-changed', { detail: value }));
@@ -40,8 +43,15 @@ import { withBase } from '../utils/withBase';
       showBanner();
     }
 
-    banner.querySelectorAll('[data-consent-choice]').forEach((button) => {
-      button.addEventListener('click', () => applyChoice(button.getAttribute('data-consent-choice')));
+    banner.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      const choiceTrigger = target.closest('[data-consent-choice]');
+      if (!choiceTrigger) return;
+
+      event.preventDefault();
+      applyChoice(choiceTrigger.getAttribute('data-consent-choice'));
     });
 
     const openCookieSettings = () => {
