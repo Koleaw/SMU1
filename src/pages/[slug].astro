@@ -262,6 +262,80 @@ const topiaryContent = {
     'Напишите нам, и мы подберем форму, размер, материал покрытия и способ установки под вашу территорию, мероприятие или входную зону.'
 };
 
+const landscapingContent = {
+  navItems: [
+    { id: 'landscaping-do', label: 'Что делаем' },
+    { id: 'landscaping-targets', label: 'Для каких объектов' },
+    { id: 'landscaping-scope', label: 'Что можем включить в проект' },
+    { id: 'landscaping-workflow', label: 'Как работаем' },
+    { id: 'landscaping-pricing', label: 'Что влияет на стоимость' },
+    { id: 'landscaping-examples', label: 'Примеры задач' },
+    { id: 'direct-contact', label: 'Связаться напрямую' }
+  ],
+  whatWeDo: [
+    { title: 'Дворы и территории', description: 'Обустройство дворов, придомовых зон и территорий вокруг объектов.' },
+    { title: 'Входные группы', description: 'Оформление зон перед входом: конструкции, МАФ, ограждения и декоративные элементы.' },
+    { title: 'Зоны отдыха', description: 'Создание мест для отдыха, ожидания и общения на территории объекта.' },
+    { title: 'МАФ и элементы благоустройства', description: 'Подбор и установка лавок, урн, вазонов, велопарковок и других элементов.' },
+    { title: 'Ограждения и навесы', description: 'Малые конструкции для зонирования, защиты и организации пространства.' },
+    { title: 'Хозяйственные зоны', description: 'Обустройство контейнерных, технических и вспомогательных площадок.' },
+    { title: 'Озеленение и декор', description: 'Декоративные элементы, топиарии, вазоны и решения для визуального оформления.' },
+    { title: 'Индивидуальные проекты', description: 'Работы по ТЗ, эскизу, дизайн-проекту, фото территории или описанию задачи.' }
+  ],
+  objectTypes: [
+    'частные участки',
+    'дворы многоквартирных домов',
+    'коммерческие территории',
+    'офисы, магазины, кафе и базы отдыха',
+    'общественные пространства',
+    'производственные и складские территории',
+    'территории у входных групп',
+    'хозяйственные и контейнерные зоны'
+  ],
+  projectScope: [
+    'лавочки, урны, вазоны, велопарковки',
+    'навесы, перголы, павильоны',
+    'ограждения, калитки, ворота, болларды',
+    'топиарии и декоративные элементы',
+    'освещение и фонари',
+    'контейнерные площадки',
+    'металлоконструкции под задачу',
+    'монтаж и доработка территории'
+  ],
+  workflow: [
+    'разбираем задачу и состояние территории',
+    'определяем состав работ и элементов',
+    'подбираем изделия, материалы и конструктив',
+    'согласуем внешний вид, объем и этапность',
+    'изготавливаем элементы и выполняем монтаж',
+    'передаем готовый результат'
+  ],
+  costFactors: [
+    'площадь и состояние территории',
+    'состав работ',
+    'количество и тип МАФ',
+    'необходимость изготовления под заказ',
+    'материалы и покрытия',
+    'основание и монтаж',
+    'логистика и доступ к объекту',
+    'сроки и этапность выполнения'
+  ],
+  examples: [
+    'обустроить входную группу',
+    'собрать зону отдыха во дворе',
+    'оформить территорию у кафе или базы отдыха',
+    'закрыть контейнерную площадку',
+    'установить лавки, урны, вазоны и велопарковки',
+    'оформить общественное пространство',
+    'добавить навес, ограждение и освещение',
+    'реализовать благоустройство по дизайн-проекту'
+  ],
+  scopeMediaCaption: 'Комплект благоустройства будет добавлен позже',
+  contactTitle: 'Нужно благоустроить территорию?',
+  contactDescription:
+    'Напишите нам, и мы сориентируем по составу работ, изделиям, материалам, монтажу и этапности. Можно отправить фото территории, ТЗ, чертеж, дизайн-проект или описание задачи.'
+};
+
 export async function getStaticPaths() {
   const productSections = await getCollection('product-sections');
   const services = await getCollection('services');
@@ -283,6 +357,7 @@ const isProjectDirection = itemType === 'product-section' && item.mode === 'cust
 const isNavesyPage = itemType === 'product-section' && item.slug === 'navesy-i-kozyrki';
 const isMetalPage = itemType === 'product-section' && item.slug === 'metallokonstruktsii-dlya-biznesa';
 const isTopiaryPage = itemType === 'product-section' && item.slug === 'topiarii';
+const isLandscapingPage = itemType === 'service' && item.slug === 'blagoustroystvo-territoriy';
 
 const sectionNavItems = isNavesyPage
   ? navesyContent.navItems
@@ -290,7 +365,9 @@ const sectionNavItems = isNavesyPage
     ? metalContent.navItems
     : isTopiaryPage
       ? topiaryContent.navItems
-      : defaultProjectNavItems;
+      : isLandscapingPage
+        ? landscapingContent.navItems
+        : defaultProjectNavItems;
 
 const categories = isCatalogHub
   ? (await getCollection('product-categories'))
@@ -305,6 +382,8 @@ const contactTitle = isNavesyPage
     ? metalContent.contactTitle
     : isTopiaryPage
       ? topiaryContent.contactTitle
+      : isLandscapingPage
+        ? landscapingContent.contactTitle
     : item.slug === 'ograzhdeniya-i-zabory'
     ? 'Нужно ограждение под конкретный объект?'
     : 'Не нашли, что искали?';
@@ -315,6 +394,8 @@ const contactDescription = isNavesyPage
     ? metalContent.contactDescription
     : isTopiaryPage
       ? topiaryContent.contactDescription
+      : isLandscapingPage
+        ? landscapingContent.contactDescription
     : item.slug === 'ograzhdeniya-i-zabory'
     ? 'Напишите нам, и мы подберем конструкцию под размеры, задачу, внешний вид территории и условия монтажа.'
     : 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.';
@@ -330,7 +411,7 @@ const contactDescription = isNavesyPage
 
   <Hero
     kicker={isCatalogHub ? 'Каталог направлений' : 'Проектное направление'}
-    className={isTopiaryPage ? 'hero--media navesy-hero topiary-hero' : isNavesyPage || isMetalPage ? 'hero--media navesy-hero' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
+    className={isTopiaryPage ? 'hero--media navesy-hero topiary-hero' : isNavesyPage || isMetalPage || isLandscapingPage ? 'hero--media navesy-hero' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
     title={item.heroTitle}
     description={item.heroDescription}
     mediaImage={isCatalogHub ? undefined : withBase(item.image)}
@@ -601,6 +682,93 @@ const contactDescription = isNavesyPage
         </div>
       </section>
     </>
+  ) : isLandscapingPage ? (
+    <>
+      <section id="landscaping-do" class="section section--dark navesy-section-compact" data-section-theme="dark">
+        <div class="container">
+          <div class="section-heading section-heading--light">
+            <h2 class="section-title">Что делаем</h2>
+          </div>
+          <div class="landscaping-do-grid">
+            {landscapingContent.whatWeDo.map((itemCard) => (
+              <article class="card landscaping-dark-card">
+                <h3>{itemCard.title}</h3>
+                <p>{itemCard.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="landscaping-targets" class="section section--soft navesy-section-compact">
+        <div class="container">
+          <article class="card landscaping-panel landscaping-panel--light">
+            <h2>Для каких объектов</h2>
+            <ul class="landscaping-columns-list">
+              {landscapingContent.objectTypes.map((objectType) => (
+                <li>{objectType}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="landscaping-scope" class="section navesy-section-compact">
+        <div class="container landscaping-scope-layout">
+          <article class="card landscaping-panel landscaping-panel--graphite">
+            <h2>Что можем включить в проект</h2>
+            <ul class="landscaping-list-tight">
+              {landscapingContent.projectScope.map((scopeItem) => (
+                <li>{scopeItem}</li>
+              ))}
+            </ul>
+          </article>
+          <article class="media-block placeholder placeholder--wide-feature">
+            <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
+            <p class="media-caption">{landscapingContent.scopeMediaCaption}</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="landscaping-workflow" class="section section--soft navesy-section-compact">
+        <div class="container">
+          <article class="card landscaping-panel landscaping-panel--light">
+            <h2>Как работаем</h2>
+            <ol class="landscaping-list-tight">
+              {landscapingContent.workflow.map((step) => (
+                <li>{step}</li>
+              ))}
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section id="landscaping-pricing" class="section section--dark navesy-section-compact" data-section-theme="dark">
+        <div class="container">
+          <article class="card landscaping-panel">
+            <h2>Что влияет на стоимость</h2>
+            <ul class="landscaping-columns-list landscaping-columns-list--pricing">
+              {landscapingContent.costFactors.map((factor) => (
+                <li>{factor}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="landscaping-examples" class="section navesy-section-compact">
+        <div class="container">
+          <article class="card landscaping-panel landscaping-panel--examples">
+            <h2>Примеры задач</h2>
+            <ul class="landscaping-columns-list">
+              {landscapingContent.examples.map((example) => (
+                <li>{example}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+    </>
   ) : (
     <>
       <section id="project-scope" class="section">
@@ -653,9 +821,9 @@ const contactDescription = isNavesyPage
   <DirectContactBlock
     title={contactTitle}
     description={contactDescription}
-    telegramLabel={isMetalPage || isTopiaryPage ? 'Написать в Telegram' : undefined}
-    emailLabel={isMetalPage || isTopiaryPage ? 'Написать на почту' : undefined}
-    phoneLabel={isMetalPage || isTopiaryPage ? 'Позвонить' : undefined}
+    telegramLabel={isMetalPage || isTopiaryPage || isLandscapingPage ? 'Написать в Telegram' : undefined}
+    emailLabel={isMetalPage || isTopiaryPage || isLandscapingPage ? 'Написать на почту' : undefined}
+    phoneLabel={isMetalPage || isTopiaryPage || isLandscapingPage ? 'Позвонить' : undefined}
   />
 </BaseLayout>
 
@@ -890,6 +1058,92 @@ const contactDescription = isNavesyPage
     gap: 8px;
   }
 
+  .landscaping-do-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .landscaping-dark-card {
+    align-content: start;
+    min-height: 170px;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .landscaping-dark-card h3 {
+    font-size: 21px;
+    line-height: 1.2;
+  }
+
+  .landscaping-dark-card p {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .landscaping-panel {
+    gap: 14px;
+    padding: 20px;
+  }
+
+  .landscaping-panel--light {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-card);
+  }
+
+  .landscaping-panel--graphite {
+    background: var(--color-panel-dark);
+    border-color: var(--color-border-dark);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+  }
+
+  .landscaping-panel--graphite h2,
+  .landscaping-panel--graphite li {
+    color: #f2f5f7;
+  }
+
+  .landscaping-panel--examples {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-card);
+  }
+
+  .landscaping-columns-list {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 20px;
+  }
+
+  .landscaping-columns-list li {
+    margin: 0;
+  }
+
+  .landscaping-columns-list--pricing {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .landscaping-list-tight {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .landscaping-scope-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  .landscaping-scope-layout .media-block {
+    height: 100%;
+  }
+
   .navesy-workflow-layout {
     display: grid;
     grid-template-columns: minmax(0, 860px);
@@ -924,6 +1178,10 @@ const contactDescription = isNavesyPage
     }
 
     .topiary-made-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .landscaping-do-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
@@ -966,6 +1224,18 @@ const contactDescription = isNavesyPage
     }
 
     .topiary-workflow-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .landscaping-do-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .landscaping-columns-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .landscaping-scope-layout {
       grid-template-columns: 1fr;
     }
   }
@@ -1011,6 +1281,20 @@ const contactDescription = isNavesyPage
     }
 
     .topiary-panel {
+      padding: 16px;
+    }
+
+    .landscaping-do-grid,
+    .landscaping-columns-list,
+    .landscaping-columns-list--pricing {
+      grid-template-columns: 1fr;
+    }
+
+    .landscaping-dark-card {
+      min-height: 0;
+    }
+
+    .landscaping-panel {
       padding: 16px;
     }
   }
