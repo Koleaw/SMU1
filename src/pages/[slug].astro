@@ -23,14 +23,38 @@ const navesyContent = {
     { id: 'direct-contact', label: 'Связаться напрямую' }
   ],
   canopyTypes: [
-    'входные навесы',
-    'навесы для велопарковок',
-    'навесы для контейнерных площадок',
-    'навесы для зон ожидания',
-    'парковочные навесы',
-    'теневые навесы для дворов и общественных пространств',
-    'навесы для хозяйственных и производственных зон',
-    'павильоны и укрытия по индивидуальной задаче'
+    {
+      title: 'Входные навесы',
+      description: 'Для крылец, проходов, входных групп и зон перед дверями.'
+    },
+    {
+      title: 'Навесы для велопарковок',
+      description: 'Крытые решения для велосипедов у ЖК, офисов, школ и предприятий.'
+    },
+    {
+      title: 'Навесы для контейнерных площадок',
+      description: 'Кровля и защитные конструкции для площадок ТКО и хозяйственных зон.'
+    },
+    {
+      title: 'Навесы для зон ожидания',
+      description: 'Для проходных, остановок, территорий предприятий и общественных пространств.'
+    },
+    {
+      title: 'Парковочные навесы',
+      description: 'Для автомобилей, спецтехники и хозяйственных площадок.'
+    },
+    {
+      title: 'Теневые навесы',
+      description: 'Для дворов, парков, зон отдыха и общественных пространств.'
+    },
+    {
+      title: 'Хозяйственные навесы',
+      description: 'Для складских, производственных и технических зон.'
+    },
+    {
+      title: 'Павильоны и укрытия',
+      description: 'Индивидуальные конструкции под задачу объекта.'
+    }
   ],
   objectTypes: [
     'частные дома и участки',
@@ -58,6 +82,8 @@ const navesyContent = {
     'основание, монтаж и условия объекта',
     'индивидуальные требования к внешнему виду'
   ],
+  heroPlaceholderLabel: 'Рендер навеса будет добавлен позже',
+  workflowPlaceholderLabel: 'Визуал узлов и монтажа навеса будет добавлен позже',
   contactTitle: 'Нужен навес под конкретный объект?',
   contactDescription:
     'Напишите нам, и мы подберем конструкцию под размеры площадки, назначение, внешний вид территории и условия монтажа.'
@@ -115,12 +141,12 @@ const contactDescription = isNavesyPage
 
   <Hero
     kicker={isCatalogHub ? 'Каталог направлений' : 'Проектное направление'}
-    className={isNavesyPage ? 'hero--catalog hero--catalog-clean' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
+    className={isNavesyPage ? 'hero--media navesy-hero' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
     title={item.heroTitle}
     description={item.heroDescription}
-    mediaImage={isCatalogHub || isNavesyPage ? undefined : withBase(item.image)}
-    mediaAlt={isCatalogHub || isNavesyPage ? undefined : item.title}
-    mediaCaption={isCatalogHub || isNavesyPage ? undefined : item.placeholderLabel}
+    mediaImage={isCatalogHub ? undefined : withBase(item.image)}
+    mediaAlt={isCatalogHub ? undefined : item.title}
+    mediaCaption={isCatalogHub ? undefined : isNavesyPage ? navesyContent.heroPlaceholderLabel : item.placeholderLabel}
   />
 
   {isCatalogHub ? (
@@ -168,26 +194,27 @@ const contactDescription = isNavesyPage
     </>
   ) : isNavesyPage ? (
     <>
-      <section id="navesy-types" class="section">
+      <section id="navesy-types" class="section section--dark" data-section-theme="dark">
         <div class="container">
-          <div class="section-heading">
+          <div class="section-heading section-heading--light">
             <h2 class="section-title">Какие навесы делаем</h2>
           </div>
-          <div class="grid grid-3">
-            {navesyContent.canopyTypes.map((itemName) => (
-              <article class="card">
-                <p>{itemName}</p>
+          <div class="navesy-type-grid">
+            {navesyContent.canopyTypes.map((canopyType) => (
+              <article class="card navesy-type-card">
+                <h3>{canopyType.title}</h3>
+                <p>{canopyType.description}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="navesy-targets" class="section section--soft">
+      <section id="navesy-targets" class="section section--soft navesy-section-compact">
         <div class="container">
-          <article class="card">
+          <article class="card navesy-panel">
             <h2>Для каких объектов</h2>
-            <ul>
+            <ul class="navesy-columns-list">
               {navesyContent.objectTypes.map((objectType) => (
                 <li>{objectType}</li>
               ))}
@@ -196,24 +223,29 @@ const contactDescription = isNavesyPage
         </div>
       </section>
 
-      <section id="navesy-workflow" class="section">
-        <div class="container">
-          <article class="card">
+      <section id="navesy-workflow" class="section navesy-section-compact">
+        <div class="container navesy-workflow-layout">
+          <article class="media-block placeholder placeholder--wide-feature navesy-workflow-media">
+            <img class="media-thumb" src={withBase(item.image)} alt="Навес под объект — визуал" loading="lazy" />
+            <p class="media-caption">{navesyContent.workflowPlaceholderLabel}</p>
+          </article>
+
+          <article class="card navesy-panel navesy-process-card">
             <h2>Как работаем</h2>
-            <ul>
+            <ol>
               {navesyContent.workflow.map((step) => (
                 <li>{step}</li>
               ))}
-            </ul>
+            </ol>
           </article>
         </div>
       </section>
 
-      <section id="navesy-pricing" class="section section--soft">
+      <section id="navesy-pricing" class="section section--dark navesy-section-compact" data-section-theme="dark">
         <div class="container">
-          <article class="card catalog-price-factors">
+          <article class="card navesy-panel navesy-pricing-panel">
             <h2>Что влияет на стоимость</h2>
-            <ul>
+            <ul class="navesy-columns-list navesy-columns-list--pricing">
               {navesyContent.costFactors.map((factor) => (
                 <li>{factor}</li>
               ))}
@@ -273,3 +305,124 @@ const contactDescription = isNavesyPage
 
   <DirectContactBlock title={contactTitle} description={contactDescription} />
 </BaseLayout>
+
+<style>
+  .navesy-section-compact {
+    --section-gap-desktop: 72px;
+    --section-gap-tablet: 56px;
+    --section-gap-mobile: 44px;
+  }
+
+  .navesy-hero :global(.hero-content) {
+    max-width: 760px;
+  }
+
+  .navesy-hero :global(.hero-description) {
+    max-width: 60ch;
+    color: rgb(255 255 255 / 92%);
+  }
+
+  .navesy-type-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .navesy-type-card {
+    align-content: start;
+    min-height: 172px;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .navesy-type-card h3 {
+    font-size: 22px;
+    line-height: 1.2;
+  }
+
+  .navesy-type-card p {
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .navesy-panel {
+    gap: 14px;
+    padding: 20px;
+  }
+
+  .navesy-columns-list {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 20px;
+  }
+
+  .navesy-columns-list li {
+    margin: 0;
+  }
+
+  .navesy-workflow-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.15fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .navesy-workflow-media :global(.media-thumb) {
+    --media-ratio: 16 / 10;
+  }
+
+  .navesy-process-card ol {
+    margin: 0;
+    padding-left: 22px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .navesy-process-card li,
+  .navesy-pricing-panel li {
+    line-height: 1.45;
+  }
+
+  .navesy-columns-list--pricing {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 1200px) {
+    .navesy-type-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 900px) {
+    .navesy-type-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .navesy-columns-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .navesy-workflow-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .navesy-type-grid,
+    .navesy-columns-list,
+    .navesy-columns-list--pricing {
+      grid-template-columns: 1fr;
+    }
+
+    .navesy-type-card {
+      min-height: 0;
+    }
+
+    .navesy-panel {
+      padding: 16px;
+    }
+  }
+</style>
