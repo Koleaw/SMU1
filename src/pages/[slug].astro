@@ -82,8 +82,6 @@ const navesyContent = {
     'основание, монтаж и условия объекта',
     'индивидуальные требования к внешнему виду'
   ],
-  heroPlaceholderLabel: 'Рендер навеса будет добавлен позже',
-  workflowPlaceholderLabel: 'Визуал узлов и монтажа навеса будет добавлен позже',
   contactTitle: 'Нужен навес под конкретный объект?',
   contactDescription:
     'Напишите нам, и мы подберем конструкцию под размеры площадки, назначение, внешний вид территории и условия монтажа.'
@@ -146,7 +144,7 @@ const contactDescription = isNavesyPage
     description={item.heroDescription}
     mediaImage={isCatalogHub ? undefined : withBase(item.image)}
     mediaAlt={isCatalogHub ? undefined : item.title}
-    mediaCaption={isCatalogHub ? undefined : isNavesyPage ? navesyContent.heroPlaceholderLabel : item.placeholderLabel}
+    mediaCaption={isCatalogHub || isNavesyPage ? undefined : item.placeholderLabel}
   />
 
   {isCatalogHub ? (
@@ -225,11 +223,6 @@ const contactDescription = isNavesyPage
 
       <section id="navesy-workflow" class="section navesy-section-compact">
         <div class="container navesy-workflow-layout">
-          <article class="media-block placeholder placeholder--wide-feature navesy-workflow-media">
-            <img class="media-thumb" src={withBase(item.image)} alt="Навес под объект — визуал" loading="lazy" />
-            <p class="media-caption">{navesyContent.workflowPlaceholderLabel}</p>
-          </article>
-
           <article class="card navesy-panel navesy-process-card">
             <h2>Как работаем</h2>
             <ol>
@@ -365,13 +358,10 @@ const contactDescription = isNavesyPage
 
   .navesy-workflow-layout {
     display: grid;
-    grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.15fr);
+    grid-template-columns: minmax(0, 860px);
     gap: 20px;
     align-items: start;
-  }
-
-  .navesy-workflow-media :global(.media-thumb) {
-    --media-ratio: 16 / 10;
+    justify-content: start;
   }
 
   .navesy-process-card ol {
