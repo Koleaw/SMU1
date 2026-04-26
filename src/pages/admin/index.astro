@@ -1,4 +1,5 @@
 ---
+const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:8787/api/admin';
 ---
 
 <html lang="ru">
@@ -66,13 +67,14 @@
     </style>
   </head>
   <body>
-    <div id="loginView" class="login-wrap hidden">
+    <div id="loginView" class="login-wrap">
       <form id="loginForm" class="login-card">
         <h1>Локальная админка СМУ-1</h1>
         <p>Войдите, чтобы редактировать контент JSON через интерфейс.</p>
         <div class="field"><label for="login">Логин</label><input id="login" name="login" required /></div>
         <div class="field"><label for="password">Пароль</label><input id="password" type="password" name="password" required /></div>
         <button class="btn" type="submit">Войти</button>
+        <p id="loginStatus" class="muted" style="margin-top:10px;">Проверяем подключение к backend API…</p>
         <p id="loginError" class="muted" style="color:#b12f2f;margin-top:10px;"></p>
       </form>
     </div>
@@ -112,8 +114,9 @@
       </main>
     </div>
 
-    <script type="module">
-      const API_BASE = 'http://localhost:8787/api/admin';
+    <script type="module" define:vars={{ adminApiBase }}>
+      const API_BASE = adminApiBase;
+      const CONNECTION_ERROR_MESSAGE = 'Не удалось подключиться к локальному backend API. Проверьте, что запущен npm run admin:api и API доступен по http://127.0.0.1:8787/api/admin/me';
       const groupedCollections = [
         { title: 'Страницы', keys: ['product-sections', 'services'] },
         { title: 'Каталог', keys: ['product-categories', 'products'] },
@@ -151,12 +154,28 @@
         box.style.color = error ? '#b12f2f' : '#49627a';
       }
 
+      function setLoginStatus(text, error = false) {
+        const box = $('loginStatus');
+        if (!box) return;
+        box.textContent = text;
+        box.style.color = error ? '#b12f2f' : '#66788b';
+      }
+
       async function api(path, options = {}) {
-        const response = await fetch(`${API_BASE}${path}`, {
-          ...options,
-          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-          credentials: 'include'
-        });
+        let response;
+        try {
+          response = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+            credentials: 'include'
+          });
+        } catch (error) {
+          const isConnectionError = error instanceof TypeError || String(error?.message || '').includes('Failed to fetch');
+          if (isConnectionError) {
+            throw new Error(CONNECTION_ERROR_MESSAGE);
+          }
+          throw error;
+        }
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
         return data;
@@ -595,30 +614,45 @@
           event.preventDefault();
           const form = new FormData(event.currentTarget);
           try {
+            setLoginStatus('Выполняем вход…');
             await api('/login', { method: 'POST', body: JSON.stringify({ login: form.get('login'), password: form.get('password') }) });
             $('loginError').textContent = '';
             await startApp();
           } catch (error) {
             $('loginError').textContent = error.message;
+            setLoginStatus('Вход не выполнен.', true);
           }
         });
 
-        const me = await api('/me').catch(() => ({ authenticated: false }));
-        if (me.authenticated) {
-          await startApp();
-        } else {
-          $('loginView').classList.remove('hidden');
+        $('loginView').classList.remove('hidden');
+        try {
+          const me = await api('/me');
+          if (me.authenticated) {
+            setLoginStatus('Сессия найдена, загружаем интерфейс…');
+            await startApp();
+            return;
+          }
+          setLoginStatus('Введите логин и пароль.');
+        } catch (error) {
+          $('loginError').textContent = error.message;
+          setLoginStatus(CONNECTION_ERROR_MESSAGE, true);
         }
       }
 
       async function startApp() {
         $('loginView').classList.add('hidden');
         $('appView').classList.remove('hidden');
-        const data = await api('/collections');
-        state.collections = data.collections || [];
-        renderNav();
-        if (state.collections.length) {
-          await openCollection('product-sections');
+        try {
+          const data = await api('/collections');
+          state.collections = data.collections || [];
+          renderNav();
+          if (state.collections.length) {
+            await openCollection('product-sections');
+          }
+        } catch (error) {
+          setAlert('Не удалось загрузить коллекции', true);
+          $('collectionNav').innerHTML = '<button id="retryCollectionsBtn" class="btn">Повторить</button>';
+          $('retryCollectionsBtn')?.addEventListener('click', () => startApp());
         }
       }
 

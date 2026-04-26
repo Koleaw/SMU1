@@ -14,7 +14,7 @@ const DEV_DEFAULTS = {
   ADMIN_PASSWORD: 'admin',
   SESSION_SECRET: 'dev-session-secret-change-me',
   ADMIN_API_PORT: '8787',
-  ADMIN_ALLOWED_ORIGIN: 'http://localhost:4321',
+  ADMIN_ALLOWED_ORIGIN: '',
   CONTENT_WRITE_MODE: 'local'
 };
 
@@ -87,6 +87,9 @@ async function loadEnvConfig() {
       // optional env file
     }
   }
+  Object.assign(merged, Object.fromEntries(
+    Object.entries(process.env).filter(([, value]) => typeof value === 'string' && value.length > 0)
+  ));
 
   let usingDevCredentials = false;
   const config = {
@@ -121,10 +124,19 @@ function parseCookies(request) {
   );
 }
 
-function setCorsHeaders(req, res, allowedOrigin) {
+function buildAllowedOrigins(extraOrigin) {
+  const defaults = new Set(['http://localhost:4321', 'http://127.0.0.1:4321']);
+  const normalizedExtraOrigin = String(extraOrigin ?? '').trim();
+  if (normalizedExtraOrigin) {
+    defaults.add(normalizedExtraOrigin);
+  }
+  return defaults;
+}
+
+function setCorsHeaders(req, res, allowedOrigins) {
   const requestOrigin = req.headers.origin;
-  if (requestOrigin === allowedOrigin) {
-    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  if (requestOrigin && allowedOrigins.has(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
@@ -299,6 +311,7 @@ function clearSessionCookie(res) {
 }
 
 const { config, usingDevCredentials } = await loadEnvConfig();
+const allowedOrigins = buildAllowedOrigins(config.ADMIN_ALLOWED_ORIGIN);
 
 if (usingDevCredentials) {
   console.warn('[admin-api] WARNING: используются dev credentials (admin/admin). Добавьте .env.local или .env.admin.local');
@@ -310,7 +323,7 @@ if (config.CONTENT_WRITE_MODE !== 'local') {
 
 const server = http.createServer(async (req, res) => {
   try {
-    setCorsHeaders(req, res, config.ADMIN_ALLOWED_ORIGIN);
+    setCorsHeaders(req, res, allowedOrigins);
 
     if (req.method === 'OPTIONS') {
       res.statusCode = 204;
@@ -355,7 +368,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/admin/me' && req.method === 'GET') {
       const username = getAuthUser(req);
       if (!username) {
-        sendJson(res, 401, { authenticated: false });
+        sendJson(res, 200, { authenticated: false });
         return;
       }
       sendJson(res, 200, { authenticated: true, username });
@@ -415,5 +428,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(config.ADMIN_API_PORT, () => {
-  console.log(`[admin-api] running on http://localhost:${config.ADMIN_API_PORT}/api/admin`);
+  console.log(`[admin-api] running on http://127.0.0.1:${config.ADMIN_API_PORT}/api/admin`);
+  console.log(`[admin-api] CORS origins: ${Array.from(allowedOrigins).join(', ')}`);
 });
