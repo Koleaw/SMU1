@@ -1,664 +1,151 @@
 ---
+import { withBase } from '../../utils/withBase';
 const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:8787/api/admin';
+
+const cards = [
+  { title: 'Навесы', description: 'Визуальное редактирование страницы «Навесы»', href: withBase('/admin/pages/navesy/'), cta: 'Редактировать страницу Навесы', primary: true },
+  { title: 'Разделы продукции', description: 'Скоро: визуальный режим для всех разделов.' },
+  { title: 'Услуги', description: 'Скоро: отдельный сценарий редактирования услуг.' },
+  { title: 'Категории изделий', description: 'Скоро: визуальное редактирование каталога.' },
+  { title: 'Изделия', description: 'Скоро: удобный редактор карточек изделий.' },
+  { title: 'Выполненные объекты', description: 'Скоро: визуальный редактор объектов.' },
+  { title: 'Вакансии', description: 'Скоро: визуальный редактор вакансий.' }
+];
 ---
 
 <html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>СМУ-1 — Локальная админка</title>
+    <title>Админка СМУ-1</title>
     <style>
-      :root { color-scheme: light; }
       * { box-sizing: border-box; }
-      body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #f4f6f8; color: #17212b; }
+      body { margin: 0; font-family: Inter, system-ui, sans-serif; color: #1c2d3f; background: linear-gradient(180deg, #f4f6fa 0%, #eef2f7 100%); }
       .hidden { display: none !important; }
       .login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-      .login-card { width: min(420px, 100%); background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 8px 30px rgb(0 0 0 / 8%); }
-      .login-card h1 { margin: 0 0 12px; font-size: 24px; }
-      .login-card p { margin: 0 0 20px; color: #49586a; }
-      .field { display: grid; gap: 6px; margin-bottom: 12px; }
-      .field label { font-size: 14px; color: #49586a; }
-      .field input, .field textarea, .field select { width: 100%; border: 1px solid #d3dae2; border-radius: 8px; padding: 9px 10px; font: inherit; background: #fff; }
-      .field textarea { min-height: 90px; resize: vertical; }
-      .btn { border: 1px solid #1f8f55; border-radius: 8px; background: #1f8f55; color: #fff; padding: 8px 14px; cursor: pointer; font-weight: 600; }
-      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-      .btn-secondary { background: #fff; color: #34495e; border-color: #c9d3de; }
-      .btn-danger { border-color: #de4b4b; background: #de4b4b; }
-      .admin-shell { height: 100vh; display: grid; grid-template-columns: 280px 1fr; }
-      .sidebar { background: #111a22; color: #dce5ee; padding: 14px; overflow: auto; }
-      .sidebar h2 { margin: 0 0 14px; font-size: 18px; color: #fff; }
-      .menu-group { margin-bottom: 18px; }
-      .menu-group-title { font-size: 12px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-      .menu-item { width: 100%; text-align: left; border: 0; background: transparent; color: inherit; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
-      .menu-item:hover, .menu-item.active { background: #1f2b37; }
-      .main { display: grid; grid-template-rows: auto auto 1fr; min-width: 0; }
-      .topbar { position: sticky; top: 0; z-index: 4; background: #fff; border-bottom: 1px solid #d9e0e8; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-      .title-stack h1 { margin: 0; font-size: 20px; }
-      .muted { color: #66788b; font-size: 13px; }
-      .topbar-actions { display: flex; gap: 8px; align-items: center; }
-      .status-dirty { color: #b54f02; font-weight: 600; }
-      .status-clean { color: #2a7b47; }
-      .content { overflow: auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: minmax(280px, 360px) minmax(420px, 1fr); align-items: start; }
-      .panel { background: #fff; border-radius: 12px; border: 1px solid #dde4eb; }
-      .panel-header { padding: 12px 14px; border-bottom: 1px solid #e4ebf2; font-weight: 700; }
-      .panel-body { padding: 14px; }
-      .entries { display: grid; gap: 8px; }
-      .entry-item { border: 1px solid #d8e1eb; border-radius: 10px; padding: 10px; display: grid; gap: 6px; }
-      .entry-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-      .badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #ebf8f0; color: #1e8a52; }
-      .badge.off { background: #ffecec; color: #a23f3f; }
-      .small-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-      .editor-scroll { display: grid; gap: 12px; }
-      details.section { border: 1px solid #dde5ee; border-radius: 10px; background: #fff; }
-      details.section > summary { list-style: none; cursor: pointer; padding: 10px 12px; font-weight: 700; border-bottom: 1px solid #e8edf3; }
-      details.section[open] > summary { background: #f6f9fc; }
-      details.section > summary::-webkit-details-marker { display: none; }
-      .section-body { padding: 12px; display: grid; gap: 10px; }
-      .block-card { border: 1px solid #d8e1ea; border-radius: 10px; }
-      .block-head { background: #f6f9fc; padding: 10px; display: grid; gap: 8px; }
-      .inline-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-      .block-body { padding: 10px; display: grid; gap: 10px; }
-      pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; background: #10161d; color: #d6deeb; padding: 12px; border-radius: 8px; max-height: 360px; overflow: auto; }
-      @media (max-width: 1024px) {
-        .admin-shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-        .sidebar { max-height: 220px; }
-        .content { grid-template-columns: 1fr; }
-      }
+      .login-card { width: min(460px, 100%); background: #fff; border: 1px solid #d8e2ec; border-radius: 16px; padding: 28px; box-shadow: 0 18px 40px rgb(23 39 56 / 10%); }
+      .login-card h1 { margin: 0 0 10px; font-size: 28px; }
+      .login-card p { margin: 0 0 18px; color: #576b80; }
+      .field { display: grid; gap: 8px; margin-bottom: 12px; }
+      .field label { font-size: 14px; color: #41566d; }
+      .field input { border: 1px solid #c8d6e4; border-radius: 10px; padding: 12px 14px; font: inherit; font-size: 16px; }
+      .btn { border: 1px solid #0b6b4f; border-radius: 10px; background: #0b6b4f; color: #fff; padding: 12px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+      .btn:disabled { opacity: .5; cursor: wait; }
+      .muted { color: #60758a; font-size: 14px; }
+      .error { color: #b13838; }
+      .app { min-height: 100vh; padding: 32px 24px 56px; }
+      .shell { max-width: 1120px; margin: 0 auto; }
+      .topbar { display: flex; justify-content: space-between; gap: 14px; align-items: center; margin-bottom: 24px; }
+      .topbar h1 { margin: 0; font-size: clamp(30px, 4vw, 42px); }
+      .topbar p { margin: 8px 0 0; color: #556d85; }
+      .topbar-actions { display: flex; gap: 10px; }
+      .btn-secondary { background: #fff; color: #26405a; border-color: #c2d2e2; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+      .card { background: #fff; border: 1px solid #d5e0ea; border-radius: 14px; padding: 18px; display: grid; gap: 12px; min-height: 190px; }
+      .card h2 { margin: 0; font-size: 22px; }
+      .card p { margin: 0; color: #5e7388; }
+      .card .cta { margin-top: auto; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; padding: 11px 14px; border-radius: 10px; font-weight: 700; }
+      .cta-primary { background: #0b6b4f; color: #fff; }
+      .cta-muted { background: #ecf1f6; color: #4c6075; }
     </style>
   </head>
   <body>
-    <div id="loginView" class="login-wrap">
+    <div id="loginView" class="login-wrap hidden">
       <form id="loginForm" class="login-card">
-        <h1>Локальная админка СМУ-1</h1>
-        <p>Войдите, чтобы редактировать контент JSON через интерфейс.</p>
+        <h1>Админка СМУ-1</h1>
+        <p>Войдите, чтобы перейти к редактированию контента.</p>
         <div class="field"><label for="login">Логин</label><input id="login" name="login" required /></div>
         <div class="field"><label for="password">Пароль</label><input id="password" type="password" name="password" required /></div>
         <button class="btn" type="submit">Войти</button>
-        <p id="loginStatus" class="muted" style="margin-top:10px;">Проверяем подключение к backend API…</p>
-        <p id="loginError" class="muted" style="color:#b12f2f;margin-top:10px;"></p>
+        <p id="loginStatus" class="muted" style="margin-top: 12px;"></p>
       </form>
     </div>
 
-    <div id="appView" class="admin-shell hidden">
-      <aside class="sidebar">
-        <h2>Админка</h2>
-        <div id="collectionNav"></div>
-      </aside>
-      <main class="main">
+    <main id="appView" class="app hidden">
+      <div class="shell">
         <div class="topbar">
-          <div class="title-stack">
-            <h1 id="editorTitle">Выберите запись</h1>
-            <div class="muted" id="editorSubtitle">Откройте коллекцию слева.</div>
+          <div>
+            <h1>Админка СМУ-1</h1>
+            <p>Выберите страницу или раздел для редактирования.</p>
           </div>
           <div class="topbar-actions">
-            <span id="dirtyStatus" class="muted status-clean">Нет изменений</span>
-            <button id="saveBtn" class="btn" disabled>Сохранить</button>
-            <button id="logoutBtn" class="btn btn-secondary">Выйти</button>
+            <a class="btn btn-secondary" href={withBase('/admin/technical/')}>Технический режим</a>
+            <button id="logoutBtn" class="btn btn-secondary" type="button">Выйти</button>
           </div>
         </div>
-        <div id="alertBox" class="muted" style="padding:8px 16px;"></div>
-        <section class="content">
-          <div class="panel">
-            <div class="panel-header" id="entriesHeader">Записи</div>
-            <div class="panel-body">
-              <div id="entriesList" class="entries"></div>
-            </div>
-          </div>
-          <div class="panel">
-            <div class="panel-header">Редактор</div>
-            <div class="panel-body editor-scroll" id="editorRoot">
-              <p class="muted">Откройте запись для редактирования.</p>
-            </div>
-          </div>
+        <section class="cards">
+          {cards.map((card) => (
+            <article class="card">
+              <h2>{card.title}</h2>
+              <p>{card.description}</p>
+              {card.href ? (
+                <a class={`cta ${card.primary ? 'cta-primary' : 'cta-muted'}`} href={card.href}>{card.cta ?? 'Открыть'}</a>
+              ) : (
+                <span class="cta cta-muted">Скоро</span>
+              )}
+            </article>
+          ))}
         </section>
-      </main>
-    </div>
+      </div>
+    </main>
 
     <script type="module" define:vars={{ adminApiBase }}>
       const API_BASE = adminApiBase;
-      const CONNECTION_ERROR_MESSAGE = 'Не удалось подключиться к локальному backend API. Проверьте, что запущен npm run admin:api и API доступен по http://127.0.0.1:8787/api/admin/me';
-      const groupedCollections = [
-        { title: 'Страницы', keys: ['product-sections', 'services'] },
-        { title: 'Каталог', keys: ['product-categories', 'products'] },
-        { title: 'Компания', keys: ['projects', 'jobs', 'site-settings'] }
-      ];
+      const loginView = document.getElementById('loginView');
+      const appView = document.getElementById('appView');
+      const loginStatus = document.getElementById('loginStatus');
+      const loginForm = document.getElementById('loginForm');
 
-      const state = {
-        collections: [],
-        selectedCollection: null,
-        entries: [],
-        selectedSlug: null,
-        originalContent: null,
-        draftContent: null,
-        collapsedBlocks: new Set()
-      };
-
-      const $ = (id) => document.getElementById(id);
-      const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-      const deepClone = (v) => JSON.parse(JSON.stringify(v));
-      const stableStringify = (value) => JSON.stringify(sortDeep(value));
-      function sortDeep(value) {
-        if (Array.isArray(value)) return value.map(sortDeep);
-        if (value && typeof value === 'object') {
-          return Object.keys(value).sort().reduce((acc, key) => {
-            acc[key] = sortDeep(value[key]);
-            return acc;
-          }, {});
-        }
-        return value;
-      }
-
-      function setAlert(text, error = false) {
-        const box = $('alertBox');
-        box.textContent = text;
-        box.style.color = error ? '#b12f2f' : '#49627a';
-      }
-
-      function setLoginStatus(text, error = false) {
-        const box = $('loginStatus');
-        if (!box) return;
-        box.textContent = text;
-        box.style.color = error ? '#b12f2f' : '#66788b';
-      }
-
-      async function api(path, options = {}) {
-        let response;
-        try {
-          response = await fetch(`${API_BASE}${path}`, {
-            ...options,
-            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-            credentials: 'include'
-          });
-        } catch (error) {
-          const isConnectionError = error instanceof TypeError || String(error?.message || '').includes('Failed to fetch');
-          if (isConnectionError) {
-            throw new Error(CONNECTION_ERROR_MESSAGE);
-          }
-          throw error;
-        }
+      const api = async (path, options = {}) => {
+        const response = await fetch(`${API_BASE}${path}`, {
+          ...options,
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+        });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
         return data;
-      }
+      };
 
-      function markDirtyStatus() {
-        const dirty = isDirty();
-        $('dirtyStatus').textContent = dirty ? 'Есть несохраненные изменения' : 'Нет изменений';
-        $('dirtyStatus').className = dirty ? 'muted status-dirty' : 'muted status-clean';
-        $('saveBtn').disabled = !dirty || !state.selectedCollection || !state.selectedSlug;
-      }
+      const showLogin = (msg = '') => {
+        loginView.classList.remove('hidden');
+        appView.classList.add('hidden');
+        loginStatus.textContent = msg;
+        loginStatus.className = 'muted';
+      };
+      const showApp = () => {
+        loginView.classList.add('hidden');
+        appView.classList.remove('hidden');
+      };
 
-      function isDirty() {
-        if (!state.originalContent || !state.draftContent) return false;
-        return stableStringify(state.originalContent) !== stableStringify(state.draftContent);
-      }
-
-      function updateDraft(path, value) {
-        let cursor = state.draftContent;
-        for (let i = 0; i < path.length - 1; i += 1) {
-          const key = path[i];
-          cursor = cursor[key];
-        }
-        cursor[path[path.length - 1]] = value;
-        renderEditor();
-      }
-
-      function normalizeOrder(list) {
-        list.forEach((item, index) => {
-          if (item && typeof item === 'object' && 'order' in item) item.order = (index + 1) * 10;
-        });
-      }
-
-      function moveArrayItem(list, index, delta) {
-        const nextIndex = index + delta;
-        if (nextIndex < 0 || nextIndex >= list.length) return;
-        [list[index], list[nextIndex]] = [list[nextIndex], list[index]];
-        normalizeOrder(list);
-        renderEditor();
-      }
-
-      function boolField(label, checked, onChange) {
-        return `<label style="display:flex;align-items:center;gap:8px;font-size:14px;"><input type="checkbox" ${checked ? 'checked' : ''} data-action="${onChange}" /> ${label}</label>`;
-      }
-
-      function commonMainFields(content) {
-        return `
-          <div class="small-grid">
-            ${textInput('Заголовок', 'title', content.title)}
-            ${textInput('Slug', 'slug', content.slug)}
-            ${textInput('Mode', 'mode', content.mode ?? '')}
-            ${textInput('Порядок', 'order', content.order ?? '', 'number')}
-          </div>
-          ${textArea('Краткое описание', 'shortDescription', content.shortDescription ?? '')}
-          ${textInput('Hero title', 'heroTitle', content.heroTitle ?? '')}
-          ${textArea('Hero description', 'heroDescription', content.heroDescription ?? '')}
-          <div class="small-grid">
-            ${textInput('Изображение', 'image', content.image ?? '')}
-            ${textInput('Placeholder label', 'placeholderLabel', content.placeholderLabel ?? '')}
-          </div>
-          <div class="small-grid">
-            ${boolInput('Показывать на главной', 'showOnHome', !!content.showOnHome)}
-            ${boolInput('Активно', 'isActive', !!content.isActive)}
-          </div>
-        `;
-      }
-
-      function textInput(label, key, value, type = 'text') {
-        return `<div class="field"><label>${label}</label><input type="${type}" data-field="${key}" value="${escapeHtml(value)}" /></div>`;
-      }
-      function textArea(label, key, value) {
-        return `<div class="field"><label>${label}</label><textarea data-field="${key}">${escapeHtml(value)}</textarea></div>`;
-      }
-      function boolInput(label, key, value) {
-        return `<label class="field" style="grid-template-columns:auto 1fr;align-items:center;"><input type="checkbox" data-field="${key}" ${value ? 'checked' : ''} /><span>${label}</span></label>`;
-      }
-
-      function renderNav() {
-        const map = Object.fromEntries(state.collections.map((c) => [c.key, c]));
-        $('collectionNav').innerHTML = groupedCollections.map((group) => {
-          const items = group.keys
-            .filter((key) => map[key])
-            .map((key) => `<button class="menu-item ${state.selectedCollection === key ? 'active' : ''}" data-collection="${key}">${map[key].label}</button>`)
-            .join('');
-          return `<div class="menu-group"><div class="menu-group-title">${group.title}</div>${items}</div>`;
-        }).join('');
-      }
-
-      function renderEntries() {
-        const list = $('entriesList');
-        $('entriesHeader').textContent = state.selectedCollection ? `Записи: ${collectionLabel(state.selectedCollection)}` : 'Записи';
-        if (!state.entries.length) {
-          list.innerHTML = '<p class="muted">Нет записей.</p>';
-          return;
-        }
-        list.innerHTML = state.entries.map((entry) => `
-          <div class="entry-item">
-            <div class="entry-head">
-              <strong>${escapeHtml(entry.title || entry.slug)}</strong>
-              <span class="badge ${entry.isActive === false ? 'off' : ''}">${entry.isActive === false ? 'Скрыто' : 'Активно'}</span>
-            </div>
-            <div class="muted">slug: ${escapeHtml(entry.slug)} · order: ${entry.order ?? '—'}</div>
-            <button class="btn btn-secondary" data-open-slug="${entry.slug}">Открыть</button>
-          </div>
-        `).join('');
-      }
-
-      function collectionLabel(key) {
-        return state.collections.find((c) => c.key === key)?.label || key;
-      }
-
-      function renderEditor() {
-        const root = $('editorRoot');
-        if (!state.draftContent) {
-          root.innerHTML = '<p class="muted">Откройте запись для редактирования.</p>';
-          $('editorTitle').textContent = 'Выберите запись';
-          $('editorSubtitle').textContent = 'Откройте коллекцию слева.';
-          markDirtyStatus();
-          return;
-        }
-
-        const title = state.draftContent.title || state.selectedSlug;
-        $('editorTitle').textContent = `${title}`;
-        $('editorSubtitle').textContent = `${collectionLabel(state.selectedCollection)} · ${state.selectedSlug}`;
-
-        if (['product-sections', 'services'].includes(state.selectedCollection)) {
-          root.innerHTML = renderFriendlyDirectionEditor(state.draftContent);
-        } else if (state.selectedCollection === 'product-categories') {
-          root.innerHTML = renderGenericEditor(['title','slug','parentSectionSlug','shortDescription','heroTitle','heroDescription','mode','order','isActive','showInSectionGrid','image','placeholderLabel','seoTitle','seoDescription']);
-        } else if (state.selectedCollection === 'products') {
-          root.innerHTML = renderGenericEditor(['title','slug','productCategorySlug','shortDescription','priceMode','priceFrom','showInCatalog','isActive','order','image','placeholderLabel','seoTitle','seoDescription']);
-        } else if (state.selectedCollection === 'projects') {
-          root.innerHTML = renderGenericEditor(['title','slug','shortDescription','isActive','order','image','placeholderLabel','seoTitle','seoDescription'], ['city','whatWasDone','gallery','year']);
-        } else if (state.selectedCollection === 'jobs') {
-          root.innerHTML = renderGenericEditor(['title','slug','city','employmentType','shortDescription','responsibilities','requirements','conditions','order','isActive']);
-        } else {
-          root.innerHTML = renderSiteSettingsEditor();
-        }
-
-        markDirtyStatus();
-      }
-
-      function renderFriendlyDirectionEditor(content) {
-        const blocks = Array.isArray(content.pageBlocks) ? content.pageBlocks : null;
-        return `
-          <details class="section" open><summary>Основное</summary><div class="section-body">${commonMainFields(content)}</div></details>
-          <details class="section" open><summary>SEO</summary><div class="section-body">${textInput('SEO title', 'seoTitle', content.seoTitle ?? '')}${textArea('SEO description', 'seoDescription', content.seoDescription ?? '')}</div></details>
-          <details class="section" open><summary>Блоки страницы</summary><div class="section-body">${blocks ? renderBlocks(blocks) : '<p class="muted">У этой страницы еще нет редактируемых блоков pageBlocks.</p>'}</div></details>
-          <details class="section"><summary>Показать JSON</summary><div class="section-body"><pre>${escapeHtml(JSON.stringify(content, null, 2))}</pre></div></details>
-        `;
-      }
-
-      function renderSiteSettingsEditor() {
-        return `<details class="section" open><summary>Настройки сайта</summary><div class="section-body">${Object.entries(state.draftContent).map(([k,v]) => typeof v === 'boolean' ? boolInput(k,k,v) : textInput(k,k,v ?? '')).join('')}</div></details><details class="section"><summary>Показать JSON</summary><div class="section-body"><pre>${escapeHtml(JSON.stringify(state.draftContent, null, 2))}</pre></div></details>`;
-      }
-
-      function renderGenericEditor(primaryFields, extraPrefer = []) {
-        const content = state.draftContent;
-        const known = new Set(primaryFields.concat(extraPrefer));
-        const primary = primaryFields.map((key) => fieldByValueType(key, content[key])).join('');
-        const extras = Object.keys(content).filter((k) => !known.has(k)).map((k) => fieldByValueType(k, content[k])).join('');
-        const preferExtra = extraPrefer.map((k) => fieldByValueType(k, content[k])).join('');
-        return `
-          <details class="section" open><summary>Основные поля</summary><div class="section-body">${primary}${preferExtra}</div></details>
-          ${extras ? `<details class="section"><summary>Дополнительные поля</summary><div class="section-body">${extras}</div></details>` : ''}
-          <details class="section"><summary>Показать JSON</summary><div class="section-body"><pre>${escapeHtml(JSON.stringify(content, null, 2))}</pre></div></details>
-        `;
-      }
-
-      function fieldByValueType(key, value) {
-        if (typeof value === 'boolean') return boolInput(key, key, value);
-        if (Array.isArray(value)) return textArea(key, key, value.join('\n'));
-        if (typeof value === 'number') return textInput(key, key, value, 'number');
-        if (value && typeof value === 'object') return textArea(key, key, JSON.stringify(value, null, 2));
-        if ((key.toLowerCase().includes('description') || key.toLowerCase().includes('text')) && String(value || '').length > 60) return textArea(key, key, value ?? '');
-        return textInput(key, key, value ?? '');
-      }
-
-      function renderBlocks(blocks) {
-        return blocks.map((block, blockIndex) => {
-          const collapsed = state.collapsedBlocks.has(blockIndex);
-          return `
-            <div class="block-card">
-              <div class="block-head">
-                <strong>${escapeHtml(block.title || `Блок ${blockIndex + 1}`)}</strong>
-                <div class="muted">Тип: ${block.type} · theme: ${block.theme ?? '—'} · order: ${block.order ?? '—'} · ${block.isActive === false ? 'Скрыт' : 'Активен'}</div>
-                <div class="inline-actions">
-                  <button class="btn btn-secondary" data-block-move="up" data-block-index="${blockIndex}">Выше</button>
-                  <button class="btn btn-secondary" data-block-move="down" data-block-index="${blockIndex}">Ниже</button>
-                  <button class="btn btn-secondary" data-block-toggle="${blockIndex}">${collapsed ? 'Развернуть' : 'Свернуть'}</button>
-                  <button class="btn btn-secondary" data-block-active="${blockIndex}">${block.isActive === false ? 'Показать блок' : 'Скрыть блок'}</button>
-                </div>
-              </div>
-              ${collapsed ? '' : `<div class="block-body">${renderBlockBody(block, blockIndex)}</div>`}
-            </div>
-          `;
-        }).join('');
-      }
-
-      function renderBlockBody(block, blockIndex) {
-        const shared = `
-          ${textInput('Заголовок', `pageBlocks.${blockIndex}.title`, block.title ?? '')}
-          ${textArea('Вступление', `pageBlocks.${blockIndex}.intro`, block.intro ?? '')}
-          <div class="small-grid">
-            ${textInput('Тема', `pageBlocks.${blockIndex}.theme`, block.theme ?? '')}
-            ${textInput('Порядок', `pageBlocks.${blockIndex}.order`, block.order ?? '', 'number')}
-          </div>
-          ${boolInput('Активен', `pageBlocks.${blockIndex}.isActive`, block.isActive !== false)}
-        `;
-
-        if (['cardGrid', 'exampleGrid'].includes(block.type)) {
-          const items = Array.isArray(block.items) ? block.items : [];
-          return `${shared}${textInput('Сетка', `pageBlocks.${blockIndex}.grid`, block.grid ?? '')}<div>${items.map((item, itemIndex) => renderCardItem(blockIndex, item, itemIndex)).join('')}</div><button class="btn" data-item-add="${blockIndex}">Добавить карточку</button>`;
-        }
-        if (block.type === 'listPanel' || block.type === 'factorList') {
-          const items = Array.isArray(block.items) ? block.items : [];
-          return `${shared}${textInput('Колонки', `pageBlocks.${blockIndex}.columns`, block.columns ?? '', 'number')}<div>${items.map((row, rowIndex) => renderStringItem(blockIndex, rowIndex, row)).join('')}</div><button class="btn" data-row-add="${blockIndex}">Добавить строку</button>`;
-        }
-        if (block.type === 'process') {
-          const steps = Array.isArray(block.steps) ? block.steps : [];
-          return `${shared}<div class="small-grid">${textInput('Media', `pageBlocks.${blockIndex}.media`, block.media ?? '')}${textInput('Media position', `pageBlocks.${blockIndex}.mediaPosition`, block.mediaPosition ?? '')}</div>${textInput('Placeholder label', `pageBlocks.${blockIndex}.placeholderLabel`, block.placeholderLabel ?? '')}<div>${steps.map((step, stepIndex) => renderStepItem(blockIndex, step, stepIndex)).join('')}</div>`;
-        }
-        if (block.type === 'mediaText') {
-          return `${shared}${textArea('Текст', `pageBlocks.${blockIndex}.text`, block.text ?? '')}<div class="small-grid">${textInput('Media', `pageBlocks.${blockIndex}.media`, block.media ?? '')}${textInput('Media position', `pageBlocks.${blockIndex}.mediaPosition`, block.mediaPosition ?? '')}</div>${textInput('Placeholder label', `pageBlocks.${blockIndex}.placeholderLabel`, block.placeholderLabel ?? '')}`;
-        }
-        if (block.type === 'notice') {
-          return `${shared}${textArea('Текст', `pageBlocks.${blockIndex}.text`, block.text ?? '')}`;
-        }
-        return `${shared}<p class="muted">Для этого типа блока используется базовое редактирование полей.</p>`;
-      }
-
-      function renderCardItem(blockIndex, item, itemIndex) {
-        return `<div class="block-card" style="margin-bottom:8px;"><div class="block-body">${textInput('Заголовок карточки', `pageBlocks.${blockIndex}.items.${itemIndex}.title`, item.title ?? '')}${textArea('Текст', `pageBlocks.${blockIndex}.items.${itemIndex}.text`, item.text ?? '')}<div class="small-grid">${textInput('Порядок', `pageBlocks.${blockIndex}.items.${itemIndex}.order`, item.order ?? '', 'number')}${boolInput('Активна', `pageBlocks.${blockIndex}.items.${itemIndex}.isActive`, item.isActive !== false)}</div><div class="inline-actions"><button class="btn btn-secondary" data-item-move="up" data-block-index="${blockIndex}" data-item-index="${itemIndex}">Выше</button><button class="btn btn-secondary" data-item-move="down" data-block-index="${blockIndex}" data-item-index="${itemIndex}">Ниже</button><button class="btn btn-secondary" data-item-hide data-block-index="${blockIndex}" data-item-index="${itemIndex}">Скрыть</button></div></div></div>`;
-      }
-
-      function renderStringItem(blockIndex, rowIndex, value) {
-        return `<div class="field" style="grid-template-columns:1fr auto auto auto;align-items:center;"><input data-row-value="${blockIndex}:${rowIndex}" value="${escapeHtml(value)}" /><button class="btn btn-secondary" data-row-move="up" data-block-index="${blockIndex}" data-row-index="${rowIndex}">Выше</button><button class="btn btn-secondary" data-row-move="down" data-block-index="${blockIndex}" data-row-index="${rowIndex}">Ниже</button><button class="btn btn-secondary" data-row-delete data-block-index="${blockIndex}" data-row-index="${rowIndex}">Удалить</button></div>`;
-      }
-
-      function renderStepItem(blockIndex, step, stepIndex) {
-        return `<div class="block-card" style="margin-bottom:8px;"><div class="block-body">${textInput('Шаг: заголовок', `pageBlocks.${blockIndex}.steps.${stepIndex}.title`, step.title ?? '')}${textArea('Шаг: текст', `pageBlocks.${blockIndex}.steps.${stepIndex}.text`, step.text ?? '')}<div class="small-grid">${textInput('Порядок', `pageBlocks.${blockIndex}.steps.${stepIndex}.order`, step.order ?? '', 'number')}${boolInput('Активен', `pageBlocks.${blockIndex}.steps.${stepIndex}.isActive`, step.isActive !== false)}</div><div class="inline-actions"><button class="btn btn-secondary" data-step-move="up" data-block-index="${blockIndex}" data-step-index="${stepIndex}">Выше</button><button class="btn btn-secondary" data-step-move="down" data-block-index="${blockIndex}" data-step-index="${stepIndex}">Ниже</button></div></div></div>`;
-      }
-
-      function bindGlobalEvents() {
-        document.body.addEventListener('input', (event) => {
-          const target = event.target;
-          if (!(target instanceof HTMLElement)) return;
-
-          if (target.matches('[data-field]')) {
-            const keyPath = target.getAttribute('data-field').split('.');
-            const raw = target.type === 'checkbox' ? target.checked : target.value;
-            let value = raw;
-            if (target.type === 'number') value = raw === '' ? null : Number(raw);
-            if (target.tagName === 'TEXTAREA' && Array.isArray(getByPath(state.draftContent, keyPath))) {
-              value = String(raw).split('\n').map((line) => line.trim()).filter(Boolean);
-            }
-            updateDraft(keyPath, value);
-            return;
-          }
-
-          if (target.matches('[data-row-value]')) {
-            const [blockIndex, rowIndex] = target.getAttribute('data-row-value').split(':').map(Number);
-            state.draftContent.pageBlocks[blockIndex].items[rowIndex] = target.value;
-            markDirtyStatus();
-          }
-        });
-
-        document.body.addEventListener('click', (event) => {
-          const target = event.target;
-          if (!(target instanceof HTMLElement)) return;
-
-          const collection = target.getAttribute('data-collection');
-          if (collection) { openCollection(collection); return; }
-
-          const slug = target.getAttribute('data-open-slug');
-          if (slug) { openEntry(slug); return; }
-
-          const blockToggle = target.getAttribute('data-block-toggle');
-          if (blockToggle !== null) {
-            const index = Number(blockToggle);
-            if (state.collapsedBlocks.has(index)) state.collapsedBlocks.delete(index); else state.collapsedBlocks.add(index);
-            renderEditor();
-            return;
-          }
-
-          const blockMove = target.getAttribute('data-block-move');
-          if (blockMove) {
-            const blockIndex = Number(target.getAttribute('data-block-index'));
-            moveArrayItem(state.draftContent.pageBlocks, blockIndex, blockMove === 'up' ? -1 : 1);
-            return;
-          }
-
-          const blockActive = target.getAttribute('data-block-active');
-          if (blockActive !== null) {
-            const index = Number(blockActive);
-            const block = state.draftContent.pageBlocks[index];
-            block.isActive = !(block.isActive !== false);
-            renderEditor();
-            return;
-          }
-
-          if (target.hasAttribute('data-item-add')) {
-            const blockIndex = Number(target.getAttribute('data-item-add'));
-            const items = state.draftContent.pageBlocks[blockIndex].items || (state.draftContent.pageBlocks[blockIndex].items = []);
-            items.push({ title: 'Новая карточка', text: '', order: (items.length + 1) * 10, isActive: true });
-            normalizeOrder(items);
-            renderEditor();
-            return;
-          }
-
-          const itemMove = target.getAttribute('data-item-move');
-          if (itemMove) {
-            const blockIndex = Number(target.getAttribute('data-block-index'));
-            const itemIndex = Number(target.getAttribute('data-item-index'));
-            moveArrayItem(state.draftContent.pageBlocks[blockIndex].items, itemIndex, itemMove === 'up' ? -1 : 1);
-            return;
-          }
-
-          if (target.hasAttribute('data-item-hide')) {
-            const blockIndex = Number(target.getAttribute('data-block-index'));
-            const itemIndex = Number(target.getAttribute('data-item-index'));
-            const item = state.draftContent.pageBlocks[blockIndex].items[itemIndex];
-            item.isActive = false;
-            renderEditor();
-            return;
-          }
-
-          if (target.hasAttribute('data-row-add')) {
-            const blockIndex = Number(target.getAttribute('data-row-add'));
-            const items = state.draftContent.pageBlocks[blockIndex].items || (state.draftContent.pageBlocks[blockIndex].items = []);
-            items.push('Новая строка');
-            renderEditor();
-            return;
-          }
-
-          const rowMove = target.getAttribute('data-row-move');
-          if (rowMove) {
-            const blockIndex = Number(target.getAttribute('data-block-index'));
-            const rowIndex = Number(target.getAttribute('data-row-index'));
-            moveArrayItem(state.draftContent.pageBlocks[blockIndex].items, rowIndex, rowMove === 'up' ? -1 : 1);
-            return;
-          }
-
-          if (target.hasAttribute('data-row-delete')) {
-            const blockIndex = Number(target.getAttribute('data-block-index'));
-            const rowIndex = Number(target.getAttribute('data-row-index'));
-            state.draftContent.pageBlocks[blockIndex].items.splice(rowIndex, 1);
-            renderEditor();
-            return;
-          }
-
-          const stepMove = target.getAttribute('data-step-move');
-          if (stepMove) {
-            const blockIndex = Number(target.getAttribute('data-block-index'));
-            const stepIndex = Number(target.getAttribute('data-step-index'));
-            moveArrayItem(state.draftContent.pageBlocks[blockIndex].steps, stepIndex, stepMove === 'up' ? -1 : 1);
-          }
-        });
-
-        $('saveBtn').addEventListener('click', saveCurrent);
-        $('logoutBtn').addEventListener('click', logout);
-        window.addEventListener('beforeunload', (event) => {
-          if (!isDirty()) return;
-          event.preventDefault();
-          event.returnValue = '';
-        });
-      }
-
-      function getByPath(obj, pathArr) {
-        return pathArr.reduce((acc, key) => acc?.[key], obj);
-      }
-
-      async function openCollection(collection) {
-        if (isDirty() && !confirm('Есть несохраненные изменения. Продолжить без сохранения?')) return;
-        state.selectedCollection = collection;
-        state.selectedSlug = null;
-        state.originalContent = null;
-        state.draftContent = null;
-        state.collapsedBlocks.clear();
-        const data = await api(`/content/${collection}`);
-        state.entries = data.entries || [];
-        renderNav();
-        renderEntries();
-        renderEditor();
-      }
-
-      async function openEntry(slug) {
-        if (!state.selectedCollection) return;
-        if (isDirty() && state.selectedSlug && state.selectedSlug !== slug && !confirm('Есть несохраненные изменения. Открыть другую запись?')) return;
-        const data = await api(`/content/${state.selectedCollection}/${slug}`);
-        state.selectedSlug = slug;
-        state.originalContent = deepClone(data.content);
-        state.draftContent = deepClone(data.content);
-        state.collapsedBlocks.clear();
-        renderEntries();
-        renderEditor();
-        setAlert('Запись загружена.');
-      }
-
-      async function saveCurrent() {
-        if (!state.selectedCollection || !state.selectedSlug || !state.draftContent) return;
-        $('saveBtn').disabled = true;
-        $('saveBtn').textContent = 'Сохранение...';
+      async function boot() {
         try {
-          const data = await api(`/content/${state.selectedCollection}/${state.selectedSlug}`, {
-            method: 'PUT',
-            body: JSON.stringify(state.draftContent)
-          });
-          state.originalContent = deepClone(data.content);
-          state.draftContent = deepClone(data.content);
-          renderEditor();
-          setAlert('Изменения сохранены в JSON-файл.');
-        } catch (error) {
-          setAlert(`Ошибка сохранения: ${error.message}`, true);
-        } finally {
-          $('saveBtn').textContent = 'Сохранить';
-          markDirtyStatus();
+          await api('/me');
+          showApp();
+        } catch {
+          showLogin('Введите логин и пароль.');
         }
       }
 
-      async function logout() {
-        await api('/logout', { method: 'POST' }).catch(() => {});
-        state.selectedCollection = null;
-        state.entries = [];
-        state.selectedSlug = null;
-        state.originalContent = null;
-        state.draftContent = null;
-        $('appView').classList.add('hidden');
-        $('loginView').classList.remove('hidden');
-      }
-
-      async function bootstrap() {
-        bindGlobalEvents();
-
-        $('loginForm').addEventListener('submit', async (event) => {
-          event.preventDefault();
-          const form = new FormData(event.currentTarget);
-          try {
-            setLoginStatus('Выполняем вход…');
-            await api('/login', { method: 'POST', body: JSON.stringify({ login: form.get('login'), password: form.get('password') }) });
-            $('loginError').textContent = '';
-            await startApp();
-          } catch (error) {
-            $('loginError').textContent = error.message;
-            setLoginStatus('Вход не выполнен.', true);
-          }
-        });
-
-        $('loginView').classList.remove('hidden');
+      loginForm?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        loginStatus.textContent = 'Выполняем вход…';
+        const formData = new FormData(loginForm);
         try {
-          const me = await api('/me');
-          if (me.authenticated) {
-            setLoginStatus('Сессия найдена, загружаем интерфейс…');
-            await startApp();
-            return;
-          }
-          setLoginStatus('Введите логин и пароль.');
+          await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
+          showApp();
         } catch (error) {
-          $('loginError').textContent = error.message;
-          setLoginStatus(CONNECTION_ERROR_MESSAGE, true);
+          loginStatus.textContent = error.message || 'Ошибка входа.';
+          loginStatus.className = 'muted error';
         }
-      }
-
-      async function startApp() {
-        $('loginView').classList.add('hidden');
-        $('appView').classList.remove('hidden');
-        try {
-          const data = await api('/collections');
-          state.collections = data.collections || [];
-          renderNav();
-          if (state.collections.length) {
-            await openCollection('product-sections');
-          }
-        } catch (error) {
-          setAlert('Не удалось загрузить коллекции', true);
-          $('collectionNav').innerHTML = '<button id="retryCollectionsBtn" class="btn">Повторить</button>';
-          $('retryCollectionsBtn')?.addEventListener('click', () => startApp());
-        }
-      }
-
-      bootstrap().catch((error) => {
-        setAlert(`Не удалось инициализировать админку: ${error.message}`, true);
       });
+
+      document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+        await api('/logout', { method: 'POST' }).catch(() => {});
+        showLogin('Вы вышли из админки.');
+      });
+
+      boot();
     </script>
   </body>
 </html>

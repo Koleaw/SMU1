@@ -1,0 +1,239 @@
+---
+import '../../../styles/global.css';
+import { withBase } from '../../../utils/withBase';
+const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:8787/api/admin';
+const publicNavesyPath = withBase('/navesy-i-kozyrki/');
+const adminHome = withBase('/admin/');
+---
+
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Редактирование: Навесы — Админка СМУ-1</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #eef2f6; color: #182635; }
+      .hidden { display: none !important; }
+      .login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+      .login-card { width: min(460px, 100%); background: #fff; border: 1px solid #d8e2ec; border-radius: 16px; padding: 28px; }
+      .field { display: grid; gap: 8px; margin-bottom: 12px; }
+      .field input, .field textarea, .field select { width: 100%; border: 1px solid #c7d4e2; border-radius: 10px; font: inherit; padding: 11px 12px; background: #fff; }
+      .field textarea { min-height: 90px; }
+      .btn { border: 1px solid #0b6b4f; background: #0b6b4f; color: #fff; border-radius: 10px; padding: 10px 14px; font: inherit; font-weight: 700; cursor: pointer; }
+      .btn-secondary { background: #fff; border-color: #c3d3e3; color: #2a435c; }
+      .btn-sm { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+      .editor-shell { min-height: 100vh; }
+      .topbar { position: fixed; inset: 0 0 auto; z-index: 40; background: #fff; border-bottom: 1px solid #d8e3ed; padding: 12px 18px; display: grid; grid-template-columns: 1fr auto; gap: 12px; }
+      .topbar-left { display: flex; gap: 12px; align-items: center; min-width: 0; }
+      .topbar h1 { margin: 0; font-size: 20px; }
+      .status-clean { color: #22714b; }
+      .status-dirty { color: #9a4a0f; font-weight: 700; }
+      .topbar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .layout { padding-top: 84px; display: grid; grid-template-columns: 1fr 400px; }
+      .canvas { padding: 16px 16px 80px; }
+      .preview-frame { background: #fff; border: 1px solid #d4e0ea; border-radius: 12px; overflow: hidden; }
+      .admin-block { border: 1px dashed #7ea1c2; border-radius: 10px; margin: 12px; }
+      .admin-block-toolbar { background: #f5f9fd; border-bottom: 1px solid #d2e1ef; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+      .admin-block-toolbar select { border: 1px solid #c6d7e8; border-radius: 8px; padding: 4px 6px; }
+      .editor-badge { border-radius: 999px; background: #e9f0f7; color: #314a63; font-size: 12px; padding: 3px 8px; }
+      .sidebar { border-left: 1px solid #d8e3ed; background: #fff; padding: 16px; position: sticky; top: 84px; max-height: calc(100vh - 84px); overflow: auto; }
+      .panel { border: 1px solid #dbe5ef; border-radius: 12px; padding: 12px; margin-bottom: 12px; background: #f8fbfe; }
+      .item-card { border: 1px solid #dbe5ef; border-radius: 10px; background: #fff; padding: 10px; margin-bottom: 10px; }
+      .item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+      .muted { color: #60758a; font-size: 14px; }
+      .error { color: #b13d3d; }
+      @media (max-width: 1200px) { .layout { grid-template-columns: 1fr; } .sidebar { position: static; max-height: none; border-left: 0; border-top: 1px solid #d8e3ed; } }
+    </style>
+  </head>
+  <body>
+    <div id="loginView" class="login-wrap hidden">
+      <form id="loginForm" class="login-card">
+        <h1>Админка СМУ-1</h1>
+        <p class="muted">Войдите для визуального редактирования страницы «Навесы».</p>
+        <div class="field"><label>Логин</label><input name="login" required /></div>
+        <div class="field"><label>Пароль</label><input name="password" type="password" required /></div>
+        <button class="btn" type="submit">Войти</button>
+        <p id="loginStatus" class="muted"></p>
+      </form>
+    </div>
+
+    <div id="editorView" class="editor-shell hidden">
+      <header class="topbar">
+        <div class="topbar-left">
+          <a class="btn btn-secondary btn-sm" href={adminHome}>← В админку</a>
+          <h1>Редактирование: Навесы</h1>
+          <span id="dirtyStatus" class="status-clean">Нет изменений</span>
+        </div>
+        <div class="topbar-actions">
+          <button id="saveBtn" class="btn btn-sm" disabled>Сохранить</button>
+          <a class="btn btn-secondary btn-sm" href={publicNavesyPath} target="_blank">Открыть публичную страницу</a>
+          <button id="logoutBtn" class="btn btn-secondary btn-sm" type="button">Выйти</button>
+        </div>
+      </header>
+      <div class="layout">
+        <main class="canvas"><div id="alertBox" class="muted" style="margin:0 0 10px 12px;"></div><div id="previewRoot" class="preview-frame"></div></main>
+        <aside class="sidebar" id="sidebarRoot"></aside>
+      </div>
+    </div>
+
+    <script type="module" define:vars={{ adminApiBase, publicNavesyPath }}>
+      const API_BASE = adminApiBase;
+      const state = { original: null, draft: null, selected: { kind: 'hero', index: null } };
+      const labels = { cardGrid:'Карточки', listPanel:'Список', process:'Процесс', factorList:'Факторы', mediaText:'Текст + изображение', notice:'Вставка', exampleGrid:'Примеры' };
+      const $ = (id) => document.getElementById(id);
+      const clone = (v) => JSON.parse(JSON.stringify(v));
+      const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+      const sortByOrder = (list = []) => list.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const normOrder = (list = []) => list.forEach((item, i) => { if (item && typeof item === 'object' && 'order' in item) item.order = (i + 1) * 10; });
+      const isDirty = () => JSON.stringify(state.original) !== JSON.stringify(state.draft);
+
+      async function api(path, options = {}) {
+        const response = await fetch(`${API_BASE}${path}`, { ...options, credentials: 'include', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) } });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        return data;
+      }
+
+      function setAlert(text = '', err = false) { const b = $('alertBox'); b.textContent = text; b.className = err ? 'muted error' : 'muted'; }
+      function showLogin(msg = '') { $('loginView').classList.remove('hidden'); $('editorView').classList.add('hidden'); $('loginStatus').textContent = msg; }
+      function showEditor() { $('loginView').classList.add('hidden'); $('editorView').classList.remove('hidden'); }
+      function updateDirty() { const d = isDirty(); $('dirtyStatus').textContent = d ? 'Есть несохраненные изменения' : 'Нет изменений'; $('dirtyStatus').className = d ? 'status-dirty' : 'status-clean'; $('saveBtn').disabled = !d; }
+      function mutate(fn) { fn(); render(); }
+      function move(list, i, delta) { const ni = i + delta; if (ni < 0 || ni >= list.length) return; [list[i], list[ni]] = [list[ni], list[i]]; normOrder(list); }
+
+      function renderBlock(block, idx) {
+        const themeClass = block.theme === 'dark' ? 'section section--dark navesy-section-compact' : block.theme === 'light' ? 'section section--soft navesy-section-compact' : 'section navesy-section-compact';
+        const base = `<div class="admin-block-toolbar"><span class="editor-badge">${labels[block.type] || block.type}</span><button class="btn btn-secondary btn-sm" data-action="edit-block" data-index="${idx}">Редактировать блок</button><button class="btn btn-secondary btn-sm" data-action="block-up" data-index="${idx}">Выше</button><button class="btn btn-secondary btn-sm" data-action="block-down" data-index="${idx}">Ниже</button><button class="btn btn-secondary btn-sm" data-action="toggle-block" data-index="${idx}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><label>Тема <select data-action="set-theme" data-index="${idx}"><option value="dark" ${block.theme==='dark'?'selected':''}>Темная</option><option value="light" ${block.theme==='light'?'selected':''}>Светлая</option><option value="graphite" ${block.theme==='graphite'?'selected':''}>Графитовая</option></select></label>${block.grid ? `<label>Сетка <select data-action="set-grid" data-index="${idx}"><option value="auto" ${block.grid==='auto'?'selected':''}>Авто</option><option value="2" ${block.grid==='2'?'selected':''}>2</option><option value="3" ${block.grid==='3'?'selected':''}>3</option><option value="4" ${block.grid==='4'?'selected':''}>4</option></select></label>` : ''}${block.columns ? `<label>Колонки <select data-action="set-columns" data-index="${idx}"><option value="2" ${String(block.columns)==='2'?'selected':''}>2</option><option value="3" ${String(block.columns)==='3'?'selected':''}>3</option></select></label>` : ''}</div>`;
+        let body = '';
+        if ((block.type === 'cardGrid' || block.type === 'exampleGrid') && Array.isArray(block.items)) {
+          const items = sortByOrder(block.items).filter((i) => i.isActive !== false);
+          body = `<div class="container"><h2 class="section-title">${esc(block.title)}</h2>${block.intro?`<p class="lead">${esc(block.intro)}</p>`:''}<div class="page-blocks-grid page-blocks-grid--${block.grid || 'auto'}">${items.map((item)=>`<article class="card page-block-card"><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></article>`).join('')}</div></div>`;
+        } else if ((block.type === 'listPanel' || block.type === 'factorList') && Array.isArray(block.items)) {
+          const items = block.items.map((i) => typeof i === 'string' ? i : i?.text).filter(Boolean);
+          body = `<div class="container"><article class="card page-block-panel"><h2>${esc(block.title)}</h2><ul class="page-blocks-columns page-blocks-columns--${block.columns || 2}">${items.map((t)=>`<li>${esc(t)}</li>`).join('')}</ul></article></div>`;
+        } else if (block.type === 'process') {
+          const steps = sortByOrder(block.steps || []).filter((s) => s.isActive !== false);
+          body = `<div class="container"><article class="card page-block-panel"><h2>${esc(block.title)}</h2><ol class="page-block-steps">${steps.map((s)=>`<li><strong>${esc(s.title)}</strong>${s.text?`<p>${esc(s.text)}</p>`:''}</li>`).join('')}</ol></article></div>`;
+        } else if (block.type === 'mediaText' || block.type === 'notice') {
+          body = `<div class="container"><article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article></div>`;
+        }
+        return `<div class="admin-block">${base}<section class="${themeClass}">${body}</section></div>`;
+      }
+
+      function field(label, field, value, textarea = false) { return `<div class="field"><label>${label}</label>${textarea ? `<textarea data-field="${field}">${esc(value)}</textarea>` : `<input data-field="${field}" value="${esc(value)}" />`}</div>`; }
+
+      function sidebarHTML() {
+        if (state.selected.kind === 'hero') return `<h2>Редактирование hero</h2>${field('Заголовок','heroTitle',state.draft.heroTitle)}${field('Описание','heroDescription',state.draft.heroDescription,true)}${field('Изображение','image',state.draft.image)}${field('Подпись заглушки','placeholderLabel',state.draft.placeholderLabel)}<p class="muted">Путь: /uploads/... или /assets/...</p>`;
+        const block = state.draft.pageBlocks[state.selected.index];
+        if (!block) return '<p class="muted">Выберите блок.</p>';
+        let items = '';
+        if (block.type === 'cardGrid' || block.type === 'exampleGrid') {
+          const sorted = sortByOrder(block.items || []);
+          items = `<h3>Карточки</h3>${sorted.map((item, i) => `<div class="item-card">${field('Заголовок',`card-title-${i}`,item.title)}${field('Описание',`card-text-${i}`,item.text,true)}<label class="field" style="grid-template-columns:auto 1fr;align-items:center;"><input type="checkbox" data-field="card-active-${i}" ${item.isActive===false?'':'checked'} /><span>Активна</span></label><div class="item-actions"><button class="btn btn-secondary btn-sm" data-action="item-up" data-index="${i}">Выше</button><button class="btn btn-secondary btn-sm" data-action="item-down" data-index="${i}">Ниже</button><button class="btn btn-secondary btn-sm" data-action="item-hide" data-index="${i}">${item.isActive===false?'Показать':'Скрыть'}</button></div></div>`).join('')}<button class="btn btn-secondary" data-action="add-card">Добавить карточку</button>`;
+        } else if (block.type === 'listPanel' || block.type === 'factorList') {
+          items = `<h3>Строки</h3>${(block.items || []).map((item, i) => `<div class="item-card">${field('Текст',`row-text-${i}`,typeof item==='string'?item:item?.text || '')}<div class="item-actions"><button class="btn btn-secondary btn-sm" data-action="item-up" data-index="${i}">Выше</button><button class="btn btn-secondary btn-sm" data-action="item-down" data-index="${i}">Ниже</button><button class="btn btn-secondary btn-sm" data-action="item-delete" data-index="${i}">Удалить</button></div></div>`).join('')}<button class="btn btn-secondary" data-action="add-row">Добавить строку</button>`;
+        } else if (block.type === 'process') {
+          const steps = sortByOrder(block.steps || []);
+          items = `<h3>Шаги</h3>${steps.map((step, i)=>`<div class="item-card">${field('Заголовок',`step-title-${i}`,step.title)}${field('Описание',`step-text-${i}`,step.text || '',true)}<label class="field" style="grid-template-columns:auto 1fr;align-items:center;"><input type="checkbox" data-field="step-active-${i}" ${step.isActive===false?'':'checked'} /><span>Активен</span></label><div class="item-actions"><button class="btn btn-secondary btn-sm" data-action="item-up" data-index="${i}">Выше</button><button class="btn btn-secondary btn-sm" data-action="item-down" data-index="${i}">Ниже</button></div></div>`).join('')}<button class="btn btn-secondary" data-action="add-step">Добавить шаг</button>`;
+        }
+        return `<h2>Редактирование блока</h2><div class="panel">${field('Заголовок блока','block-title',block.title)}${field('Intro','block-intro',block.intro || '',true)}<div class="field"><label>Тема</label><select data-field="block-theme"><option value="dark" ${block.theme==='dark'?'selected':''}>Темная</option><option value="light" ${block.theme==='light'?'selected':''}>Светлая</option><option value="graphite" ${block.theme==='graphite'?'selected':''}>Графитовая</option></select></div>${block.grid ? `<div class="field"><label>Сетка</label><select data-field="block-grid"><option value="auto" ${block.grid==='auto'?'selected':''}>Авто</option><option value="2" ${block.grid==='2'?'selected':''}>2</option><option value="3" ${block.grid==='3'?'selected':''}>3</option><option value="4" ${block.grid==='4'?'selected':''}>4</option></select></div>` : ''}${block.columns ? `<div class="field"><label>Колонки</label><select data-field="block-columns"><option value="2" ${String(block.columns)==='2'?'selected':''}>2</option><option value="3" ${String(block.columns)==='3'?'selected':''}>3</option></select></div>` : ''}<label class="field" style="grid-template-columns:auto 1fr;align-items:center;"><input type="checkbox" data-field="block-active" ${block.isActive===false?'':'checked'} /><span>Активность</span></label></div>${items}`;
+      }
+
+      function render() {
+        $('previewRoot').innerHTML = `<section class="section section--dark hero" style="margin:0;"><div class="container"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="editor-badge">Hero</span><button class="btn btn-secondary btn-sm" data-action="edit-hero">Редактировать hero</button></div><h2 class="section-title" style="color:#fff;">${esc(state.draft.heroTitle)}</h2><p class="lead" style="color:#e6edf4;">${esc(state.draft.heroDescription)}</p></div></section>${sortByOrder(state.draft.pageBlocks || []).map((b, i) => renderBlock(b, i)).join('')}<section class="section"><div class="container"><details><summary>Показать JSON</summary><pre>${esc(JSON.stringify(state.draft, null, 2))}</pre></details></div></section>`;
+        $('sidebarRoot').innerHTML = sidebarHTML();
+        updateDirty();
+      }
+
+      $('previewRoot').addEventListener('click', (e) => {
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        const action = el.dataset.action; const idx = Number(el.dataset.index);
+        if (action === 'edit-hero') { state.selected = { kind: 'hero', index: null }; render(); }
+        if (action === 'edit-block') { state.selected = { kind: 'block', index: idx }; render(); }
+        if (action === 'block-up') mutate(() => { move(state.draft.pageBlocks, idx, -1); state.selected.index = Math.max(0, idx - 1); });
+        if (action === 'block-down') mutate(() => { move(state.draft.pageBlocks, idx, 1); state.selected.index = Math.min(state.draft.pageBlocks.length - 1, idx + 1); });
+        if (action === 'toggle-block') mutate(() => { const b = state.draft.pageBlocks[idx]; b.isActive = b.isActive === false; });
+      });
+
+      $('previewRoot').addEventListener('change', (e) => {
+        const a = e.target.dataset.action; const idx = Number(e.target.dataset.index); if (!a) return;
+        mutate(() => { if (a === 'set-theme') state.draft.pageBlocks[idx].theme = e.target.value; if (a === 'set-grid') state.draft.pageBlocks[idx].grid = e.target.value; if (a === 'set-columns') state.draft.pageBlocks[idx].columns = Number(e.target.value); });
+      });
+
+      $('sidebarRoot').addEventListener('input', (e) => {
+        const f = e.target.dataset.field; if (!f) return;
+        mutate(() => {
+          if (['heroTitle', 'heroDescription', 'image', 'placeholderLabel'].includes(f)) { state.draft[f] = e.target.value; return; }
+          const b = state.draft.pageBlocks[state.selected.index]; if (!b) return;
+          if (f === 'block-title') b.title = e.target.value;
+          if (f === 'block-intro') b.intro = e.target.value;
+          if (f.startsWith('card-title-')) b.items[Number(f.split('-').pop())].title = e.target.value;
+          if (f.startsWith('card-text-')) b.items[Number(f.split('-').pop())].text = e.target.value;
+          if (f.startsWith('row-text-')) { const i = Number(f.split('-').pop()); const cur = b.items[i]; b.items[i] = typeof cur === 'string' ? e.target.value : { ...(cur || {}), text: e.target.value }; }
+          if (f.startsWith('step-title-')) b.steps[Number(f.split('-').pop())].title = e.target.value;
+          if (f.startsWith('step-text-')) b.steps[Number(f.split('-').pop())].text = e.target.value;
+        });
+      });
+
+      $('sidebarRoot').addEventListener('change', (e) => {
+        const f = e.target.dataset.field; if (!f) return;
+        mutate(() => {
+          const b = state.draft.pageBlocks[state.selected.index]; if (!b) return;
+          if (f === 'block-theme') b.theme = e.target.value;
+          if (f === 'block-grid') b.grid = e.target.value;
+          if (f === 'block-columns') b.columns = Number(e.target.value);
+          if (f === 'block-active') b.isActive = !e.target.checked;
+          if (f.startsWith('card-active-')) b.items[Number(f.split('-').pop())].isActive = !e.target.checked;
+          if (f.startsWith('step-active-')) b.steps[Number(f.split('-').pop())].isActive = !e.target.checked;
+        });
+      });
+
+      $('sidebarRoot').addEventListener('click', (e) => {
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        const b = state.draft.pageBlocks[state.selected.index]; if (!b) return;
+        const i = Number(el.dataset.index);
+        mutate(() => {
+          const action = el.dataset.action;
+          if (action === 'item-up') move(b.items || b.steps, i, -1);
+          if (action === 'item-down') move(b.items || b.steps, i, 1);
+          if (action === 'item-hide' && b.items[i]) b.items[i].isActive = b.items[i].isActive === false;
+          if (action === 'item-delete') { b.items.splice(i, 1); normOrder(b.items); }
+          if (action === 'add-card') { b.items.push({ title: 'Новая карточка', text: '', order: (b.items.length + 1) * 10, isActive: true }); normOrder(b.items); }
+          if (action === 'add-row') b.items.push('Новая строка');
+          if (action === 'add-step') { b.steps.push({ title: 'Новый шаг', text: '', order: (b.steps.length + 1) * 10, isActive: true }); normOrder(b.steps); }
+        });
+      });
+
+      $('saveBtn').addEventListener('click', async () => {
+        setAlert('Сохраняем...');
+        try {
+          await api('/content/product-sections/navesy', { method: 'PUT', body: JSON.stringify(state.draft) });
+          state.original = clone(state.draft); setAlert('Сохранено'); render();
+        } catch (error) { setAlert(error.message || 'Ошибка сохранения', true); }
+      });
+
+      $('logoutBtn').addEventListener('click', async () => { await api('/logout', { method: 'POST' }).catch(() => {}); showLogin('Вы вышли из админки.'); });
+      $('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = new FormData(e.currentTarget);
+        try {
+          await api('/login', { method: 'POST', body: JSON.stringify({ login: form.get('login'), password: form.get('password') }) });
+          showEditor();
+          const data = await api('/content/product-sections/navesy');
+          state.original = clone(data.content); state.draft = clone(data.content); state.selected = { kind: 'hero', index: null }; render();
+        } catch (error) { $('loginStatus').textContent = error.message || 'Ошибка входа'; $('loginStatus').className = 'muted error'; }
+      });
+
+      async function boot() {
+        try {
+          await api('/me');
+          showEditor();
+          const data = await api('/content/product-sections/navesy');
+          state.original = clone(data.content); state.draft = clone(data.content); render();
+        } catch { showLogin('Введите логин и пароль.'); }
+      }
+      boot();
+    </script>
+  </body>
+</html>
