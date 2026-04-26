@@ -10,14 +10,17 @@
 ## Запуск
 1. Терминал 1:
    ```bash
-   npm run dev
+   npm run dev -- --host 127.0.0.1
    ```
 2. Терминал 2:
    ```bash
    npm run admin:api
    ```
 3. Открыть:
-   - `http://localhost:4321/admin`
+   - `http://127.0.0.1:4321/SMU1/admin/`
+4. Логин:
+   - Логин: `admin`
+   - Пароль: `admin`
 
 ## ENV
 Пример переменных: `.env.admin.example`.
@@ -27,6 +30,15 @@
 - `.env.admin.local`
 
 Если переменные не заданы, API использует dev-дефолты (`admin/admin`) и выводит warning в консоль.
+
+Admin frontend использует API base в таком порядке:
+1. `PUBLIC_ADMIN_API_BASE` (если задана).
+2. Дефолт для local dev: `http://127.0.0.1:8787/api/admin`.
+
+Admin API в local dev всегда разрешает CORS для:
+- `http://localhost:4321`
+- `http://127.0.0.1:4321`
+- и дополнительно `ADMIN_ALLOWED_ORIGIN`, если задан.
 
 ## Что сейчас работает
 - Логин/логаут и проверка сессии:

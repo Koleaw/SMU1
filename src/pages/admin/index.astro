@@ -1,4 +1,5 @@
 ---
+const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:8787/api/admin';
 ---
 
 <html lang="ru">
@@ -113,7 +114,8 @@
     </div>
 
     <script type="module">
-      const API_BASE = 'http://localhost:8787/api/admin';
+      const API_BASE = ${JSON.stringify(adminApiBase)};
+      const CONNECTION_ERROR_MESSAGE = 'Не удалось подключиться к локальному backend API. Проверьте, что запущен npm run admin:api и API доступен по http://127.0.0.1:8787/api/admin/me';
       const groupedCollections = [
         { title: 'Страницы', keys: ['product-sections', 'services'] },
         { title: 'Каталог', keys: ['product-categories', 'products'] },
@@ -152,11 +154,20 @@
       }
 
       async function api(path, options = {}) {
-        const response = await fetch(`${API_BASE}${path}`, {
-          ...options,
-          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-          credentials: 'include'
-        });
+        let response;
+        try {
+          response = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+            credentials: 'include'
+          });
+        } catch (error) {
+          const isConnectionError = error instanceof TypeError || String(error?.message || '').includes('Failed to fetch');
+          if (isConnectionError) {
+            throw new Error(CONNECTION_ERROR_MESSAGE);
+          }
+          throw error;
+        }
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
         return data;
