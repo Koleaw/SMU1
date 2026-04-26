@@ -1,5 +1,106 @@
 import { defineCollection, z } from 'astro:content';
 
+
+const pageBlockThemeSchema = z.enum(['dark', 'light', 'graphite']);
+
+const pageCardItemSchema = z.object({
+  title: z.string(),
+  text: z.string(),
+  order: z.number(),
+  isActive: z.boolean().optional()
+}).strict();
+
+const pageProcessStepSchema = z.object({
+  title: z.string(),
+  text: z.string().optional(),
+  order: z.number(),
+  isActive: z.boolean().optional()
+}).strict();
+
+const pageListItemSchema = z.union([
+  z.string(),
+  z.object({
+    text: z.string(),
+    order: z.number().optional(),
+    isActive: z.boolean().optional()
+  }).strict()
+]);
+
+const pageBlockSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('cardGrid'),
+    title: z.string(),
+    intro: z.string().optional(),
+    theme: pageBlockThemeSchema,
+    grid: z.enum(['auto', '2', '3', '4']),
+    isActive: z.boolean().optional(),
+    order: z.number(),
+    items: z.array(pageCardItemSchema)
+  }).strict(),
+  z.object({
+    type: z.literal('listPanel'),
+    title: z.string(),
+    intro: z.string().optional(),
+    theme: pageBlockThemeSchema,
+    columns: z.union([z.literal(2), z.literal(3)]),
+    isActive: z.boolean().optional(),
+    order: z.number(),
+    items: z.array(pageListItemSchema)
+  }).strict(),
+  z.object({
+    type: z.literal('mediaText'),
+    title: z.string(),
+    text: z.string(),
+    theme: pageBlockThemeSchema,
+    media: z.string().optional(),
+    placeholderLabel: z.string().optional(),
+    mediaPosition: z.enum(['left', 'right']),
+    isActive: z.boolean().optional(),
+    order: z.number()
+  }).strict(),
+  z.object({
+    type: z.literal('process'),
+    title: z.string(),
+    intro: z.string().optional(),
+    theme: pageBlockThemeSchema,
+    media: z.string().optional(),
+    placeholderLabel: z.string().optional(),
+    mediaPosition: z.enum(['left', 'right']).optional(),
+    isActive: z.boolean().optional(),
+    order: z.number(),
+    steps: z.array(pageProcessStepSchema)
+  }).strict(),
+  z.object({
+    type: z.literal('factorList'),
+    title: z.string(),
+    intro: z.string().optional(),
+    theme: pageBlockThemeSchema,
+    columns: z.union([z.literal(2), z.literal(3)]),
+    isActive: z.boolean().optional(),
+    order: z.number(),
+    items: z.array(pageListItemSchema)
+  }).strict(),
+  z.object({
+    type: z.literal('notice'),
+    title: z.string(),
+    text: z.string(),
+    theme: pageBlockThemeSchema,
+    isActive: z.boolean().optional(),
+    order: z.number()
+  }).strict(),
+  z.object({
+    type: z.literal('exampleGrid'),
+    title: z.string(),
+    intro: z.string().optional(),
+    theme: pageBlockThemeSchema,
+    grid: z.enum(['auto', '2', '3', '4']),
+    isActive: z.boolean().optional(),
+    order: z.number(),
+    items: z.array(pageCardItemSchema)
+  }).strict()
+]);
+
+
 const productSections = defineCollection({
   type: 'data',
   schema: z.object({
@@ -15,7 +116,8 @@ const productSections = defineCollection({
     image: z.string(),
     placeholderLabel: z.string(),
     seoTitle: z.string(),
-    seoDescription: z.string()
+    seoDescription: z.string(),
+    pageBlocks: z.array(pageBlockSchema).optional()
   }).strict()
 });
 
@@ -74,7 +176,8 @@ const services = defineCollection({
     image: z.string(),
     placeholderLabel: z.string(),
     seoTitle: z.string(),
-    seoDescription: z.string()
+    seoDescription: z.string(),
+    pageBlocks: z.array(pageBlockSchema).optional()
   }).strict()
 });
 
