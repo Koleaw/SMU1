@@ -1,0 +1,342 @@
+---
+import { withBase } from '../utils/withBase';
+
+type Theme = 'dark' | 'light' | 'graphite';
+type GridValue = 'auto' | '2' | '3' | '4';
+type ColumnsValue = 2 | 3;
+
+interface BaseBlock {
+  type: string;
+  title: string;
+  theme: Theme;
+  isActive?: boolean;
+  order: number;
+  sectionId?: string;
+  intro?: string;
+}
+
+interface CardItem {
+  title: string;
+  text: string;
+  order: number;
+  isActive?: boolean;
+}
+
+interface ProcessStep {
+  title: string;
+  text?: string;
+  order: number;
+  isActive?: boolean;
+}
+
+interface CardGridBlock extends BaseBlock {
+  type: 'cardGrid' | 'exampleGrid';
+  grid: GridValue;
+  items: CardItem[];
+}
+
+interface ListBlock extends BaseBlock {
+  type: 'listPanel' | 'factorList';
+  columns: ColumnsValue;
+  items: Array<string | { text: string; order?: number; isActive?: boolean }>;
+}
+
+interface MediaTextBlock extends BaseBlock {
+  type: 'mediaText';
+  text: string;
+  media?: string;
+  placeholderLabel?: string;
+  mediaPosition: 'left' | 'right';
+}
+
+interface ProcessBlock extends BaseBlock {
+  type: 'process';
+  media?: string;
+  placeholderLabel?: string;
+  mediaPosition?: 'left' | 'right';
+  steps: ProcessStep[];
+}
+
+interface NoticeBlock extends BaseBlock {
+  type: 'notice';
+  text: string;
+}
+
+type PageBlock = CardGridBlock | ListBlock | MediaTextBlock | ProcessBlock | NoticeBlock;
+
+interface Props {
+  pageBlocks?: PageBlock[];
+}
+
+const { pageBlocks = [] } = Astro.props;
+
+const visibleBlocks = pageBlocks
+  .filter((block) => block && block.isActive !== false)
+  .slice()
+  .sort((a, b) => a.order - b.order);
+
+const getSectionClass = (theme: Theme) => {
+  if (theme === 'dark') return 'section section--dark navesy-section-compact';
+  if (theme === 'light') return 'section section--soft navesy-section-compact';
+
+  return 'section navesy-section-compact';
+};
+
+const getThemeAttr = (theme: Theme) => (theme === 'dark' || theme === 'graphite' ? 'dark' : undefined);
+const getHeadingClass = (theme: Theme) => (theme === 'dark' || theme === 'graphite' ? 'section-heading section-heading--light' : 'section-heading');
+const getGridClass = (grid: GridValue) => `page-blocks-grid page-blocks-grid--${grid}`;
+const getColumnsClass = (columns: ColumnsValue) => `page-blocks-columns page-blocks-columns--${columns}`;
+const isDarkCardTheme = (theme: Theme) => theme === 'dark' || theme === 'graphite';
+
+const normalizeTextList = (items: Array<string | { text: string; order?: number; isActive?: boolean }>) =>
+  items
+    .map((item) => (typeof item === 'string' ? item.trim() : item.isActive === false ? '' : item.text?.trim()))
+    .filter(Boolean);
+const normalizeCardItems = (items: CardItem[]) =>
+  items
+    .filter((item) => item && item.isActive !== false && item.title?.trim() && item.text?.trim())
+    .slice()
+    .sort((a, b) => a.order - b.order);
+
+const normalizeSteps = (steps: ProcessStep[]) =>
+  steps
+    .filter((step) => step && step.isActive !== false && step.title?.trim())
+    .slice()
+    .sort((a, b) => a.order - b.order);
+---
+{visibleBlocks.map((block, index) => {
+  const sectionId = block.sectionId ?? `page-block-${index + 1}`;
+  const sectionClass = getSectionClass(block.theme);
+  const themeAttr = getThemeAttr(block.theme);
+
+  if ((block.type === 'cardGrid' || block.type === 'exampleGrid') && block.items?.length) {
+    const items = normalizeCardItems(block.items);
+    if (!items.length) return null;
+
+    return (
+      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
+        <div class="container">
+          <div class={getHeadingClass(block.theme)}>
+            <h2 class="section-title">{block.title}</h2>
+            {block.intro && <p class="lead">{block.intro}</p>}
+          </div>
+          <div class={getGridClass(block.grid)}>
+            {items.map((item) => (
+              <article class={`card page-block-card ${isDarkCardTheme(block.theme) ? 'page-block-card--dark' : 'page-block-card--light'}`}>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if ((block.type === 'listPanel' || block.type === 'factorList') && block.items?.length) {
+    const items = normalizeTextList(block.items);
+    if (!items.length) return null;
+
+    return (
+      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
+        <div class="container">
+          <article class={`card page-block-card page-block-panel ${block.theme === 'graphite' ? 'page-block-card--graphite' : ''}`}>
+            <h2>{block.title}</h2>
+            {block.intro && <p class="lead">{block.intro}</p>}
+            <ul class={getColumnsClass(block.columns)}>
+              {items.map((item) => (
+                <li>{item}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+    );
+  }
+
+  if (block.type === 'mediaText' && block.title?.trim() && block.text?.trim()) {
+    const mediaPosition = block.mediaPosition === 'left' ? 'left' : 'right';
+
+    return (
+      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
+        <div class={`container page-block-media-layout ${mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}`}>
+          <article class="media-block placeholder placeholder--wide-feature">
+            {block.media ? (
+              <img class="media-thumb" src={withBase(block.media)} alt={block.title} loading="lazy" />
+            ) : null}
+            {block.placeholderLabel && <p class="media-caption">{block.placeholderLabel}</p>}
+          </article>
+          <article class={`card page-block-card page-block-panel ${block.theme === 'graphite' ? 'page-block-card--graphite' : ''}`}>
+            <h2>{block.title}</h2>
+            <p>{block.text}</p>
+          </article>
+        </div>
+      </section>
+    );
+  }
+
+  if (block.type === 'process' && block.steps?.length) {
+    const steps = normalizeSteps(block.steps);
+    if (!steps.length) return null;
+
+    const mediaPosition = block.mediaPosition === 'left' ? 'left' : 'right';
+
+    return (
+      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
+        <div class={`container page-block-media-layout ${mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}`}>
+          <article class="media-block placeholder placeholder--wide-feature">
+            {block.media ? <img class="media-thumb" src={withBase(block.media)} alt={block.title} loading="lazy" /> : null}
+            {block.placeholderLabel && <p class="media-caption">{block.placeholderLabel}</p>}
+          </article>
+          <article class={`card page-block-card page-block-panel ${block.theme === 'graphite' ? 'page-block-card--graphite' : ''}`}>
+            <h2>{block.title}</h2>
+            {block.intro && <p class="lead">{block.intro}</p>}
+            <ol class="page-block-steps">
+              {steps.map((step) => (
+                <li>
+                  <strong>{step.title}</strong>
+                  {step.text && <p>{step.text}</p>}
+                </li>
+              ))}
+            </ol>
+          </article>
+        </div>
+      </section>
+    );
+  }
+
+  if (block.type === 'notice' && block.title?.trim() && block.text?.trim()) {
+    return (
+      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
+        <div class="container">
+          <article class={`card page-block-card page-block-panel ${block.theme === 'graphite' ? 'page-block-card--graphite' : ''}`}>
+            <h2>{block.title}</h2>
+            <p>{block.text}</p>
+          </article>
+        </div>
+      </section>
+    );
+  }
+
+  return null;
+})}
+
+<style>
+  .navesy-section-compact {
+    padding-block: clamp(36px, 5vw, 56px);
+  }
+
+  .page-blocks-grid {
+    display: grid;
+    gap: 16px;
+  }
+
+  .page-blocks-grid--auto {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .page-blocks-grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page-blocks-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .page-blocks-grid--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .page-block-card {
+    min-height: 100%;
+  }
+
+  .page-block-card--graphite {
+    background: var(--color-gray-100);
+    border-color: var(--color-border-strong);
+  }
+
+  .page-block-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .page-blocks-columns {
+    margin: 0;
+    padding-left: 18px;
+    column-gap: 20px;
+    row-gap: 8px;
+  }
+
+  .page-blocks-columns--2 {
+    columns: 2;
+  }
+
+  .page-blocks-columns--3 {
+    columns: 3;
+  }
+
+  .page-block-media-layout {
+    display: grid;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .page-block-media-layout--left .media-block {
+    order: 0;
+  }
+
+  .page-block-media-layout--left .page-block-panel {
+    order: 1;
+  }
+
+  .page-block-media-layout .media-block {
+    order: 1;
+  }
+
+  .page-block-media-layout .page-block-panel {
+    order: 0;
+  }
+
+  .page-block-steps {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .page-block-steps li p {
+    margin-top: 4px;
+  }
+
+  @media (min-width: 920px) {
+    .page-block-media-layout {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    .page-blocks-grid--4 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .page-blocks-grid--3 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 767px) {
+    .page-blocks-grid,
+    .page-blocks-grid--2,
+    .page-blocks-grid--3,
+    .page-blocks-grid--4,
+    .page-blocks-grid--auto {
+      grid-template-columns: 1fr;
+    }
+
+    .page-blocks-columns {
+      columns: 1;
+    }
+  }
+</style>

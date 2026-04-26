@@ -59,6 +59,106 @@ content:
             type: string
           - name: seoDescription
             type: text
+          - name: pageBlocks
+            label: Блоки страницы (Stage 1)
+            type: object
+            list: true
+            fields:
+              - name: type
+                type: select
+                required: true
+                options:
+                  values:
+                    - value: cardGrid
+                      label: cardGrid
+                    - value: listPanel
+                      label: listPanel
+                    - value: mediaText
+                      label: mediaText
+                    - value: process
+                      label: process
+                    - value: factorList
+                      label: factorList
+                    - value: notice
+                      label: notice
+                    - value: exampleGrid
+                      label: exampleGrid
+              - name: title
+                type: string
+              - name: intro
+                type: text
+              - name: text
+                type: text
+              - name: theme
+                type: select
+                options:
+                  values:
+                    - value: dark
+                      label: dark
+                    - value: light
+                      label: light
+                    - value: graphite
+                      label: graphite
+              - name: grid
+                type: select
+                options:
+                  values:
+                    - value: auto
+                      label: auto
+                    - value: "2"
+                      label: "2"
+                    - value: "3"
+                      label: "3"
+                    - value: "4"
+                      label: "4"
+              - name: columns
+                type: select
+                options:
+                  values:
+                    - value: 2
+                      label: "2"
+                    - value: 3
+                      label: "3"
+              - name: media
+                type: image
+              - name: placeholderLabel
+                type: string
+              - name: mediaPosition
+                type: select
+                options:
+                  values:
+                    - value: left
+                      label: left
+                    - value: right
+                      label: right
+              - name: isActive
+                type: boolean
+              - name: order
+                type: number
+              - name: items
+                type: object
+                list: true
+                fields:
+                  - name: title
+                    type: string
+                  - name: text
+                    type: text
+                  - name: order
+                    type: number
+                  - name: isActive
+                    type: boolean
+              - name: steps
+                type: object
+                list: true
+                fields:
+                  - name: title
+                    type: string
+                  - name: text
+                    type: text
+                  - name: order
+                    type: number
+                  - name: isActive
+                    type: boolean
 
       - name: product-categories
         label: Категории изделий
