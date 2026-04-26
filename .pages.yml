@@ -17,6 +17,11 @@ content:
         label: Разделы продукции
         type: collection
         path: src/content/product-sections
+        format: json
+        filename: "{slug}.json"
+        view:
+          primary: title
+          fields: [title, slug, mode, showOnHome, isActive]
         fields:
           - name: title
             type: string
@@ -164,6 +169,11 @@ content:
         label: Категории изделий
         type: collection
         path: src/content/product-categories
+        format: json
+        filename: "{slug}.json"
+        view:
+          primary: title
+          fields: [title, slug, parentSectionSlug, mode, isActive]
         fields:
           - name: title
             type: string
@@ -214,6 +224,11 @@ content:
         label: Изделия
         type: collection
         path: src/content/products
+        format: json
+        filename: "{slug}.json"
+        view:
+          primary: title
+          fields: [title, slug, productCategorySlug, priceMode, showInCatalog, isActive]
         fields:
           - name: title
             type: string
@@ -272,6 +287,11 @@ content:
         label: Услуги
         type: collection
         path: src/content/services
+        format: json
+        filename: "{slug}.json"
+        view:
+          primary: title
+          fields: [title, slug, showOnHome, isActive]
         fields:
           - name: title
             type: string
@@ -310,6 +330,11 @@ content:
         label: Выполненные объекты
         type: collection
         path: src/content/projects
+        format: json
+        filename: "{slug}.json"
+        view:
+          primary: title
+          fields: [title, slug, isActive]
         fields:
           - name: title
             type: string
@@ -348,6 +373,11 @@ content:
         label: Вакансии
         type: collection
         path: src/content/jobs
+        format: json
+        filename: "{slug}.json"
+        view:
+          primary: title
+          fields: [title, slug, city, employmentType, isActive]
         fields:
           - name: title
             type: string
@@ -393,6 +423,7 @@ content:
         label: Настройки сайта
         type: file
         path: src/content/site-settings/global.json
+        format: json
         fields:
           - name: companyName
             type: string
