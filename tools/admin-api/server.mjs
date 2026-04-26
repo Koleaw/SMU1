@@ -58,6 +58,9 @@ const COLLECTIONS = {
 };
 
 const sessions = new Map();
+const UPLOADS_DIR = path.join(repoRoot, 'public', 'uploads');
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
+const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg']);
 
 function parseEnvText(source = '') {
   const lines = source.split(/\r?\n/);
@@ -171,6 +174,58 @@ function readBody(req) {
     });
     req.on('error', reject);
   });
+}
+
+function slugifyFilename(name) {
+  return String(name ?? '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'image';
+}
+
+function readRawBody(req, maxBytes = MAX_UPLOAD_SIZE + 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        reject(new Error('Файл слишком большой. Максимум 10 MB.'));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
+function parseMultipartFile(buffer, contentType) {
+  const boundaryMatch = String(contentType || '').match(/boundary=([^;]+)/i);
+  if (!boundaryMatch) throw new Error('Некорректный multipart/form-data');
+  const boundary = boundaryMatch[1];
+  const delimiter = Buffer.from(`--${boundary}`);
+  let start = buffer.indexOf(delimiter);
+  while (start !== -1) {
+    const next = buffer.indexOf(delimiter, start + delimiter.length);
+    if (next === -1) break;
+    const part = buffer.slice(start + delimiter.length + 2, next - 2);
+    const headerEnd = part.indexOf(Buffer.from('\r\n\r\n'));
+    if (headerEnd !== -1) {
+      const headers = part.slice(0, headerEnd).toString('utf8');
+      if (headers.includes('name="file"')) {
+        const fileNameMatch = headers.match(/filename="([^"]*)"/i);
+        const filename = fileNameMatch ? fileNameMatch[1] : 'upload.bin';
+        const fileBuffer = part.slice(headerEnd + 4);
+        return { filename, fileBuffer };
+      }
+    }
+    start = next;
+  }
+  throw new Error('Файл не найден в multipart-запросе');
 }
 
 function normalizeOrderItems(items) {
@@ -376,6 +431,39 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (!requireAuth(req, res)) {
+      return;
+    }
+
+    if (pathname === '/api/admin/upload' && req.method === 'POST') {
+      const contentType = req.headers['content-type'] || '';
+      if (!String(contentType).includes('multipart/form-data')) {
+        sendJson(res, 400, { error: 'Ожидается multipart/form-data' });
+        return;
+      }
+
+      const raw = await readRawBody(req);
+      const { filename, fileBuffer } = parseMultipartFile(raw, contentType);
+      if (!fileBuffer?.length) {
+        sendJson(res, 400, { error: 'Пустой файл' });
+        return;
+      }
+      if (fileBuffer.length > MAX_UPLOAD_SIZE) {
+        sendJson(res, 400, { error: 'Файл слишком большой. Максимум 10 MB.' });
+        return;
+      }
+
+      const ext = path.extname(filename).toLowerCase();
+      if (!ALLOWED_EXTENSIONS.has(ext)) {
+        sendJson(res, 400, { error: 'Разрешены только jpg, jpeg, png, webp, svg' });
+        return;
+      }
+
+      await fs.mkdir(UPLOADS_DIR, { recursive: true });
+      const baseName = slugifyFilename(path.basename(filename, ext));
+      const safeName = `${baseName}-${Date.now()}${ext}`;
+      const filePath = path.join(UPLOADS_DIR, safeName);
+      await fs.writeFile(filePath, fileBuffer);
+      sendJson(res, 200, { path: `/uploads/${safeName}` });
       return;
     }
 
