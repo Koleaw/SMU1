@@ -336,6 +336,106 @@ const landscapingContent = {
     'Напишите нам, и мы сориентируем по составу работ, изделиям, материалам, монтажу и этапности. Можно отправить фото территории, ТЗ, чертеж, дизайн-проект или описание задачи.'
 };
 
+const constructionContent = {
+  navItems: [
+    { id: 'construction-do', label: 'Что делаем' },
+    { id: 'construction-targets', label: 'Для каких объектов' },
+    { id: 'construction-scope', label: 'Что можем включить в работы' },
+    { id: 'construction-workflow', label: 'Как работаем' },
+    { id: 'construction-pricing', label: 'Что влияет на стоимость' },
+    { id: 'construction-examples', label: 'Примеры задач' },
+    { id: 'direct-contact', label: 'Связаться напрямую' }
+  ],
+  whatWeDo: [
+    {
+      title: 'Подготовка площадок',
+      description: 'Обустройство территории под дальнейшие работы, монтаж конструкций и установку элементов.'
+    },
+    {
+      title: 'Основания под конструкции',
+      description: 'Основания и крепления под МАФ, навесы, ограждения, контейнерные и хозяйственные зоны.'
+    },
+    {
+      title: 'Входные группы',
+      description: 'Работы в зоне входа: площадки, малые конструкции, ограждения и элементы оформления.'
+    },
+    {
+      title: 'Монтаж элементов',
+      description: 'Установка малых конструкций, МАФ и элементов благоустройства на объекте.'
+    },
+    {
+      title: 'Хозяйственные зоны',
+      description: 'Обустройство технических, контейнерных и вспомогательных площадок.'
+    },
+    {
+      title: 'Каркасные конструкции',
+      description: 'Каркасные конструкции хозяйственного назначения под задачу объекта.'
+    },
+    {
+      title: 'Обшивка и доработка',
+      description: 'Обшивка, доработка и адаптация конструкций под условия эксплуатации.'
+    },
+    {
+      title: 'Работы по ТЗ',
+      description: 'Выполнение прикладных строительных и монтажных задач по ТЗ, эскизу, чертежу или замеру.'
+    }
+  ],
+  objectTypes: [
+    'частные участки',
+    'коммерческие территории',
+    'производственные и складские объекты',
+    'кафе, магазины и базы отдыха',
+    'дворы и придомовые территории',
+    'входные группы',
+    'контейнерные и хозяйственные площадки',
+    'технические зоны'
+  ],
+  projectScope: [
+    'замер и уточнение задачи',
+    'подбор материалов и конструктивного решения',
+    'изготовление металлоконструкций при необходимости',
+    'основания и крепления под конструкции',
+    'монтаж навесов, ограждений, МАФ и элементов благоустройства',
+    'обшивка, покраска и защитные покрытия',
+    'доработка существующих конструкций',
+    'поэтапное выполнение работ'
+  ],
+  workflow: [
+    'разбираем задачу и состояние объекта',
+    'уточняем размеры, материалы и ограничения',
+    'согласуем состав работ и этапность',
+    'при необходимости изготавливаем конструкции',
+    'выполняем монтаж и строительные работы',
+    'передаем результат'
+  ],
+  costFactors: [
+    'объем и состав работ',
+    'состояние площадки',
+    'материалы и конструкции',
+    'необходимость изготовления элементов под заказ',
+    'основания, крепления и монтаж',
+    'доступ к объекту',
+    'логистика',
+    'сроки и этапность'
+  ],
+  examples: [
+    'обустроить входную группу',
+    'подготовить площадку под контейнерную зону',
+    'смонтировать навес или ограждение',
+    'сделать основание под МАФ или конструкцию',
+    'обшить каркас хозяйственного помещения',
+    'доработать техническую или хозяйственную зону',
+    'смонтировать элементы благоустройства',
+    'выполнить работы по чертежу или ТЗ'
+  ],
+  scopeMediaCaption: 'Фото строительных или монтажных работ будет добавлено позже',
+  formatText:
+    'Берем прикладные строительные и монтажные задачи, где понятен объект, объем работ и ожидаемый результат. Если задача требует отдельного проектирования, согласований, инженерных сетей или специализированных работ, обсуждаем это отдельно.',
+  contactTitle: 'Нужны строительные или монтажные работы на объекте?',
+  contactDescription:
+    'Напишите нам, и мы сориентируем по составу работ, материалам, конструкциям, монтажу и этапности. Можно отправить фото объекта, размеры, чертеж, ТЗ или описание задачи.'
+};
+
 export async function getStaticPaths() {
   const productSections = await getCollection('product-sections');
   const services = await getCollection('services');
@@ -358,6 +458,7 @@ const isNavesyPage = itemType === 'product-section' && item.slug === 'navesy-i-k
 const isMetalPage = itemType === 'product-section' && item.slug === 'metallokonstruktsii-dlya-biznesa';
 const isTopiaryPage = itemType === 'product-section' && item.slug === 'topiarii';
 const isLandscapingPage = itemType === 'service' && item.slug === 'blagoustroystvo-territoriy';
+const isConstructionPage = itemType === 'service' && item.slug === 'stroitelstvo-i-remonty';
 
 const sectionNavItems = isNavesyPage
   ? navesyContent.navItems
@@ -367,6 +468,8 @@ const sectionNavItems = isNavesyPage
       ? topiaryContent.navItems
       : isLandscapingPage
         ? landscapingContent.navItems
+        : isConstructionPage
+          ? constructionContent.navItems
         : defaultProjectNavItems;
 
 const categories = isCatalogHub
@@ -384,6 +487,8 @@ const contactTitle = isNavesyPage
       ? topiaryContent.contactTitle
       : isLandscapingPage
         ? landscapingContent.contactTitle
+        : isConstructionPage
+          ? constructionContent.contactTitle
     : item.slug === 'ograzhdeniya-i-zabory'
     ? 'Нужно ограждение под конкретный объект?'
     : 'Не нашли, что искали?';
@@ -396,6 +501,8 @@ const contactDescription = isNavesyPage
       ? topiaryContent.contactDescription
       : isLandscapingPage
         ? landscapingContent.contactDescription
+        : isConstructionPage
+          ? constructionContent.contactDescription
     : item.slug === 'ograzhdeniya-i-zabory'
     ? 'Напишите нам, и мы подберем конструкцию под размеры, задачу, внешний вид территории и условия монтажа.'
     : 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.';
@@ -411,7 +518,7 @@ const contactDescription = isNavesyPage
 
   <Hero
     kicker={isCatalogHub ? 'Каталог направлений' : 'Проектное направление'}
-    className={isTopiaryPage ? 'hero--media navesy-hero topiary-hero' : isNavesyPage || isMetalPage || isLandscapingPage ? 'hero--media navesy-hero' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
+    className={isTopiaryPage ? 'hero--media navesy-hero topiary-hero' : isNavesyPage || isMetalPage || isLandscapingPage || isConstructionPage ? 'hero--media navesy-hero' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
     title={item.heroTitle}
     description={item.heroDescription}
     mediaImage={isCatalogHub ? undefined : withBase(item.image)}
@@ -769,6 +876,102 @@ const contactDescription = isNavesyPage
         </div>
       </section>
     </>
+  ) : isConstructionPage ? (
+    <>
+      <section id="construction-do" class="section section--dark navesy-section-compact" data-section-theme="dark">
+        <div class="container">
+          <div class="section-heading section-heading--light">
+            <h2 class="section-title">Что делаем</h2>
+          </div>
+          <div class="construction-do-grid">
+            {constructionContent.whatWeDo.map((itemCard) => (
+              <article class="card construction-dark-card">
+                <h3>{itemCard.title}</h3>
+                <p>{itemCard.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="construction-targets" class="section section--soft navesy-section-compact">
+        <div class="container">
+          <article class="card construction-panel construction-panel--light">
+            <h2>Для каких объектов</h2>
+            <ul class="construction-columns-list">
+              {constructionContent.objectTypes.map((objectType) => (
+                <li>{objectType}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="construction-scope" class="section navesy-section-compact">
+        <div class="container construction-scope-layout">
+          <article class="card construction-panel construction-panel--graphite">
+            <h2>Что можем включить в работы</h2>
+            <ul class="construction-list-tight">
+              {constructionContent.projectScope.map((scopeItem) => (
+                <li>{scopeItem}</li>
+              ))}
+            </ul>
+          </article>
+          <article class="media-block placeholder placeholder--wide-feature">
+            <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
+            <p class="media-caption">{constructionContent.scopeMediaCaption}</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="construction-workflow" class="section section--soft navesy-section-compact">
+        <div class="container">
+          <article class="card construction-panel construction-panel--light">
+            <h2>Как работаем</h2>
+            <ol class="construction-list-tight">
+              {constructionContent.workflow.map((step) => (
+                <li>{step}</li>
+              ))}
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section id="construction-pricing" class="section section--dark navesy-section-compact" data-section-theme="dark">
+        <div class="container">
+          <article class="card construction-panel construction-panel--dark">
+            <h2>Что влияет на стоимость</h2>
+            <ul class="construction-columns-list construction-columns-list--pricing">
+              {constructionContent.costFactors.map((factor) => (
+                <li>{factor}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="construction-examples" class="section navesy-section-compact">
+        <div class="container">
+          <article class="card construction-panel construction-panel--examples">
+            <h2>Примеры задач</h2>
+            <ul class="construction-columns-list">
+              {constructionContent.examples.map((example) => (
+                <li>{example}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section section--soft navesy-section-compact">
+        <div class="container">
+          <article class="card construction-format-note">
+            <h2>Формат работы</h2>
+            <p>{constructionContent.formatText}</p>
+          </article>
+        </div>
+      </section>
+    </>
   ) : (
     <>
       <section id="project-scope" class="section">
@@ -821,9 +1024,9 @@ const contactDescription = isNavesyPage
   <DirectContactBlock
     title={contactTitle}
     description={contactDescription}
-    telegramLabel={isMetalPage || isTopiaryPage || isLandscapingPage ? 'Написать в Telegram' : undefined}
-    emailLabel={isMetalPage || isTopiaryPage || isLandscapingPage ? 'Написать на почту' : undefined}
-    phoneLabel={isMetalPage || isTopiaryPage || isLandscapingPage ? 'Позвонить' : undefined}
+    telegramLabel={isMetalPage || isTopiaryPage || isLandscapingPage || isConstructionPage ? 'Написать в Telegram' : undefined}
+    emailLabel={isMetalPage || isTopiaryPage || isLandscapingPage || isConstructionPage ? 'Написать на почту' : undefined}
+    phoneLabel={isMetalPage || isTopiaryPage || isLandscapingPage || isConstructionPage ? 'Позвонить' : undefined}
   />
 </BaseLayout>
 
@@ -1144,6 +1347,111 @@ const contactDescription = isNavesyPage
     height: 100%;
   }
 
+  .construction-do-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .construction-dark-card {
+    align-content: start;
+    min-height: 170px;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .construction-dark-card h3 {
+    font-size: 21px;
+    line-height: 1.2;
+  }
+
+  .construction-dark-card p {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .construction-panel {
+    gap: 14px;
+    padding: 20px;
+  }
+
+  .construction-panel--light,
+  .construction-format-note {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-card);
+  }
+
+  .construction-panel--graphite {
+    background: var(--color-panel-dark);
+    border-color: var(--color-border-dark);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+  }
+
+  .construction-panel--dark {
+    background: var(--color-panel-dark);
+    border-color: var(--color-border-dark);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+  }
+
+  .construction-panel--graphite h2,
+  .construction-panel--graphite li,
+  .construction-panel--dark h2,
+  .construction-panel--dark li {
+    color: #f2f5f7;
+  }
+
+  .construction-panel--examples {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-card);
+  }
+
+  .construction-columns-list {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 20px;
+  }
+
+  .construction-columns-list li {
+    margin: 0;
+  }
+
+  .construction-columns-list--pricing {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .construction-list-tight {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .construction-scope-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  .construction-scope-layout .media-block {
+    height: 100%;
+  }
+
+  .construction-format-note {
+    gap: 10px;
+    padding: 18px 20px;
+  }
+
+  .construction-format-note p {
+    margin: 0;
+    line-height: 1.5;
+  }
+
   .navesy-workflow-layout {
     display: grid;
     grid-template-columns: minmax(0, 860px);
@@ -1182,6 +1490,10 @@ const contactDescription = isNavesyPage
     }
 
     .landscaping-do-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .construction-do-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
@@ -1236,6 +1548,18 @@ const contactDescription = isNavesyPage
     }
 
     .landscaping-scope-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .construction-do-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .construction-columns-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .construction-scope-layout {
       grid-template-columns: 1fr;
     }
   }
@@ -1295,6 +1619,21 @@ const contactDescription = isNavesyPage
     }
 
     .landscaping-panel {
+      padding: 16px;
+    }
+
+    .construction-do-grid,
+    .construction-columns-list,
+    .construction-columns-list--pricing {
+      grid-template-columns: 1fr;
+    }
+
+    .construction-dark-card {
+      min-height: 0;
+    }
+
+    .construction-panel,
+    .construction-format-note {
       padding: 16px;
     }
   }
