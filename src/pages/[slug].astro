@@ -5,6 +5,7 @@ import Hero from '../components/Hero.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import SectionNavigator from '../components/SectionNavigator.astro';
 import DirectContactBlock from '../components/DirectContactBlock.astro';
+import PageBlocksRenderer from '../components/PageBlocksRenderer.astro';
 import { withBase } from '../utils/withBase';
 
 const defaultProjectNavItems = [
@@ -459,9 +460,25 @@ const isMetalPage = itemType === 'product-section' && item.slug === 'metallokons
 const isTopiaryPage = itemType === 'product-section' && item.slug === 'topiarii';
 const isLandscapingPage = itemType === 'service' && item.slug === 'blagoustroystvo-territoriy';
 const isConstructionPage = itemType === 'service' && item.slug === 'stroitelstvo-i-remonty';
+const navesyPageBlocks = isNavesyPage && Array.isArray(item.pageBlocks)
+  ? item.pageBlocks
+      .filter((block) => block?.isActive !== false)
+      .slice()
+      .sort((a, b) => a.order - b.order)
+      .map((block, index) => ({
+        ...block,
+        sectionId: `navesy-block-${index + 1}`
+      }))
+  : [];
+const hasNavesyPageBlocks = navesyPageBlocks.length > 0;
 
 const sectionNavItems = isNavesyPage
-  ? navesyContent.navItems
+  ? hasNavesyPageBlocks
+    ? navesyPageBlocks.map((block, index) => ({
+        id: block.sectionId ?? `navesy-block-${index + 1}`,
+        label: block.title
+      })).concat([{ id: 'direct-contact', label: 'Связаться напрямую' }])
+    : navesyContent.navItems
   : isMetalPage
     ? metalContent.navItems
     : isTopiaryPage
@@ -571,60 +588,66 @@ const contactDescription = isNavesyPage
     </>
   ) : isNavesyPage ? (
     <>
-      <section id="navesy-types" class="section section--dark" data-section-theme="dark">
-        <div class="container">
-          <div class="section-heading section-heading--light">
-            <h2 class="section-title">Какие навесы делаем</h2>
-          </div>
-          <div class="navesy-type-grid">
-            {navesyContent.canopyTypes.map((canopyType) => (
-              <article class="card navesy-type-card">
-                <h3>{canopyType.title}</h3>
-                <p>{canopyType.description}</p>
+      {hasNavesyPageBlocks ? (
+        <PageBlocksRenderer pageBlocks={navesyPageBlocks} />
+      ) : (
+        <>
+          <section id="navesy-types" class="section section--dark" data-section-theme="dark">
+            <div class="container">
+              <div class="section-heading section-heading--light">
+                <h2 class="section-title">Какие навесы делаем</h2>
+              </div>
+              <div class="navesy-type-grid">
+                {navesyContent.canopyTypes.map((canopyType) => (
+                  <article class="card navesy-type-card">
+                    <h3>{canopyType.title}</h3>
+                    <p>{canopyType.description}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section id="navesy-targets" class="section section--soft navesy-section-compact">
+            <div class="container">
+              <article class="card navesy-panel">
+                <h2>Для каких объектов</h2>
+                <ul class="navesy-columns-list">
+                  {navesyContent.objectTypes.map((objectType) => (
+                    <li>{objectType}</li>
+                  ))}
+                </ul>
               </article>
-            ))}
-          </div>
-        </div>
-      </section>
+            </div>
+          </section>
 
-      <section id="navesy-targets" class="section section--soft navesy-section-compact">
-        <div class="container">
-          <article class="card navesy-panel">
-            <h2>Для каких объектов</h2>
-            <ul class="navesy-columns-list">
-              {navesyContent.objectTypes.map((objectType) => (
-                <li>{objectType}</li>
-              ))}
-            </ul>
-          </article>
-        </div>
-      </section>
+          <section id="navesy-workflow" class="section navesy-section-compact">
+            <div class="container navesy-workflow-layout">
+              <article class="card navesy-panel navesy-process-card">
+                <h2>Как работаем</h2>
+                <ol>
+                  {navesyContent.workflow.map((step) => (
+                    <li>{step}</li>
+                  ))}
+                </ol>
+              </article>
+            </div>
+          </section>
 
-      <section id="navesy-workflow" class="section navesy-section-compact">
-        <div class="container navesy-workflow-layout">
-          <article class="card navesy-panel navesy-process-card">
-            <h2>Как работаем</h2>
-            <ol>
-              {navesyContent.workflow.map((step) => (
-                <li>{step}</li>
-              ))}
-            </ol>
-          </article>
-        </div>
-      </section>
-
-      <section id="navesy-pricing" class="section section--dark navesy-section-compact" data-section-theme="dark">
-        <div class="container">
-          <article class="card navesy-panel navesy-pricing-panel">
-            <h2>Что влияет на стоимость</h2>
-            <ul class="navesy-columns-list navesy-columns-list--pricing">
-              {navesyContent.costFactors.map((factor) => (
-                <li>{factor}</li>
-              ))}
-            </ul>
-          </article>
-        </div>
-      </section>
+          <section id="navesy-pricing" class="section section--dark navesy-section-compact" data-section-theme="dark">
+            <div class="container">
+              <article class="card navesy-panel navesy-pricing-panel">
+                <h2>Что влияет на стоимость</h2>
+                <ul class="navesy-columns-list navesy-columns-list--pricing">
+                  {navesyContent.costFactors.map((factor) => (
+                    <li>{factor}</li>
+                  ))}
+                </ul>
+              </article>
+            </div>
+          </section>
+        </>
+      )}
     </>
   ) : isMetalPage ? (
     <>
