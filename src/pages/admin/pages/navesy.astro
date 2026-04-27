@@ -5,6 +5,7 @@ import { withBase } from '../../../utils/withBase';
 const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:8787/api/admin';
 const publicNavesyPath = withBase('/navesy-i-kozyrki/');
 const adminHome = withBase('/admin/');
+const technicalAdminPath = withBase('/admin/technical/');
 const baseUrl = import.meta.env.BASE_URL ?? '/';
 ---
 
@@ -78,7 +79,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       <input id="uploadInput" type="file" accept="image/*,.svg" class="hidden" />
     </div>
 
-    <script type="module" define:vars={{ adminApiBase, baseUrl }}>
+    <script type="module" define:vars={{ adminApiBase, baseUrl, adminHome, technicalAdminPath }}>
       const API_BASE = adminApiBase;
       const BLOCK_LABELS = { cardGrid: 'Карточки', listPanel: 'Список', process: 'Процесс', factorList: 'Факторы', mediaText: 'Текст + изображение', notice: 'Вставка', exampleGrid: 'Примеры' };
       const state = {
@@ -86,6 +87,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         draft: null,
         loading: true,
         loadError: '',
+        loadErrorDetails: '',
+        loadErrorEndpoint: '',
+        loadErrorStatus: '',
+        authRequired: false,
         alert: '',
         alertError: false,
         editingHero: null,
@@ -103,26 +108,77 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       const sorted = (arr = []) => arr.slice().filter(Boolean).sort((a,b)=>(a.order ?? 0)-(b.order ?? 0));
       const renumber = (arr = []) => arr.forEach((item, i) => { if (item && typeof item === 'object' && 'order' in item) item.order = (i + 1) * 10; });
       const isDirty = () => JSON.stringify(state.original) !== JSON.stringify(state.draft);
-      const toSrc = (src) => !src ? '' : /^https?:\/\//.test(src) ? src : `${(baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`)}${src.startsWith('/') ? src.slice(1) : src}`;
-      const getMediaView = (mediaView) => ({ fit: mediaView?.fit === 'contain' ? 'contain' : 'cover', positionX: Number.isFinite(mediaView?.positionX) ? Number(mediaView.positionX) : 50, positionY: Number.isFinite(mediaView?.positionY) ? Number(mediaView.positionY) : 50, scale: Number.isFinite(mediaView?.scale) ? Math.max(1, Math.min(3, Number(mediaView.scale))) : 1 });
+      const toSrc = (src) => {
+        if (!src) return '';
+        if (/^https?:\/\//.test(src)) return src;
+        const normBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+        const clean = src.startsWith('/') ? src.slice(1) : src;
+        return `${normBase}${clean}`;
+      };
 
-      async function api(path, options = {}) { const response = await fetch(`${API_BASE}${path}`, { ...options, credentials:'include', headers: options.body instanceof FormData ? {} : { 'Content-Type': 'application/json', ...(options.headers || {}) } }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`); return data; }
-      const getBlocks = () => sorted(state.draft?.pageBlocks || []);
-      const setBlocks = (blocks) => { state.draft.pageBlocks = sorted(blocks); };
-      const applyBlock = (index, updater) => { const blocks = getBlocks(); if (!blocks[index]) return; updater(blocks[index]); setBlocks(blocks); };
-      const normalizeListItems = (items = []) => items.map((it, i) => typeof it === 'string' ? { text: it, order: (i+1)*10, isActive: true } : { text: it?.text || '', order: it?.order ?? (i+1)*10, isActive: it?.isActive !== false }).filter((it) => it.text.trim());
+      async function api(path, options = {}) {
+        const response = await fetch(`${API_BASE}${path}`, {
+          ...options,
+          credentials: 'include',
+          headers: options.body instanceof FormData ? {} : { 'Content-Type': 'application/json', ...(options.headers || {}) }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const err = new Error(data.error || `HTTP ${response.status}`);
+          err.status = response.status;
+          err.endpoint = path;
+          throw err;
+        }
+        return data;
+      }
 
-      function showLogin(msg = '') { $('loginView').classList.remove('hidden'); $('editorView').classList.add('hidden'); $('loginStatus').textContent = msg; }
-      function showEditor() { $('loginView').classList.add('hidden'); $('editorView').classList.remove('hidden'); }
-      function setAlert(text = '', error = false) { state.alert = text; state.alertError = error; }
-      function updateStatus() { const dirty = isDirty(); $('dirtyStatus').textContent = dirty ? 'Есть несохраненные изменения' : 'Нет изменений'; $('dirtyStatus').className = dirty ? 'status-dirty' : 'status-clean'; $('saveBtn').disabled = !dirty; }
+      async function apiWithTimeout(path, options = {}, timeoutMs = 10000) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          return await api(path, { ...options, signal: controller.signal });
+        } catch (error) {
+          if (error?.name === 'AbortError') {
+            const timeoutError = new Error('Превышено время ожидания ответа API');
+            timeoutError.endpoint = path;
+            timeoutError.status = 'timeout';
+            throw timeoutError;
+          }
+          throw error;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
 
-      function renderMedia(block, blockIndex, hero = false) {
-        const img = hero ? (state.editingHero?.image ?? state.draft.image) : block.media;
-        const placeholder = hero ? (state.editingHero?.placeholderLabel ?? state.draft.placeholderLabel || DEFAULT_PLACEHOLDER) : (block.placeholderLabel || DEFAULT_PLACEHOLDER);
-        const view = getMediaView(hero ? (state.editingHero?.imageView ?? state.draft.imageView) : block.mediaView);
-        const controls = `${hero ? '' : `<button class="btn btn-secondary btn-xs" data-action="open-crop" data-block="${blockIndex}">Настроить кадр</button>`}<button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="${hero ? 'hero-image' : `block-media-${blockIndex}`}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="${hero ? 'clear-hero-image' : 'clear-block-media'}" data-block="${blockIndex}">Убрать фото</button>`;
-        return `<article class="media-block placeholder placeholder--wide-feature">${img ? `<img class="media-thumb media-thumb--managed" style="--media-fit:${view.fit};--media-pos-x:${view.positionX}%;--media-pos-y:${view.positionY}%;--media-scale:${view.scale};" src="${esc(toSrc(img))}" alt="" />` : ''}<p class="media-caption">${esc(placeholder)}</p><div class="admin-media-controls">${hero ? '<button class="btn btn-secondary btn-xs" data-action="open-hero-crop">Настроить кадр</button>' : ''}${controls}</div></article>`;
+      function showLogin(msg = '') {
+        $('loginView').classList.remove('hidden');
+        $('editorView').classList.add('hidden');
+        $('loginStatus').textContent = msg;
+      }
+
+      function showEditor() {
+        $('loginView').classList.add('hidden');
+        $('editorView').classList.remove('hidden');
+      }
+
+      function setAlert(text = '', error = false) {
+        state.alert = text;
+        state.alertError = error;
+      }
+
+      function setLoadError(message, error, endpoint = '') {
+        state.loadError = message;
+        state.loadErrorEndpoint = endpoint;
+        state.loadErrorStatus = error?.status ? String(error.status) : '';
+        state.loadErrorDetails = error?.message || String(error || '');
+        console.error('[admin/navesy] load error', { endpoint, error, apiBase: API_BASE });
+      }
+
+      function updateStatus() {
+        const dirty = isDirty();
+        $('dirtyStatus').textContent = dirty ? 'Есть несохраненные изменения' : 'Нет изменений';
+        $('dirtyStatus').className = dirty ? 'status-dirty' : 'status-clean';
+        $('saveBtn').disabled = !dirty;
       }
 
       function renderHero() {
@@ -188,8 +244,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           updateStatus();
           return;
         }
+        if (state.authRequired) {
+          root.innerHTML = `<section class="section"><div class="container"><h2>Требуется вход в админку</h2><p class="muted">Сессия не найдена или истекла.</p><div class="admin-strip"><button class="btn btn-xs" data-action="go-login">Вернуться к входу</button><a class="btn btn-secondary btn-xs" href="${esc(adminHome)}">В админку</a></div></div></section>`;
+          updateStatus();
+          return;
+        }
         if (state.loadError) {
-          root.innerHTML = `<section class="section"><div class="container"><h2>Редактирование: Навесы</h2><p class="error">Не удалось загрузить данные страницы. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me</p><p class="muted">${esc(state.loadError)}</p></div></section>`;
+          root.innerHTML = `<section class="section"><div class="container"><h2>Ошибка загрузки редактора</h2><p class="error">Не удалось загрузить данные редактора. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me</p><p class="muted">API base: ${esc(API_BASE)}</p><p class="muted">Endpoint: ${esc(state.loadErrorEndpoint || '-')}</p><p class="muted">Status: ${esc(state.loadErrorStatus || '-')}</p><p class="muted">Error: ${esc(state.loadErrorDetails || state.loadError)}</p><div class="admin-strip"><button class="btn btn-xs" data-action="retry-load">Повторить</button><a class="btn btn-secondary btn-xs" href="${esc(adminHome)}">В админку</a><a class="btn btn-secondary btn-xs" href="${esc(technicalAdminPath)}">Открыть техническую диагностику</a></div></div></section>`;
           updateStatus();
           return;
         }
@@ -267,6 +328,15 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           const map = { cardGrid: { type:'cardGrid', title:'Новая секция', theme:'dark', grid:'auto', order:nextOrder, isActive:true, items:[] }, listPanel: { type:'listPanel', title:'Новая секция', theme:'light', columns:2, order:nextOrder, isActive:true, items:[] }, process: { type:'process', title:'Новая секция', theme:'light', mediaPosition:'right', placeholderLabel:DEFAULT_PLACEHOLDER, order:nextOrder, isActive:true, steps:[] }, factorList: { type:'factorList', title:'Новая секция', theme:'graphite', columns:2, order:nextOrder, isActive:true, items:[] }, mediaText: { type:'mediaText', title:'Новая секция', text:'', theme:'light', mediaPosition:'right', placeholderLabel:DEFAULT_PLACEHOLDER, order:nextOrder, isActive:true }, notice: { type:'notice', title:'Новая вставка', text:'', theme:'light', order:nextOrder, isActive:true }, exampleGrid: { type:'exampleGrid', title:'Новая секция', theme:'light', grid:'auto', order:nextOrder, isActive:true, items:[] } };
           setBlocks([...getBlocks(), map[type]]); state.modal = null; renderPage(); return;
         }
+        if (action === 'upload-image') { state.uploadTarget = el.dataset.target; $('uploadInput').click(); }
+        if (action === 'retry-load') { boot(); return; }
+        if (action === 'go-login') { showLogin('Введите логин и пароль.'); return; }
+      });
+
+      $('workspace').addEventListener('input', (event) => {
+        if (!event.target.dataset.modal || !state.blockSettings) return;
+        const key = event.target.dataset.modal;
+        state.blockSettings[key] = event.target.value;
       });
 
       $('workspace').addEventListener('change', (event) => {
@@ -314,45 +384,65 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         try {
-          await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
+          await apiWithTimeout('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
           state.loading = true;
           state.loadError = '';
+          state.loadErrorDetails = '';
+          state.loadErrorEndpoint = '';
+          state.loadErrorStatus = '';
+          state.authRequired = false;
           showEditor();
           renderPage();
-          const data = await api('/content/product-sections/navesy');
+          const data = await apiWithTimeout('/content/product-sections/navesy');
           state.original = clone(data.content);
           state.draft = clone(data.content);
-          state.loading = false;
-          renderPage();
+          if (!Array.isArray(state.draft.pageBlocks)) {
+            setLoadError('У страницы нет pageBlocks', new Error('pageBlocks is missing or not an array'), '/content/product-sections/navesy');
+            state.draft.pageBlocks = [];
+          }
         } catch (error) {
+          state.authRequired = true;
           $('loginStatus').textContent = error.message || 'Ошибка входа';
           $('loginStatus').className = 'muted error';
+        } finally {
+          state.loading = false;
+          renderPage();
         }
       });
 
       async function boot() {
         state.loading = true;
+        state.loadError = '';
+        state.loadErrorDetails = '';
+        state.loadErrorEndpoint = '';
+        state.loadErrorStatus = '';
+        state.authRequired = false;
         renderPage();
         try {
-          const me = await api('/me');
+          const me = await apiWithTimeout('/me');
           if (!me.authenticated) {
-            state.loading = false;
-            state.loadError = '';
-            showLogin('Введите логин и пароль.');
+            state.authRequired = true;
+            showEditor();
+            renderPage();
             return;
           }
           showEditor();
-          const data = await api('/content/product-sections/navesy');
+          const data = await apiWithTimeout('/content/product-sections/navesy');
           state.original = clone(data.content);
           state.draft = clone(data.content);
-          state.loadError = '';
-          state.loading = false;
-          renderPage();
+          if (!Array.isArray(state.draft.pageBlocks)) {
+            setLoadError('У страницы нет pageBlocks', new Error('pageBlocks is missing or not an array'), '/content/product-sections/navesy');
+            state.draft.pageBlocks = [];
+          }
         } catch (error) {
-          state.loading = false;
-          state.loadError = error?.message || 'Ошибка загрузки';
-          console.error('[admin/navesy] boot failed', error);
+          setLoadError(
+            'Не удалось загрузить данные редактора. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me',
+            error,
+            error?.endpoint || '/me'
+          );
           showEditor();
+        } finally {
+          state.loading = false;
           renderPage();
         }
       }
@@ -360,7 +450,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       window.addEventListener('error', (event) => {
         console.error('[admin/navesy] runtime error', event.error || event.message);
         state.loading = false;
-        state.loadError = (event.error && event.error.message) || String(event.message || 'Ошибка runtime');
+        setLoadError('Ошибка выполнения скрипта редактора', event.error || event.message, 'runtime');
         showEditor();
         renderPage();
       });
@@ -368,7 +458,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       window.addEventListener('unhandledrejection', (event) => {
         console.error('[admin/navesy] unhandled rejection', event.reason);
         state.loading = false;
-        state.loadError = (event.reason && event.reason.message) || String(event.reason || 'Unhandled rejection');
+        setLoadError('Необработанная ошибка редактора', event.reason, 'unhandledrejection');
         showEditor();
         renderPage();
       });
