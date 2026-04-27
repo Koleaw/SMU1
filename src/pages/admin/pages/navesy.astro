@@ -3,10 +3,8 @@ import '../../../styles/global.css';
 import { withBase } from '../../../utils/withBase';
 
 const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:8787/api/admin';
-const publicNavesyPath = withBase('/navesy-i-kozyrki/');
 const adminHome = withBase('/admin/');
-const technicalAdminPath = withBase('/admin/technical/');
-const baseUrl = import.meta.env.BASE_URL ?? '/';
+const publicNavesyPath = withBase('/navesy-i-kozyrki/');
 ---
 
 <html lang="ru">
@@ -15,586 +13,712 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Редактирование: Навесы — Админка СМУ-1</title>
     <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
       * { box-sizing: border-box; }
-      body { margin: 0; background: #f4f7fb; font-family: Inter, system-ui, sans-serif; }
+      body { margin: 0; background: #f3f6fa; color: #1f2d3d; }
       .hidden { display: none !important; }
-      .login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-      .login-card { width: min(440px, 100%); border-radius: 14px; border: 1px solid #d6e0ea; background: #fff; padding: 24px; }
-      .field { display: grid; gap: 6px; margin-bottom: 12px; }
-      .field input, .field textarea, .field select { width: 100%; padding: 10px 12px; border: 1px solid #c6d4e2; border-radius: 8px; font: inherit; }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: #fff;
+        border-bottom: 1px solid #d8e1eb;
+        padding: 10px 14px;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .topbar-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+      h1 { margin: 0; font-size: 18px; }
+      .status-clean { color: #1f7a3f; font-size: 14px; }
+      .status-dirty { color: #9b5a13; font-size: 14px; font-weight: 700; }
+      .btn {
+        border: 1px solid #0f6a4d;
+        background: #0f6a4d;
+        color: #fff;
+        border-radius: 8px;
+        padding: 7px 10px;
+        font: inherit;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .btn:disabled { opacity: .6; cursor: not-allowed; }
+      .btn-secondary { background: #fff; color: #1f3550; border-color: #c2d0e0; }
+      .container { width: min(1080px, calc(100% - 24px)); margin: 16px auto 32px; }
+      .panel { background: #fff; border: 1px solid #d8e1eb; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+      .muted { color: #5e7389; }
+      .error-box { border: 1px solid #e4b3b3; background: #fff2f2; color: #9f2f2f; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+      .field { display: grid; gap: 6px; margin-bottom: 10px; }
+      .field input, .field textarea {
+        width: 100%;
+        border: 1px solid #c4d2e3;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: inherit;
+        background: #fff;
+      }
       .field textarea { min-height: 90px; resize: vertical; }
-      .btn { border: 1px solid #0d6d50; border-radius: 8px; background: #0d6d50; color: #fff; padding: 8px 12px; font: inherit; font-weight: 700; cursor: pointer; }
-      .btn-secondary { border-color: #c4d4e4; background: #fff; color: #31495f; }
-      .btn-danger { border-color: #be4646; background: #be4646; }
-      .btn-xs { font-size: 12px; padding: 5px 8px; }
-      .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 70; background: #fff; border-bottom: 1px solid #d8e3ed; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-      .topbar h1 { margin: 0; font-size: 19px; }
-      .topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-      .status-clean { color: #2b774b; font-size: 14px; }
-      .status-dirty { color: #9e500f; font-size: 14px; font-weight: 700; }
-      .workspace { padding-top: 70px; }
-      .admin-strip { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
-      .admin-block-head { position: sticky; top: 62px; z-index: 10; background: #f2f8ff; border: 1px dashed #89a8c6; border-bottom: none; border-radius: 10px 10px 0 0; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-      .admin-block-body { border: 1px dashed #89a8c6; border-top: none; border-radius: 0 0 10px 10px; margin-bottom: 14px; }
-      .badge { border-radius: 999px; background: #e5eef8; color: #36506a; padding: 3px 8px; font-size: 12px; }
-      .admin-inline { width: 100%; border: 1px solid #9db7d1; border-radius: 8px; padding: 8px 10px; font: inherit; background: #fff; }
-      .admin-inline-area { min-height: 80px; resize: vertical; }
-      .item-editor { border: 1px solid #c9d8e8; border-radius: 10px; background: #f7fbff; padding: 10px; display: grid; gap: 8px; }
-      .hero-edit-box { border: 1px solid #92acca; border-radius: 10px; background: rgb(255 255 255 / 92%); padding: 10px; display: grid; gap: 8px; }
-      .admin-media-controls { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
-      .modal-backdrop { position: fixed; inset: 0; background: rgb(6 16 27 / 42%); z-index: 80; display: grid; place-items: center; padding: 16px; }
-      .modal { width: min(620px, 100%); max-height: 90vh; overflow: auto; border-radius: 14px; border: 1px solid #d5e2ef; background: #fff; padding: 16px; }
-      .modal-close { float: right; }
-      .hidden-flag { color: #8b4f18; font-weight: 700; }
-      .media-thumb--managed { object-fit: var(--media-fit, cover); object-position: var(--media-pos-x,50%) var(--media-pos-y,50%); transform: scale(var(--media-scale,1)); transform-origin: center; }
-      pre { margin: 0; font-size: 12px; background: #0f1720; color: #d4e3f5; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
-      .muted { color: #60758a; }
-      .error { color: #b13838; }
+      .hero-preview { border: 1px dashed #97b1ca; border-radius: 10px; padding: 12px; background: #f8fbff; }
+      .hero-media { margin-top: 10px; border: 1px solid #d4deea; border-radius: 8px; overflow: hidden; background: #fff; }
+      .hero-media img { width: 100%; max-height: 260px; object-fit: cover; display: block; }
+      .placeholder { padding: 12px; color: #5e7389; }
+      .block-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; align-items: center; }
+      .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #e7eef8; color: #39546f; }
+      .card-item { border: 1px solid #d5dfeb; background: #f9fbff; border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+      .item-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+      .item-inactive { opacity: 0.65; }
+      .small { font-size: 13px; }
     </style>
   </head>
   <body>
-    <div id="bootView" class="login-wrap">
-      <div class="login-card">
-        <h1>Админка СМУ-1</h1>
-        <p id="bootStatus" class="muted">Проверяем сессию и загружаем редактор…</p>
-        <button id="bootRetryBtn" class="btn btn-secondary hidden" type="button">Повторить</button>
+    <header class="topbar">
+      <div class="topbar-group">
+        <a class="btn btn-secondary" href={adminHome}>← В админку</a>
+        <h1>Редактирование: Навесы</h1>
+        <span id="dirtyStatus" class="status-clean">Нет изменений</span>
       </div>
-    </div>
+      <div class="topbar-group">
+        <button id="saveBtn" class="btn" type="button" disabled>Сохранить</button>
+        <a class="btn btn-secondary" href={publicNavesyPath} target="_blank" rel="noreferrer">Открыть публичную страницу</a>
+        <button id="logoutBtn" class="btn btn-secondary" type="button">Выйти</button>
+      </div>
+    </header>
 
-    <div id="loginView" class="login-wrap hidden">
-      <form id="loginForm" class="login-card">
-        <h1>Админка СМУ-1</h1>
-        <p class="muted">Войдите, чтобы редактировать страницу «Навесы».</p>
-        <div class="field"><label>Логин</label><input name="login" required /></div>
-        <div class="field"><label>Пароль</label><input name="password" type="password" required /></div>
-        <button class="btn" type="submit">Войти</button>
-        <p id="loginStatus" class="muted"></p>
-      </form>
-    </div>
+    <main class="container" id="app">
+      <section class="panel" id="loadingView">
+        <p id="loadingText" class="muted">Загрузка данных…</p>
+      </section>
+      <section class="panel hidden" id="errorView"></section>
+      <section class="panel hidden" id="authView">
+        <h2>Требуется вход в админку</h2>
+        <a class="btn btn-secondary" href={adminHome}>В админку</a>
+      </section>
+      <section class="hidden" id="editorView">
+        <div id="heroSection" class="panel"></div>
+        <div id="blocksSection"></div>
+      </section>
+    </main>
 
-    <div id="editorView">
-      <header class="topbar">
-        <div class="topbar-left"><a class="btn btn-secondary btn-xs" href={adminHome}>← В админку</a><h1>Редактирование: Навесы</h1><span id="dirtyStatus" class="status-clean">Нет изменений</span></div>
-        <div class="topbar-right"><button id="saveBtn" class="btn btn-xs" disabled>Сохранить</button><button class="btn btn-secondary btn-xs" id="addSectionBtn">+ Добавить секцию</button><a class="btn btn-secondary btn-xs" href={publicNavesyPath} target="_blank" rel="noreferrer">Открыть публичную страницу</a><a class="btn btn-secondary btn-xs" href={withBase('/admin/content/product-sections/navesy/')}>Технический режим</a><button id="logoutBtn" class="btn btn-secondary btn-xs" type="button">Выйти</button></div>
-      </header>
-      <main class="workspace" id="workspace">
-        <section class="section">
-          <div class="container">
-            <p class="muted">Загрузка visual editor…</p>
-          </div>
-        </section>
-      </main>
-      <input id="uploadInput" type="file" accept="image/*,.svg" class="hidden" />
-    </div>
-
-    <script type="module" define:vars={{ adminApiBase, baseUrl, adminHome, technicalAdminPath }}>
+    <script type="module" define:vars={{ adminApiBase }}>
       const API_BASE = adminApiBase;
-      const BLOCK_LABELS = { cardGrid: 'Карточки', listPanel: 'Список', process: 'Процесс', factorList: 'Факторы', mediaText: 'Текст + изображение', notice: 'Вставка', exampleGrid: 'Примеры' };
-      const state = {
-        original: null,
-        draft: null,
-        loading: true,
-        loadError: '',
-        loadErrorDetails: '',
-        loadErrorEndpoint: '',
-        loadErrorStatus: '',
-        authRequired: false,
-        alert: '',
-        alertError: false,
-        editingHero: null,
-        editingCard: null,
-        editingRow: null,
-        editingStep: null,
-        editingListBlock: null,
-        blockSettings: null,
-        uploadTarget: null,
-        loadingTimer: null
-      };
+      const CONTENT_ENDPOINT = '/content/product-sections/navesy';
 
-      const $ = (id) => document.getElementById(id);
-      const clone = (v) => JSON.parse(JSON.stringify(v));
-      const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-      const safeArray = (value) => (Array.isArray(value) ? value : []);
-      const safeString = (value, fallback = '') => (typeof value === 'string' ? value : fallback);
-      const isActive = (item) => item?.isActive !== false;
-      const sortByOrder = (arr = []) => safeArray(arr).slice().sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0));
-      const sorted = (arr = []) => sortByOrder(arr);
-      const renumber = (arr = []) => arr.forEach((item, i) => { if (item && typeof item === 'object' && 'order' in item) item.order = (i + 1) * 10; });
-      const normalizeCardItems = (items) => sortByOrder(items).filter((item) => item && (safeString(item.title) || safeString(item.text)));
-      const normalizeStringItems = (items) =>
-        safeArray(items)
-          .map((item) => {
-            if (typeof item === 'string') return item;
-            if (item && typeof item.text === 'string') return item.text;
-            if (item && typeof item.title === 'string') return item.title;
-            return '';
-          })
-          .map((item) => item.trim())
-          .filter(Boolean);
-      const normalizeListItems = (items) => normalizeStringItems(items);
-      const normalizeSteps = (steps) => sortByOrder(steps).filter((step) => step && safeString(step.title));
-      const isDirty = () => JSON.stringify(state.original) !== JSON.stringify(state.draft);
-      const toSrc = (src) => {
-        if (!src) return '';
-        if (/^https?:\/\//.test(src)) return src;
-        const normBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-        const clean = src.startsWith('/') ? src.slice(1) : src;
-        return `${normBase}${clean}`;
-      };
-      const DEFAULT_MEDIA_PLACEHOLDER = 'Фото или рендер будет добавлен позже';
-      const getPlaceholderLabel = (placeholderLabel) => safeString(placeholderLabel, DEFAULT_MEDIA_PLACEHOLDER) || DEFAULT_MEDIA_PLACEHOLDER;
-      const getMediaPath = (mediaPath) => safeString(mediaPath, '');
+      let entry = null;
+      let draft = null;
+      let dirty = false;
+      let loading = true;
+      let error = null;
 
-      function renderMedia(mediaPath, title, placeholderLabel, controls = '') {
-        const safeTitle = esc(safeString(title, 'Изображение'));
-        const resolvedMedia = getMediaPath(mediaPath);
-        const src = resolvedMedia ? `<img class="media-thumb" src="${esc(toSrc(resolvedMedia))}" alt="${safeTitle}" />` : '';
-        const caption = esc(getPlaceholderLabel(placeholderLabel));
-        return `<article class="media-block placeholder placeholder--wide-feature">${src}<p class="media-caption">${caption}</p>${controls}</article>`;
+      const loadingView = document.getElementById('loadingView');
+      const loadingText = document.getElementById('loadingText');
+      const errorView = document.getElementById('errorView');
+      const authView = document.getElementById('authView');
+      const editorView = document.getElementById('editorView');
+      const heroSection = document.getElementById('heroSection');
+      const blocksSection = document.getElementById('blocksSection');
+      const saveBtn = document.getElementById('saveBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+      const dirtyStatus = document.getElementById('dirtyStatus');
+
+      function safeArray(value) {
+        return Array.isArray(value) ? value : [];
       }
 
-      async function api(path, options = {}) {
-        const response = await fetch(`${API_BASE}${path}`, {
-          ...options,
-          credentials: 'include',
-          headers: options.body instanceof FormData ? {} : { 'Content-Type': 'application/json', ...(options.headers || {}) }
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          const err = new Error(data.error || `HTTP ${response.status}`);
-          err.status = response.status;
-          err.endpoint = path;
-          throw err;
-        }
-        return data;
+      function safeString(value, fallback = '') {
+        return typeof value === 'string' ? value : fallback;
       }
 
-      async function apiWithTimeout(path, options = {}, timeoutMs = 10000) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-        try {
-          return await api(path, { ...options, signal: controller.signal });
-        } catch (error) {
-          if (error?.name === 'AbortError') {
-            const timeoutError = new Error('Превышено время ожидания ответа API');
-            timeoutError.endpoint = path;
-            timeoutError.status = 'timeout';
-            throw timeoutError;
-          }
-          throw error;
-        } finally {
-          clearTimeout(timeoutId);
-        }
+      function isActive(item) {
+        return item?.isActive !== false;
       }
 
-      function showLogin(msg = '') {
-        $('bootView').classList.add('hidden');
-        $('loginView').classList.remove('hidden');
-        $('editorView').classList.add('hidden');
-        $('loginStatus').textContent = msg;
+      function sortByOrder(items) {
+        return safeArray(items).slice().sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0));
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[char]));
+      }
+
+      function setStatus(text) {
+        dirtyStatus.textContent = text;
+      }
+
+      function markDirty() {
+        dirty = true;
+        saveBtn.disabled = false;
+        dirtyStatus.className = 'status-dirty';
+        setStatus('Есть несохраненные изменения');
+      }
+
+      function clearDirty() {
+        dirty = false;
+        saveBtn.disabled = true;
+        dirtyStatus.className = 'status-clean';
+        setStatus('Нет изменений');
+      }
+
+      function showError(message, details = '') {
+        error = { message, details };
+        loading = false;
+        loadingView.classList.add('hidden');
+        authView.classList.add('hidden');
+        editorView.classList.add('hidden');
+        errorView.classList.remove('hidden');
+        const detailText = details ? `<pre class="small">${escapeHtml(details)}</pre>` : '';
+        errorView.innerHTML = `<div class="error-box"><h2>Ошибка</h2><p>${escapeHtml(message)}</p>${detailText}</div>`;
+      }
+
+      function showLoading(text) {
+        loading = true;
+        loadingText.textContent = text;
+        loadingView.classList.remove('hidden');
+        authView.classList.add('hidden');
+        errorView.classList.add('hidden');
+        editorView.classList.add('hidden');
+      }
+
+      function showAuthRequired() {
+        loading = false;
+        loadingView.classList.add('hidden');
+        errorView.classList.add('hidden');
+        editorView.classList.add('hidden');
+        authView.classList.remove('hidden');
       }
 
       function showEditor() {
-        $('bootView').classList.add('hidden');
-        $('loginView').classList.add('hidden');
-        $('editorView').classList.remove('hidden');
+        loading = false;
+        loadingView.classList.add('hidden');
+        errorView.classList.add('hidden');
+        authView.classList.add('hidden');
+        editorView.classList.remove('hidden');
       }
 
-      function showBoot(msg = 'Проверяем сессию и загружаем редактор…', withRetry = false) {
-        $('bootView').classList.remove('hidden');
-        $('loginView').classList.add('hidden');
-        $('editorView').classList.add('hidden');
-        $('bootStatus').textContent = msg;
-        $('bootRetryBtn').classList.toggle('hidden', !withRetry);
+      function deepCopy(value) {
+        return JSON.parse(JSON.stringify(value));
       }
 
-      function setAlert(text = '', error = false) {
-        state.alert = text;
-        state.alertError = error;
+      function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { ...options, signal: controller.signal })
+          .finally(() => clearTimeout(timeoutId));
       }
 
-      function setLoadError(message, error, endpoint = '') {
-        state.loadError = message;
-        state.loadErrorEndpoint = endpoint;
-        state.loadErrorStatus = error?.status ? String(error.status) : '';
-        state.loadErrorDetails = error?.message || String(error || '');
-        console.error('[admin/navesy] load error', { endpoint, error, apiBase: API_BASE });
-      }
+      async function requestJson(endpoint, options = {}) {
+        const url = `${API_BASE}${endpoint}`;
+        try {
+          const response = await fetchWithTimeout(url, {
+            credentials: 'include',
+            ...options,
+            headers: {
+              'Content-Type': 'application/json',
+              ...(options.headers || {})
+            }
+          }, 10000);
 
-      function updateStatus() {
-        const dirty = isDirty();
-        $('dirtyStatus').textContent = dirty ? 'Есть несохраненные изменения' : 'Нет изменений';
-        $('dirtyStatus').className = dirty ? 'status-dirty' : 'status-clean';
-        $('saveBtn').disabled = !dirty;
-      }
+          const data = await response.json().catch(() => ({}));
 
-      function startLoadingWatchdog() {
-        if (state.loadingTimer) clearTimeout(state.loadingTimer);
-        state.loadingTimer = setTimeout(() => {
-          if (!state.loading) return;
-          setLoadError(
-            'Не удалось загрузить данные редактора. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me',
-            new Error('Timeout while waiting for editor boot'),
-            'boot-timeout'
-          );
-          state.loading = false;
-          showEditor();
-          renderPage();
-        }, 12000);
-      }
+          if (!response.ok) {
+            throw new Error(
+              `API base: ${API_BASE}\nendpoint: ${endpoint}\nstatus: ${response.status}\nmessage: ${data?.error || response.statusText || 'HTTP error'}`
+            );
+          }
 
-      function stopLoadingWatchdog() {
-        if (state.loadingTimer) {
-          clearTimeout(state.loadingTimer);
-          state.loadingTimer = null;
+          return data;
+        } catch (requestError) {
+          if (requestError?.name === 'AbortError') {
+            throw new Error(
+              `Не удалось загрузить данные редактора. Проверьте, что запущен npm run admin:api.\nAPI base: ${API_BASE}\nendpoint: ${endpoint}\nstatus: timeout`
+            );
+          }
+          throw requestError;
         }
+      }
+
+      function getRowsArray(block) {
+        if (Array.isArray(block.items)) return block.items;
+        if (Array.isArray(block.list)) return block.list;
+        if (Array.isArray(block.factors)) return block.factors;
+        return [];
+      }
+
+      function getCardsArray(block) {
+        if (Array.isArray(block.cards)) return block.cards;
+        if (Array.isArray(block.items)) return block.items;
+        return [];
+      }
+
+      function getStepsArray(block) {
+        if (Array.isArray(block.steps)) return block.steps;
+        if (Array.isArray(block.items)) return block.items;
+        return [];
+      }
+
+      function normalizeOrder(items) {
+        safeArray(items).forEach((item, index) => {
+          if (item && typeof item === 'object') {
+            item.order = (index + 1) * 10;
+          }
+        });
+      }
+
+      function moveItem(items, index, direction) {
+        const nextIndex = direction === 'up' ? index - 1 : index + 1;
+        if (nextIndex < 0 || nextIndex >= items.length) return;
+        const currentItem = items[index];
+        items[index] = items[nextIndex];
+        items[nextIndex] = currentItem;
+        normalizeOrder(items);
       }
 
       function renderHero() {
-        const draftEntry = state.draft || {};
-        if (!state.editingHero) {
-          const controls = `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button></div>`;
-          return `<section class="section section--dark hero hero--compact"><div class="container"><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-hero">Редактировать hero</button></div><div class="grid grid-2" style="align-items:center;"><div><h1 class="hero-title" style="color:#fff;">${esc(draftEntry.heroTitle)}</h1><p class="hero-description" style="color:#e2ebf3;">${esc(draftEntry.heroDescription)}</p></div>${renderMedia(draftEntry.image, draftEntry.heroTitle, draftEntry.placeholderLabel, controls)}</div></div></section>`;
-        }
+        const heroTitle = safeString(draft?.heroTitle);
+        const heroDescription = safeString(draft?.heroDescription);
+        const image = safeString(draft?.image);
+        const placeholderLabel = safeString(draft?.placeholderLabel, 'Фото будет добавлено позже');
 
-        const heroDraft = state.editingHero || {};
-        const controls = `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button></div>`;
-        return `<section class="section section--dark hero hero--compact"><div class="container"><div class="hero-edit-box"><h3 style="margin:0;">Редактирование hero</h3><input class="admin-inline" data-inline="hero-title" value="${esc(heroDraft.heroTitle)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="hero-description" placeholder="Описание">${esc(heroDraft.heroDescription)}</textarea><input class="admin-inline" data-inline="hero-placeholder" value="${esc(heroDraft.placeholderLabel)}" placeholder="Подпись placeholder" />${renderMedia(heroDraft.image, heroDraft.heroTitle, heroDraft.placeholderLabel, controls)}<div class="admin-media-controls"><button class="btn btn-xs" data-action="save-hero">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-hero">Отмена</button></div></div></div></section>`;
+        heroSection.innerHTML = `
+          <div class="block-head">
+            <h2>Hero</h2>
+            <span class="badge">visual Stage A</span>
+          </div>
+          <div class="hero-preview">
+            <h3>${escapeHtml(heroTitle || 'Без заголовка')}</h3>
+            <p>${escapeHtml(heroDescription || 'Описание отсутствует')}</p>
+            <div class="hero-media">
+              ${image ? `<img src="${escapeHtml(image)}" alt="Hero" />` : `<div class="placeholder">${escapeHtml(placeholderLabel)}</div>`}
+            </div>
+          </div>
+          <div class="field">
+            <label for="heroTitleInput">Заголовок hero</label>
+            <input id="heroTitleInput" data-hero-field="heroTitle" value="${escapeHtml(heroTitle)}" />
+          </div>
+          <div class="field">
+            <label for="heroDescriptionInput">Описание hero</label>
+            <textarea id="heroDescriptionInput" data-hero-field="heroDescription">${escapeHtml(heroDescription)}</textarea>
+          </div>
+          <div class="field">
+            <label for="heroImageInput">Путь изображения</label>
+            <input id="heroImageInput" data-hero-field="image" value="${escapeHtml(image)}" />
+          </div>
+          <div class="field">
+            <label for="heroPlaceholderInput">Подпись placeholder</label>
+            <input id="heroPlaceholderInput" data-hero-field="placeholderLabel" value="${escapeHtml(placeholderLabel)}" />
+          </div>
+        `;
+
+        heroSection.querySelectorAll('[data-hero-field]').forEach((field) => {
+          field.addEventListener('change', (event) => {
+            const input = event.currentTarget;
+            const fieldName = input.getAttribute('data-hero-field');
+            draft[fieldName] = input.value;
+            markDirty();
+            renderHero();
+          });
+        });
       }
 
-      function renderCardItem(blockIndex, itemIndex, item) {
-        const key = `${blockIndex}:${itemIndex}`;
-        const editing = state.editingCard && state.editingCard.key === key;
-        if (editing) {
-          const cardDraft = state.editingCard.draft || {};
-          return `<article class="card page-block-card item-editor"><input class="admin-inline" data-inline="card-title" value="${esc(cardDraft.title)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="card-text" placeholder="Описание">${esc(cardDraft.text)}</textarea><label><input type="checkbox" data-inline="card-active" ${cardDraft.isActive === false ? '' : 'checked'} /> Активна</label><div class="admin-strip"><button class="btn btn-xs" data-action="save-card" data-block="${blockIndex}" data-item="${itemIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-card">Отмена</button></div></article>`;
-        }
+      function renderRowsBlock(block, blockIndex) {
+        const rows = getRowsArray(block);
+        const sortedRows = sortByOrder(rows);
+        const rowsMarkup = sortedRows.map((row, rowIndex) => {
+          const rowText = typeof row === 'string'
+            ? row
+            : safeString(row?.text) || safeString(row?.title);
+          return `
+            <div class="card-item">
+              <div class="field">
+                <label>Строка ${rowIndex + 1}</label>
+                <textarea data-row-text="${blockIndex}:${rowIndex}">${escapeHtml(rowText)}</textarea>
+              </div>
+            </div>
+          `;
+        }).join('');
 
-        return `<article class="card page-block-card"><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-card" data-block="${blockIndex}" data-item="${itemIndex}">Редактировать</button><button class="btn btn-secondary btn-xs" data-action="move-card-up" data-block="${blockIndex}" data-item="${itemIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="move-card-down" data-block="${blockIndex}" data-item="${itemIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-card" data-block="${blockIndex}" data-item="${itemIndex}">${item.isActive === false ? 'Показать' : 'Скрыть'}</button></div></article>`;
+        return `
+          <div class="panel">
+            <div class="block-head">
+              <h3>${escapeHtml(safeString(block.title, 'Список'))}</h3>
+              <span class="badge">${escapeHtml(safeString(block.type))}</span>
+            </div>
+            ${rowsMarkup || '<p class="muted">Список пуст.</p>'}
+          </div>
+        `;
       }
 
-      function renderListItem(blockIndex, rowIndex, text) {
-        const key = `${blockIndex}:${rowIndex}`;
-        const editing = state.editingRow && state.editingRow.key === key;
-        if (editing) {
-          return `<li class="item-editor"><input class="admin-inline" data-inline="row-text" value="${esc(state.editingRow.draft)}" /><div class="admin-strip"><button class="btn btn-xs" data-action="save-row" data-block="${blockIndex}" data-item="${rowIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-row">Отмена</button><button class="btn btn-danger btn-xs" data-action="delete-row" data-block="${blockIndex}" data-item="${rowIndex}">Удалить</button></div></li>`;
-        }
-        return `<li>${esc(text)} <span class="admin-strip" style="display:inline-flex;"><button class="btn btn-secondary btn-xs" data-action="edit-row" data-block="${blockIndex}" data-item="${rowIndex}">Ред.</button><button class="btn btn-secondary btn-xs" data-action="move-row-up" data-block="${blockIndex}" data-item="${rowIndex}">↑</button><button class="btn btn-secondary btn-xs" data-action="move-row-down" data-block="${blockIndex}" data-item="${rowIndex}">↓</button><button class="btn btn-danger btn-xs" data-action="delete-row" data-block="${blockIndex}" data-item="${rowIndex}">✕</button></span></li>`;
+      function renderCardsBlock(block, blockIndex) {
+        const cards = getCardsArray(block);
+        const sortedCards = sortByOrder(cards);
+        const cardsMarkup = sortedCards.map((card, cardIndex) => {
+          const inactiveClass = isActive(card) ? '' : 'item-inactive';
+          return `
+            <div class="card-item ${inactiveClass}">
+              <div class="item-actions">
+                <button type="button" class="btn btn-secondary small" data-card-move="up:${blockIndex}:${cardIndex}">Выше</button>
+                <button type="button" class="btn btn-secondary small" data-card-move="down:${blockIndex}:${cardIndex}">Ниже</button>
+                <button type="button" class="btn btn-secondary small" data-card-toggle="${blockIndex}:${cardIndex}">${isActive(card) ? 'Скрыть' : 'Показать'}</button>
+              </div>
+              <div class="field">
+                <label>Заголовок</label>
+                <input data-card-title="${blockIndex}:${cardIndex}" value="${escapeHtml(safeString(card?.title))}" />
+              </div>
+              <div class="field">
+                <label>Описание</label>
+                <textarea data-card-text="${blockIndex}:${cardIndex}">${escapeHtml(safeString(card?.text))}</textarea>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="panel">
+            <div class="block-head">
+              <h3>${escapeHtml(safeString(block.title, 'Карточки'))}</h3>
+              <span class="badge">${escapeHtml(safeString(block.type))}</span>
+            </div>
+            ${safeString(block.intro) ? `<p>${escapeHtml(block.intro)}</p>` : ''}
+            ${cardsMarkup || '<p class="muted">Карточки отсутствуют.</p>'}
+          </div>
+        `;
       }
 
-      function renderStep(blockIndex, stepIndex, step) {
-        const key = `${blockIndex}:${stepIndex}`;
-        const editing = state.editingStep && state.editingStep.key === key;
-        if (editing) {
-          const stepDraft = state.editingStep.draft || {};
-          return `<li class="item-editor"><input class="admin-inline" data-inline="step-title" value="${esc(stepDraft.title)}" placeholder="Заголовок шага" /><textarea class="admin-inline admin-inline-area" data-inline="step-text" placeholder="Описание">${esc(stepDraft.text || '')}</textarea><label><input type="checkbox" data-inline="step-active" ${stepDraft.isActive === false ? '' : 'checked'} /> Активен</label><div class="admin-strip"><button class="btn btn-xs" data-action="save-step" data-block="${blockIndex}" data-item="${stepIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-step">Отмена</button></div></li>`;
-        }
+      function renderProcessBlock(block, blockIndex) {
+        const steps = getStepsArray(block);
+        const sortedSteps = sortByOrder(steps);
+        const stepsMarkup = sortedSteps.map((step, stepIndex) => {
+          const inactiveClass = isActive(step) ? '' : 'item-inactive';
+          return `
+            <div class="card-item ${inactiveClass}">
+              <div class="item-actions">
+                <button type="button" class="btn btn-secondary small" data-step-move="up:${blockIndex}:${stepIndex}">Выше</button>
+                <button type="button" class="btn btn-secondary small" data-step-move="down:${blockIndex}:${stepIndex}">Ниже</button>
+                <button type="button" class="btn btn-secondary small" data-step-toggle="${blockIndex}:${stepIndex}">${isActive(step) ? 'Скрыть' : 'Показать'}</button>
+              </div>
+              <div class="field">
+                <label>Заголовок</label>
+                <input data-step-title="${blockIndex}:${stepIndex}" value="${escapeHtml(safeString(step?.title))}" />
+              </div>
+              <div class="field">
+                <label>Описание</label>
+                <textarea data-step-text="${blockIndex}:${stepIndex}">${escapeHtml(safeString(step?.text))}</textarea>
+              </div>
+            </div>
+          `;
+        }).join('');
 
-        return `<li><strong>${esc(step.title)}</strong>${step.text ? `<p>${esc(step.text)}</p>` : ''}<div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-step" data-block="${blockIndex}" data-item="${stepIndex}">Редактировать</button><button class="btn btn-secondary btn-xs" data-action="move-step-up" data-block="${blockIndex}" data-item="${stepIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="move-step-down" data-block="${blockIndex}" data-item="${stepIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-step" data-block="${blockIndex}" data-item="${stepIndex}">${step.isActive === false ? 'Показать' : 'Скрыть'}</button></div></li>`;
+        return `
+          <div class="panel">
+            <div class="block-head">
+              <h3>${escapeHtml(safeString(block.title, 'Процесс'))}</h3>
+              <span class="badge">process</span>
+            </div>
+            ${stepsMarkup || '<p class="muted">Шаги отсутствуют.</p>'}
+          </div>
+        `;
       }
 
-      function renderBlock(block, blockIndex) {
-        if (!block || typeof block !== 'object') return '';
-        const sectionClass = block.theme === 'dark' ? 'section section--dark navesy-section-compact' : block.theme === 'light' ? 'section section--soft navesy-section-compact' : 'section navesy-section-compact';
-        let content = `<article class="card page-block-panel"><p>Неизвестный тип блока: ${esc(block.type || 'undefined')}</p></article>`;
-
-        if ((block.type === 'cardGrid' || block.type === 'exampleGrid') && Array.isArray(block.items)) {
-          const cards = normalizeCardItems(block.items);
-          content = `<div class="page-blocks-grid page-blocks-grid--${block.grid || 'auto'}">${cards.map((item, idx) => isActive(item) ? renderCardItem(blockIndex, idx, item) : '').join('')}</div><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="add-card" data-block="${blockIndex}">+ Добавить карточку</button></div>`;
-        }
-
-        if ((block.type === 'listPanel' || block.type === 'factorList') && Array.isArray(block.items)) {
-          const list = normalizeListItems(block.items);
-          const isEditList = state.editingListBlock === blockIndex;
-          content = `<ul class="page-blocks-columns page-blocks-columns--${block.columns || 2}">${list.map((text, idx) => isEditList ? renderListItem(blockIndex, idx, text) : `<li>${esc(text)}</li>`).join('')}</ul><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="toggle-list-edit" data-block="${blockIndex}">${isEditList ? 'Готово' : 'Редактировать список'}</button>${isEditList ? `<button class="btn btn-secondary btn-xs" data-action="add-row" data-block="${blockIndex}">+ Добавить строку</button>` : ''}</div>`;
-        }
-        if (block.type === 'process') {
-          const steps = normalizeSteps(block.steps).filter(isActive);
-          const controls = `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="block-media-${blockIndex}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="edit-block-placeholder" data-block="${blockIndex}">Подпись placeholder</button></div>`;
-          content = `<div class="page-block-media-layout">${renderMedia(block?.media, block?.title, block?.placeholderLabel, controls)}<article class="card page-block-panel"><h2>${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}<ol class="page-block-steps">${steps.map((step, idx) => renderStep(blockIndex, idx, step)).join('')}</ol><div class="admin-strip" style="margin-top:8px;"><button class="btn btn-secondary btn-xs" data-action="add-step" data-block="${blockIndex}">+ Добавить шаг</button></div></article></div>`;
-        }
-        if (block.type === 'mediaText') {
-          const controls = `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="block-media-${blockIndex}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="edit-block-placeholder" data-block="${blockIndex}">Подпись placeholder</button></div>`;
-          content = `<div class="page-block-media-layout">${renderMedia(block?.media, block?.title, block?.placeholderLabel, controls)}<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article></div>`;
-        }
-
-        if (block.type === 'notice') {
-          content = `<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article>`;
-        }
-        if (block.type === 'notice') content = `<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article>`;
-
-        return `<section><div class="admin-block-head"><span class="badge">${BLOCK_LABELS[block.type] || block.type}</span>${block.isActive===false?'<span class="hidden-flag">Скрыт</span>':''}<button class="btn btn-secondary btn-xs" data-action="block-up" data-block="${blockIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="block-down" data-block="${blockIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-block" data-block="${blockIndex}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="btn btn-secondary btn-xs" data-action="open-settings" data-block="${blockIndex}">Настройки</button><button class="btn btn-danger btn-xs" data-action="delete-block" data-block="${blockIndex}">Удалить секцию</button></div><div class="admin-block-body"><section class="${sectionClass}"><div class="container"><h2 class="section-title">${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}${content}</div></section></div></section>`;
+      function renderMediaTextBlock(block, blockIndex) {
+        return `
+          <div class="panel">
+            <div class="block-head">
+              <h3>${escapeHtml(safeString(block.title, 'Текст + изображение'))}</h3>
+              <span class="badge">mediaText</span>
+            </div>
+            <div class="field">
+              <label>Заголовок</label>
+              <input data-block-field="${blockIndex}:title" value="${escapeHtml(safeString(block.title))}" />
+            </div>
+            <div class="field">
+              <label>Текст</label>
+              <textarea data-block-field="${blockIndex}:text">${escapeHtml(safeString(block.text))}</textarea>
+            </div>
+            <div class="field">
+              <label>Media path</label>
+              <input data-block-field="${blockIndex}:media" value="${escapeHtml(safeString(block.media))}" />
+            </div>
+            <div class="field">
+              <label>Placeholder</label>
+              <input data-block-field="${blockIndex}:placeholderLabel" value="${escapeHtml(safeString(block.placeholderLabel))}" />
+            </div>
+          </div>
+        `;
       }
 
-      function renderModal() {
-        if (!state.modal) return '';
-        if (state.modal.type === 'settings') {
-          const s = state.modal.data;
-          return `<div class="modal-backdrop" data-action="close-modal"><div class="modal" onclick="event.stopPropagation()"><button class="btn btn-secondary btn-xs modal-close" data-action="cancel-settings">Отмена</button><h3 style="margin-top:0;">Настройки блока</h3><div class="field"><label>Заголовок блока</label><input data-modal="title" value="${esc(s.title || '')}" /></div><div class="field"><label>Intro</label><textarea data-modal="intro">${esc(s.intro || '')}</textarea></div><div class="field"><label>Тема</label><select data-modal="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Темная</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Светлая</option><option value="graphite" ${s.theme === 'graphite' ? 'selected' : ''}>Графитовая</option></select></div>${Object.hasOwn(s, 'grid') ? `<div class="field"><label>Сетка</label><select data-modal="grid"><option value="auto">Авто</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>` : ''}${Object.hasOwn(s, 'columns') ? `<div class="field"><label>Колонки</label><select data-modal="columns"><option value="2">2</option><option value="3">3</option></select></div>` : ''}<label><input type="checkbox" data-modal="isActive" ${s.isActive===false?'':'checked'} /> Активность</label><div class="admin-strip"><button class="btn btn-xs" data-action="save-settings">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-settings">Отмена</button></div></div></div>`;
-        }
-        if (state.modal.type === 'add-section') return `<div class="modal-backdrop" data-action="close-modal"><div class="modal" onclick="event.stopPropagation()"><h3 style="margin-top:0;">Добавить секцию</h3><div class="field"><label>Тип секции</label><select data-modal="sectionType"><option value="cardGrid">Карточки</option><option value="listPanel">Список</option><option value="process">Процесс</option><option value="factorList">Факторы стоимости</option><option value="mediaText">Текст + изображение</option><option value="notice">Вставка</option><option value="exampleGrid">Примеры</option></select></div><div class="admin-strip"><button class="btn btn-xs" data-action="create-section">Добавить</button><button class="btn btn-secondary btn-xs" data-action="close-modal">Отмена</button></div></div></div>`;
-        if (state.modal.type === 'crop') {
-          const c = state.modal.data;
-          return `<div class="modal-backdrop" data-action="close-modal"><div class="modal" onclick="event.stopPropagation()"><h3 style="margin-top:0;">Настроить кадр</h3><div class="field"><label>Fit</label><select data-modal="fit"><option value="cover" ${c.fit==='cover'?'selected':''}>Заполнить</option><option value="contain" ${c.fit==='contain'?'selected':''}>Вписать</option></select></div><div class="field"><label>Масштаб</label><input type="range" min="1" max="3" step="0.1" data-modal="scale" value="${c.scale}" /></div><div class="field"><label>Сдвиг X</label><input type="range" min="0" max="100" step="1" data-modal="positionX" value="${c.positionX}" /></div><div class="field"><label>Сдвиг Y</label><input type="range" min="0" max="100" step="1" data-modal="positionY" value="${c.positionY}" /></div><div class="admin-strip"><button class="btn btn-xs" data-action="save-crop">Готово</button><button class="btn btn-secondary btn-xs" data-action="close-modal">Отмена</button></div></div></div>`;
-        }
-        return '';
+      function renderNoticeBlock(block, blockIndex) {
+        return `
+          <div class="panel">
+            <div class="block-head">
+              <h3>${escapeHtml(safeString(block.title, 'Вставка'))}</h3>
+              <span class="badge">notice</span>
+            </div>
+            <div class="field">
+              <label>Заголовок</label>
+              <input data-block-field="${blockIndex}:title" value="${escapeHtml(safeString(block.title))}" />
+            </div>
+            <div class="field">
+              <label>Текст</label>
+              <textarea data-block-field="${blockIndex}:text">${escapeHtml(safeString(block.text))}</textarea>
+            </div>
+          </div>
+        `;
       }
 
-      function renderPage() {
-        const root = $('workspace');
-        try {
-          if (state.loading) {
-            root.innerHTML = `<section class="section"><div class="container"><p class="muted">Загрузка visual editor…</p></div></section>`;
-            updateStatus();
-            return;
-          }
-          if (state.authRequired) {
-            root.innerHTML = `<section class="section"><div class="container"><h2>Требуется вход в админку</h2><p class="muted">Сессия не найдена или истекла.</p><div class="admin-strip"><button class="btn btn-xs" data-action="go-login">Вернуться к входу</button><a class="btn btn-secondary btn-xs" href="${esc(adminHome)}">В админку</a></div></div></section>`;
-            updateStatus();
-            return;
-          }
-          if (state.loadError) {
-            root.innerHTML = `<section class="section"><div class="container"><h2>Ошибка загрузки редактора</h2><p class="error">Не удалось загрузить данные редактора. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me</p><p class="muted">API base: ${esc(API_BASE)}</p><p class="muted">Endpoint: ${esc(state.loadErrorEndpoint || '-')}</p><p class="muted">Status: ${esc(state.loadErrorStatus || '-')}</p><p class="muted">Error: ${esc(state.loadErrorDetails || state.loadError)}</p><div class="admin-strip"><button class="btn btn-xs" data-action="retry-load">Повторить</button><a class="btn btn-secondary btn-xs" href="${esc(adminHome)}">В админку</a><a class="btn btn-secondary btn-xs" href="${esc(technicalAdminPath)}">Открыть техническую диагностику</a></div></div></section>`;
-            updateStatus();
-            return;
-          }
-          if (!state.draft) {
-            root.innerHTML = `<section class="section"><div class="container"><p class="muted">Данные страницы пока не загружены.</p></div></section>`;
-            updateStatus();
-            return;
-          }
-
-          const blocks = sorted(Array.isArray(state.draft.pageBlocks) ? state.draft.pageBlocks : []);
-          root.innerHTML = `${state.alert ? `<div class="container" style="padding-top:12px;"><p class="${state.alertError ? 'error' : 'muted'}">${esc(state.alert)}</p></div>` : ''}${renderHero()}${blocks.map((block, idx) => renderBlock(block, idx)).join('')}<section class="section"><div class="container"><details><summary>Показать JSON</summary><pre>${esc(JSON.stringify(state.draft, null, 2))}</pre></details></div></section>${renderModal()}`;
-          updateStatus();
-        } catch (renderError) {
-          console.error('[admin/navesy] render failed', renderError);
-          setLoadError('Ошибка рендера visual editor', renderError, 'renderPage');
-          root.innerHTML = `<section class="section"><div class="container"><h2>Ошибка рендера редактора</h2><p class="error">${esc(renderError?.message || String(renderError))}</p><div class="admin-strip"><button class="btn btn-xs" data-action="retry-load">Повторить</button><a class="btn btn-secondary btn-xs" href="${esc(adminHome)}">В админку</a><a class="btn btn-secondary btn-xs" href="${esc(technicalAdminPath)}">Техническая диагностика</a></div></div></section>`;
-        }
+      function renderUnknownBlock(block) {
+        return `
+          <div class="panel">
+            <div class="error-box">
+              <strong>Неизвестный или поврежденный блок</strong>
+              <p>type: ${escapeHtml(safeString(block?.type, 'unknown'))}</p>
+            </div>
+          </div>
+        `;
       }
 
-      function getBlock(index) {
-        return sorted(safeArray(state.draft?.pageBlocks))[index];
-      }
-
-      function applyBlock(index, updater) {
-        const blocks = sorted(safeArray(state.draft?.pageBlocks));
-        updater(blocks[index]);
-        state.draft.pageBlocks = blocks;
-      }
-
-      async function uploadImage(file, target) {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await api('/upload', { method: 'POST', body: formData });
-        if (target === 'hero-image') {
-          state.draft.image = res.path;
-          if (state.editingHero) state.editingHero.image = res.path;
-        }
-        if (target.startsWith('block-media-')) {
-          const index = Number(target.replace('block-media-', ''));
-          applyBlock(index, (block) => { block.media = res.path; });
-        }
-      }
-
-      async function uploadImage(file, target) { const formData = new FormData(); formData.append('file', file); const res = await api('/upload', { method: 'POST', body: formData }); if (target === 'hero-image') { state.draft.image = res.path; if (state.editingHero) state.editingHero.image = res.path; } else if (target.startsWith('block-media-')) { const index = Number(target.replace('block-media-', '')); applyBlock(index, (block) => block.media = res.path); } setAlert('Изображение загружено'); renderPage(); }
-
-      $('workspace').addEventListener('input', (e) => {
-        const key = e.target.dataset.inline;
-        if (key === 'hero-title') state.editingHero.heroTitle = e.target.value;
-        if (key === 'hero-description') state.editingHero.heroDescription = e.target.value;
-        if (key === 'hero-placeholder') state.editingHero.placeholderLabel = e.target.value;
-        if (key === 'card-title') state.editingCard.draft.title = e.target.value;
-        if (key === 'card-text') state.editingCard.draft.text = e.target.value;
-        if (key === 'step-title') state.editingStep.draft.title = e.target.value;
-        if (key === 'step-text') state.editingStep.draft.text = e.target.value;
-        if (key === 'row-text') { const b = Number(e.target.dataset.block), i = Number(e.target.dataset.item); applyBlock(b, (block) => { const rows = normalizeListItems(block.items || []); rows[i].text = e.target.value; block.items = rows; }); }
-        if (e.target.dataset.modal && state.modal?.data) state.modal.data[e.target.dataset.modal] = e.target.type === 'range' ? Number(e.target.value) : e.target.value;
-      });
-      $('workspace').addEventListener('change', (e) => {
-        const key = e.target.dataset.inline;
-        if (key === 'card-active') state.editingCard.draft.isActive = e.target.checked;
-        if (key === 'step-active') state.editingStep.draft.isActive = e.target.checked;
-        if (e.target.dataset.modal === 'isActive') state.modal.data.isActive = e.target.checked;
-      });
-      $('workspace').addEventListener('click', (event) => {
-        const el = event.target.closest('[data-action]'); if (!el) return;
-        const action = el.dataset.action, blockIndex = Number(el.dataset.block), itemIndex = Number(el.dataset.item);
-        if (action === 'close-modal') { state.modal = null; renderPage(); return; }
-        if (action === 'edit-hero') { state.editingHero = clone({ heroTitle: state.draft.heroTitle, heroDescription: state.draft.heroDescription, image: state.draft.image, placeholderLabel: state.draft.placeholderLabel || DEFAULT_PLACEHOLDER, imageView: state.draft.imageView || getMediaView() }); renderPage(); return; }
-        if (action === 'cancel-hero') { state.editingHero = null; renderPage(); return; }
-        if (action === 'save-hero') { Object.assign(state.draft, state.editingHero); state.editingHero = null; renderPage(); return; }
-        if (action === 'clear-hero-image') { if (state.editingHero) state.editingHero.image = ''; state.draft.image = ''; renderPage(); return; }
-        if (action === 'open-hero-crop') { state.modal = { type: 'crop', target: 'hero', data: getMediaView(state.editingHero?.imageView || state.draft.imageView) }; renderPage(); return; }
-        if (action === 'open-crop') { const block = getBlocks()[blockIndex]; state.modal = { type: 'crop', target: `block:${blockIndex}`, data: getMediaView(block.mediaView) }; renderPage(); return; }
-        if (action === 'save-crop') { const value = clone(state.modal.data); if (state.modal.target === 'hero') { state.draft.imageView = value; if (state.editingHero) state.editingHero.imageView = value; } else { applyBlock(Number(state.modal.target.split(':')[1]), (block) => block.mediaView = value); } state.modal = null; renderPage(); return; }
-        if (action === 'edit-card') { const block = getBlocks()[blockIndex]; state.editingCard = { key: `${blockIndex}:${itemIndex}`, draft: clone(sorted(block.items || [])[itemIndex]) }; renderPage(); return; }
-        if (action === 'cancel-card') { state.editingCard = null; renderPage(); return; }
-        if (action === 'save-card') { applyBlock(blockIndex, (block) => { const items = sorted(block.items || []); items[itemIndex] = clone(state.editingCard.draft); renumber(items); block.items = items; }); state.editingCard = null; renderPage(); return; }
-        if (action === 'delete-card') { if (!confirm('Удалить карточку? Это действие применится после сохранения страницы.')) return; applyBlock(blockIndex, (block) => { const items = sorted(block.items || []); items.splice(itemIndex,1); renumber(items); block.items = items; }); state.editingCard = null; renderPage(); return; }
-        if (action === 'add-card') { applyBlock(blockIndex, (block) => { const items = sorted(block.items || []); items.push({ title: 'Новая карточка', text: '', order: (items.length + 1) * 10, isActive: true }); renumber(items); block.items = items; }); const b = getBlocks()[blockIndex]; state.editingCard = { key: `${blockIndex}:${b.items.length - 1}`, draft: clone(b.items[b.items.length - 1]) }; renderPage(); return; }
-        if (action === 'move-card-up' || action === 'move-card-down') { applyBlock(blockIndex, (block) => { const items = sorted(block.items || []); const to = action==='move-card-up'?itemIndex-1:itemIndex+1; if (to<0||to>=items.length) return; [items[itemIndex],items[to]]=[items[to],items[itemIndex]]; renumber(items); block.items=items; }); renderPage(); return; }
-        if (action === 'toggle-card') { applyBlock(blockIndex, (block) => { const items = sorted(block.items || []); items[itemIndex].isActive = items[itemIndex].isActive === false; block.items = items; }); renderPage(); return; }
-        if (action === 'toggle-list-edit') { state.editingListBlock = state.editingListBlock===blockIndex ? null : blockIndex; renderPage(); return; }
-        if (action === 'add-row') { applyBlock(blockIndex, (block) => { const rows = normalizeListItems(block.items || []); rows.push({ text:'Новая строка', order:(rows.length+1)*10, isActive:true }); renumber(rows); block.items=rows; }); renderPage(); return; }
-        if (action === 'delete-row') { applyBlock(blockIndex, (block) => { const rows = normalizeListItems(block.items || []); rows.splice(itemIndex,1); renumber(rows); block.items=rows; }); renderPage(); return; }
-        if (action === 'move-row-up' || action === 'move-row-down') { applyBlock(blockIndex, (block) => { const rows = normalizeListItems(block.items || []); const to = action==='move-row-up'?itemIndex-1:itemIndex+1; if (to<0||to>=rows.length) return; [rows[itemIndex], rows[to]]=[rows[to],rows[itemIndex]]; renumber(rows); block.items = rows; }); renderPage(); return; }
-        if (action === 'edit-step') { state.editingStep = { key: `${blockIndex}:${itemIndex}`, draft: clone(sorted(getBlocks()[blockIndex].steps || [])[itemIndex]) }; renderPage(); return; }
-        if (action === 'cancel-step') { state.editingStep = null; renderPage(); return; }
-        if (action === 'save-step') { applyBlock(blockIndex, (block) => { const steps = sorted(block.steps || []); steps[itemIndex] = clone(state.editingStep.draft); renumber(steps); block.steps = steps; }); state.editingStep = null; renderPage(); return; }
-        if (action === 'delete-step') { applyBlock(blockIndex, (block) => { const steps = sorted(block.steps || []); steps.splice(itemIndex,1); renumber(steps); block.steps = steps; }); renderPage(); return; }
-        if (action === 'add-step') { applyBlock(blockIndex, (block) => { const steps = sorted(block.steps || []); steps.push({ title:'Новый шаг', text:'', order:(steps.length+1)*10, isActive:true }); renumber(steps); block.steps = steps; }); renderPage(); return; }
-        if (action === 'move-step-up' || action === 'move-step-down') { applyBlock(blockIndex, (block) => { const steps = sorted(block.steps || []); const to = action==='move-step-up'?itemIndex-1:itemIndex+1; if (to<0||to>=steps.length) return; [steps[itemIndex],steps[to]]=[steps[to],steps[itemIndex]]; renumber(steps); block.steps = steps; }); renderPage(); return; }
-        if (action === 'toggle-step') { applyBlock(blockIndex, (block) => { const steps = sorted(block.steps || []); steps[itemIndex].isActive = steps[itemIndex].isActive === false; block.steps = steps; }); renderPage(); return; }
-        if (action === 'block-up' || action === 'block-down') { const blocks = getBlocks(); const to = action==='block-up'?blockIndex-1:blockIndex+1; if (to<0||to>=blocks.length) return; [blocks[blockIndex],blocks[to]]=[blocks[to],blocks[blockIndex]]; renumber(blocks); setBlocks(blocks); renderPage(); return; }
-        if (action === 'toggle-block') { applyBlock(blockIndex, (block) => block.isActive = block.isActive === false); renderPage(); return; }
-        if (action === 'open-settings') { state.modal = { type:'settings', data: { index:blockIndex, ...clone(getBlocks()[blockIndex]) } }; renderPage(); return; }
-        if (action === 'cancel-settings') { state.modal = null; renderPage(); return; }
-        if (action === 'save-settings') { const { index, ...payload } = state.modal.data; applyBlock(index, (block) => { block.title = payload.title; block.intro = payload.intro; block.theme = payload.theme; if ('grid' in block) block.grid = payload.grid; if ('columns' in block) block.columns = Number(payload.columns); block.isActive = payload.isActive; }); state.modal = null; renderPage(); return; }
-        if (action === 'delete-block') { if (!confirm('Удалить секцию? Это действие применится после сохранения страницы.')) return; const blocks = getBlocks(); blocks.splice(blockIndex, 1); renumber(blocks); setBlocks(blocks); renderPage(); return; }
-        if (action === 'clear-block-media') { applyBlock(blockIndex, (block)=> block.media=''); renderPage(); return; }
-        if (action === 'upload-image') { state.uploadTarget = el.dataset.target; $('uploadInput').click(); return; }
-        if (action === 'create-section') {
-          const type = state.modal.data.sectionType || 'cardGrid';
-          const nextOrder = (getBlocks().length + 1) * 10;
-          const map = { cardGrid: { type:'cardGrid', title:'Новая секция', theme:'dark', grid:'auto', order:nextOrder, isActive:true, items:[] }, listPanel: { type:'listPanel', title:'Новая секция', theme:'light', columns:2, order:nextOrder, isActive:true, items:[] }, process: { type:'process', title:'Новая секция', theme:'light', mediaPosition:'right', placeholderLabel:DEFAULT_PLACEHOLDER, order:nextOrder, isActive:true, steps:[] }, factorList: { type:'factorList', title:'Новая секция', theme:'graphite', columns:2, order:nextOrder, isActive:true, items:[] }, mediaText: { type:'mediaText', title:'Новая секция', text:'', theme:'light', mediaPosition:'right', placeholderLabel:DEFAULT_PLACEHOLDER, order:nextOrder, isActive:true }, notice: { type:'notice', title:'Новая вставка', text:'', theme:'light', order:nextOrder, isActive:true }, exampleGrid: { type:'exampleGrid', title:'Новая секция', theme:'light', grid:'auto', order:nextOrder, isActive:true, items:[] } };
-          setBlocks([...getBlocks(), map[type]]); state.modal = null; renderPage(); return;
-        }
-        if (action === 'clear-block-media') { applyBlock(blockIndex, (block) => { block.media = ''; }); renderPage(); return; }
-        if (action === 'edit-block-placeholder') {
-          const value = prompt('Подпись placeholder', getBlock(blockIndex).placeholderLabel || '');
-          if (value !== null) { applyBlock(blockIndex, (block) => { block.placeholderLabel = value; }); renderPage(); }
+      function renderBlocks() {
+        const blocks = draft?.pageBlocks;
+        if (!Array.isArray(blocks)) {
+          blocksSection.innerHTML = '<div class="panel"><p class="muted">У страницы нет pageBlocks.</p></div>';
           return;
         }
-        if (action === 'upload-image') { setAlert('Временно недоступно', true); renderPage(); return; }
-        if (action === 'retry-load') { boot(); return; }
-        if (action === 'go-login') { showLogin('Введите логин и пароль.'); return; }
-      });
 
-      $('workspace').addEventListener('input', (event) => {
-        if (!event.target.dataset.modal || !state.blockSettings) return;
-        const key = event.target.dataset.modal;
-        state.blockSettings[key] = event.target.value;
-      });
-
-      $('workspace').addEventListener('change', (event) => {
-        if (!event.target.dataset.modal || !state.blockSettings) return;
-        const key = event.target.dataset.modal;
-        if (key === 'isActive') state.blockSettings.isActive = event.target.checked;
-      });
-
-      $('uploadInput').addEventListener('change', async (event) => {
-        const file = event.target.files?.[0];
-        if (!file || !state.uploadTarget) return;
-        setAlert('Загрузка изображения...');
-        renderPage();
-        try {
-          await uploadImage(file, state.uploadTarget);
-        } catch (error) {
-          setAlert(error.message || 'Ошибка загрузки изображения', true);
-          renderPage();
-        } finally {
-          event.target.value = '';
-          state.uploadTarget = null;
+        const visibleBlocks = sortByOrder(blocks).filter((block) => isActive(block));
+        if (!visibleBlocks.length) {
+          blocksSection.innerHTML = '<div class="panel"><p class="muted">Нет активных блоков для отображения.</p></div>';
+          return;
         }
-      });
 
-      $('saveBtn').addEventListener('click', async () => {
-        setAlert('Сохраняем...');
-        renderPage();
-        try {
-          await api('/content/product-sections/navesy', { method: 'PUT', body: JSON.stringify(state.draft) });
-          state.original = clone(state.draft);
-          setAlert('Сохранено');
-          renderPage();
-        } catch (error) {
-          setAlert(error.message || 'Ошибка сохранения', true);
-          renderPage();
-        }
-      });
-
-      $('logoutBtn').addEventListener('click', async () => {
-        await api('/logout', { method: 'POST' }).catch(() => {});
-        showLogin('Вы вышли из админки.');
-      });
-
-      $('loginForm').addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        showBoot('Выполняем вход…');
-        try {
-          await apiWithTimeout('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
-          state.loading = true;
-          state.loadError = '';
-          state.loadErrorDetails = '';
-          state.loadErrorEndpoint = '';
-          state.loadErrorStatus = '';
-          state.authRequired = false;
-          showEditor();
-          renderPage();
-          const data = await apiWithTimeout('/content/product-sections/navesy');
-          state.original = clone(data.content);
-          state.draft = clone(data.content);
-          if (!Array.isArray(state.draft.pageBlocks)) {
-            setLoadError('У страницы нет pageBlocks', new Error('pageBlocks is missing or not an array'), '/content/product-sections/navesy');
-            state.draft.pageBlocks = [];
+        const html = visibleBlocks.map((block) => {
+          const blockIndex = blocks.indexOf(block);
+          if (block.type === 'cardGrid' || block.type === 'exampleGrid') {
+            return renderCardsBlock(block, blockIndex);
           }
-        } catch (error) {
-          showLogin(error.message || 'Ошибка входа');
-          $('loginStatus').className = 'muted error';
-        } finally {
-          stopLoadingWatchdog();
-          state.loading = false;
-          renderPage();
-        }
-      });
+          if (block.type === 'listPanel' || block.type === 'factorList') {
+            return renderRowsBlock(block, blockIndex);
+          }
+          if (block.type === 'process') {
+            return renderProcessBlock(block, blockIndex);
+          }
+          if (block.type === 'mediaText') {
+            return renderMediaTextBlock(block, blockIndex);
+          }
+          if (block.type === 'notice') {
+            return renderNoticeBlock(block, blockIndex);
+          }
+          return renderUnknownBlock(block);
+        }).join('');
 
-      async function withTimeout(promise, ms = 12000) {
-        let timerId;
-        const timeout = new Promise((_, reject) => {
-          timerId = window.setTimeout(() => reject(new Error('Таймаут загрузки. Проверьте API и сеть.')), ms);
-        });
-        try {
-          return await Promise.race([promise, timeout]);
-        } finally {
-          if (timerId) window.clearTimeout(timerId);
+        blocksSection.innerHTML = html;
+      }
+
+      function renderEditor() {
+        showEditor();
+        renderHero();
+        renderBlocks();
+      }
+
+      function parsePair(value) {
+        const [a, b] = String(value).split(':');
+        return [Number(a), Number(b)];
+      }
+
+      function handleBlocksChange(event) {
+        const target = event.target;
+
+        if (target.hasAttribute('data-row-text')) {
+          const [blockIndex, rowIndex] = parsePair(target.getAttribute('data-row-text'));
+          const block = draft.pageBlocks?.[blockIndex];
+          if (!block) return;
+          const rows = getRowsArray(block);
+          const sortedRows = sortByOrder(rows);
+          const row = sortedRows[rowIndex];
+          if (typeof row === 'string') {
+            const originalIndex = rows.indexOf(row);
+            rows[originalIndex] = target.value;
+          } else if (row && typeof row === 'object') {
+            row.text = target.value;
+          }
+          markDirty();
+          return;
+        }
+
+        if (target.hasAttribute('data-card-title') || target.hasAttribute('data-card-text')) {
+          const token = target.getAttribute('data-card-title') || target.getAttribute('data-card-text');
+          const [blockIndex, cardIndex] = parsePair(token);
+          const block = draft.pageBlocks?.[blockIndex];
+          if (!block) return;
+          const cards = sortByOrder(getCardsArray(block));
+          const card = cards[cardIndex];
+          if (!card || typeof card !== 'object') return;
+          if (target.hasAttribute('data-card-title')) card.title = target.value;
+          if (target.hasAttribute('data-card-text')) card.text = target.value;
+          markDirty();
+          return;
+        }
+
+        if (target.hasAttribute('data-step-title') || target.hasAttribute('data-step-text')) {
+          const token = target.getAttribute('data-step-title') || target.getAttribute('data-step-text');
+          const [blockIndex, stepIndex] = parsePair(token);
+          const block = draft.pageBlocks?.[blockIndex];
+          if (!block) return;
+          const steps = sortByOrder(getStepsArray(block));
+          const step = steps[stepIndex];
+          if (!step || typeof step !== 'object') return;
+          if (target.hasAttribute('data-step-title')) step.title = target.value;
+          if (target.hasAttribute('data-step-text')) step.text = target.value;
+          markDirty();
+          return;
+        }
+
+        if (target.hasAttribute('data-block-field')) {
+          const [blockIndexRaw, field] = target.getAttribute('data-block-field').split(':');
+          const blockIndex = Number(blockIndexRaw);
+          const block = draft.pageBlocks?.[blockIndex];
+          if (!block) return;
+          block[field] = target.value;
+          markDirty();
         }
       }
 
-      async function boot() {
-        showBoot('Проверяем сессию и загружаем редактор…');
-        try {
-          await withTimeout(api('/me'));
-          showEditor();
-          const data = await withTimeout(api('/content/product-sections/navesy'));
-          state.original = clone(data.content);
-          state.draft = clone(data.content);
-          if (!Array.isArray(state.draft.pageBlocks)) {
-            setLoadError('У страницы нет pageBlocks', new Error('pageBlocks is missing or not an array'), '/content/product-sections/navesy');
-            state.draft.pageBlocks = [];
-          }
-        } catch (error) {
-          setLoadError(
-            'Не удалось загрузить данные редактора. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me',
-            error,
-            error?.endpoint || '/me'
-          );
-          showEditor();
-        } finally {
-          stopLoadingWatchdog();
-          state.loading = false;
-          renderPage();
-        } catch (error) {
-          showBoot(error.message || 'Не удалось загрузить редактор.', true);
+      function handleBlocksClick(event) {
+        const moveCardToken = event.target.getAttribute('data-card-move');
+        if (moveCardToken) {
+          const [direction, blockIndexRaw, cardIndexRaw] = moveCardToken.split(':');
+          const block = draft.pageBlocks?.[Number(blockIndexRaw)];
+          if (!block) return;
+          const cards = getCardsArray(block);
+          const sortedCards = sortByOrder(cards);
+          const card = sortedCards[Number(cardIndexRaw)];
+          const currentIndex = cards.indexOf(card);
+          moveItem(cards, currentIndex, direction);
+          markDirty();
+          renderBlocks();
+          return;
+        }
+
+        const toggleCardToken = event.target.getAttribute('data-card-toggle');
+        if (toggleCardToken) {
+          const [blockIndex, cardIndex] = parsePair(toggleCardToken);
+          const block = draft.pageBlocks?.[blockIndex];
+          if (!block) return;
+          const cards = sortByOrder(getCardsArray(block));
+          const card = cards[cardIndex];
+          if (!card || typeof card !== 'object') return;
+          card.isActive = !isActive(card);
+          markDirty();
+          renderBlocks();
+          return;
+        }
+
+        const moveStepToken = event.target.getAttribute('data-step-move');
+        if (moveStepToken) {
+          const [direction, blockIndexRaw, stepIndexRaw] = moveStepToken.split(':');
+          const block = draft.pageBlocks?.[Number(blockIndexRaw)];
+          if (!block) return;
+          const steps = getStepsArray(block);
+          const sortedSteps = sortByOrder(steps);
+          const step = sortedSteps[Number(stepIndexRaw)];
+          const currentIndex = steps.indexOf(step);
+          moveItem(steps, currentIndex, direction);
+          markDirty();
+          renderBlocks();
+          return;
+        }
+
+        const toggleStepToken = event.target.getAttribute('data-step-toggle');
+        if (toggleStepToken) {
+          const [blockIndex, stepIndex] = parsePair(toggleStepToken);
+          const block = draft.pageBlocks?.[blockIndex];
+          if (!block) return;
+          const steps = sortByOrder(getStepsArray(block));
+          const step = steps[stepIndex];
+          if (!step || typeof step !== 'object') return;
+          step.isActive = !isActive(step);
+          markDirty();
+          renderBlocks();
         }
       }
 
-      $('bootRetryBtn').addEventListener('click', () => {
-        boot();
+      async function saveDraft() {
+        if (!draft) return;
+        saveBtn.disabled = true;
+        setStatus('Сохраняем…');
+        try {
+          await requestJson(CONTENT_ENDPOINT, {
+            method: 'PUT',
+            body: JSON.stringify(draft)
+          });
+          entry = deepCopy(draft);
+          clearDirty();
+          setStatus('Нет изменений');
+          alert('Сохранено');
+        } catch (saveError) {
+          console.error('[navesy-editor] save error', saveError);
+          showError('Не удалось сохранить данные.', String(saveError?.message || saveError));
+          if (dirty) {
+            saveBtn.disabled = false;
+          }
+        }
+      }
+
+      async function logout() {
+        try {
+          await requestJson('/logout', { method: 'POST' });
+        } catch (logoutError) {
+          console.error('[navesy-editor] logout error', logoutError);
+        } finally {
+          window.location.href = '/SMU1/admin/';
+        }
+      }
+
+      async function initialize() {
+        showLoading('Загрузка данных…');
+        try {
+          const meResponse = await requestJson('/me');
+          if (!meResponse?.authenticated) {
+            showAuthRequired();
+            return;
+          }
+
+          const contentResponse = await requestJson(CONTENT_ENDPOINT);
+          const loadedEntry = contentResponse?.entry || contentResponse;
+          entry = deepCopy(loadedEntry || {});
+          draft = deepCopy(loadedEntry || {});
+          clearDirty();
+          renderEditor();
+        } catch (initError) {
+          console.error('[navesy-editor] init error', initError);
+          showError('Не удалось загрузить данные редактора. Проверьте, что запущен npm run admin:api.', String(initError?.message || initError));
+        }
+      }
+
+      saveBtn.addEventListener('click', saveDraft);
+      logoutBtn.addEventListener('click', logout);
+      blocksSection.addEventListener('change', handleBlocksChange);
+      blocksSection.addEventListener('click', handleBlocksClick);
+
+      window.addEventListener('error', (event) => {
+        console.error('[navesy-editor] runtime error', event.error || event.message);
+        showError('Произошла ошибка в редакторе.', String(event.error?.message || event.message || 'unknown error'));
       });
 
-      boot();
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('[navesy-editor] unhandled rejection', event.reason);
+        showError('Необработанная ошибка в редакторе.', String(event.reason?.message || event.reason || 'unknown rejection'));
+      });
+
+      initialize();
     </script>
   </body>
 </html>
