@@ -105,8 +105,25 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       const $ = (id) => document.getElementById(id);
       const clone = (v) => JSON.parse(JSON.stringify(v));
       const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-      const sorted = (arr = []) => arr.slice().filter(Boolean).sort((a,b)=>(a.order ?? 0)-(b.order ?? 0));
+      const safeArray = (value) => (Array.isArray(value) ? value : []);
+      const safeString = (value, fallback = '') => (typeof value === 'string' ? value : fallback);
+      const isActive = (item) => item?.isActive !== false;
+      const sortByOrder = (arr = []) => safeArray(arr).slice().sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0));
+      const sorted = (arr = []) => sortByOrder(arr);
       const renumber = (arr = []) => arr.forEach((item, i) => { if (item && typeof item === 'object' && 'order' in item) item.order = (i + 1) * 10; });
+      const normalizeCardItems = (items) => sortByOrder(items).filter((item) => item && (safeString(item.title) || safeString(item.text)));
+      const normalizeStringItems = (items) =>
+        safeArray(items)
+          .map((item) => {
+            if (typeof item === 'string') return item;
+            if (item && typeof item.text === 'string') return item.text;
+            if (item && typeof item.title === 'string') return item.title;
+            return '';
+          })
+          .map((item) => item.trim())
+          .filter(Boolean);
+      const normalizeListItems = (items) => normalizeStringItems(items);
+      const normalizeSteps = (steps) => sortByOrder(steps).filter((step) => step && safeString(step.title));
       const isDirty = () => JSON.stringify(state.original) !== JSON.stringify(state.draft);
       const toSrc = (src) => {
         if (!src) return '';
@@ -116,11 +133,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `${normBase}${clean}`;
       };
       const DEFAULT_MEDIA_PLACEHOLDER = 'Фото или рендер будет добавлен позже';
+      const getPlaceholderLabel = (placeholderLabel) => safeString(placeholderLabel, DEFAULT_MEDIA_PLACEHOLDER) || DEFAULT_MEDIA_PLACEHOLDER;
+      const getMediaPath = (mediaPath) => safeString(mediaPath, '');
 
       function renderMedia(mediaPath, title, placeholderLabel, controls = '') {
-        const safeTitle = esc(title || 'Изображение');
-        const src = mediaPath ? `<img class="media-thumb" src="${esc(toSrc(mediaPath))}" alt="${safeTitle}" />` : '';
-        const caption = esc(placeholderLabel || DEFAULT_MEDIA_PLACEHOLDER);
+        const safeTitle = esc(safeString(title, 'Изображение'));
+        const resolvedMedia = getMediaPath(mediaPath);
+        const src = resolvedMedia ? `<img class="media-thumb" src="${esc(toSrc(resolvedMedia))}" alt="${safeTitle}" />` : '';
+        const caption = esc(getPlaceholderLabel(placeholderLabel));
         return `<article class="media-block placeholder placeholder--wide-feature">${src}<p class="media-caption">${caption}</p>${controls}</article>`;
       }
 
@@ -238,15 +258,17 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         let content = `<article class="card page-block-panel"><p>Неизвестный тип блока: ${esc(block.type || 'undefined')}</p></article>`;
 
         if ((block.type === 'cardGrid' || block.type === 'exampleGrid') && Array.isArray(block.items)) {
-          content = `<div class="page-blocks-grid page-blocks-grid--${block.grid || 'auto'}">${sorted(block.items).map((item, idx) => item.isActive === false ? '' : renderCardItem(blockIndex, idx, item)).join('')}</div><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="add-card" data-block="${blockIndex}">+ Добавить карточку</button></div>`;
+          const cards = normalizeCardItems(block.items);
+          content = `<div class="page-blocks-grid page-blocks-grid--${block.grid || 'auto'}">${cards.map((item, idx) => isActive(item) ? renderCardItem(blockIndex, idx, item) : '').join('')}</div><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="add-card" data-block="${blockIndex}">+ Добавить карточку</button></div>`;
         }
-        if (block.type === 'listPanel' || block.type === 'factorList') {
-          const rows = normalizeListItems(block.items || []);
-          const editing = state.editingListBlock === blockIndex;
-          content = `<article class="card page-block-panel"><ul class="page-blocks-columns page-blocks-columns--${block.columns || 2}">${rows.map((row, idx) => editing ? `<li class="item-editor"><input class="admin-inline" data-inline="row-text" data-block="${blockIndex}" data-item="${idx}" value="${esc(row.text)}" /><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="move-row-up" data-block="${blockIndex}" data-item="${idx}">Выше</button><button class="btn btn-secondary btn-xs" data-action="move-row-down" data-block="${blockIndex}" data-item="${idx}">Ниже</button><button class="btn btn-danger btn-xs" data-action="delete-row" data-block="${blockIndex}" data-item="${idx}">Удалить</button></div></li>` : `<li>${esc(row.text)}</li>`).join('')}</ul><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="toggle-list-edit" data-block="${blockIndex}">${editing ? 'Готово' : 'Редактировать список'}</button>${editing ? `<button class="btn btn-secondary btn-xs" data-action="add-row" data-block="${blockIndex}">+ Добавить строку</button>` : ''}</div></article>`;
+
+        if ((block.type === 'listPanel' || block.type === 'factorList') && Array.isArray(block.items)) {
+          const list = normalizeListItems(block.items);
+          const isEditList = state.editingListBlock === blockIndex;
+          content = `<ul class="page-blocks-columns page-blocks-columns--${block.columns || 2}">${list.map((text, idx) => isEditList ? renderListItem(blockIndex, idx, text) : `<li>${esc(text)}</li>`).join('')}</ul><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="toggle-list-edit" data-block="${blockIndex}">${isEditList ? 'Готово' : 'Редактировать список'}</button>${isEditList ? `<button class="btn btn-secondary btn-xs" data-action="add-row" data-block="${blockIndex}">+ Добавить строку</button>` : ''}</div>`;
         }
         if (block.type === 'process') {
-          const steps = sorted(block.steps || []).filter((step) => step.isActive !== false);
+          const steps = normalizeSteps(block.steps).filter(isActive);
           const controls = `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="block-media-${blockIndex}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="edit-block-placeholder" data-block="${blockIndex}">Подпись placeholder</button></div>`;
           content = `<div class="page-block-media-layout">${renderMedia(block?.media, block?.title, block?.placeholderLabel, controls)}<article class="card page-block-panel"><h2>${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}<ol class="page-block-steps">${steps.map((step, idx) => renderStep(blockIndex, idx, step)).join('')}</ol><div class="admin-strip" style="margin-top:8px;"><button class="btn btn-secondary btn-xs" data-action="add-step" data-block="${blockIndex}">+ Добавить шаг</button></div></article></div>`;
         }
@@ -308,6 +330,30 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           console.error('[admin/navesy] render failed', renderError);
           setLoadError('Ошибка рендера visual editor', renderError, 'renderPage');
           root.innerHTML = `<section class="section"><div class="container"><h2>Ошибка рендера редактора</h2><p class="error">${esc(renderError?.message || String(renderError))}</p><div class="admin-strip"><button class="btn btn-xs" data-action="retry-load">Повторить</button><a class="btn btn-secondary btn-xs" href="${esc(adminHome)}">В админку</a><a class="btn btn-secondary btn-xs" href="${esc(technicalAdminPath)}">Техническая диагностика</a></div></div></section>`;
+        }
+      }
+
+      function getBlock(index) {
+        return sorted(safeArray(state.draft?.pageBlocks))[index];
+      }
+
+      function applyBlock(index, updater) {
+        const blocks = sorted(safeArray(state.draft?.pageBlocks));
+        updater(blocks[index]);
+        state.draft.pageBlocks = blocks;
+      }
+
+      async function uploadImage(file, target) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await api('/upload', { method: 'POST', body: formData });
+        if (target === 'hero-image') {
+          state.draft.image = res.path;
+          if (state.editingHero) state.editingHero.image = res.path;
+        }
+        if (target.startsWith('block-media-')) {
+          const index = Number(target.replace('block-media-', ''));
+          applyBlock(index, (block) => { block.media = res.path; });
         }
       }
 
@@ -374,7 +420,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           const map = { cardGrid: { type:'cardGrid', title:'Новая секция', theme:'dark', grid:'auto', order:nextOrder, isActive:true, items:[] }, listPanel: { type:'listPanel', title:'Новая секция', theme:'light', columns:2, order:nextOrder, isActive:true, items:[] }, process: { type:'process', title:'Новая секция', theme:'light', mediaPosition:'right', placeholderLabel:DEFAULT_PLACEHOLDER, order:nextOrder, isActive:true, steps:[] }, factorList: { type:'factorList', title:'Новая секция', theme:'graphite', columns:2, order:nextOrder, isActive:true, items:[] }, mediaText: { type:'mediaText', title:'Новая секция', text:'', theme:'light', mediaPosition:'right', placeholderLabel:DEFAULT_PLACEHOLDER, order:nextOrder, isActive:true }, notice: { type:'notice', title:'Новая вставка', text:'', theme:'light', order:nextOrder, isActive:true }, exampleGrid: { type:'exampleGrid', title:'Новая секция', theme:'light', grid:'auto', order:nextOrder, isActive:true, items:[] } };
           setBlocks([...getBlocks(), map[type]]); state.modal = null; renderPage(); return;
         }
-        if (action === 'upload-image') { state.uploadTarget = el.dataset.target; $('uploadInput').click(); }
+        if (action === 'upload-image') { setAlert('Временно недоступно', true); renderPage(); return; }
         if (action === 'retry-load') { boot(); return; }
         if (action === 'go-login') { showLogin('Введите логин и пароль.'); return; }
       });
