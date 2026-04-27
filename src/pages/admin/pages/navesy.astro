@@ -49,6 +49,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
     </style>
   </head>
   <body>
+    <div id="bootView" class="login-wrap">
+      <div class="login-card">
+        <h1>Админка СМУ-1</h1>
+        <p id="bootStatus" class="muted">Проверяем сессию и загружаем редактор…</p>
+        <button id="bootRetryBtn" class="btn btn-secondary hidden" type="button">Повторить</button>
+      </div>
+    </div>
+
     <div id="loginView" class="login-wrap hidden">
       <form id="loginForm" class="login-card">
         <h1>Админка СМУ-1</h1>
@@ -120,14 +128,24 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function showLogin(msg = '') {
+        $('bootView').classList.add('hidden');
         $('loginView').classList.remove('hidden');
         $('editorView').classList.add('hidden');
         $('loginStatus').textContent = msg;
       }
 
       function showEditor() {
+        $('bootView').classList.add('hidden');
         $('loginView').classList.add('hidden');
         $('editorView').classList.remove('hidden');
+      }
+
+      function showBoot(msg = 'Проверяем сессию и загружаем редактор…', withRetry = false) {
+        $('bootView').classList.remove('hidden');
+        $('loginView').classList.add('hidden');
+        $('editorView').classList.add('hidden');
+        $('bootStatus').textContent = msg;
+        $('bootRetryBtn').classList.toggle('hidden', !withRetry);
       }
 
       function setAlert(text = '', error = false) {
@@ -420,6 +438,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       $('loginForm').addEventListener('submit', async (event) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
+        showBoot('Выполняем вход…');
         try {
           await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
           showEditor();
@@ -428,23 +447,40 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           state.draft = clone(data.content);
           renderPage();
         } catch (error) {
-          $('loginStatus').textContent = error.message || 'Ошибка входа';
+          showLogin(error.message || 'Ошибка входа');
           $('loginStatus').className = 'muted error';
         }
       });
 
-      async function boot() {
+      async function withTimeout(promise, ms = 12000) {
+        let timerId;
+        const timeout = new Promise((_, reject) => {
+          timerId = window.setTimeout(() => reject(new Error('Таймаут загрузки. Проверьте API и сеть.')), ms);
+        });
         try {
-          await api('/me');
+          return await Promise.race([promise, timeout]);
+        } finally {
+          if (timerId) window.clearTimeout(timerId);
+        }
+      }
+
+      async function boot() {
+        showBoot('Проверяем сессию и загружаем редактор…');
+        try {
+          await withTimeout(api('/me'));
           showEditor();
-          const data = await api('/content/product-sections/navesy');
+          const data = await withTimeout(api('/content/product-sections/navesy'));
           state.original = clone(data.content);
           state.draft = clone(data.content);
           renderPage();
-        } catch {
-          showLogin('Введите логин и пароль.');
+        } catch (error) {
+          showBoot(error.message || 'Не удалось загрузить редактор.', true);
         }
       }
+
+      $('bootRetryBtn').addEventListener('click', () => {
+        boot();
+      });
 
       boot();
     </script>

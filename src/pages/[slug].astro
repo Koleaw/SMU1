@@ -7,6 +7,7 @@ import SectionNavigator from '../components/SectionNavigator.astro';
 import DirectContactBlock from '../components/DirectContactBlock.astro';
 import PageBlocksRenderer from '../components/PageBlocksRenderer.astro';
 import { withBase } from '../utils/withBase';
+import { getVisiblePageBlocks, withSectionIds } from '../utils/pageBlocks';
 
 const defaultProjectNavItems = [
   { id: 'project-scope', label: 'Что решаем и состав услуги' },
@@ -461,14 +462,7 @@ const isTopiaryPage = itemType === 'product-section' && item.slug === 'topiarii'
 const isLandscapingPage = itemType === 'service' && item.slug === 'blagoustroystvo-territoriy';
 const isConstructionPage = itemType === 'service' && item.slug === 'stroitelstvo-i-remonty';
 const navesyPageBlocks = isNavesyPage && Array.isArray(item.pageBlocks)
-  ? item.pageBlocks
-      .filter((block) => block?.isActive !== false)
-      .slice()
-      .sort((a, b) => a.order - b.order)
-      .map((block, index) => ({
-        ...block,
-        sectionId: `navesy-block-${index + 1}`
-      }))
+  ? withSectionIds(getVisiblePageBlocks(item.pageBlocks), 'navesy-block')
   : [];
 const hasNavesyPageBlocks = navesyPageBlocks.length > 0;
 
@@ -541,6 +535,7 @@ const contactDescription = isNavesyPage
     mediaImage={isCatalogHub ? undefined : withBase(item.image)}
     mediaAlt={isCatalogHub ? undefined : item.title}
     mediaCaption={isCatalogHub || isNavesyPage ? undefined : item.placeholderLabel}
+    mediaView={item.imageView}
   />
 
   {isCatalogHub ? (
