@@ -60,7 +60,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       </form>
     </div>
 
-    <div id="editorView" class="hidden">
+    <div id="editorView">
       <header class="topbar">
         <div class="topbar-left">
           <a class="btn btn-secondary btn-xs" href={adminHome}>← В админку</a>
@@ -73,7 +73,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           <button id="logoutBtn" class="btn btn-secondary btn-xs" type="button">Выйти</button>
         </div>
       </header>
-      <main class="workspace" id="workspace"></main>
+      <main class="workspace" id="workspace">
+        <section class="section">
+          <div class="container">
+            <p class="muted">Загрузка visual editor…</p>
+          </div>
+        </section>
+      </main>
       <input id="uploadInput" type="file" accept="image/*,.svg" class="hidden" />
     </div>
 
@@ -83,6 +89,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       const state = {
         original: null,
         draft: null,
+        loading: true,
+        loadError: '',
         alert: '',
         alertError: false,
         editingHero: null,
@@ -225,7 +233,21 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function renderPage() {
         const root = $('workspace');
-        if (!state.draft) { root.innerHTML = ''; return; }
+        if (state.loading) {
+          root.innerHTML = `<section class="section"><div class="container"><p class="muted">Загрузка visual editor…</p></div></section>`;
+          updateStatus();
+          return;
+        }
+        if (state.loadError) {
+          root.innerHTML = `<section class="section"><div class="container"><h2>Редактирование: Навесы</h2><p class="error">Не удалось загрузить данные страницы. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me</p><p class="muted">${esc(state.loadError)}</p></div></section>`;
+          updateStatus();
+          return;
+        }
+        if (!state.draft) {
+          root.innerHTML = `<section class="section"><div class="container"><p class="muted">Данные страницы пока не загружены.</p></div></section>`;
+          updateStatus();
+          return;
+        }
 
         const blocks = sorted(state.draft.pageBlocks || []);
         root.innerHTML = `${state.alert ? `<div class="container" style="padding-top:12px;"><p class="${state.alertError ? 'error' : 'muted'}">${esc(state.alert)}</p></div>` : ''}${renderHero()}${blocks.map((block, idx) => block.isActive === false ? renderBlock(block, idx) : renderBlock(block, idx)).join('')}<section class="section"><div class="container"><details><summary>Показать JSON</summary><pre>${esc(JSON.stringify(state.draft, null, 2))}</pre></details></div></section>${renderModal()}`;
@@ -422,10 +444,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const formData = new FormData(event.currentTarget);
         try {
           await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
+          state.loading = true;
+          state.loadError = '';
           showEditor();
+          renderPage();
           const data = await api('/content/product-sections/navesy');
           state.original = clone(data.content);
           state.draft = clone(data.content);
+          state.loading = false;
           renderPage();
         } catch (error) {
           $('loginStatus').textContent = error.message || 'Ошибка входа';
@@ -434,17 +460,47 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       });
 
       async function boot() {
+        state.loading = true;
+        renderPage();
         try {
-          await api('/me');
+          const me = await api('/me');
+          if (!me.authenticated) {
+            state.loading = false;
+            state.loadError = '';
+            showLogin('Введите логин и пароль.');
+            return;
+          }
           showEditor();
           const data = await api('/content/product-sections/navesy');
           state.original = clone(data.content);
           state.draft = clone(data.content);
+          state.loadError = '';
+          state.loading = false;
           renderPage();
-        } catch {
-          showLogin('Введите логин и пароль.');
+        } catch (error) {
+          state.loading = false;
+          state.loadError = error?.message || 'Ошибка загрузки';
+          console.error('[admin/navesy] boot failed', error);
+          showEditor();
+          renderPage();
         }
       }
+
+      window.addEventListener('error', (event) => {
+        console.error('[admin/navesy] runtime error', event.error || event.message);
+        state.loading = false;
+        state.loadError = (event.error && event.error.message) || String(event.message || 'Ошибка runtime');
+        showEditor();
+        renderPage();
+      });
+
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('[admin/navesy] unhandled rejection', event.reason);
+        state.loading = false;
+        state.loadError = (event.reason && event.reason.message) || String(event.reason || 'Unhandled rejection');
+        showEditor();
+        renderPage();
+      });
 
       boot();
     </script>
