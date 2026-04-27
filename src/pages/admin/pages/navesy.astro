@@ -53,6 +53,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
     </style>
   </head>
   <body>
+    <div id="bootView" class="login-wrap">
+      <div class="login-card">
+        <h1>Админка СМУ-1</h1>
+        <p id="bootStatus" class="muted">Проверяем сессию и загружаем редактор…</p>
+        <button id="bootRetryBtn" class="btn btn-secondary hidden" type="button">Повторить</button>
+      </div>
+    </div>
+
     <div id="loginView" class="login-wrap hidden">
       <form id="loginForm" class="login-card">
         <h1>Админка СМУ-1</h1>
@@ -180,14 +188,24 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function showLogin(msg = '') {
+        $('bootView').classList.add('hidden');
         $('loginView').classList.remove('hidden');
         $('editorView').classList.add('hidden');
         $('loginStatus').textContent = msg;
       }
 
       function showEditor() {
+        $('bootView').classList.add('hidden');
         $('loginView').classList.add('hidden');
         $('editorView').classList.remove('hidden');
+      }
+
+      function showBoot(msg = 'Проверяем сессию и загружаем редактор…', withRetry = false) {
+        $('bootView').classList.remove('hidden');
+        $('loginView').classList.add('hidden');
+        $('editorView').classList.add('hidden');
+        $('bootStatus').textContent = msg;
+        $('bootRetryBtn').classList.toggle('hidden', !withRetry);
       }
 
       function setAlert(text = '', error = false) {
@@ -504,7 +522,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       $('loginForm').addEventListener('submit', async (event) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        startLoadingWatchdog();
+        showBoot('Выполняем вход…');
         try {
           await apiWithTimeout('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
           state.loading = true;
@@ -523,8 +541,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             state.draft.pageBlocks = [];
           }
         } catch (error) {
-          state.authRequired = true;
-          $('loginStatus').textContent = error.message || 'Ошибка входа';
+          showLogin(error.message || 'Ошибка входа');
           $('loginStatus').className = 'muted error';
         } finally {
           stopLoadingWatchdog();
@@ -533,25 +550,24 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         }
       });
 
-      async function boot() {
-        state.loading = true;
-        state.loadError = '';
-        state.loadErrorDetails = '';
-        state.loadErrorEndpoint = '';
-        state.loadErrorStatus = '';
-        state.authRequired = false;
-        startLoadingWatchdog();
-        renderPage();
+      async function withTimeout(promise, ms = 12000) {
+        let timerId;
+        const timeout = new Promise((_, reject) => {
+          timerId = window.setTimeout(() => reject(new Error('Таймаут загрузки. Проверьте API и сеть.')), ms);
+        });
         try {
-          const me = await apiWithTimeout('/me');
-          if (!me.authenticated) {
-            state.authRequired = true;
-            showEditor();
-            renderPage();
-            return;
-          }
+          return await Promise.race([promise, timeout]);
+        } finally {
+          if (timerId) window.clearTimeout(timerId);
+        }
+      }
+
+      async function boot() {
+        showBoot('Проверяем сессию и загружаем редактор…');
+        try {
+          await withTimeout(api('/me'));
           showEditor();
-          const data = await apiWithTimeout('/content/product-sections/navesy');
+          const data = await withTimeout(api('/content/product-sections/navesy'));
           state.original = clone(data.content);
           state.draft = clone(data.content);
           if (!Array.isArray(state.draft.pageBlocks)) {
@@ -569,23 +585,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           stopLoadingWatchdog();
           state.loading = false;
           renderPage();
+        } catch (error) {
+          showBoot(error.message || 'Не удалось загрузить редактор.', true);
         }
       }
 
-      window.addEventListener('error', (event) => {
-        console.error('[admin/navesy] runtime error', event.error || event.message);
-        state.loading = false;
-        setLoadError('Ошибка выполнения скрипта редактора', event.error || event.message, 'runtime');
-        showEditor();
-        renderPage();
-      });
-
-      window.addEventListener('unhandledrejection', (event) => {
-        console.error('[admin/navesy] unhandled rejection', event.reason);
-        state.loading = false;
-        setLoadError('Необработанная ошибка редактора', event.reason, 'unhandledrejection');
-        showEditor();
-        renderPage();
+      $('bootRetryBtn').addEventListener('click', () => {
+        boot();
       });
 
       boot();
