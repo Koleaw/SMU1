@@ -34,8 +34,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .status-dirty { color: #9e500f; font-size: 14px; font-weight: 700; }
       .workspace { padding-top: 70px; }
       .admin-strip { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
-      .admin-block { margin: 12px 0; border: 1px dashed #89a8c6; border-radius: 10px; overflow: hidden; }
-      .admin-block-head { background: #f2f8ff; border-bottom: 1px solid #d5e4f3; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+      .admin-block-head { position: sticky; top: 62px; z-index: 10; background: #f2f8ff; border: 1px dashed #89a8c6; border-bottom: none; border-radius: 10px 10px 0 0; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+      .admin-block-body { border: 1px dashed #89a8c6; border-top: none; border-radius: 0 0 10px 10px; margin-bottom: 14px; }
       .badge { border-radius: 999px; background: #e5eef8; color: #36506a; padding: 3px 8px; font-size: 12px; }
       .admin-inline { width: 100%; border: 1px solid #9db7d1; border-radius: 8px; padding: 8px 10px; font: inherit; background: #fff; }
       .admin-inline-area { min-height: 80px; resize: vertical; }
@@ -43,7 +43,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .hero-edit-box { border: 1px solid #92acca; border-radius: 10px; background: rgb(255 255 255 / 92%); padding: 10px; display: grid; gap: 8px; }
       .admin-media-controls { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
       .modal-backdrop { position: fixed; inset: 0; background: rgb(6 16 27 / 42%); z-index: 80; display: grid; place-items: center; padding: 16px; }
-      .modal { width: min(560px, 100%); max-height: 90vh; overflow: auto; border-radius: 14px; border: 1px solid #d5e2ef; background: #fff; padding: 16px; }
+      .modal { width: min(620px, 100%); max-height: 90vh; overflow: auto; border-radius: 14px; border: 1px solid #d5e2ef; background: #fff; padding: 16px; }
+      .modal-close { float: right; }
+      .hidden-flag { color: #8b4f18; font-weight: 700; }
+      .media-thumb--managed { object-fit: var(--media-fit, cover); object-position: var(--media-pos-x,50%) var(--media-pos-y,50%); transform: scale(var(--media-scale,1)); transform-origin: center; }
       pre { margin: 0; font-size: 12px; background: #0f1720; color: #d4e3f5; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
       .muted { color: #60758a; }
       .error { color: #b13838; }
@@ -63,16 +66,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
     <div id="editorView">
       <header class="topbar">
-        <div class="topbar-left">
-          <a class="btn btn-secondary btn-xs" href={adminHome}>← В админку</a>
-          <h1>Редактирование: Навесы</h1>
-          <span id="dirtyStatus" class="status-clean">Нет изменений</span>
-        </div>
-        <div class="topbar-right">
-          <button id="saveBtn" class="btn btn-xs" disabled>Сохранить</button>
-          <a class="btn btn-secondary btn-xs" href={publicNavesyPath} target="_blank" rel="noreferrer">Открыть публичную страницу</a>
-          <button id="logoutBtn" class="btn btn-secondary btn-xs" type="button">Выйти</button>
-        </div>
+        <div class="topbar-left"><a class="btn btn-secondary btn-xs" href={adminHome}>← В админку</a><h1>Редактирование: Навесы</h1><span id="dirtyStatus" class="status-clean">Нет изменений</span></div>
+        <div class="topbar-right"><button id="saveBtn" class="btn btn-xs" disabled>Сохранить</button><button class="btn btn-secondary btn-xs" id="addSectionBtn">+ Добавить секцию</button><a class="btn btn-secondary btn-xs" href={publicNavesyPath} target="_blank" rel="noreferrer">Открыть публичную страницу</a><a class="btn btn-secondary btn-xs" href={withBase('/admin/content/product-sections/navesy/')}>Технический режим</a><button id="logoutBtn" class="btn btn-secondary btn-xs" type="button">Выйти</button></div>
       </header>
       <main class="workspace" id="workspace">
         <section class="section">
@@ -295,13 +290,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           const isEditList = state.editingListBlock === blockIndex;
           content = `<ul class="page-blocks-columns page-blocks-columns--${block.columns || 2}">${list.map((text, idx) => isEditList ? renderListItem(blockIndex, idx, text) : `<li>${esc(text)}</li>`).join('')}</ul><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="toggle-list-edit" data-block="${blockIndex}">${isEditList ? 'Готово' : 'Редактировать список'}</button>${isEditList ? `<button class="btn btn-secondary btn-xs" data-action="add-row" data-block="${blockIndex}">+ Добавить строку</button>` : ''}</div>`;
         }
-
         if (block.type === 'process') {
           const steps = normalizeSteps(block.steps).filter(isActive);
           const controls = `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="block-media-${blockIndex}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="edit-block-placeholder" data-block="${blockIndex}">Подпись placeholder</button></div>`;
           content = `<div class="page-block-media-layout">${renderMedia(block?.media, block?.title, block?.placeholderLabel, controls)}<article class="card page-block-panel"><h2>${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}<ol class="page-block-steps">${steps.map((step, idx) => renderStep(blockIndex, idx, step)).join('')}</ol><div class="admin-strip" style="margin-top:8px;"><button class="btn btn-secondary btn-xs" data-action="add-step" data-block="${blockIndex}">+ Добавить шаг</button></div></article></div>`;
         }
-
         if (block.type === 'mediaText') {
           const controls = `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="block-media-${blockIndex}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="edit-block-placeholder" data-block="${blockIndex}">Подпись placeholder</button></div>`;
           content = `<div class="page-block-media-layout">${renderMedia(block?.media, block?.title, block?.placeholderLabel, controls)}<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article></div>`;
@@ -310,14 +303,23 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (block.type === 'notice') {
           content = `<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article>`;
         }
+        if (block.type === 'notice') content = `<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article>`;
 
-        return `<section class="admin-block"><div class="admin-block-head"><span class="badge">${BLOCK_LABELS[block.type] || block.type}</span><button class="btn btn-secondary btn-xs" data-action="block-up" data-block="${blockIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="block-down" data-block="${blockIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-block" data-block="${blockIndex}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="btn btn-secondary btn-xs" data-action="open-settings" data-block="${blockIndex}">Настройки</button></div><section class="${sectionClass}"><div class="container"><h2 class="section-title">${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}${content}</div></section></section>`;
+        return `<section><div class="admin-block-head"><span class="badge">${BLOCK_LABELS[block.type] || block.type}</span>${block.isActive===false?'<span class="hidden-flag">Скрыт</span>':''}<button class="btn btn-secondary btn-xs" data-action="block-up" data-block="${blockIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="block-down" data-block="${blockIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-block" data-block="${blockIndex}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="btn btn-secondary btn-xs" data-action="open-settings" data-block="${blockIndex}">Настройки</button><button class="btn btn-danger btn-xs" data-action="delete-block" data-block="${blockIndex}">Удалить секцию</button></div><div class="admin-block-body"><section class="${sectionClass}"><div class="container"><h2 class="section-title">${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}${content}</div></section></div></section>`;
       }
 
       function renderModal() {
-        if (!state.blockSettings) return '';
-        const s = state.blockSettings;
-        return `<div class="modal-backdrop"><div class="modal"><h3 style="margin-top:0;">Настройки блока</h3><div class="field"><label>Заголовок блока</label><input data-modal="title" value="${esc(s.title || '')}" /></div><div class="field"><label>Intro</label><textarea data-modal="intro">${esc(s.intro || '')}</textarea></div><div class="field"><label>Тема</label><select data-modal="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Темная</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Светлая</option><option value="graphite" ${s.theme === 'graphite' ? 'selected' : ''}>Графитовая</option></select></div>${Object.hasOwn(s, 'grid') ? `<div class="field"><label>Сетка</label><select data-modal="grid"><option value="auto" ${s.grid === 'auto' ? 'selected' : ''}>Авто</option><option value="2" ${s.grid === '2' ? 'selected' : ''}>2</option><option value="3" ${s.grid === '3' ? 'selected' : ''}>3</option><option value="4" ${s.grid === '4' ? 'selected' : ''}>4</option></select></div>` : ''}${Object.hasOwn(s, 'columns') ? `<div class="field"><label>Колонки</label><select data-modal="columns"><option value="2" ${String(s.columns) === '2' ? 'selected' : ''}>2</option><option value="3" ${String(s.columns) === '3' ? 'selected' : ''}>3</option></select></div>` : ''}<label><input type="checkbox" data-modal="isActive" ${s.isActive === false ? '' : 'checked'} /> Активный блок</label><div class="admin-strip" style="margin-top:12px;"><button class="btn btn-xs" data-action="save-settings">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-settings">Отмена</button></div></div></div>`;
+        if (!state.modal) return '';
+        if (state.modal.type === 'settings') {
+          const s = state.modal.data;
+          return `<div class="modal-backdrop" data-action="close-modal"><div class="modal" onclick="event.stopPropagation()"><button class="btn btn-secondary btn-xs modal-close" data-action="cancel-settings">Отмена</button><h3 style="margin-top:0;">Настройки блока</h3><div class="field"><label>Заголовок блока</label><input data-modal="title" value="${esc(s.title || '')}" /></div><div class="field"><label>Intro</label><textarea data-modal="intro">${esc(s.intro || '')}</textarea></div><div class="field"><label>Тема</label><select data-modal="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Темная</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Светлая</option><option value="graphite" ${s.theme === 'graphite' ? 'selected' : ''}>Графитовая</option></select></div>${Object.hasOwn(s, 'grid') ? `<div class="field"><label>Сетка</label><select data-modal="grid"><option value="auto">Авто</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>` : ''}${Object.hasOwn(s, 'columns') ? `<div class="field"><label>Колонки</label><select data-modal="columns"><option value="2">2</option><option value="3">3</option></select></div>` : ''}<label><input type="checkbox" data-modal="isActive" ${s.isActive===false?'':'checked'} /> Активность</label><div class="admin-strip"><button class="btn btn-xs" data-action="save-settings">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-settings">Отмена</button></div></div></div>`;
+        }
+        if (state.modal.type === 'add-section') return `<div class="modal-backdrop" data-action="close-modal"><div class="modal" onclick="event.stopPropagation()"><h3 style="margin-top:0;">Добавить секцию</h3><div class="field"><label>Тип секции</label><select data-modal="sectionType"><option value="cardGrid">Карточки</option><option value="listPanel">Список</option><option value="process">Процесс</option><option value="factorList">Факторы стоимости</option><option value="mediaText">Текст + изображение</option><option value="notice">Вставка</option><option value="exampleGrid">Примеры</option></select></div><div class="admin-strip"><button class="btn btn-xs" data-action="create-section">Добавить</button><button class="btn btn-secondary btn-xs" data-action="close-modal">Отмена</button></div></div></div>`;
+        if (state.modal.type === 'crop') {
+          const c = state.modal.data;
+          return `<div class="modal-backdrop" data-action="close-modal"><div class="modal" onclick="event.stopPropagation()"><h3 style="margin-top:0;">Настроить кадр</h3><div class="field"><label>Fit</label><select data-modal="fit"><option value="cover" ${c.fit==='cover'?'selected':''}>Заполнить</option><option value="contain" ${c.fit==='contain'?'selected':''}>Вписать</option></select></div><div class="field"><label>Масштаб</label><input type="range" min="1" max="3" step="0.1" data-modal="scale" value="${c.scale}" /></div><div class="field"><label>Сдвиг X</label><input type="range" min="0" max="100" step="1" data-modal="positionX" value="${c.positionX}" /></div><div class="field"><label>Сдвиг Y</label><input type="range" min="0" max="100" step="1" data-modal="positionY" value="${c.positionY}" /></div><div class="admin-strip"><button class="btn btn-xs" data-action="save-crop">Готово</button><button class="btn btn-secondary btn-xs" data-action="close-modal">Отмена</button></div></div></div>`;
+        }
+        return '';
       }
 
       function renderPage() {
@@ -376,112 +378,70 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           const index = Number(target.replace('block-media-', ''));
           applyBlock(index, (block) => { block.media = res.path; });
         }
-        setAlert('Изображение загружено');
-        renderPage();
       }
 
-      $('workspace').addEventListener('input', (event) => {
-        const key = event.target.dataset.inline;
-        if (!key) return;
-        if (key === 'hero-title') state.editingHero.heroTitle = event.target.value;
-        if (key === 'hero-description') state.editingHero.heroDescription = event.target.value;
-        if (key === 'hero-placeholder') state.editingHero.placeholderLabel = event.target.value;
-        if (key === 'card-title') state.editingCard.draft.title = event.target.value;
-        if (key === 'card-text') state.editingCard.draft.text = event.target.value;
-        if (key === 'row-text') state.editingRow.draft = event.target.value;
-        if (key === 'step-title') state.editingStep.draft.title = event.target.value;
-        if (key === 'step-text') state.editingStep.draft.text = event.target.value;
-      });
+      async function uploadImage(file, target) { const formData = new FormData(); formData.append('file', file); const res = await api('/upload', { method: 'POST', body: formData }); if (target === 'hero-image') { state.draft.image = res.path; if (state.editingHero) state.editingHero.image = res.path; } else if (target.startsWith('block-media-')) { const index = Number(target.replace('block-media-', '')); applyBlock(index, (block) => block.media = res.path); } setAlert('Изображение загружено'); renderPage(); }
 
-      $('workspace').addEventListener('change', (event) => {
-        const key = event.target.dataset.inline;
-        if (!key) return;
-        if (key === 'card-active') state.editingCard.draft.isActive = event.target.checked;
-        if (key === 'step-active') state.editingStep.draft.isActive = event.target.checked;
+      $('workspace').addEventListener('input', (e) => {
+        const key = e.target.dataset.inline;
+        if (key === 'hero-title') state.editingHero.heroTitle = e.target.value;
+        if (key === 'hero-description') state.editingHero.heroDescription = e.target.value;
+        if (key === 'hero-placeholder') state.editingHero.placeholderLabel = e.target.value;
+        if (key === 'card-title') state.editingCard.draft.title = e.target.value;
+        if (key === 'card-text') state.editingCard.draft.text = e.target.value;
+        if (key === 'step-title') state.editingStep.draft.title = e.target.value;
+        if (key === 'step-text') state.editingStep.draft.text = e.target.value;
+        if (key === 'row-text') { const b = Number(e.target.dataset.block), i = Number(e.target.dataset.item); applyBlock(b, (block) => { const rows = normalizeListItems(block.items || []); rows[i].text = e.target.value; block.items = rows; }); }
+        if (e.target.dataset.modal && state.modal?.data) state.modal.data[e.target.dataset.modal] = e.target.type === 'range' ? Number(e.target.value) : e.target.value;
       });
-
+      $('workspace').addEventListener('change', (e) => {
+        const key = e.target.dataset.inline;
+        if (key === 'card-active') state.editingCard.draft.isActive = e.target.checked;
+        if (key === 'step-active') state.editingStep.draft.isActive = e.target.checked;
+        if (e.target.dataset.modal === 'isActive') state.modal.data.isActive = e.target.checked;
+      });
       $('workspace').addEventListener('click', (event) => {
-        const el = event.target.closest('[data-action]');
-        if (!el) return;
-        const action = el.dataset.action;
-        const blockIndex = Number(el.dataset.block);
-        const itemIndex = Number(el.dataset.item);
-
-        if (action === 'edit-hero') { state.editingHero = clone({ heroTitle: state.draft.heroTitle, heroDescription: state.draft.heroDescription, image: state.draft.image, placeholderLabel: state.draft.placeholderLabel }); renderPage(); return; }
+        const el = event.target.closest('[data-action]'); if (!el) return;
+        const action = el.dataset.action, blockIndex = Number(el.dataset.block), itemIndex = Number(el.dataset.item);
+        if (action === 'close-modal') { state.modal = null; renderPage(); return; }
+        if (action === 'edit-hero') { state.editingHero = clone({ heroTitle: state.draft.heroTitle, heroDescription: state.draft.heroDescription, image: state.draft.image, placeholderLabel: state.draft.placeholderLabel || DEFAULT_PLACEHOLDER, imageView: state.draft.imageView || getMediaView() }); renderPage(); return; }
         if (action === 'cancel-hero') { state.editingHero = null; renderPage(); return; }
         if (action === 'save-hero') { Object.assign(state.draft, state.editingHero); state.editingHero = null; renderPage(); return; }
-        if (action === 'clear-hero-image') { state.editingHero.image = ''; state.draft.image = ''; renderPage(); return; }
-
-        if (action === 'edit-card') {
-          const block = getBlock(blockIndex);
-          state.editingCard = { key: `${blockIndex}:${itemIndex}`, draft: clone(block.items[itemIndex]) };
-          renderPage();
-          return;
-        }
+        if (action === 'clear-hero-image') { if (state.editingHero) state.editingHero.image = ''; state.draft.image = ''; renderPage(); return; }
+        if (action === 'open-hero-crop') { state.modal = { type: 'crop', target: 'hero', data: getMediaView(state.editingHero?.imageView || state.draft.imageView) }; renderPage(); return; }
+        if (action === 'open-crop') { const block = getBlocks()[blockIndex]; state.modal = { type: 'crop', target: `block:${blockIndex}`, data: getMediaView(block.mediaView) }; renderPage(); return; }
+        if (action === 'save-crop') { const value = clone(state.modal.data); if (state.modal.target === 'hero') { state.draft.imageView = value; if (state.editingHero) state.editingHero.imageView = value; } else { applyBlock(Number(state.modal.target.split(':')[1]), (block) => block.mediaView = value); } state.modal = null; renderPage(); return; }
+        if (action === 'edit-card') { const block = getBlocks()[blockIndex]; state.editingCard = { key: `${blockIndex}:${itemIndex}`, draft: clone(sorted(block.items || [])[itemIndex]) }; renderPage(); return; }
         if (action === 'cancel-card') { state.editingCard = null; renderPage(); return; }
-        if (action === 'save-card') {
-          applyBlock(blockIndex, (block) => { block.items[itemIndex] = clone(state.editingCard.draft); });
-          state.editingCard = null;
-          renderPage();
-          return;
-        }
-        if (action === 'move-card-up' || action === 'move-card-down') {
-          applyBlock(blockIndex, (block) => {
-            const arr = sorted(block.items || []);
-            const to = action === 'move-card-up' ? itemIndex - 1 : itemIndex + 1;
-            if (to < 0 || to >= arr.length) return;
-            [arr[itemIndex], arr[to]] = [arr[to], arr[itemIndex]];
-            renumber(arr);
-            block.items = arr;
-          });
-          renderPage();
-          return;
-        }
-        if (action === 'toggle-card') { applyBlock(blockIndex, (block) => { block.items[itemIndex].isActive = block.items[itemIndex].isActive === false; }); renderPage(); return; }
-        if (action === 'add-card') {
-          applyBlock(blockIndex, (block) => {
-            block.items = sorted(block.items || []);
-            block.items.push({ title: 'Новая карточка', text: '', order: (block.items.length + 1) * 10, isActive: true });
-            renumber(block.items);
-          });
-          const block = getBlock(blockIndex);
-          state.editingCard = { key: `${blockIndex}:${block.items.length - 1}`, draft: clone(block.items[block.items.length - 1]) };
-          renderPage();
-          return;
-        }
-
-        if (action === 'toggle-list-edit') { state.editingListBlock = state.editingListBlock === blockIndex ? null : blockIndex; state.editingRow = null; renderPage(); return; }
-        if (action === 'edit-row') { state.editingRow = { key: `${blockIndex}:${itemIndex}`, draft: (getBlock(blockIndex).items[itemIndex] || '') }; renderPage(); return; }
-        if (action === 'cancel-row') { state.editingRow = null; renderPage(); return; }
-        if (action === 'save-row') { applyBlock(blockIndex, (block) => { block.items[itemIndex] = state.editingRow.draft; }); state.editingRow = null; renderPage(); return; }
-        if (action === 'add-row') { applyBlock(blockIndex, (block) => { block.items.push('Новая строка'); }); state.editingRow = { key: `${blockIndex}:${getBlock(blockIndex).items.length - 1}`, draft: 'Новая строка' }; renderPage(); return; }
-        if (action === 'delete-row') { applyBlock(blockIndex, (block) => { block.items.splice(itemIndex, 1); }); state.editingRow = null; renderPage(); return; }
-        if (action === 'move-row-up' || action === 'move-row-down') { applyBlock(blockIndex, (block) => { const to = action === 'move-row-up' ? itemIndex - 1 : itemIndex + 1; if (to < 0 || to >= block.items.length) return; [block.items[itemIndex], block.items[to]] = [block.items[to], block.items[itemIndex]]; }); renderPage(); return; }
-
-        if (action === 'edit-step') { state.editingStep = { key: `${blockIndex}:${itemIndex}`, draft: clone(getBlock(blockIndex).steps[itemIndex]) }; renderPage(); return; }
+        if (action === 'save-card') { applyBlock(blockIndex, (block) => { const items = sorted(block.items || []); items[itemIndex] = clone(state.editingCard.draft); renumber(items); block.items = items; }); state.editingCard = null; renderPage(); return; }
+        if (action === 'delete-card') { if (!confirm('Удалить карточку? Это действие применится после сохранения страницы.')) return; applyBlock(blockIndex, (block) => { const items = sorted(block.items || []); items.splice(itemIndex,1); renumber(items); block.items = items; }); state.editingCard = null; renderPage(); return; }
+        if (action === 'add-card') { applyBlock(blockIndex, (block) => { const items = sorted(block.items || []); items.push({ title: 'Новая карточка', text: '', order: (items.length + 1) * 10, isActive: true }); renumber(items); block.items = items; }); const b = getBlocks()[blockIndex]; state.editingCard = { key: `${blockIndex}:${b.items.length - 1}`, draft: clone(b.items[b.items.length - 1]) }; renderPage(); return; }
+        if (action === 'move-card-up' || action === 'move-card-down') { applyBlock(blockIndex, (block) => { const items = sorted(block.items || []); const to = action==='move-card-up'?itemIndex-1:itemIndex+1; if (to<0||to>=items.length) return; [items[itemIndex],items[to]]=[items[to],items[itemIndex]]; renumber(items); block.items=items; }); renderPage(); return; }
+        if (action === 'toggle-card') { applyBlock(blockIndex, (block) => { const items = sorted(block.items || []); items[itemIndex].isActive = items[itemIndex].isActive === false; block.items = items; }); renderPage(); return; }
+        if (action === 'toggle-list-edit') { state.editingListBlock = state.editingListBlock===blockIndex ? null : blockIndex; renderPage(); return; }
+        if (action === 'add-row') { applyBlock(blockIndex, (block) => { const rows = normalizeListItems(block.items || []); rows.push({ text:'Новая строка', order:(rows.length+1)*10, isActive:true }); renumber(rows); block.items=rows; }); renderPage(); return; }
+        if (action === 'delete-row') { applyBlock(blockIndex, (block) => { const rows = normalizeListItems(block.items || []); rows.splice(itemIndex,1); renumber(rows); block.items=rows; }); renderPage(); return; }
+        if (action === 'move-row-up' || action === 'move-row-down') { applyBlock(blockIndex, (block) => { const rows = normalizeListItems(block.items || []); const to = action==='move-row-up'?itemIndex-1:itemIndex+1; if (to<0||to>=rows.length) return; [rows[itemIndex], rows[to]]=[rows[to],rows[itemIndex]]; renumber(rows); block.items = rows; }); renderPage(); return; }
+        if (action === 'edit-step') { state.editingStep = { key: `${blockIndex}:${itemIndex}`, draft: clone(sorted(getBlocks()[blockIndex].steps || [])[itemIndex]) }; renderPage(); return; }
         if (action === 'cancel-step') { state.editingStep = null; renderPage(); return; }
-        if (action === 'save-step') { applyBlock(blockIndex, (block) => { block.steps[itemIndex] = clone(state.editingStep.draft); }); state.editingStep = null; renderPage(); return; }
-        if (action === 'move-step-up' || action === 'move-step-down') { applyBlock(blockIndex, (block) => { const arr = sorted(block.steps || []); const to = action === 'move-step-up' ? itemIndex - 1 : itemIndex + 1; if (to < 0 || to >= arr.length) return; [arr[itemIndex], arr[to]] = [arr[to], arr[itemIndex]]; renumber(arr); block.steps = arr; }); renderPage(); return; }
-        if (action === 'toggle-step') { applyBlock(blockIndex, (block) => { block.steps[itemIndex].isActive = block.steps[itemIndex].isActive === false; }); renderPage(); return; }
-        if (action === 'add-step') { applyBlock(blockIndex, (block) => { block.steps = sorted(block.steps || []); block.steps.push({ title: 'Новый шаг', text: '', order: (block.steps.length + 1) * 10, isActive: true }); renumber(block.steps); }); const b = getBlock(blockIndex); state.editingStep = { key: `${blockIndex}:${b.steps.length - 1}`, draft: clone(b.steps[b.steps.length - 1]) }; renderPage(); return; }
-
-        if (action === 'block-up' || action === 'block-down') { state.draft.pageBlocks = sorted(state.draft.pageBlocks || []); const to = action === 'block-up' ? blockIndex - 1 : blockIndex + 1; if (to >= 0 && to < state.draft.pageBlocks.length) [state.draft.pageBlocks[blockIndex], state.draft.pageBlocks[to]] = [state.draft.pageBlocks[to], state.draft.pageBlocks[blockIndex]]; renumber(state.draft.pageBlocks); renderPage(); return; }
-        if (action === 'toggle-block') { applyBlock(blockIndex, (block) => { block.isActive = block.isActive === false; }); renderPage(); return; }
-        if (action === 'open-settings') { state.blockSettings = { index: blockIndex, ...clone(getBlock(blockIndex)) }; renderPage(); return; }
-        if (action === 'cancel-settings') { state.blockSettings = null; renderPage(); return; }
-        if (action === 'save-settings') {
-          const { index, ...payload } = state.blockSettings;
-          applyBlock(index, (block) => {
-            block.title = payload.title;
-            block.intro = payload.intro;
-            block.theme = payload.theme;
-            if ('grid' in block) block.grid = payload.grid;
-            if ('columns' in block) block.columns = Number(payload.columns);
-            block.isActive = payload.isActive;
-          });
-          state.blockSettings = null;
-          renderPage();
-          return;
+        if (action === 'save-step') { applyBlock(blockIndex, (block) => { const steps = sorted(block.steps || []); steps[itemIndex] = clone(state.editingStep.draft); renumber(steps); block.steps = steps; }); state.editingStep = null; renderPage(); return; }
+        if (action === 'delete-step') { applyBlock(blockIndex, (block) => { const steps = sorted(block.steps || []); steps.splice(itemIndex,1); renumber(steps); block.steps = steps; }); renderPage(); return; }
+        if (action === 'add-step') { applyBlock(blockIndex, (block) => { const steps = sorted(block.steps || []); steps.push({ title:'Новый шаг', text:'', order:(steps.length+1)*10, isActive:true }); renumber(steps); block.steps = steps; }); renderPage(); return; }
+        if (action === 'move-step-up' || action === 'move-step-down') { applyBlock(blockIndex, (block) => { const steps = sorted(block.steps || []); const to = action==='move-step-up'?itemIndex-1:itemIndex+1; if (to<0||to>=steps.length) return; [steps[itemIndex],steps[to]]=[steps[to],steps[itemIndex]]; renumber(steps); block.steps = steps; }); renderPage(); return; }
+        if (action === 'toggle-step') { applyBlock(blockIndex, (block) => { const steps = sorted(block.steps || []); steps[itemIndex].isActive = steps[itemIndex].isActive === false; block.steps = steps; }); renderPage(); return; }
+        if (action === 'block-up' || action === 'block-down') { const blocks = getBlocks(); const to = action==='block-up'?blockIndex-1:blockIndex+1; if (to<0||to>=blocks.length) return; [blocks[blockIndex],blocks[to]]=[blocks[to],blocks[blockIndex]]; renumber(blocks); setBlocks(blocks); renderPage(); return; }
+        if (action === 'toggle-block') { applyBlock(blockIndex, (block) => block.isActive = block.isActive === false); renderPage(); return; }
+        if (action === 'open-settings') { state.modal = { type:'settings', data: { index:blockIndex, ...clone(getBlocks()[blockIndex]) } }; renderPage(); return; }
+        if (action === 'cancel-settings') { state.modal = null; renderPage(); return; }
+        if (action === 'save-settings') { const { index, ...payload } = state.modal.data; applyBlock(index, (block) => { block.title = payload.title; block.intro = payload.intro; block.theme = payload.theme; if ('grid' in block) block.grid = payload.grid; if ('columns' in block) block.columns = Number(payload.columns); block.isActive = payload.isActive; }); state.modal = null; renderPage(); return; }
+        if (action === 'delete-block') { if (!confirm('Удалить секцию? Это действие применится после сохранения страницы.')) return; const blocks = getBlocks(); blocks.splice(blockIndex, 1); renumber(blocks); setBlocks(blocks); renderPage(); return; }
+        if (action === 'clear-block-media') { applyBlock(blockIndex, (block)=> block.media=''); renderPage(); return; }
+        if (action === 'upload-image') { state.uploadTarget = el.dataset.target; $('uploadInput').click(); return; }
+        if (action === 'create-section') {
+          const type = state.modal.data.sectionType || 'cardGrid';
+          const nextOrder = (getBlocks().length + 1) * 10;
+          const map = { cardGrid: { type:'cardGrid', title:'Новая секция', theme:'dark', grid:'auto', order:nextOrder, isActive:true, items:[] }, listPanel: { type:'listPanel', title:'Новая секция', theme:'light', columns:2, order:nextOrder, isActive:true, items:[] }, process: { type:'process', title:'Новая секция', theme:'light', mediaPosition:'right', placeholderLabel:DEFAULT_PLACEHOLDER, order:nextOrder, isActive:true, steps:[] }, factorList: { type:'factorList', title:'Новая секция', theme:'graphite', columns:2, order:nextOrder, isActive:true, items:[] }, mediaText: { type:'mediaText', title:'Новая секция', text:'', theme:'light', mediaPosition:'right', placeholderLabel:DEFAULT_PLACEHOLDER, order:nextOrder, isActive:true }, notice: { type:'notice', title:'Новая вставка', text:'', theme:'light', order:nextOrder, isActive:true }, exampleGrid: { type:'exampleGrid', title:'Новая секция', theme:'light', grid:'auto', order:nextOrder, isActive:true, items:[] } };
+          setBlocks([...getBlocks(), map[type]]); state.modal = null; renderPage(); return;
         }
         if (action === 'clear-block-media') { applyBlock(blockIndex, (block) => { block.media = ''; }); renderPage(); return; }
         if (action === 'edit-block-placeholder') {
