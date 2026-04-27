@@ -14,6 +14,7 @@ interface Props {
   mediaPoster?: string;
   mediaAlt?: string;
   mediaCaption?: string;
+  mediaView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
 }
 import { withBase } from '../utils/withBase';
 
@@ -31,10 +32,19 @@ const {
   mediaVideo,
   mediaPoster,
   mediaAlt = 'Фоновое изображение первого экрана',
-  mediaCaption
+  mediaCaption,
+  mediaView
 } = Astro.props;
 
 const heroClass = ['hero', className].filter(Boolean).join(' ');
+
+const resolvedMediaView = {
+  fit: mediaView?.fit === 'contain' ? 'contain' : 'cover',
+  positionX: Number.isFinite(mediaView?.positionX) ? Number(mediaView.positionX) : 50,
+  positionY: Number.isFinite(mediaView?.positionY) ? Number(mediaView.positionY) : 50,
+  scale: Number.isFinite(mediaView?.scale) ? Math.min(Math.max(Number(mediaView.scale), 1), 3) : 1
+};
+
 ---
 <section class={heroClass}>
   {(mediaImage || mediaPoster) && (
@@ -47,7 +57,7 @@ const heroClass = ['hero', className].filter(Boolean).join(' ');
           {mediaPoster && <img class="hero-media__fallback" src={mediaPoster} alt={mediaAlt} loading="eager" />}
         </>
       ) : (
-        <img class="hero-media__image" src={mediaImage ?? mediaPoster} alt={mediaAlt} loading="eager" />
+        <img class="hero-media__image" style={`object-fit:${resolvedMediaView.fit};object-position:${resolvedMediaView.positionX}% ${resolvedMediaView.positionY}%;transform:scale(${resolvedMediaView.scale});transform-origin:center;`} src={mediaImage ?? mediaPoster} alt={mediaAlt} loading="eager" />
       )}
       <div class="hero-media__overlay"></div>
       {mediaCaption && <p class="hero-media__caption">{mediaCaption}</p>}

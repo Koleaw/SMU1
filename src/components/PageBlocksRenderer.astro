@@ -1,5 +1,6 @@
 ---
 import { withBase } from '../utils/withBase';
+import { getVisiblePageBlocks } from '../utils/pageBlocks';
 
 type Theme = 'dark' | 'light' | 'graphite';
 type GridValue = 'auto' | '2' | '3' | '4';
@@ -41,12 +42,20 @@ interface ListBlock extends BaseBlock {
   items: Array<string | { text: string; order?: number; isActive?: boolean }>;
 }
 
+interface MediaView {
+  fit?: 'cover' | 'contain';
+  positionX?: number;
+  positionY?: number;
+  scale?: number;
+}
+
 interface MediaTextBlock extends BaseBlock {
   type: 'mediaText';
   text: string;
   media?: string;
   placeholderLabel?: string;
   mediaPosition: 'left' | 'right';
+  mediaView?: MediaView;
 }
 
 interface ProcessBlock extends BaseBlock {
@@ -54,6 +63,7 @@ interface ProcessBlock extends BaseBlock {
   media?: string;
   placeholderLabel?: string;
   mediaPosition?: 'left' | 'right';
+  mediaView?: MediaView;
   steps: ProcessStep[];
 }
 
@@ -70,10 +80,7 @@ interface Props {
 
 const { pageBlocks = [] } = Astro.props;
 
-const visibleBlocks = pageBlocks
-  .filter((block) => block && block.isActive !== false)
-  .slice()
-  .sort((a, b) => a.order - b.order);
+const visibleBlocks = getVisiblePageBlocks(pageBlocks);
 
 const getSectionClass = (theme: Theme) => {
   if (theme === 'dark') return 'section section--dark navesy-section-compact';
@@ -87,6 +94,15 @@ const getHeadingClass = (theme: Theme) => (theme === 'dark' || theme === 'graphi
 const getGridClass = (grid: GridValue) => `page-blocks-grid page-blocks-grid--${grid}`;
 const getColumnsClass = (columns: ColumnsValue) => `page-blocks-columns page-blocks-columns--${columns}`;
 const isDarkCardTheme = (theme: Theme) => theme === 'dark' || theme === 'graphite';
+
+const DEFAULT_PLACEHOLDER = 'Фото или рендер навеса будет добавлен позже';
+
+const getMediaView = (mediaView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number }) => ({
+  fit: mediaView?.fit === 'contain' ? 'contain' : 'cover',
+  positionX: Number.isFinite(mediaView?.positionX) ? Number(mediaView?.positionX) : 50,
+  positionY: Number.isFinite(mediaView?.positionY) ? Number(mediaView?.positionY) : 50,
+  scale: Number.isFinite(mediaView?.scale) ? Math.min(Math.max(Number(mediaView?.scale), 1), 3) : 1
+});
 
 const normalizeTextList = (items: Array<string | { text: string; order?: number; isActive?: boolean }>) =>
   items
@@ -161,10 +177,10 @@ const normalizeSteps = (steps: ProcessStep[]) =>
       <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
         <div class={`container page-block-media-layout ${mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}`}>
           <article class="media-block placeholder placeholder--wide-feature">
-            {block.media ? (
-              <img class="media-thumb" src={withBase(block.media)} alt={block.title} loading="lazy" />
-            ) : null}
-            {block.placeholderLabel && <p class="media-caption">{block.placeholderLabel}</p>}
+            {(() => { const view = getMediaView(block.mediaView); return block.media ? (
+              <img class="media-thumb media-thumb--managed" style={`--media-scale:${view.scale};--media-pos-x:${view.positionX}%;--media-pos-y:${view.positionY}%;--media-fit:${view.fit};`} src={withBase(block.media)} alt={block.title} loading="lazy" />
+            ) : null; })()}
+            <p class="media-caption">{block.placeholderLabel || DEFAULT_PLACEHOLDER}</p>
           </article>
           <article class={`card page-block-card page-block-panel ${block.theme === 'graphite' ? 'page-block-card--graphite' : ''}`}>
             <h2>{block.title}</h2>
@@ -185,8 +201,8 @@ const normalizeSteps = (steps: ProcessStep[]) =>
       <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
         <div class={`container page-block-media-layout ${mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}`}>
           <article class="media-block placeholder placeholder--wide-feature">
-            {block.media ? <img class="media-thumb" src={withBase(block.media)} alt={block.title} loading="lazy" /> : null}
-            {block.placeholderLabel && <p class="media-caption">{block.placeholderLabel}</p>}
+            {(() => { const view = getMediaView(block.mediaView); return block.media ? <img class="media-thumb media-thumb--managed" style={`--media-scale:${view.scale};--media-pos-x:${view.positionX}%;--media-pos-y:${view.positionY}%;--media-fit:${view.fit};`} src={withBase(block.media)} alt={block.title} loading="lazy" /> : null; })()}
+            <p class="media-caption">{block.placeholderLabel || DEFAULT_PLACEHOLDER}</p>
           </article>
           <article class={`card page-block-card page-block-panel ${block.theme === 'graphite' ? 'page-block-card--graphite' : ''}`}>
             <h2>{block.title}</h2>
@@ -308,6 +324,13 @@ const normalizeSteps = (steps: ProcessStep[]) =>
 
   .page-block-steps li p {
     margin-top: 4px;
+  }
+
+  .media-thumb--managed {
+    object-fit: var(--media-fit, cover);
+    object-position: var(--media-pos-x, 50%) var(--media-pos-y, 50%);
+    transform: scale(var(--media-scale, 1));
+    transform-origin: center;
   }
 
   @media (min-width: 920px) {
