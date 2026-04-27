@@ -52,21 +52,51 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
     </style>
   </head>
   <body>
-    <div id="loginView" class="login-wrap hidden"><form id="loginForm" class="login-card"><h1>Админка СМУ-1</h1><p class="muted">Войдите, чтобы редактировать страницу «Навесы».</p><div class="field"><label>Логин</label><input name="login" required /></div><div class="field"><label>Пароль</label><input name="password" type="password" required /></div><button class="btn" type="submit">Войти</button><p id="loginStatus" class="muted"></p></form></div>
-    <div id="editorView" class="hidden">
+    <div id="loginView" class="login-wrap hidden">
+      <form id="loginForm" class="login-card">
+        <h1>Админка СМУ-1</h1>
+        <p class="muted">Войдите, чтобы редактировать страницу «Навесы».</p>
+        <div class="field"><label>Логин</label><input name="login" required /></div>
+        <div class="field"><label>Пароль</label><input name="password" type="password" required /></div>
+        <button class="btn" type="submit">Войти</button>
+        <p id="loginStatus" class="muted"></p>
+      </form>
+    </div>
+
+    <div id="editorView">
       <header class="topbar">
         <div class="topbar-left"><a class="btn btn-secondary btn-xs" href={adminHome}>← В админку</a><h1>Редактирование: Навесы</h1><span id="dirtyStatus" class="status-clean">Нет изменений</span></div>
         <div class="topbar-right"><button id="saveBtn" class="btn btn-xs" disabled>Сохранить</button><button class="btn btn-secondary btn-xs" id="addSectionBtn">+ Добавить секцию</button><a class="btn btn-secondary btn-xs" href={publicNavesyPath} target="_blank" rel="noreferrer">Открыть публичную страницу</a><a class="btn btn-secondary btn-xs" href={withBase('/admin/content/product-sections/navesy/')}>Технический режим</a><button id="logoutBtn" class="btn btn-secondary btn-xs" type="button">Выйти</button></div>
       </header>
-      <main class="workspace" id="workspace"></main>
+      <main class="workspace" id="workspace">
+        <section class="section">
+          <div class="container">
+            <p class="muted">Загрузка visual editor…</p>
+          </div>
+        </section>
+      </main>
       <input id="uploadInput" type="file" accept="image/*,.svg" class="hidden" />
     </div>
 
     <script type="module" define:vars={{ adminApiBase, baseUrl }}>
       const API_BASE = adminApiBase;
-      const DEFAULT_PLACEHOLDER = 'Фото или рендер навеса будет добавлен позже';
-      const BLOCK_LABELS = { cardGrid: 'Карточки', listPanel: 'Список', process: 'Процесс', factorList: 'Факторы стоимости', mediaText: 'Текст + изображение', notice: 'Вставка', exampleGrid: 'Примеры' };
-      const state = { original: null, draft: null, alert: '', alertError: false, editingHero: null, editingCard: null, editingRow: null, editingStep: null, editingListBlock: null, modal: null, uploadTarget: null };
+      const BLOCK_LABELS = { cardGrid: 'Карточки', listPanel: 'Список', process: 'Процесс', factorList: 'Факторы', mediaText: 'Текст + изображение', notice: 'Вставка', exampleGrid: 'Примеры' };
+      const state = {
+        original: null,
+        draft: null,
+        loading: true,
+        loadError: '',
+        alert: '',
+        alertError: false,
+        editingHero: null,
+        editingCard: null,
+        editingRow: null,
+        editingStep: null,
+        editingListBlock: null,
+        blockSettings: null,
+        uploadTarget: null
+      };
+
       const $ = (id) => document.getElementById(id);
       const clone = (v) => JSON.parse(JSON.stringify(v));
       const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
@@ -152,8 +182,25 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function renderPage() {
-        const blocks = getBlocks();
-        $('workspace').innerHTML = `${state.alert ? `<div class="container" style="padding-top:12px;"><p class="${state.alertError ? 'error' : 'muted'}">${esc(state.alert)}</p></div>` : ''}${renderHero()}${blocks.map((block, idx) => renderBlock(block, idx)).join('')}<section class="section"><div class="container"><details><summary>Показать JSON</summary><pre>${esc(JSON.stringify(state.draft, null, 2))}</pre></details></div></section>${renderModal()}`;
+        const root = $('workspace');
+        if (state.loading) {
+          root.innerHTML = `<section class="section"><div class="container"><p class="muted">Загрузка visual editor…</p></div></section>`;
+          updateStatus();
+          return;
+        }
+        if (state.loadError) {
+          root.innerHTML = `<section class="section"><div class="container"><h2>Редактирование: Навесы</h2><p class="error">Не удалось загрузить данные страницы. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me</p><p class="muted">${esc(state.loadError)}</p></div></section>`;
+          updateStatus();
+          return;
+        }
+        if (!state.draft) {
+          root.innerHTML = `<section class="section"><div class="container"><p class="muted">Данные страницы пока не загружены.</p></div></section>`;
+          updateStatus();
+          return;
+        }
+
+        const blocks = sorted(state.draft.pageBlocks || []);
+        root.innerHTML = `${state.alert ? `<div class="container" style="padding-top:12px;"><p class="${state.alertError ? 'error' : 'muted'}">${esc(state.alert)}</p></div>` : ''}${renderHero()}${blocks.map((block, idx) => block.isActive === false ? renderBlock(block, idx) : renderBlock(block, idx)).join('')}<section class="section"><div class="container"><details><summary>Показать JSON</summary><pre>${esc(JSON.stringify(state.draft, null, 2))}</pre></details></div></section>${renderModal()}`;
         updateStatus();
       }
 
@@ -222,13 +269,110 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         }
       });
 
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.modal) { state.modal = null; renderPage(); } });
-      $('addSectionBtn').addEventListener('click', () => { state.modal = { type:'add-section', data:{ sectionType:'cardGrid' } }; renderPage(); });
-      $('uploadInput').addEventListener('change', async (event) => { const file = event.target.files?.[0]; if (!file || !state.uploadTarget) return; setAlert('Загрузка изображения...'); renderPage(); try { await uploadImage(file, state.uploadTarget); } catch (error) { setAlert(error.message || 'Ошибка загрузки изображения', true); renderPage(); } finally { event.target.value=''; state.uploadTarget = null; } });
-      $('saveBtn').addEventListener('click', async () => { setAlert('Сохраняем...'); renderPage(); try { await api('/content/product-sections/navesy', { method: 'PUT', body: JSON.stringify(state.draft) }); state.original = clone(state.draft); setAlert('Сохранено'); renderPage(); } catch (error) { setAlert(error.message || 'Ошибка сохранения', true); renderPage(); } });
-      $('logoutBtn').addEventListener('click', async () => { await api('/logout', { method:'POST' }).catch(() => {}); showLogin('Вы вышли из админки.'); });
-      $('loginForm').addEventListener('submit', async (event) => { event.preventDefault(); const formData = new FormData(event.currentTarget); try { await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) }); showEditor(); const data = await api('/content/product-sections/navesy'); state.original = clone(data.content); state.draft = clone(data.content); renderPage(); } catch (error) { $('loginStatus').textContent = error.message || 'Ошибка входа'; $('loginStatus').className = 'muted error'; } });
-      async function boot() { try { await api('/me'); showEditor(); const data = await api('/content/product-sections/navesy'); state.original = clone(data.content); state.draft = clone(data.content); renderPage(); } catch { showLogin('Введите логин и пароль.'); } }
+      $('workspace').addEventListener('change', (event) => {
+        if (!event.target.dataset.modal || !state.blockSettings) return;
+        const key = event.target.dataset.modal;
+        if (key === 'isActive') state.blockSettings.isActive = event.target.checked;
+      });
+
+      $('uploadInput').addEventListener('change', async (event) => {
+        const file = event.target.files?.[0];
+        if (!file || !state.uploadTarget) return;
+        setAlert('Загрузка изображения...');
+        renderPage();
+        try {
+          await uploadImage(file, state.uploadTarget);
+        } catch (error) {
+          setAlert(error.message || 'Ошибка загрузки изображения', true);
+          renderPage();
+        } finally {
+          event.target.value = '';
+          state.uploadTarget = null;
+        }
+      });
+
+      $('saveBtn').addEventListener('click', async () => {
+        setAlert('Сохраняем...');
+        renderPage();
+        try {
+          await api('/content/product-sections/navesy', { method: 'PUT', body: JSON.stringify(state.draft) });
+          state.original = clone(state.draft);
+          setAlert('Сохранено');
+          renderPage();
+        } catch (error) {
+          setAlert(error.message || 'Ошибка сохранения', true);
+          renderPage();
+        }
+      });
+
+      $('logoutBtn').addEventListener('click', async () => {
+        await api('/logout', { method: 'POST' }).catch(() => {});
+        showLogin('Вы вышли из админки.');
+      });
+
+      $('loginForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        try {
+          await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
+          state.loading = true;
+          state.loadError = '';
+          showEditor();
+          renderPage();
+          const data = await api('/content/product-sections/navesy');
+          state.original = clone(data.content);
+          state.draft = clone(data.content);
+          state.loading = false;
+          renderPage();
+        } catch (error) {
+          $('loginStatus').textContent = error.message || 'Ошибка входа';
+          $('loginStatus').className = 'muted error';
+        }
+      });
+
+      async function boot() {
+        state.loading = true;
+        renderPage();
+        try {
+          const me = await api('/me');
+          if (!me.authenticated) {
+            state.loading = false;
+            state.loadError = '';
+            showLogin('Введите логин и пароль.');
+            return;
+          }
+          showEditor();
+          const data = await api('/content/product-sections/navesy');
+          state.original = clone(data.content);
+          state.draft = clone(data.content);
+          state.loadError = '';
+          state.loading = false;
+          renderPage();
+        } catch (error) {
+          state.loading = false;
+          state.loadError = error?.message || 'Ошибка загрузки';
+          console.error('[admin/navesy] boot failed', error);
+          showEditor();
+          renderPage();
+        }
+      }
+
+      window.addEventListener('error', (event) => {
+        console.error('[admin/navesy] runtime error', event.error || event.message);
+        state.loading = false;
+        state.loadError = (event.error && event.error.message) || String(event.message || 'Ошибка runtime');
+        showEditor();
+        renderPage();
+      });
+
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('[admin/navesy] unhandled rejection', event.reason);
+        state.loading = false;
+        state.loadError = (event.reason && event.reason.message) || String(event.reason || 'Unhandled rejection');
+        showEditor();
+        renderPage();
+      });
+
       boot();
     </script>
   </body>
