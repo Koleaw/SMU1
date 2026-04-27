@@ -5,6 +5,7 @@ import { withBase } from '../../../utils/withBase';
 const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:8787/api/admin';
 const publicNavesyPath = withBase('/navesy-i-kozyrki/');
 const adminHome = withBase('/admin/');
+const technicalAdminPath = withBase('/admin/technical/');
 const baseUrl = import.meta.env.BASE_URL ?? '/';
 ---
 
@@ -60,7 +61,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       </form>
     </div>
 
-    <div id="editorView" class="hidden">
+    <div id="editorView">
       <header class="topbar">
         <div class="topbar-left">
           <a class="btn btn-secondary btn-xs" href={adminHome}>← В админку</a>
@@ -73,16 +74,28 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           <button id="logoutBtn" class="btn btn-secondary btn-xs" type="button">Выйти</button>
         </div>
       </header>
-      <main class="workspace" id="workspace"></main>
+      <main class="workspace" id="workspace">
+        <section class="section">
+          <div class="container">
+            <p class="muted">Загрузка visual editor…</p>
+          </div>
+        </section>
+      </main>
       <input id="uploadInput" type="file" accept="image/*,.svg" class="hidden" />
     </div>
 
-    <script type="module" define:vars={{ adminApiBase, baseUrl }}>
+    <script type="module" define:vars={{ adminApiBase, baseUrl, adminHome, technicalAdminPath }}>
       const API_BASE = adminApiBase;
       const BLOCK_LABELS = { cardGrid: 'Карточки', listPanel: 'Список', process: 'Процесс', factorList: 'Факторы', mediaText: 'Текст + изображение', notice: 'Вставка', exampleGrid: 'Примеры' };
       const state = {
         original: null,
         draft: null,
+        loading: true,
+        loadError: '',
+        loadErrorDetails: '',
+        loadErrorEndpoint: '',
+        loadErrorStatus: '',
+        authRequired: false,
         alert: '',
         alertError: false,
         editingHero: null,
@@ -91,14 +104,32 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         editingStep: null,
         editingListBlock: null,
         blockSettings: null,
-        uploadTarget: null
+        uploadTarget: null,
+        loadingTimer: null
       };
 
       const $ = (id) => document.getElementById(id);
       const clone = (v) => JSON.parse(JSON.stringify(v));
       const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-      const sorted = (arr = []) => arr.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const safeArray = (value) => (Array.isArray(value) ? value : []);
+      const safeString = (value, fallback = '') => (typeof value === 'string' ? value : fallback);
+      const isActive = (item) => item?.isActive !== false;
+      const sortByOrder = (arr = []) => safeArray(arr).slice().sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0));
+      const sorted = (arr = []) => sortByOrder(arr);
       const renumber = (arr = []) => arr.forEach((item, i) => { if (item && typeof item === 'object' && 'order' in item) item.order = (i + 1) * 10; });
+      const normalizeCardItems = (items) => sortByOrder(items).filter((item) => item && (safeString(item.title) || safeString(item.text)));
+      const normalizeStringItems = (items) =>
+        safeArray(items)
+          .map((item) => {
+            if (typeof item === 'string') return item;
+            if (item && typeof item.text === 'string') return item.text;
+            if (item && typeof item.title === 'string') return item.title;
+            return '';
+          })
+          .map((item) => item.trim())
+          .filter(Boolean);
+      const normalizeListItems = (items) => normalizeStringItems(items);
+      const normalizeSteps = (steps) => sortByOrder(steps).filter((step) => step && safeString(step.title));
       const isDirty = () => JSON.stringify(state.original) !== JSON.stringify(state.draft);
       const toSrc = (src) => {
         if (!src) return '';
@@ -107,6 +138,17 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const clean = src.startsWith('/') ? src.slice(1) : src;
         return `${normBase}${clean}`;
       };
+      const DEFAULT_MEDIA_PLACEHOLDER = 'Фото или рендер будет добавлен позже';
+      const getPlaceholderLabel = (placeholderLabel) => safeString(placeholderLabel, DEFAULT_MEDIA_PLACEHOLDER) || DEFAULT_MEDIA_PLACEHOLDER;
+      const getMediaPath = (mediaPath) => safeString(mediaPath, '');
+
+      function renderMedia(mediaPath, title, placeholderLabel, controls = '') {
+        const safeTitle = esc(safeString(title, 'Изображение'));
+        const resolvedMedia = getMediaPath(mediaPath);
+        const src = resolvedMedia ? `<img class="media-thumb" src="${esc(toSrc(resolvedMedia))}" alt="${safeTitle}" />` : '';
+        const caption = esc(getPlaceholderLabel(placeholderLabel));
+        return `<article class="media-block placeholder placeholder--wide-feature">${src}<p class="media-caption">${caption}</p>${controls}</article>`;
+      }
 
       async function api(path, options = {}) {
         const response = await fetch(`${API_BASE}${path}`, {
@@ -115,8 +157,31 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           headers: options.body instanceof FormData ? {} : { 'Content-Type': 'application/json', ...(options.headers || {}) }
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        if (!response.ok) {
+          const err = new Error(data.error || `HTTP ${response.status}`);
+          err.status = response.status;
+          err.endpoint = path;
+          throw err;
+        }
         return data;
+      }
+
+      async function apiWithTimeout(path, options = {}, timeoutMs = 10000) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          return await api(path, { ...options, signal: controller.signal });
+        } catch (error) {
+          if (error?.name === 'AbortError') {
+            const timeoutError = new Error('Превышено время ожидания ответа API');
+            timeoutError.endpoint = path;
+            timeoutError.status = 'timeout';
+            throw timeoutError;
+          }
+          throw error;
+        } finally {
+          clearTimeout(timeoutId);
+        }
       }
 
       function showLogin(msg = '') {
@@ -135,6 +200,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         state.alertError = error;
       }
 
+      function setLoadError(message, error, endpoint = '') {
+        state.loadError = message;
+        state.loadErrorEndpoint = endpoint;
+        state.loadErrorStatus = error?.status ? String(error.status) : '';
+        state.loadErrorDetails = error?.message || String(error || '');
+        console.error('[admin/navesy] load error', { endpoint, error, apiBase: API_BASE });
+      }
+
       function updateStatus() {
         const dirty = isDirty();
         $('dirtyStatus').textContent = dirty ? 'Есть несохраненные изменения' : 'Нет изменений';
@@ -142,22 +215,46 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         $('saveBtn').disabled = !dirty;
       }
 
+      function startLoadingWatchdog() {
+        if (state.loadingTimer) clearTimeout(state.loadingTimer);
+        state.loadingTimer = setTimeout(() => {
+          if (!state.loading) return;
+          setLoadError(
+            'Не удалось загрузить данные редактора. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me',
+            new Error('Timeout while waiting for editor boot'),
+            'boot-timeout'
+          );
+          state.loading = false;
+          showEditor();
+          renderPage();
+        }, 12000);
+      }
+
+      function stopLoadingWatchdog() {
+        if (state.loadingTimer) {
+          clearTimeout(state.loadingTimer);
+          state.loadingTimer = null;
+        }
+      }
+
       function renderHero() {
-        const d = state.draft;
+        const draftEntry = state.draft || {};
         if (!state.editingHero) {
-          return `<section class="section section--dark hero hero--compact"><div class="container"><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-hero">Редактировать hero</button></div><div class="grid grid-2" style="align-items:center;"><div><h1 class="hero-title" style="color:#fff;">${esc(d.heroTitle)}</h1><p class="hero-description" style="color:#e2ebf3;">${esc(d.heroDescription)}</p></div><article class="media-block placeholder placeholder--wide-feature">${d.image ? `<img class="media-thumb" src="${esc(toSrc(d.image))}" alt="${esc(d.heroTitle)}" />` : ''}${d.placeholderLabel ? `<p class="media-caption">${esc(d.placeholderLabel)}</p>` : ''}<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button></div></article></div></div></section>`;
+          const controls = `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button></div>`;
+          return `<section class="section section--dark hero hero--compact"><div class="container"><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-hero">Редактировать hero</button></div><div class="grid grid-2" style="align-items:center;"><div><h1 class="hero-title" style="color:#fff;">${esc(draftEntry.heroTitle)}</h1><p class="hero-description" style="color:#e2ebf3;">${esc(draftEntry.heroDescription)}</p></div>${renderMedia(draftEntry.image, draftEntry.heroTitle, draftEntry.placeholderLabel, controls)}</div></div></section>`;
         }
 
-        const e = state.editingHero;
-        return `<section class="section section--dark hero hero--compact"><div class="container"><div class="hero-edit-box"><h3 style="margin:0;">Редактирование hero</h3><input class="admin-inline" data-inline="hero-title" value="${esc(e.heroTitle)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="hero-description" placeholder="Описание">${esc(e.heroDescription)}</textarea><input class="admin-inline" data-inline="hero-placeholder" value="${esc(e.placeholderLabel)}" placeholder="Подпись placeholder" /><div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button><button class="btn btn-xs" data-action="save-hero">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-hero">Отмена</button></div></div></div></section>`;
+        const heroDraft = state.editingHero || {};
+        const controls = `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button></div>`;
+        return `<section class="section section--dark hero hero--compact"><div class="container"><div class="hero-edit-box"><h3 style="margin:0;">Редактирование hero</h3><input class="admin-inline" data-inline="hero-title" value="${esc(heroDraft.heroTitle)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="hero-description" placeholder="Описание">${esc(heroDraft.heroDescription)}</textarea><input class="admin-inline" data-inline="hero-placeholder" value="${esc(heroDraft.placeholderLabel)}" placeholder="Подпись placeholder" />${renderMedia(heroDraft.image, heroDraft.heroTitle, heroDraft.placeholderLabel, controls)}<div class="admin-media-controls"><button class="btn btn-xs" data-action="save-hero">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-hero">Отмена</button></div></div></div></section>`;
       }
 
       function renderCardItem(blockIndex, itemIndex, item) {
         const key = `${blockIndex}:${itemIndex}`;
         const editing = state.editingCard && state.editingCard.key === key;
         if (editing) {
-          const d = state.editingCard.draft;
-          return `<article class="card page-block-card item-editor"><input class="admin-inline" data-inline="card-title" value="${esc(d.title)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="card-text" placeholder="Описание">${esc(d.text)}</textarea><label><input type="checkbox" data-inline="card-active" ${d.isActive === false ? '' : 'checked'} /> Активна</label><div class="admin-strip"><button class="btn btn-xs" data-action="save-card" data-block="${blockIndex}" data-item="${itemIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-card">Отмена</button></div></article>`;
+          const cardDraft = state.editingCard.draft || {};
+          return `<article class="card page-block-card item-editor"><input class="admin-inline" data-inline="card-title" value="${esc(cardDraft.title)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="card-text" placeholder="Описание">${esc(cardDraft.text)}</textarea><label><input type="checkbox" data-inline="card-active" ${cardDraft.isActive === false ? '' : 'checked'} /> Активна</label><div class="admin-strip"><button class="btn btn-xs" data-action="save-card" data-block="${blockIndex}" data-item="${itemIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-card">Отмена</button></div></article>`;
         }
 
         return `<article class="card page-block-card"><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-card" data-block="${blockIndex}" data-item="${itemIndex}">Редактировать</button><button class="btn btn-secondary btn-xs" data-action="move-card-up" data-block="${blockIndex}" data-item="${itemIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="move-card-down" data-block="${blockIndex}" data-item="${itemIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-card" data-block="${blockIndex}" data-item="${itemIndex}">${item.isActive === false ? 'Показать' : 'Скрыть'}</button></div></article>`;
@@ -176,38 +273,38 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const key = `${blockIndex}:${stepIndex}`;
         const editing = state.editingStep && state.editingStep.key === key;
         if (editing) {
-          const d = state.editingStep.draft;
-          return `<li class="item-editor"><input class="admin-inline" data-inline="step-title" value="${esc(d.title)}" placeholder="Заголовок шага" /><textarea class="admin-inline admin-inline-area" data-inline="step-text" placeholder="Описание">${esc(d.text || '')}</textarea><label><input type="checkbox" data-inline="step-active" ${d.isActive === false ? '' : 'checked'} /> Активен</label><div class="admin-strip"><button class="btn btn-xs" data-action="save-step" data-block="${blockIndex}" data-item="${stepIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-step">Отмена</button></div></li>`;
+          const stepDraft = state.editingStep.draft || {};
+          return `<li class="item-editor"><input class="admin-inline" data-inline="step-title" value="${esc(stepDraft.title)}" placeholder="Заголовок шага" /><textarea class="admin-inline admin-inline-area" data-inline="step-text" placeholder="Описание">${esc(stepDraft.text || '')}</textarea><label><input type="checkbox" data-inline="step-active" ${stepDraft.isActive === false ? '' : 'checked'} /> Активен</label><div class="admin-strip"><button class="btn btn-xs" data-action="save-step" data-block="${blockIndex}" data-item="${stepIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-step">Отмена</button></div></li>`;
         }
 
         return `<li><strong>${esc(step.title)}</strong>${step.text ? `<p>${esc(step.text)}</p>` : ''}<div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-step" data-block="${blockIndex}" data-item="${stepIndex}">Редактировать</button><button class="btn btn-secondary btn-xs" data-action="move-step-up" data-block="${blockIndex}" data-item="${stepIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="move-step-down" data-block="${blockIndex}" data-item="${stepIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-step" data-block="${blockIndex}" data-item="${stepIndex}">${step.isActive === false ? 'Показать' : 'Скрыть'}</button></div></li>`;
       }
 
       function renderBlock(block, blockIndex) {
+        if (!block || typeof block !== 'object') return '';
         const sectionClass = block.theme === 'dark' ? 'section section--dark navesy-section-compact' : block.theme === 'light' ? 'section section--soft navesy-section-compact' : 'section navesy-section-compact';
-        let content = '';
+        let content = `<article class="card page-block-panel"><p>Неизвестный тип блока: ${esc(block.type || 'undefined')}</p></article>`;
 
         if ((block.type === 'cardGrid' || block.type === 'exampleGrid') && Array.isArray(block.items)) {
-          content = `<div class="page-blocks-grid page-blocks-grid--${block.grid || 'auto'}">${sorted(block.items).map((item, idx) => item.isActive === false ? '' : renderCardItem(blockIndex, idx, item)).join('')}</div><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="add-card" data-block="${blockIndex}">+ Добавить карточку</button></div>`;
+          const cards = normalizeCardItems(block.items);
+          content = `<div class="page-blocks-grid page-blocks-grid--${block.grid || 'auto'}">${cards.map((item, idx) => isActive(item) ? renderCardItem(blockIndex, idx, item) : '').join('')}</div><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="add-card" data-block="${blockIndex}">+ Добавить карточку</button></div>`;
         }
 
         if ((block.type === 'listPanel' || block.type === 'factorList') && Array.isArray(block.items)) {
-          const list = block.items.map((item) => (typeof item === 'string' ? item : item?.text || '')).filter(Boolean);
+          const list = normalizeListItems(block.items);
           const isEditList = state.editingListBlock === blockIndex;
           content = `<ul class="page-blocks-columns page-blocks-columns--${block.columns || 2}">${list.map((text, idx) => isEditList ? renderListItem(blockIndex, idx, text) : `<li>${esc(text)}</li>`).join('')}</ul><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="toggle-list-edit" data-block="${blockIndex}">${isEditList ? 'Готово' : 'Редактировать список'}</button>${isEditList ? `<button class="btn btn-secondary btn-xs" data-action="add-row" data-block="${blockIndex}">+ Добавить строку</button>` : ''}</div>`;
         }
 
         if (block.type === 'process') {
-          const steps = sorted(block.steps || []).filter((step) => step.isActive !== false);
-          const media = block.media ? `<img class="media-thumb" src="${esc(toSrc(block.media))}" alt="${esc(block.title)}" />` : '';
-          const caption = block.placeholderLabel ? `<p class="media-caption">${esc(block.placeholderLabel)}</p>` : '';
-          content = `<div class="page-block-media-layout"><article class="media-block placeholder placeholder--wide-feature">${media}${caption}<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="block-media-${blockIndex}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="edit-block-placeholder" data-block="${blockIndex}">Подпись placeholder</button></div></article><article class="card page-block-panel"><h2>${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}<ol class="page-block-steps">${steps.map((step, idx) => renderStep(blockIndex, idx, step)).join('')}</ol><div class="admin-strip" style="margin-top:8px;"><button class="btn btn-secondary btn-xs" data-action="add-step" data-block="${blockIndex}">+ Добавить шаг</button></div></article></div>`;
+          const steps = normalizeSteps(block.steps).filter(isActive);
+          const controls = `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="block-media-${blockIndex}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="edit-block-placeholder" data-block="${blockIndex}">Подпись placeholder</button></div>`;
+          content = `<div class="page-block-media-layout">${renderMedia(block?.media, block?.title, block?.placeholderLabel, controls)}<article class="card page-block-panel"><h2>${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}<ol class="page-block-steps">${steps.map((step, idx) => renderStep(blockIndex, idx, step)).join('')}</ol><div class="admin-strip" style="margin-top:8px;"><button class="btn btn-secondary btn-xs" data-action="add-step" data-block="${blockIndex}">+ Добавить шаг</button></div></article></div>`;
         }
 
         if (block.type === 'mediaText') {
-          const media = block.media ? `<img class="media-thumb" src="${esc(toSrc(block.media))}" alt="${esc(block.title)}" />` : '';
-          const caption = block.placeholderLabel ? `<p class="media-caption">${esc(block.placeholderLabel)}</p>` : '';
-          content = `<div class="page-block-media-layout"><article class="media-block placeholder placeholder--wide-feature">${media}${caption}<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="block-media-${blockIndex}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="edit-block-placeholder" data-block="${blockIndex}">Подпись placeholder</button></div></article><article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article></div>`;
+          const controls = `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="block-media-${blockIndex}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="edit-block-placeholder" data-block="${blockIndex}">Подпись placeholder</button></div>`;
+          content = `<div class="page-block-media-layout">${renderMedia(block?.media, block?.title, block?.placeholderLabel, controls)}<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article></div>`;
         }
 
         if (block.type === 'notice') {
@@ -225,19 +322,44 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function renderPage() {
         const root = $('workspace');
-        if (!state.draft) { root.innerHTML = ''; return; }
+        try {
+          if (state.loading) {
+            root.innerHTML = `<section class="section"><div class="container"><p class="muted">Загрузка visual editor…</p></div></section>`;
+            updateStatus();
+            return;
+          }
+          if (state.authRequired) {
+            root.innerHTML = `<section class="section"><div class="container"><h2>Требуется вход в админку</h2><p class="muted">Сессия не найдена или истекла.</p><div class="admin-strip"><button class="btn btn-xs" data-action="go-login">Вернуться к входу</button><a class="btn btn-secondary btn-xs" href="${esc(adminHome)}">В админку</a></div></div></section>`;
+            updateStatus();
+            return;
+          }
+          if (state.loadError) {
+            root.innerHTML = `<section class="section"><div class="container"><h2>Ошибка загрузки редактора</h2><p class="error">Не удалось загрузить данные редактора. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me</p><p class="muted">API base: ${esc(API_BASE)}</p><p class="muted">Endpoint: ${esc(state.loadErrorEndpoint || '-')}</p><p class="muted">Status: ${esc(state.loadErrorStatus || '-')}</p><p class="muted">Error: ${esc(state.loadErrorDetails || state.loadError)}</p><div class="admin-strip"><button class="btn btn-xs" data-action="retry-load">Повторить</button><a class="btn btn-secondary btn-xs" href="${esc(adminHome)}">В админку</a><a class="btn btn-secondary btn-xs" href="${esc(technicalAdminPath)}">Открыть техническую диагностику</a></div></div></section>`;
+            updateStatus();
+            return;
+          }
+          if (!state.draft) {
+            root.innerHTML = `<section class="section"><div class="container"><p class="muted">Данные страницы пока не загружены.</p></div></section>`;
+            updateStatus();
+            return;
+          }
 
-        const blocks = sorted(state.draft.pageBlocks || []);
-        root.innerHTML = `${state.alert ? `<div class="container" style="padding-top:12px;"><p class="${state.alertError ? 'error' : 'muted'}">${esc(state.alert)}</p></div>` : ''}${renderHero()}${blocks.map((block, idx) => block.isActive === false ? renderBlock(block, idx) : renderBlock(block, idx)).join('')}<section class="section"><div class="container"><details><summary>Показать JSON</summary><pre>${esc(JSON.stringify(state.draft, null, 2))}</pre></details></div></section>${renderModal()}`;
-        updateStatus();
+          const blocks = sorted(Array.isArray(state.draft.pageBlocks) ? state.draft.pageBlocks : []);
+          root.innerHTML = `${state.alert ? `<div class="container" style="padding-top:12px;"><p class="${state.alertError ? 'error' : 'muted'}">${esc(state.alert)}</p></div>` : ''}${renderHero()}${blocks.map((block, idx) => renderBlock(block, idx)).join('')}<section class="section"><div class="container"><details><summary>Показать JSON</summary><pre>${esc(JSON.stringify(state.draft, null, 2))}</pre></details></div></section>${renderModal()}`;
+          updateStatus();
+        } catch (renderError) {
+          console.error('[admin/navesy] render failed', renderError);
+          setLoadError('Ошибка рендера visual editor', renderError, 'renderPage');
+          root.innerHTML = `<section class="section"><div class="container"><h2>Ошибка рендера редактора</h2><p class="error">${esc(renderError?.message || String(renderError))}</p><div class="admin-strip"><button class="btn btn-xs" data-action="retry-load">Повторить</button><a class="btn btn-secondary btn-xs" href="${esc(adminHome)}">В админку</a><a class="btn btn-secondary btn-xs" href="${esc(technicalAdminPath)}">Техническая диагностика</a></div></div></section>`;
+        }
       }
 
       function getBlock(index) {
-        return sorted(state.draft.pageBlocks || [])[index];
+        return sorted(safeArray(state.draft?.pageBlocks))[index];
       }
 
       function applyBlock(index, updater) {
-        const blocks = sorted(state.draft.pageBlocks || []);
+        const blocks = sorted(safeArray(state.draft?.pageBlocks));
         updater(blocks[index]);
         state.draft.pageBlocks = blocks;
       }
@@ -367,7 +489,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           if (value !== null) { applyBlock(blockIndex, (block) => { block.placeholderLabel = value; }); renderPage(); }
           return;
         }
-        if (action === 'upload-image') { state.uploadTarget = el.dataset.target; $('uploadInput').click(); }
+        if (action === 'upload-image') { setAlert('Временно недоступно', true); renderPage(); return; }
+        if (action === 'retry-load') { boot(); return; }
+        if (action === 'go-login') { showLogin('Введите логин и пароль.'); return; }
       });
 
       $('workspace').addEventListener('input', (event) => {
@@ -420,31 +544,89 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       $('loginForm').addEventListener('submit', async (event) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
+        startLoadingWatchdog();
         try {
-          await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
+          await apiWithTimeout('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
+          state.loading = true;
+          state.loadError = '';
+          state.loadErrorDetails = '';
+          state.loadErrorEndpoint = '';
+          state.loadErrorStatus = '';
+          state.authRequired = false;
           showEditor();
-          const data = await api('/content/product-sections/navesy');
+          renderPage();
+          const data = await apiWithTimeout('/content/product-sections/navesy');
           state.original = clone(data.content);
           state.draft = clone(data.content);
-          renderPage();
+          if (!Array.isArray(state.draft.pageBlocks)) {
+            setLoadError('У страницы нет pageBlocks', new Error('pageBlocks is missing or not an array'), '/content/product-sections/navesy');
+            state.draft.pageBlocks = [];
+          }
         } catch (error) {
+          state.authRequired = true;
           $('loginStatus').textContent = error.message || 'Ошибка входа';
           $('loginStatus').className = 'muted error';
+        } finally {
+          stopLoadingWatchdog();
+          state.loading = false;
+          renderPage();
         }
       });
 
       async function boot() {
+        state.loading = true;
+        state.loadError = '';
+        state.loadErrorDetails = '';
+        state.loadErrorEndpoint = '';
+        state.loadErrorStatus = '';
+        state.authRequired = false;
+        startLoadingWatchdog();
+        renderPage();
         try {
-          await api('/me');
+          const me = await apiWithTimeout('/me');
+          if (!me.authenticated) {
+            state.authRequired = true;
+            showEditor();
+            renderPage();
+            return;
+          }
           showEditor();
-          const data = await api('/content/product-sections/navesy');
+          const data = await apiWithTimeout('/content/product-sections/navesy');
           state.original = clone(data.content);
           state.draft = clone(data.content);
+          if (!Array.isArray(state.draft.pageBlocks)) {
+            setLoadError('У страницы нет pageBlocks', new Error('pageBlocks is missing or not an array'), '/content/product-sections/navesy');
+            state.draft.pageBlocks = [];
+          }
+        } catch (error) {
+          setLoadError(
+            'Не удалось загрузить данные редактора. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me',
+            error,
+            error?.endpoint || '/me'
+          );
+          showEditor();
+        } finally {
+          stopLoadingWatchdog();
+          state.loading = false;
           renderPage();
-        } catch {
-          showLogin('Введите логин и пароль.');
         }
       }
+
+      window.addEventListener('error', (event) => {
+        console.error('[admin/navesy] runtime error', event.error || event.message);
+        state.loading = false;
+        setLoadError('Ошибка выполнения скрипта редактора', event.error || event.message, 'runtime');
+        showEditor();
+        renderPage();
+      });
+
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('[admin/navesy] unhandled rejection', event.reason);
+        state.loading = false;
+        setLoadError('Необработанная ошибка редактора', event.reason, 'unhandledrejection');
+        showEditor();
+        renderPage();
+      });
 
       boot();
     </script>
