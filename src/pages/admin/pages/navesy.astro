@@ -96,7 +96,22 @@ const publicNavesyPath = withBase('/navesy-i-kozyrki/');
       <section class="panel hidden" id="errorView"></section>
       <section class="panel hidden" id="authView">
         <h2>Требуется вход в админку</h2>
-        <a class="btn btn-secondary" href={adminHome}>В админку</a>
+        <p class="muted">Войдите прямо на этой странице или перейдите в админку.</p>
+        <form id="authLoginForm">
+          <div class="field">
+            <label for="authLogin">Логин</label>
+            <input id="authLogin" name="login" required />
+          </div>
+          <div class="field">
+            <label for="authPassword">Пароль</label>
+            <input id="authPassword" type="password" name="password" required />
+          </div>
+          <div class="topbar-group">
+            <button class="btn" type="submit">Войти</button>
+            <a class="btn btn-secondary" href={adminHome}>В админку</a>
+          </div>
+          <p id="authLoginStatus" class="muted"></p>
+        </form>
       </section>
       <section class="hidden" id="editorView">
         <div id="heroSection" class="panel"></div>
@@ -118,6 +133,8 @@ const publicNavesyPath = withBase('/navesy-i-kozyrki/');
       const loadingText = document.getElementById('loadingText');
       const errorView = document.getElementById('errorView');
       const authView = document.getElementById('authView');
+      const authLoginForm = document.getElementById('authLoginForm');
+      const authLoginStatus = document.getElementById('authLoginStatus');
       const editorView = document.getElementById('editorView');
       const heroSection = document.getElementById('heroSection');
       const blocksSection = document.getElementById('blocksSection');
@@ -195,6 +212,9 @@ const publicNavesyPath = withBase('/navesy-i-kozyrki/');
         errorView.classList.add('hidden');
         editorView.classList.add('hidden');
         authView.classList.remove('hidden');
+        if (authLoginStatus) {
+          authLoginStatus.textContent = 'Введите логин и пароль.';
+        }
       }
 
       function showEditor() {
@@ -707,6 +727,25 @@ const publicNavesyPath = withBase('/navesy-i-kozyrki/');
       logoutBtn.addEventListener('click', logout);
       blocksSection.addEventListener('change', handleBlocksChange);
       blocksSection.addEventListener('click', handleBlocksClick);
+      authLoginForm?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(authLoginForm);
+        if (authLoginStatus) authLoginStatus.textContent = 'Выполняем вход…';
+        try {
+          await requestJson('/login', {
+            method: 'POST',
+            body: JSON.stringify({
+              login: formData.get('login'),
+              password: formData.get('password')
+            })
+          });
+          await initialize();
+        } catch (loginError) {
+          if (authLoginStatus) {
+            authLoginStatus.textContent = loginError?.message || 'Ошибка входа.';
+          }
+        }
+      });
 
       window.addEventListener('error', (event) => {
         console.error('[navesy-editor] runtime error', event.error || event.message);
