@@ -99,7 +99,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         editingStep: null,
         editingListBlock: null,
         blockSettings: null,
-        uploadTarget: null
+        uploadTarget: null,
+        loadingTimer: null
       };
 
       const $ = (id) => document.getElementById(id);
@@ -207,6 +208,28 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         $('dirtyStatus').textContent = dirty ? 'Есть несохраненные изменения' : 'Нет изменений';
         $('dirtyStatus').className = dirty ? 'status-dirty' : 'status-clean';
         $('saveBtn').disabled = !dirty;
+      }
+
+      function startLoadingWatchdog() {
+        if (state.loadingTimer) clearTimeout(state.loadingTimer);
+        state.loadingTimer = setTimeout(() => {
+          if (!state.loading) return;
+          setLoadError(
+            'Не удалось загрузить данные редактора. Проверьте, что запущен npm run admin:api и доступен http://127.0.0.1:8787/api/admin/me',
+            new Error('Timeout while waiting for editor boot'),
+            'boot-timeout'
+          );
+          state.loading = false;
+          showEditor();
+          renderPage();
+        }, 12000);
+      }
+
+      function stopLoadingWatchdog() {
+        if (state.loadingTimer) {
+          clearTimeout(state.loadingTimer);
+          state.loadingTimer = null;
+        }
       }
 
       function renderHero() {
@@ -420,6 +443,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           const map = { cardGrid: { type:'cardGrid', title:'Новая секция', theme:'dark', grid:'auto', order:nextOrder, isActive:true, items:[] }, listPanel: { type:'listPanel', title:'Новая секция', theme:'light', columns:2, order:nextOrder, isActive:true, items:[] }, process: { type:'process', title:'Новая секция', theme:'light', mediaPosition:'right', placeholderLabel:DEFAULT_PLACEHOLDER, order:nextOrder, isActive:true, steps:[] }, factorList: { type:'factorList', title:'Новая секция', theme:'graphite', columns:2, order:nextOrder, isActive:true, items:[] }, mediaText: { type:'mediaText', title:'Новая секция', text:'', theme:'light', mediaPosition:'right', placeholderLabel:DEFAULT_PLACEHOLDER, order:nextOrder, isActive:true }, notice: { type:'notice', title:'Новая вставка', text:'', theme:'light', order:nextOrder, isActive:true }, exampleGrid: { type:'exampleGrid', title:'Новая секция', theme:'light', grid:'auto', order:nextOrder, isActive:true, items:[] } };
           setBlocks([...getBlocks(), map[type]]); state.modal = null; renderPage(); return;
         }
+        if (action === 'clear-block-media') { applyBlock(blockIndex, (block) => { block.media = ''; }); renderPage(); return; }
+        if (action === 'edit-block-placeholder') {
+          const value = prompt('Подпись placeholder', getBlock(blockIndex).placeholderLabel || '');
+          if (value !== null) { applyBlock(blockIndex, (block) => { block.placeholderLabel = value; }); renderPage(); }
+          return;
+        }
         if (action === 'upload-image') { setAlert('Временно недоступно', true); renderPage(); return; }
         if (action === 'retry-load') { boot(); return; }
         if (action === 'go-login') { showLogin('Введите логин и пароль.'); return; }
@@ -475,6 +504,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       $('loginForm').addEventListener('submit', async (event) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
+        startLoadingWatchdog();
         try {
           await apiWithTimeout('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
           state.loading = true;
@@ -497,6 +527,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           $('loginStatus').textContent = error.message || 'Ошибка входа';
           $('loginStatus').className = 'muted error';
         } finally {
+          stopLoadingWatchdog();
           state.loading = false;
           renderPage();
         }
@@ -509,6 +540,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         state.loadErrorEndpoint = '';
         state.loadErrorStatus = '';
         state.authRequired = false;
+        startLoadingWatchdog();
         renderPage();
         try {
           const me = await apiWithTimeout('/me');
@@ -534,6 +566,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           );
           showEditor();
         } finally {
+          stopLoadingWatchdog();
           state.loading = false;
           renderPage();
         }
