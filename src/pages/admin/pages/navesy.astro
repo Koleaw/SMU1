@@ -22,10 +22,15 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .field { display: grid; gap: 6px; margin-bottom: 12px; }
       .field input, .field textarea, .field select { width: 100%; padding: 10px 12px; border: 1px solid #c6d4e2; border-radius: var(--radius-base); font: inherit; }
       .field textarea { min-height: 90px; resize: vertical; }
-      .btn { padding: 7px 11px; font-size: 14px; }
+      .btn { padding: 7px 11px; font-size: 14px; border-radius: 8px; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
       .btn-secondary { border: 1px solid var(--color-border); background: #fff; color: var(--color-text-primary); }
       .btn-danger { background: #a83737; color: #fff; border: 1px solid #a83737; }
-      .btn-xs { font-size: 12px; padding: 5px 8px; }
+      .btn-xs { font-size: 12px; padding: 5px 8px; font-weight: 600; }
+      .btn-secondary.btn-xs { background: #f5f9ff; border-color: #b9cbe0; color: #27415b; }
+      .btn-secondary.btn-xs:hover { background: #e9f2fc; border-color: #93afcb; }
+      .btn-primary.btn-xs { box-shadow: 0 1px 0 rgb(6 16 27 / 18%); }
+      .btn-danger.btn-xs:hover { background: #942f2f; border-color: #942f2f; }
+      .btn:focus-visible { outline: 2px solid #6f97bf; outline-offset: 1px; }
       .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 70; background: #fff; border-bottom: 1px solid #d8e3ed; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       .topbar h1 { margin: 0; font-size: 19px; }
       .topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -39,12 +44,28 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-inline { width: 100%; border: 1px solid #9db7d1; border-radius: var(--radius-base); padding: 8px 10px; font: inherit; background: #fff; }
       .admin-inline-area { min-height: 80px; resize: vertical; }
       .item-editor { border: 1px solid #c9d8e8; border-radius: var(--radius-max); background: #f7fbff; padding: 10px; display: grid; gap: 8px; }
-      .hero-edit-box { border: 1px solid #92acca; border-radius: var(--radius-max); background: rgb(255 255 255 / 92%); padding: 10px; display: grid; gap: 8px; }
+      .hero-edit-box { border: 1px solid #92acca; border-radius: var(--radius-max); background: rgb(255 255 255 / 92%); padding: 14px; display: grid; gap: 10px; max-width: 860px; }
+      .hero-edit-title { margin: 0; color: #1f3449; font-size: 18px; }
+      .hero-edit-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+      .hero-edit-grid .field { margin: 0; }
+      .hero-edit-grid .field--full { grid-column: 1 / -1; }
+      .hero-edit-grid label { font-size: 12px; font-weight: 600; color: #324e68; letter-spacing: .01em; }
+      .hero-edit-grid .admin-inline { border-color: #a9bfd5; background: #fff; }
       .admin-media-controls { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
       .modal-backdrop { position: fixed; inset: 0; background: rgb(6 16 27 / 42%); z-index: 80; display: grid; place-items: center; padding: 16px; }
-      .modal { width: min(620px, 100%); max-height: 90vh; overflow: auto; border-radius: 14px; border: 1px solid #d5e2ef; background: #fff; padding: 16px; }
-      .media-preview { width: min(100%, 460px); margin: 0 auto 10px; border: 1px solid var(--color-border); border-radius: var(--radius-base); overflow: hidden; background: #fff; }
-      .media-preview img { width: 100%; aspect-ratio: 16 / 10; object-fit: var(--fit, cover); object-position: var(--x, 50%) var(--y, 50%); transform: scale(var(--scale, 1)); transform-origin: center; }
+      .modal { width: min(760px, 100%); max-height: 90vh; overflow: auto; border-radius: 14px; border: 1px solid #d5e2ef; background: #fff; padding: 18px; }
+      .frame-modal { display: grid; gap: 14px; }
+      .frame-modal-layout { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+      .frame-preview-wrap { background: #f2f7fd; border: 1px solid #d5e2ef; border-radius: 12px; padding: 10px; }
+      .media-preview { width: 100%; aspect-ratio: 16 / 10; border: 1px solid #b7cbe0; border-radius: var(--radius-base); overflow: hidden; background: #fff; position: relative; }
+      .media-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: var(--fit, cover); object-position: var(--x, 50%) var(--y, 50%); transform: scale(var(--scale, 1)); transform-origin: center; }
+      .frame-controls { border: 1px solid #d5e2ef; border-radius: 12px; background: #fff; padding: 12px; display: grid; gap: 8px; align-content: start; }
+      .range-row { display: grid; gap: 6px; }
+      .range-row-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: #36506a; }
+      .range-value { font-variant-numeric: tabular-nums; color: #1f3449; font-weight: 600; }
+      @media (min-width: 900px) {
+        .frame-modal-layout { grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr); align-items: start; }
+      }
       .factor-item { display: grid; gap: 8px; border: 1px solid #c9d8e8; border-radius: var(--radius-base); padding: 10px; background: #fff; }
       .block-create { margin: 20px 0; padding: 14px; background: #fff; border: 1px solid #d5e2ef; border-radius: var(--radius-max); }
       pre { margin: 0; font-size: 12px; background: #0f1720; color: #d4e3f5; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
@@ -173,7 +194,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         }
 
         const e = state.editingHero;
-        return `<section class="section section--dark hero hero--compact"><div class="container"><div class="hero-edit-box"><h3 style="margin:0;">Редактирование hero</h3><input class="admin-inline" data-inline="hero-title" value="${esc(e.heroTitle)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="hero-description" placeholder="Описание">${esc(e.heroDescription)}</textarea><input class="admin-inline" data-inline="hero-placeholder" value="${esc(e.placeholderLabel)}" placeholder="Подпись placeholder" /><div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="open-frame-settings" data-target="hero-image">Настроить кадр</button><button class="btn btn-primary btn-xs" data-action="save-hero">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-hero">Отмена</button></div></div></div></section>`;
+        return `<section class="section section--dark hero hero--compact"><div class="container"><div class="hero-edit-box"><h3 class="hero-edit-title">Редактирование hero</h3><div class="hero-edit-grid"><div class="field"><label>Заголовок</label><input class="admin-inline" data-inline="hero-title" value="${esc(e.heroTitle)}" placeholder="Заголовок" /></div><div class="field"><label>Путь изображения</label><input class="admin-inline" value="${esc(e.image || '')}" readonly placeholder="Путь изображения" /></div><div class="field field--full"><label>Описание</label><textarea class="admin-inline admin-inline-area" data-inline="hero-description" placeholder="Описание">${esc(e.heroDescription)}</textarea></div><div class="field field--full"><label>Подпись placeholder</label><input class="admin-inline" data-inline="hero-placeholder" value="${esc(e.placeholderLabel)}" placeholder="Подпись placeholder" /></div></div><div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="open-frame-settings" data-target="hero-image">Настроить кадр</button><button class="btn btn-primary btn-xs" data-action="save-hero">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-hero">Отмена</button></div></div></div></section>`;
       }
 
       function renderCardItem(blockIndex, itemIndex, item) {
@@ -246,7 +267,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       function renderFrameModal() {
         if (!state.frameSettings) return '';
         const f = state.frameSettings;
-        return `<div class="modal-backdrop" data-modal="frame-settings"><div class="modal" role="dialog" aria-modal="true"><h3 style="margin-top:0;">Настроить кадр</h3><div class="media-preview"><img src="${esc(toSrc(f.src || ''))}" alt="preview" style="${esc(getMediaStyle(f.view))}" /></div><div class="field"><label>Fit</label><select data-frame="fit"><option value="cover" ${f.view.fit === 'cover' ? 'selected' : ''}>cover</option><option value="contain" ${f.view.fit === 'contain' ? 'selected' : ''}>contain</option></select></div><div class="field"><label>Scale (1..3)</label><input data-frame="scale" type="range" min="1" max="3" step="0.05" value="${esc(f.view.scale)}" /><small>${esc(f.view.scale)}</small></div><div class="field"><label>positionX (0..100)</label><input data-frame="positionX" type="range" min="0" max="100" step="1" value="${esc(f.view.positionX)}" /><small>${esc(f.view.positionX)}%</small></div><div class="field"><label>positionY (0..100)</label><input data-frame="positionY" type="range" min="0" max="100" step="1" value="${esc(f.view.positionY)}" /><small>${esc(f.view.positionY)}%</small></div><div class="admin-strip" style="margin-top:12px;"><button class="btn btn-primary btn-xs" data-action="save-frame">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-frame">Отмена</button></div></div></div>`;
+        return `<div class="modal-backdrop" data-modal="frame-settings"><div class="modal frame-modal" role="dialog" aria-modal="true"><h3 style="margin:0;">Настроить кадр</h3><div class="frame-modal-layout"><div class="frame-preview-wrap"><div class="media-preview"><img src="${esc(toSrc(f.src || ''))}" alt="preview" style="${esc(getMediaStyle(f.view))}" /></div></div><div class="frame-controls"><div class="field"><label>Fit</label><select data-frame="fit"><option value="cover" ${f.view.fit === 'cover' ? 'selected' : ''}>cover</option><option value="contain" ${f.view.fit === 'contain' ? 'selected' : ''}>contain</option></select></div><div class="range-row"><div class="range-row-head"><label>Scale (1..3)</label><span class="range-value">${esc(Number(f.view.scale).toFixed(2))}</span></div><input data-frame="scale" type="range" min="1" max="3" step="0.05" value="${esc(f.view.scale)}" /></div><div class="range-row"><div class="range-row-head"><label>positionX (0..100)</label><span class="range-value">${esc(Math.round(f.view.positionX))}%</span></div><input data-frame="positionX" type="range" min="0" max="100" step="1" value="${esc(f.view.positionX)}" /></div><div class="range-row"><div class="range-row-head"><label>positionY (0..100)</label><span class="range-value">${esc(Math.round(f.view.positionY))}%</span></div><input data-frame="positionY" type="range" min="0" max="100" step="1" value="${esc(f.view.positionY)}" /></div><div class="admin-strip" style="margin-top:12px;"><button class="btn btn-primary btn-xs" data-action="save-frame">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-frame">Отмена</button></div></div></div></div></div>`;
       }
 
       function renderAddSectionPanel() {
@@ -282,14 +303,34 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function openFrameSettings(target) {
         if (target === 'hero-image') {
-          state.frameSettings = { target, src: state.draft.image || '', view: getMediaView(state.draft.imageView) };
+          const startView = getMediaView(state.draft.imageView);
+          state.frameSettings = { target, src: state.draft.image || '', view: clone(startView), initialView: clone(startView) };
           return;
         }
         if (target.startsWith('block-media-')) {
           const index = Number(target.replace('block-media-', ''));
           const block = getBlock(index);
-          state.frameSettings = { target, src: block?.media || '', view: getMediaView(block?.mediaView) };
+          const startView = getMediaView(block?.mediaView);
+          state.frameSettings = { target, src: block?.media || '', view: clone(startView), initialView: clone(startView) };
         }
+      }
+
+      function applyFrameViewToDraft(target, view) {
+        const safeView = getMediaView(view);
+        if (target === 'hero-image') {
+          state.draft.imageView = clone(safeView);
+          return;
+        }
+        if (target.startsWith('block-media-')) {
+          const index = Number(target.replace('block-media-', ''));
+          applyBlock(index, (block) => { block.mediaView = clone(safeView); });
+        }
+      }
+
+      function closeFrameSettings(rollback = false) {
+        if (!state.frameSettings) return;
+        if (rollback) applyFrameViewToDraft(state.frameSettings.target, state.frameSettings.initialView);
+        state.frameSettings = null;
       }
 
       async function uploadImage(file, target) {
@@ -310,7 +351,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function closeModals() {
         state.blockSettings = null;
-        state.frameSettings = null;
+        closeFrameSettings(true);
       }
 
       $('workspace').addEventListener('input', (event) => {
@@ -333,6 +374,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           if (frameKey === 'scale') state.frameSettings.view.scale = clamp(event.target.value, 1, 3);
           if (frameKey === 'positionX') state.frameSettings.view.positionX = clamp(event.target.value, 0, 100);
           if (frameKey === 'positionY') state.frameSettings.view.positionY = clamp(event.target.value, 0, 100);
+          applyFrameViewToDraft(state.frameSettings.target, state.frameSettings.view);
           renderPage();
         }
       });
@@ -412,15 +454,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (action === 'clear-block-media') { applyBlock(blockIndex, (block) => { block.media = ''; }); renderPage(); return; }
         if (action === 'upload-image') { state.uploadTarget = el.dataset.target; $('uploadInput').click(); return; }
         if (action === 'open-frame-settings') { openFrameSettings(el.dataset.target); renderPage(); return; }
-        if (action === 'cancel-frame') { state.frameSettings = null; renderPage(); return; }
+        if (action === 'cancel-frame') { closeFrameSettings(true); renderPage(); return; }
         if (action === 'save-frame') {
-          const view = getMediaView(state.frameSettings.view);
-          if (state.frameSettings.target === 'hero-image') state.draft.imageView = view;
-          if (state.frameSettings.target.startsWith('block-media-')) {
-            const index = Number(state.frameSettings.target.replace('block-media-', ''));
-            applyBlock(index, (block) => { block.mediaView = view; });
-          }
-          state.frameSettings = null;
+          applyFrameViewToDraft(state.frameSettings.target, state.frameSettings.view);
+          closeFrameSettings(false);
           renderPage();
           return;
         }
