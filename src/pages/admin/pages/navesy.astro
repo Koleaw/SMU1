@@ -15,16 +15,16 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
     <title>Редактирование: Навесы — Админка СМУ-1</title>
     <style>
       * { box-sizing: border-box; }
-      body { margin: 0; background: #f4f7fb; font-family: Inter, system-ui, sans-serif; }
+      body { margin: 0; background: #f4f7fb; font-family: var(--font-body); }
       .hidden { display: none !important; }
       .login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-      .login-card { width: min(440px, 100%); border-radius: 14px; border: 1px solid #d6e0ea; background: #fff; padding: 24px; }
+      .login-card { width: min(440px, 100%); border-radius: var(--radius-max); border: 1px solid #d6e0ea; background: #fff; padding: 24px; }
       .field { display: grid; gap: 6px; margin-bottom: 12px; }
-      .field input, .field textarea, .field select { width: 100%; padding: 10px 12px; border: 1px solid #c6d4e2; border-radius: 8px; font: inherit; }
+      .field input, .field textarea, .field select { width: 100%; padding: 10px 12px; border: 1px solid #c6d4e2; border-radius: var(--radius-base); font: inherit; }
       .field textarea { min-height: 90px; resize: vertical; }
-      .btn { border: 1px solid #0d6d50; border-radius: 8px; background: #0d6d50; color: #fff; padding: 8px 12px; font: inherit; font-weight: 700; cursor: pointer; }
-      .btn-secondary { border-color: #c4d4e4; background: #fff; color: #31495f; }
-      .btn-danger { border-color: #be4646; background: #be4646; }
+      .btn { padding: 7px 11px; font-size: 14px; }
+      .btn-secondary { border: 1px solid var(--color-border); background: #fff; color: var(--color-text-primary); }
+      .btn-danger { background: #a83737; color: #fff; border: 1px solid #a83737; }
       .btn-xs { font-size: 12px; padding: 5px 8px; }
       .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 70; background: #fff; border-bottom: 1px solid #d8e3ed; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       .topbar h1 { margin: 0; font-size: 19px; }
@@ -33,16 +33,20 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .status-dirty { color: #9e500f; font-size: 14px; font-weight: 700; }
       .workspace { padding-top: 70px; }
       .admin-strip { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
-      .admin-block { margin: 12px 0; border: 1px dashed #89a8c6; border-radius: 10px; overflow: hidden; }
+      .admin-block { margin: 12px 0; border: 1px dashed #89a8c6; border-radius: var(--radius-max); overflow: hidden; }
       .admin-block-head { background: #f2f8ff; border-bottom: 1px solid #d5e4f3; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
       .badge { border-radius: 999px; background: #e5eef8; color: #36506a; padding: 3px 8px; font-size: 12px; }
-      .admin-inline { width: 100%; border: 1px solid #9db7d1; border-radius: 8px; padding: 8px 10px; font: inherit; background: #fff; }
+      .admin-inline { width: 100%; border: 1px solid #9db7d1; border-radius: var(--radius-base); padding: 8px 10px; font: inherit; background: #fff; }
       .admin-inline-area { min-height: 80px; resize: vertical; }
-      .item-editor { border: 1px solid #c9d8e8; border-radius: 10px; background: #f7fbff; padding: 10px; display: grid; gap: 8px; }
-      .hero-edit-box { border: 1px solid #92acca; border-radius: 10px; background: rgb(255 255 255 / 92%); padding: 10px; display: grid; gap: 8px; }
+      .item-editor { border: 1px solid #c9d8e8; border-radius: var(--radius-max); background: #f7fbff; padding: 10px; display: grid; gap: 8px; }
+      .hero-edit-box { border: 1px solid #92acca; border-radius: var(--radius-max); background: rgb(255 255 255 / 92%); padding: 10px; display: grid; gap: 8px; }
       .admin-media-controls { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
       .modal-backdrop { position: fixed; inset: 0; background: rgb(6 16 27 / 42%); z-index: 80; display: grid; place-items: center; padding: 16px; }
-      .modal { width: min(560px, 100%); max-height: 90vh; overflow: auto; border-radius: 14px; border: 1px solid #d5e2ef; background: #fff; padding: 16px; }
+      .modal { width: min(620px, 100%); max-height: 90vh; overflow: auto; border-radius: 14px; border: 1px solid #d5e2ef; background: #fff; padding: 16px; }
+      .media-preview { width: min(100%, 460px); margin: 0 auto 10px; border: 1px solid var(--color-border); border-radius: var(--radius-base); overflow: hidden; background: #fff; }
+      .media-preview img { width: 100%; aspect-ratio: 16 / 10; object-fit: var(--fit, cover); object-position: var(--x, 50%) var(--y, 50%); transform: scale(var(--scale, 1)); transform-origin: center; }
+      .factor-item { display: grid; gap: 8px; border: 1px solid #c9d8e8; border-radius: var(--radius-base); padding: 10px; background: #fff; }
+      .block-create { margin: 20px 0; padding: 14px; background: #fff; border: 1px solid #d5e2ef; border-radius: var(--radius-max); }
       pre { margin: 0; font-size: 12px; background: #0f1720; color: #d4e3f5; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
       .muted { color: #60758a; }
       .error { color: #b13838; }
@@ -55,7 +59,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         <p class="muted">Войдите, чтобы редактировать страницу «Навесы».</p>
         <div class="field"><label>Логин</label><input name="login" required /></div>
         <div class="field"><label>Пароль</label><input name="password" type="password" required /></div>
-        <button class="btn" type="submit">Войти</button>
+        <button class="btn btn-primary" type="submit">Войти</button>
         <p id="loginStatus" class="muted"></p>
       </form>
     </div>
@@ -68,7 +72,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           <span id="dirtyStatus" class="status-clean">Нет изменений</span>
         </div>
         <div class="topbar-right">
-          <button id="saveBtn" class="btn btn-xs" disabled>Сохранить</button>
+          <button id="saveBtn" class="btn btn-primary btn-xs" disabled>Сохранить</button>
           <a class="btn btn-secondary btn-xs" href={publicNavesyPath} target="_blank" rel="noreferrer">Открыть публичную страницу</a>
           <button id="logoutBtn" class="btn btn-secondary btn-xs" type="button">Выйти</button>
         </div>
@@ -80,6 +84,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
     <script type="module" define:vars={{ adminApiBase, baseUrl }}>
       const API_BASE = adminApiBase;
       const BLOCK_LABELS = { cardGrid: 'Карточки', listPanel: 'Список', process: 'Процесс', factorList: 'Факторы', mediaText: 'Текст + изображение', notice: 'Вставка', exampleGrid: 'Примеры' };
+      const SECTION_TYPES = ['cardGrid', 'listPanel', 'process', 'factorList', 'mediaText', 'notice', 'exampleGrid'];
+      const DEFAULT_MEDIA_VIEW = { fit: 'cover', positionX: 50, positionY: 50, scale: 1 };
+      const DEFAULT_PLACEHOLDER = 'Фото или рендер будет добавлен позже';
       const state = {
         original: null,
         draft: null,
@@ -91,6 +98,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         editingStep: null,
         editingListBlock: null,
         blockSettings: null,
+        frameSettings: null,
         uploadTarget: null
       };
 
@@ -100,12 +108,23 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       const sorted = (arr = []) => arr.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       const renumber = (arr = []) => arr.forEach((item, i) => { if (item && typeof item === 'object' && 'order' in item) item.order = (i + 1) * 10; });
       const isDirty = () => JSON.stringify(state.original) !== JSON.stringify(state.draft);
+      const getBlocks = () => sorted(state.draft?.pageBlocks || []);
+      const setBlocks = (blocks) => { state.draft.pageBlocks = blocks; };
       const toSrc = (src) => {
         if (!src) return '';
         if (/^https?:\/\//.test(src)) return src;
         const normBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
         const clean = src.startsWith('/') ? src.slice(1) : src;
         return `${normBase}${clean}`;
+      };
+      const clamp = (num, min, max) => Math.min(max, Math.max(min, Number(num) || min));
+      const normalizeCards = (items = []) => sorted(items || []);
+      const normalizeSteps = (steps = []) => sorted(steps || []);
+      const normalizeListItems = (items = []) => (items || []).map((item) => (typeof item === 'string' ? item : { ...item }));
+      const getMediaView = (view) => ({ ...DEFAULT_MEDIA_VIEW, ...(view || {}) });
+      const getMediaStyle = (view) => {
+        const safe = getMediaView(view);
+        return `--fit:${safe.fit};--x:${safe.positionX}%;--y:${safe.positionY}%;--scale:${safe.scale};object-fit:${safe.fit};object-position:${safe.positionX}% ${safe.positionY}%;transform:scale(${safe.scale});transform-origin:center;`;
       };
 
       async function api(path, options = {}) {
@@ -124,17 +143,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         $('editorView').classList.add('hidden');
         $('loginStatus').textContent = msg;
       }
-
       function showEditor() {
         $('loginView').classList.add('hidden');
         $('editorView').classList.remove('hidden');
       }
-
       function setAlert(text = '', error = false) {
         state.alert = text;
         state.alertError = error;
       }
-
       function updateStatus() {
         const dirty = isDirty();
         $('dirtyStatus').textContent = dirty ? 'Есть несохраненные изменения' : 'Нет изменений';
@@ -142,14 +158,22 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         $('saveBtn').disabled = !dirty;
       }
 
+      function renderMedia(src, alt, view, caption = '', uploadTarget = '', blockIndex = null) {
+        const mediaControls = uploadTarget
+          ? `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="${uploadTarget}">Заменить фото</button>${blockIndex !== null ? `<button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button>` : `<button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button>`}<button class="btn btn-secondary btn-xs" data-action="open-frame-settings" data-target="${uploadTarget}">Настроить кадр</button></div>`
+          : '';
+        return `<article class="media-block placeholder placeholder--wide-feature">${src ? `<img class="media-thumb" src="${esc(toSrc(src))}" alt="${esc(alt)}" style="${esc(getMediaStyle(view))}" />` : ''}${caption ? `<p class="media-caption">${esc(caption)}</p>` : `<p class="media-caption">${DEFAULT_PLACEHOLDER}</p>`}${mediaControls}</article>`;
+      }
+
       function renderHero() {
         const d = state.draft;
+        const view = d.imageView || DEFAULT_MEDIA_VIEW;
         if (!state.editingHero) {
-          return `<section class="section section--dark hero hero--compact"><div class="container"><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-hero">Редактировать hero</button></div><div class="grid grid-2" style="align-items:center;"><div><h1 class="hero-title" style="color:#fff;">${esc(d.heroTitle)}</h1><p class="hero-description" style="color:#e2ebf3;">${esc(d.heroDescription)}</p></div><article class="media-block placeholder placeholder--wide-feature">${d.image ? `<img class="media-thumb" src="${esc(toSrc(d.image))}" alt="${esc(d.heroTitle)}" />` : ''}${d.placeholderLabel ? `<p class="media-caption">${esc(d.placeholderLabel)}</p>` : ''}<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button></div></article></div></div></section>`;
+          return `<section class="section section--dark hero hero--compact"><div class="container"><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-hero">Редактировать hero</button><button class="btn btn-secondary btn-xs" data-action="open-frame-settings" data-target="hero-image">Настроить кадр</button></div><div class="grid grid-2" style="align-items:center;"><div><h1 class="hero-title" style="color:#fff;">${esc(d.heroTitle)}</h1><p class="hero-description" style="color:#e2ebf3;">${esc(d.heroDescription)}</p></div>${renderMedia(d.image, d.heroTitle, view, d.placeholderLabel, 'hero-image')}</div></div></section>`;
         }
 
         const e = state.editingHero;
-        return `<section class="section section--dark hero hero--compact"><div class="container"><div class="hero-edit-box"><h3 style="margin:0;">Редактирование hero</h3><input class="admin-inline" data-inline="hero-title" value="${esc(e.heroTitle)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="hero-description" placeholder="Описание">${esc(e.heroDescription)}</textarea><input class="admin-inline" data-inline="hero-placeholder" value="${esc(e.placeholderLabel)}" placeholder="Подпись placeholder" /><div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button><button class="btn btn-xs" data-action="save-hero">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-hero">Отмена</button></div></div></div></section>`;
+        return `<section class="section section--dark hero hero--compact"><div class="container"><div class="hero-edit-box"><h3 style="margin:0;">Редактирование hero</h3><input class="admin-inline" data-inline="hero-title" value="${esc(e.heroTitle)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="hero-description" placeholder="Описание">${esc(e.heroDescription)}</textarea><input class="admin-inline" data-inline="hero-placeholder" value="${esc(e.placeholderLabel)}" placeholder="Подпись placeholder" /><div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="open-frame-settings" data-target="hero-image">Настроить кадр</button><button class="btn btn-primary btn-xs" data-action="save-hero">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-hero">Отмена</button></div></div></div></section>`;
       }
 
       function renderCardItem(blockIndex, itemIndex, item) {
@@ -157,19 +181,20 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const editing = state.editingCard && state.editingCard.key === key;
         if (editing) {
           const d = state.editingCard.draft;
-          return `<article class="card page-block-card item-editor"><input class="admin-inline" data-inline="card-title" value="${esc(d.title)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="card-text" placeholder="Описание">${esc(d.text)}</textarea><label><input type="checkbox" data-inline="card-active" ${d.isActive === false ? '' : 'checked'} /> Активна</label><div class="admin-strip"><button class="btn btn-xs" data-action="save-card" data-block="${blockIndex}" data-item="${itemIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-card">Отмена</button></div></article>`;
+          return `<article class="card page-block-card item-editor"><input class="admin-inline" data-inline="card-title" value="${esc(d.title)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="card-text" placeholder="Описание">${esc(d.text)}</textarea><label><input type="checkbox" data-inline="card-active" ${d.isActive === false ? '' : 'checked'} /> Активна</label><div class="admin-strip"><button class="btn btn-primary btn-xs" data-action="save-card" data-block="${blockIndex}" data-item="${itemIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-card">Отмена</button></div></article>`;
         }
 
-        return `<article class="card page-block-card"><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-card" data-block="${blockIndex}" data-item="${itemIndex}">Редактировать</button><button class="btn btn-secondary btn-xs" data-action="move-card-up" data-block="${blockIndex}" data-item="${itemIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="move-card-down" data-block="${blockIndex}" data-item="${itemIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-card" data-block="${blockIndex}" data-item="${itemIndex}">${item.isActive === false ? 'Показать' : 'Скрыть'}</button></div></article>`;
+        return `<article class="card page-block-card"><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-card" data-block="${blockIndex}" data-item="${itemIndex}">Редактировать</button><button class="btn btn-secondary btn-xs" data-action="move-card-up" data-block="${blockIndex}" data-item="${itemIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="move-card-down" data-block="${blockIndex}" data-item="${itemIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-card" data-block="${blockIndex}" data-item="${itemIndex}">${item.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="btn btn-danger btn-xs" data-action="delete-card" data-block="${blockIndex}" data-item="${itemIndex}">Удалить</button></div></article>`;
       }
 
-      function renderListItem(blockIndex, rowIndex, text) {
+      function renderListItem(blockIndex, rowIndex, item) {
         const key = `${blockIndex}:${rowIndex}`;
         const editing = state.editingRow && state.editingRow.key === key;
+        const text = typeof item === 'string' ? item : item?.text || '';
         if (editing) {
-          return `<li class="item-editor"><input class="admin-inline" data-inline="row-text" value="${esc(state.editingRow.draft)}" /><div class="admin-strip"><button class="btn btn-xs" data-action="save-row" data-block="${blockIndex}" data-item="${rowIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-row">Отмена</button><button class="btn btn-danger btn-xs" data-action="delete-row" data-block="${blockIndex}" data-item="${rowIndex}">Удалить</button></div></li>`;
+          return `<li class="factor-item"><input class="admin-inline" data-inline="row-text" value="${esc(state.editingRow.draft.text)}" /><div class="admin-strip"><button class="btn btn-primary btn-xs" data-action="save-row" data-block="${blockIndex}" data-item="${rowIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-row">Отмена</button><button class="btn btn-danger btn-xs" data-action="delete-row" data-block="${blockIndex}" data-item="${rowIndex}">Удалить</button></div></li>`;
         }
-        return `<li>${esc(text)} <span class="admin-strip" style="display:inline-flex;"><button class="btn btn-secondary btn-xs" data-action="edit-row" data-block="${blockIndex}" data-item="${rowIndex}">Ред.</button><button class="btn btn-secondary btn-xs" data-action="move-row-up" data-block="${blockIndex}" data-item="${rowIndex}">↑</button><button class="btn btn-secondary btn-xs" data-action="move-row-down" data-block="${blockIndex}" data-item="${rowIndex}">↓</button><button class="btn btn-danger btn-xs" data-action="delete-row" data-block="${blockIndex}" data-item="${rowIndex}">✕</button></span></li>`;
+        return `<li class="factor-item"><p>${esc(text)}</p><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-row" data-block="${blockIndex}" data-item="${rowIndex}">Ред.</button><button class="btn btn-secondary btn-xs" data-action="move-row-up" data-block="${blockIndex}" data-item="${rowIndex}">↑</button><button class="btn btn-secondary btn-xs" data-action="move-row-down" data-block="${blockIndex}" data-item="${rowIndex}">↓</button><button class="btn btn-danger btn-xs" data-action="delete-row" data-block="${blockIndex}" data-item="${rowIndex}">✕</button></div></li>`;
       }
 
       function renderStep(blockIndex, stepIndex, step) {
@@ -177,9 +202,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const editing = state.editingStep && state.editingStep.key === key;
         if (editing) {
           const d = state.editingStep.draft;
-          return `<li class="item-editor"><input class="admin-inline" data-inline="step-title" value="${esc(d.title)}" placeholder="Заголовок шага" /><textarea class="admin-inline admin-inline-area" data-inline="step-text" placeholder="Описание">${esc(d.text || '')}</textarea><label><input type="checkbox" data-inline="step-active" ${d.isActive === false ? '' : 'checked'} /> Активен</label><div class="admin-strip"><button class="btn btn-xs" data-action="save-step" data-block="${blockIndex}" data-item="${stepIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-step">Отмена</button></div></li>`;
+          return `<li class="item-editor"><input class="admin-inline" data-inline="step-title" value="${esc(d.title)}" placeholder="Заголовок шага" /><textarea class="admin-inline admin-inline-area" data-inline="step-text" placeholder="Описание">${esc(d.text || '')}</textarea><label><input type="checkbox" data-inline="step-active" ${d.isActive === false ? '' : 'checked'} /> Активен</label><div class="admin-strip"><button class="btn btn-primary btn-xs" data-action="save-step" data-block="${blockIndex}" data-item="${stepIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-step">Отмена</button></div></li>`;
         }
-
         return `<li><strong>${esc(step.title)}</strong>${step.text ? `<p>${esc(step.text)}</p>` : ''}<div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-step" data-block="${blockIndex}" data-item="${stepIndex}">Редактировать</button><button class="btn btn-secondary btn-xs" data-action="move-step-up" data-block="${blockIndex}" data-item="${stepIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="move-step-down" data-block="${blockIndex}" data-item="${stepIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-step" data-block="${blockIndex}" data-item="${stepIndex}">${step.isActive === false ? 'Показать' : 'Скрыть'}</button></div></li>`;
       }
 
@@ -188,58 +212,84 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         let content = '';
 
         if ((block.type === 'cardGrid' || block.type === 'exampleGrid') && Array.isArray(block.items)) {
-          content = `<div class="page-blocks-grid page-blocks-grid--${block.grid || 'auto'}">${sorted(block.items).map((item, idx) => item.isActive === false ? '' : renderCardItem(blockIndex, idx, item)).join('')}</div><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="add-card" data-block="${blockIndex}">+ Добавить карточку</button></div>`;
+          content = `<div class="page-blocks-grid page-blocks-grid--${block.grid || 'auto'}">${normalizeCards(block.items).map((item, idx) => renderCardItem(blockIndex, idx, item)).join('')}</div><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="add-card" data-block="${blockIndex}">+ Добавить карточку</button></div>`;
         }
 
         if ((block.type === 'listPanel' || block.type === 'factorList') && Array.isArray(block.items)) {
-          const list = block.items.map((item) => (typeof item === 'string' ? item : item?.text || '')).filter(Boolean);
+          const list = normalizeListItems(block.items);
           const isEditList = state.editingListBlock === blockIndex;
-          content = `<ul class="page-blocks-columns page-blocks-columns--${block.columns || 2}">${list.map((text, idx) => isEditList ? renderListItem(blockIndex, idx, text) : `<li>${esc(text)}</li>`).join('')}</ul><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="toggle-list-edit" data-block="${blockIndex}">${isEditList ? 'Готово' : 'Редактировать список'}</button>${isEditList ? `<button class="btn btn-secondary btn-xs" data-action="add-row" data-block="${blockIndex}">+ Добавить строку</button>` : ''}</div>`;
+          content = `<ul class="page-blocks-columns page-blocks-columns--${block.columns || 2}">${list.map((item, idx) => isEditList ? renderListItem(blockIndex, idx, item) : `<li>${esc(typeof item === 'string' ? item : item?.text || '')}</li>`).join('')}</ul><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="toggle-list-edit" data-block="${blockIndex}">${isEditList ? 'Готово' : 'Редактировать список'}</button>${isEditList ? `<button class="btn btn-secondary btn-xs" data-action="add-row" data-block="${blockIndex}">+ Добавить строку</button>` : ''}</div>`;
         }
 
         if (block.type === 'process') {
-          const steps = sorted(block.steps || []).filter((step) => step.isActive !== false);
-          const media = block.media ? `<img class="media-thumb" src="${esc(toSrc(block.media))}" alt="${esc(block.title)}" />` : '';
-          const caption = block.placeholderLabel ? `<p class="media-caption">${esc(block.placeholderLabel)}</p>` : '';
-          content = `<div class="page-block-media-layout"><article class="media-block placeholder placeholder--wide-feature">${media}${caption}<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="block-media-${blockIndex}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="edit-block-placeholder" data-block="${blockIndex}">Подпись placeholder</button></div></article><article class="card page-block-panel"><h2>${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}<ol class="page-block-steps">${steps.map((step, idx) => renderStep(blockIndex, idx, step)).join('')}</ol><div class="admin-strip" style="margin-top:8px;"><button class="btn btn-secondary btn-xs" data-action="add-step" data-block="${blockIndex}">+ Добавить шаг</button></div></article></div>`;
+          const steps = normalizeSteps(block.steps || []);
+          content = `<div class="page-block-media-layout">${renderMedia(block.media, block.title, block.mediaView, block.placeholderLabel, `block-media-${blockIndex}`, blockIndex)}<article class="card page-block-panel"><h2>${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}<ol class="page-block-steps">${steps.map((step, idx) => renderStep(blockIndex, idx, step)).join('')}</ol><div class="admin-strip" style="margin-top:8px;"><button class="btn btn-secondary btn-xs" data-action="add-step" data-block="${blockIndex}">+ Добавить шаг</button></div></article></div>`;
         }
 
         if (block.type === 'mediaText') {
-          const media = block.media ? `<img class="media-thumb" src="${esc(toSrc(block.media))}" alt="${esc(block.title)}" />` : '';
-          const caption = block.placeholderLabel ? `<p class="media-caption">${esc(block.placeholderLabel)}</p>` : '';
-          content = `<div class="page-block-media-layout"><article class="media-block placeholder placeholder--wide-feature">${media}${caption}<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="block-media-${blockIndex}">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="edit-block-placeholder" data-block="${blockIndex}">Подпись placeholder</button></div></article><article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article></div>`;
+          content = `<div class="page-block-media-layout">${renderMedia(block.media, block.title, block.mediaView, block.placeholderLabel, `block-media-${blockIndex}`, blockIndex)}<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article></div>`;
         }
 
         if (block.type === 'notice') {
           content = `<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article>`;
         }
 
-        return `<section class="admin-block"><div class="admin-block-head"><span class="badge">${BLOCK_LABELS[block.type] || block.type}</span><button class="btn btn-secondary btn-xs" data-action="block-up" data-block="${blockIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="block-down" data-block="${blockIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-block" data-block="${blockIndex}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="btn btn-secondary btn-xs" data-action="open-settings" data-block="${blockIndex}">Настройки</button></div><section class="${sectionClass}"><div class="container"><h2 class="section-title">${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}${content}</div></section></section>`;
+        return `<section class="admin-block"><div class="admin-block-head"><span class="badge">${BLOCK_LABELS[block.type] || block.type}</span><button class="btn btn-secondary btn-xs" data-action="block-up" data-block="${blockIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="block-down" data-block="${blockIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-block" data-block="${blockIndex}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="btn btn-secondary btn-xs" data-action="open-settings" data-block="${blockIndex}">Настройки</button><button class="btn btn-danger btn-xs" data-action="delete-block" data-block="${blockIndex}">Удалить секцию</button></div><section class="${sectionClass}"><div class="container"><h2 class="section-title">${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}${content}</div></section></section>`;
       }
 
-      function renderModal() {
+      function renderSectionModal() {
         if (!state.blockSettings) return '';
         const s = state.blockSettings;
-        return `<div class="modal-backdrop"><div class="modal"><h3 style="margin-top:0;">Настройки блока</h3><div class="field"><label>Заголовок блока</label><input data-modal="title" value="${esc(s.title || '')}" /></div><div class="field"><label>Intro</label><textarea data-modal="intro">${esc(s.intro || '')}</textarea></div><div class="field"><label>Тема</label><select data-modal="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Темная</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Светлая</option><option value="graphite" ${s.theme === 'graphite' ? 'selected' : ''}>Графитовая</option></select></div>${Object.hasOwn(s, 'grid') ? `<div class="field"><label>Сетка</label><select data-modal="grid"><option value="auto" ${s.grid === 'auto' ? 'selected' : ''}>Авто</option><option value="2" ${s.grid === '2' ? 'selected' : ''}>2</option><option value="3" ${s.grid === '3' ? 'selected' : ''}>3</option><option value="4" ${s.grid === '4' ? 'selected' : ''}>4</option></select></div>` : ''}${Object.hasOwn(s, 'columns') ? `<div class="field"><label>Колонки</label><select data-modal="columns"><option value="2" ${String(s.columns) === '2' ? 'selected' : ''}>2</option><option value="3" ${String(s.columns) === '3' ? 'selected' : ''}>3</option></select></div>` : ''}<label><input type="checkbox" data-modal="isActive" ${s.isActive === false ? '' : 'checked'} /> Активный блок</label><div class="admin-strip" style="margin-top:12px;"><button class="btn btn-xs" data-action="save-settings">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-settings">Отмена</button></div></div></div>`;
+        return `<div class="modal-backdrop" data-modal="section-settings"><div class="modal" role="dialog" aria-modal="true"><h3 style="margin-top:0;">Настройки блока</h3><div class="field"><label>Заголовок блока</label><input data-modal-field="title" value="${esc(s.title || '')}" /></div><div class="field"><label>Intro</label><textarea data-modal-field="intro">${esc(s.intro || '')}</textarea></div><div class="field"><label>Тема</label><select data-modal-field="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Темная</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Светлая</option><option value="graphite" ${s.theme === 'graphite' ? 'selected' : ''}>Графитовая</option></select></div>${Object.hasOwn(s, 'grid') ? `<div class="field"><label>Сетка</label><select data-modal-field="grid"><option value="auto" ${s.grid === 'auto' ? 'selected' : ''}>Авто</option><option value="2" ${s.grid === '2' ? 'selected' : ''}>2</option><option value="3" ${s.grid === '3' ? 'selected' : ''}>3</option><option value="4" ${s.grid === '4' ? 'selected' : ''}>4</option></select></div>` : ''}${Object.hasOwn(s, 'columns') ? `<div class="field"><label>Колонки</label><select data-modal-field="columns"><option value="2" ${String(s.columns) === '2' ? 'selected' : ''}>2</option><option value="3" ${String(s.columns) === '3' ? 'selected' : ''}>3</option></select></div>` : ''}<label><input type="checkbox" data-modal-field="isActive" ${s.isActive === false ? '' : 'checked'} /> Активный блок</label><div class="admin-strip" style="margin-top:12px;"><button class="btn btn-primary btn-xs" data-action="save-settings">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-settings">Отмена</button></div></div></div>`;
+      }
+
+      function renderFrameModal() {
+        if (!state.frameSettings) return '';
+        const f = state.frameSettings;
+        return `<div class="modal-backdrop" data-modal="frame-settings"><div class="modal" role="dialog" aria-modal="true"><h3 style="margin-top:0;">Настроить кадр</h3><div class="media-preview"><img src="${esc(toSrc(f.src || ''))}" alt="preview" style="${esc(getMediaStyle(f.view))}" /></div><div class="field"><label>Fit</label><select data-frame="fit"><option value="cover" ${f.view.fit === 'cover' ? 'selected' : ''}>cover</option><option value="contain" ${f.view.fit === 'contain' ? 'selected' : ''}>contain</option></select></div><div class="field"><label>Scale (1..3)</label><input data-frame="scale" type="range" min="1" max="3" step="0.05" value="${esc(f.view.scale)}" /><small>${esc(f.view.scale)}</small></div><div class="field"><label>positionX (0..100)</label><input data-frame="positionX" type="range" min="0" max="100" step="1" value="${esc(f.view.positionX)}" /><small>${esc(f.view.positionX)}%</small></div><div class="field"><label>positionY (0..100)</label><input data-frame="positionY" type="range" min="0" max="100" step="1" value="${esc(f.view.positionY)}" /><small>${esc(f.view.positionY)}%</small></div><div class="admin-strip" style="margin-top:12px;"><button class="btn btn-primary btn-xs" data-action="save-frame">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-frame">Отмена</button></div></div></div>`;
+      }
+
+      function renderAddSectionPanel() {
+        return `<section class="section"><div class="container"><div class="block-create"><h3 style="margin:0 0 10px;">Добавить секцию</h3><div class="admin-strip"><select id="newSectionType" class="admin-inline" style="max-width:240px;">${SECTION_TYPES.map((type) => `<option value="${type}">${BLOCK_LABELS[type]}</option>`).join('')}</select><button class="btn btn-primary btn-xs" data-action="add-block">+ Добавить секцию</button></div></div></div></section>`;
       }
 
       function renderPage() {
         const root = $('workspace');
         if (!state.draft) { root.innerHTML = ''; return; }
-
-        const blocks = sorted(state.draft.pageBlocks || []);
-        root.innerHTML = `${state.alert ? `<div class="container" style="padding-top:12px;"><p class="${state.alertError ? 'error' : 'muted'}">${esc(state.alert)}</p></div>` : ''}${renderHero()}${blocks.map((block, idx) => block.isActive === false ? renderBlock(block, idx) : renderBlock(block, idx)).join('')}<section class="section"><div class="container"><details><summary>Показать JSON</summary><pre>${esc(JSON.stringify(state.draft, null, 2))}</pre></details></div></section>${renderModal()}`;
+        const blocks = getBlocks();
+        root.innerHTML = `${state.alert ? `<div class="container" style="padding-top:12px;"><p class="${state.alertError ? 'error' : 'muted'}">${esc(state.alert)}</p></div>` : ''}${renderHero()}${blocks.map((block, idx) => renderBlock(block, idx)).join('')}${renderAddSectionPanel()}<section class="section"><div class="container"><details><summary>Показать JSON</summary><pre>${esc(JSON.stringify(state.draft, null, 2))}</pre></details></div></section>${renderSectionModal()}${renderFrameModal()}`;
         updateStatus();
       }
 
       function getBlock(index) {
-        return sorted(state.draft.pageBlocks || [])[index];
+        return getBlocks()[index];
+      }
+      function applyBlock(index, updater) {
+        const blocks = getBlocks();
+        updater(blocks[index]);
+        setBlocks(blocks);
       }
 
-      function applyBlock(index, updater) {
-        const blocks = sorted(state.draft.pageBlocks || []);
-        updater(blocks[index]);
-        state.draft.pageBlocks = blocks;
+      function createDefaultBlock(type, order) {
+        if (type === 'cardGrid') return { type: 'cardGrid', title: 'Новая секция', theme: 'dark', grid: 'auto', order, isActive: true, items: [] };
+        if (type === 'listPanel') return { type: 'listPanel', title: 'Новая секция', theme: 'light', columns: 2, order, isActive: true, items: [] };
+        if (type === 'process') return { type: 'process', title: 'Новая секция', theme: 'light', mediaPosition: 'right', placeholderLabel: DEFAULT_PLACEHOLDER, order, isActive: true, steps: [] };
+        if (type === 'factorList') return { type: 'factorList', title: 'Новая секция', theme: 'graphite', columns: 2, order, isActive: true, items: [] };
+        if (type === 'mediaText') return { type: 'mediaText', title: 'Новая секция', text: '', theme: 'light', mediaPosition: 'right', placeholderLabel: DEFAULT_PLACEHOLDER, order, isActive: true };
+        if (type === 'notice') return { type: 'notice', title: 'Новая вставка', text: '', theme: 'light', order, isActive: true };
+        return { type: 'exampleGrid', title: 'Новая секция', theme: 'light', grid: 'auto', order, isActive: true, items: [] };
+      }
+
+      function openFrameSettings(target) {
+        if (target === 'hero-image') {
+          state.frameSettings = { target, src: state.draft.image || '', view: getMediaView(state.draft.imageView) };
+          return;
+        }
+        if (target.startsWith('block-media-')) {
+          const index = Number(target.replace('block-media-', ''));
+          const block = getBlock(index);
+          state.frameSettings = { target, src: block?.media || '', view: getMediaView(block?.mediaView) };
+        }
       }
 
       async function uploadImage(file, target) {
@@ -258,27 +308,52 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         renderPage();
       }
 
+      function closeModals() {
+        state.blockSettings = null;
+        state.frameSettings = null;
+      }
+
       $('workspace').addEventListener('input', (event) => {
         const key = event.target.dataset.inline;
-        if (!key) return;
-        if (key === 'hero-title') state.editingHero.heroTitle = event.target.value;
-        if (key === 'hero-description') state.editingHero.heroDescription = event.target.value;
-        if (key === 'hero-placeholder') state.editingHero.placeholderLabel = event.target.value;
-        if (key === 'card-title') state.editingCard.draft.title = event.target.value;
-        if (key === 'card-text') state.editingCard.draft.text = event.target.value;
-        if (key === 'row-text') state.editingRow.draft = event.target.value;
-        if (key === 'step-title') state.editingStep.draft.title = event.target.value;
-        if (key === 'step-text') state.editingStep.draft.text = event.target.value;
+        if (key === 'hero-title' && state.editingHero) state.editingHero.heroTitle = event.target.value;
+        if (key === 'hero-description' && state.editingHero) state.editingHero.heroDescription = event.target.value;
+        if (key === 'hero-placeholder' && state.editingHero) state.editingHero.placeholderLabel = event.target.value;
+        if (key === 'card-title' && state.editingCard) state.editingCard.draft.title = event.target.value;
+        if (key === 'card-text' && state.editingCard) state.editingCard.draft.text = event.target.value;
+        if (key === 'row-text' && state.editingRow) state.editingRow.draft.text = event.target.value;
+        if (key === 'step-title' && state.editingStep) state.editingStep.draft.title = event.target.value;
+        if (key === 'step-text' && state.editingStep) state.editingStep.draft.text = event.target.value;
+
+        const modalKey = event.target.dataset.modalField;
+        if (modalKey && state.blockSettings) state.blockSettings[modalKey] = event.target.value;
+
+        const frameKey = event.target.dataset.frame;
+        if (frameKey && state.frameSettings) {
+          if (frameKey === 'fit') state.frameSettings.view.fit = event.target.value === 'contain' ? 'contain' : 'cover';
+          if (frameKey === 'scale') state.frameSettings.view.scale = clamp(event.target.value, 1, 3);
+          if (frameKey === 'positionX') state.frameSettings.view.positionX = clamp(event.target.value, 0, 100);
+          if (frameKey === 'positionY') state.frameSettings.view.positionY = clamp(event.target.value, 0, 100);
+          renderPage();
+        }
       });
 
       $('workspace').addEventListener('change', (event) => {
         const key = event.target.dataset.inline;
-        if (!key) return;
-        if (key === 'card-active') state.editingCard.draft.isActive = event.target.checked;
-        if (key === 'step-active') state.editingStep.draft.isActive = event.target.checked;
+        if (key === 'card-active' && state.editingCard) state.editingCard.draft.isActive = event.target.checked;
+        if (key === 'step-active' && state.editingStep) state.editingStep.draft.isActive = event.target.checked;
+
+        const modalKey = event.target.dataset.modalField;
+        if (modalKey === 'isActive' && state.blockSettings) state.blockSettings.isActive = event.target.checked;
       });
 
       $('workspace').addEventListener('click', (event) => {
+        const modalBackdrop = event.target.closest('.modal-backdrop');
+        if (modalBackdrop && event.target === modalBackdrop) {
+          closeModals();
+          renderPage();
+          return;
+        }
+
         const el = event.target.closest('[data-action]');
         if (!el) return;
         const action = el.dataset.action;
@@ -288,98 +363,74 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (action === 'edit-hero') { state.editingHero = clone({ heroTitle: state.draft.heroTitle, heroDescription: state.draft.heroDescription, image: state.draft.image, placeholderLabel: state.draft.placeholderLabel }); renderPage(); return; }
         if (action === 'cancel-hero') { state.editingHero = null; renderPage(); return; }
         if (action === 'save-hero') { Object.assign(state.draft, state.editingHero); state.editingHero = null; renderPage(); return; }
-        if (action === 'clear-hero-image') { state.editingHero.image = ''; state.draft.image = ''; renderPage(); return; }
+        if (action === 'clear-hero-image') { state.draft.image = ''; if (state.editingHero) state.editingHero.image = ''; renderPage(); return; }
 
-        if (action === 'edit-card') {
-          const block = getBlock(blockIndex);
-          state.editingCard = { key: `${blockIndex}:${itemIndex}`, draft: clone(block.items[itemIndex]) };
-          renderPage();
-          return;
-        }
+        if (action === 'edit-card') { state.editingCard = { key: `${blockIndex}:${itemIndex}`, draft: clone(getBlock(blockIndex).items[itemIndex]) }; renderPage(); return; }
         if (action === 'cancel-card') { state.editingCard = null; renderPage(); return; }
-        if (action === 'save-card') {
-          applyBlock(blockIndex, (block) => { block.items[itemIndex] = clone(state.editingCard.draft); });
-          state.editingCard = null;
-          renderPage();
-          return;
-        }
-        if (action === 'move-card-up' || action === 'move-card-down') {
-          applyBlock(blockIndex, (block) => {
-            const arr = sorted(block.items || []);
-            const to = action === 'move-card-up' ? itemIndex - 1 : itemIndex + 1;
-            if (to < 0 || to >= arr.length) return;
-            [arr[itemIndex], arr[to]] = [arr[to], arr[itemIndex]];
-            renumber(arr);
-            block.items = arr;
-          });
-          renderPage();
-          return;
-        }
+        if (action === 'save-card') { applyBlock(blockIndex, (block) => { block.items[itemIndex] = clone(state.editingCard.draft); }); state.editingCard = null; renderPage(); return; }
+        if (action === 'delete-card') { if (!confirm('Удалить карточку?')) return; applyBlock(blockIndex, (block) => { block.items.splice(itemIndex, 1); renumber(block.items); }); state.editingCard = null; renderPage(); return; }
+        if (action === 'move-card-up' || action === 'move-card-down') { applyBlock(blockIndex, (block) => { const arr = normalizeCards(block.items || []); const to = action === 'move-card-up' ? itemIndex - 1 : itemIndex + 1; if (to < 0 || to >= arr.length) return; [arr[itemIndex], arr[to]] = [arr[to], arr[itemIndex]]; renumber(arr); block.items = arr; }); renderPage(); return; }
         if (action === 'toggle-card') { applyBlock(blockIndex, (block) => { block.items[itemIndex].isActive = block.items[itemIndex].isActive === false; }); renderPage(); return; }
-        if (action === 'add-card') {
-          applyBlock(blockIndex, (block) => {
-            block.items = sorted(block.items || []);
-            block.items.push({ title: 'Новая карточка', text: '', order: (block.items.length + 1) * 10, isActive: true });
-            renumber(block.items);
-          });
-          const block = getBlock(blockIndex);
-          state.editingCard = { key: `${blockIndex}:${block.items.length - 1}`, draft: clone(block.items[block.items.length - 1]) };
-          renderPage();
-          return;
-        }
+        if (action === 'add-card') { applyBlock(blockIndex, (block) => { block.items = normalizeCards(block.items || []); block.items.push({ title: 'Новая карточка', text: '', order: (block.items.length + 1) * 10, isActive: true }); renumber(block.items); }); const block = getBlock(blockIndex); state.editingCard = { key: `${blockIndex}:${block.items.length - 1}`, draft: clone(block.items[block.items.length - 1]) }; renderPage(); return; }
 
         if (action === 'toggle-list-edit') { state.editingListBlock = state.editingListBlock === blockIndex ? null : blockIndex; state.editingRow = null; renderPage(); return; }
-        if (action === 'edit-row') { state.editingRow = { key: `${blockIndex}:${itemIndex}`, draft: (getBlock(blockIndex).items[itemIndex] || '') }; renderPage(); return; }
+        if (action === 'edit-row') {
+          const rawItem = getBlock(blockIndex).items[itemIndex];
+          state.editingRow = { key: `${blockIndex}:${itemIndex}`, wasString: typeof rawItem === 'string', original: clone(rawItem), draft: { text: typeof rawItem === 'string' ? rawItem : rawItem?.text || '' } };
+          renderPage();
+          return;
+        }
         if (action === 'cancel-row') { state.editingRow = null; renderPage(); return; }
-        if (action === 'save-row') { applyBlock(blockIndex, (block) => { block.items[itemIndex] = state.editingRow.draft; }); state.editingRow = null; renderPage(); return; }
-        if (action === 'add-row') { applyBlock(blockIndex, (block) => { block.items.push('Новая строка'); }); state.editingRow = { key: `${blockIndex}:${getBlock(blockIndex).items.length - 1}`, draft: 'Новая строка' }; renderPage(); return; }
-        if (action === 'delete-row') { applyBlock(blockIndex, (block) => { block.items.splice(itemIndex, 1); }); state.editingRow = null; renderPage(); return; }
+        if (action === 'save-row') {
+          applyBlock(blockIndex, (block) => {
+            if (state.editingRow.wasString) block.items[itemIndex] = state.editingRow.draft.text;
+            else block.items[itemIndex] = { ...state.editingRow.original, text: state.editingRow.draft.text };
+          });
+          state.editingRow = null;
+          renderPage();
+          return;
+        }
+        if (action === 'add-row') { applyBlock(blockIndex, (block) => { block.items.push('Новая строка'); }); state.editingRow = { key: `${blockIndex}:${getBlock(blockIndex).items.length - 1}`, wasString: true, original: 'Новая строка', draft: { text: 'Новая строка' } }; renderPage(); return; }
+        if (action === 'delete-row') { if (!confirm('Удалить строку?')) return; applyBlock(blockIndex, (block) => { block.items.splice(itemIndex, 1); }); state.editingRow = null; renderPage(); return; }
         if (action === 'move-row-up' || action === 'move-row-down') { applyBlock(blockIndex, (block) => { const to = action === 'move-row-up' ? itemIndex - 1 : itemIndex + 1; if (to < 0 || to >= block.items.length) return; [block.items[itemIndex], block.items[to]] = [block.items[to], block.items[itemIndex]]; }); renderPage(); return; }
 
         if (action === 'edit-step') { state.editingStep = { key: `${blockIndex}:${itemIndex}`, draft: clone(getBlock(blockIndex).steps[itemIndex]) }; renderPage(); return; }
         if (action === 'cancel-step') { state.editingStep = null; renderPage(); return; }
         if (action === 'save-step') { applyBlock(blockIndex, (block) => { block.steps[itemIndex] = clone(state.editingStep.draft); }); state.editingStep = null; renderPage(); return; }
-        if (action === 'move-step-up' || action === 'move-step-down') { applyBlock(blockIndex, (block) => { const arr = sorted(block.steps || []); const to = action === 'move-step-up' ? itemIndex - 1 : itemIndex + 1; if (to < 0 || to >= arr.length) return; [arr[itemIndex], arr[to]] = [arr[to], arr[itemIndex]]; renumber(arr); block.steps = arr; }); renderPage(); return; }
+        if (action === 'move-step-up' || action === 'move-step-down') { applyBlock(blockIndex, (block) => { const arr = normalizeSteps(block.steps || []); const to = action === 'move-step-up' ? itemIndex - 1 : itemIndex + 1; if (to < 0 || to >= arr.length) return; [arr[itemIndex], arr[to]] = [arr[to], arr[itemIndex]]; renumber(arr); block.steps = arr; }); renderPage(); return; }
         if (action === 'toggle-step') { applyBlock(blockIndex, (block) => { block.steps[itemIndex].isActive = block.steps[itemIndex].isActive === false; }); renderPage(); return; }
-        if (action === 'add-step') { applyBlock(blockIndex, (block) => { block.steps = sorted(block.steps || []); block.steps.push({ title: 'Новый шаг', text: '', order: (block.steps.length + 1) * 10, isActive: true }); renumber(block.steps); }); const b = getBlock(blockIndex); state.editingStep = { key: `${blockIndex}:${b.steps.length - 1}`, draft: clone(b.steps[b.steps.length - 1]) }; renderPage(); return; }
+        if (action === 'add-step') { applyBlock(blockIndex, (block) => { block.steps = normalizeSteps(block.steps || []); block.steps.push({ title: 'Новый шаг', text: '', order: (block.steps.length + 1) * 10, isActive: true }); renumber(block.steps); }); const b = getBlock(blockIndex); state.editingStep = { key: `${blockIndex}:${b.steps.length - 1}`, draft: clone(b.steps[b.steps.length - 1]) }; renderPage(); return; }
 
-        if (action === 'block-up' || action === 'block-down') { state.draft.pageBlocks = sorted(state.draft.pageBlocks || []); const to = action === 'block-up' ? blockIndex - 1 : blockIndex + 1; if (to >= 0 && to < state.draft.pageBlocks.length) [state.draft.pageBlocks[blockIndex], state.draft.pageBlocks[to]] = [state.draft.pageBlocks[to], state.draft.pageBlocks[blockIndex]]; renumber(state.draft.pageBlocks); renderPage(); return; }
+        if (action === 'block-up' || action === 'block-down') { const blocks = getBlocks(); const to = action === 'block-up' ? blockIndex - 1 : blockIndex + 1; if (to >= 0 && to < blocks.length) [blocks[blockIndex], blocks[to]] = [blocks[to], blocks[blockIndex]]; renumber(blocks); setBlocks(blocks); renderPage(); return; }
         if (action === 'toggle-block') { applyBlock(blockIndex, (block) => { block.isActive = block.isActive === false; }); renderPage(); return; }
         if (action === 'open-settings') { state.blockSettings = { index: blockIndex, ...clone(getBlock(blockIndex)) }; renderPage(); return; }
         if (action === 'cancel-settings') { state.blockSettings = null; renderPage(); return; }
-        if (action === 'save-settings') {
-          const { index, ...payload } = state.blockSettings;
-          applyBlock(index, (block) => {
-            block.title = payload.title;
-            block.intro = payload.intro;
-            block.theme = payload.theme;
-            if ('grid' in block) block.grid = payload.grid;
-            if ('columns' in block) block.columns = Number(payload.columns);
-            block.isActive = payload.isActive;
-          });
-          state.blockSettings = null;
+        if (action === 'save-settings') { const { index, ...payload } = state.blockSettings; applyBlock(index, (block) => { block.title = payload.title; block.intro = payload.intro; block.theme = payload.theme; if ('grid' in block) block.grid = payload.grid; if ('columns' in block) block.columns = Number(payload.columns); block.isActive = payload.isActive; }); state.blockSettings = null; renderPage(); return; }
+        if (action === 'delete-block') { if (!confirm('Удалить секцию?')) return; const blocks = getBlocks(); blocks.splice(blockIndex, 1); renumber(blocks); setBlocks(blocks); renderPage(); return; }
+        if (action === 'add-block') { const type = $('newSectionType')?.value || 'cardGrid'; const blocks = getBlocks(); blocks.push(createDefaultBlock(type, (blocks.length + 1) * 10)); renumber(blocks); setBlocks(blocks); renderPage(); return; }
+
+        if (action === 'clear-block-media') { applyBlock(blockIndex, (block) => { block.media = ''; }); renderPage(); return; }
+        if (action === 'upload-image') { state.uploadTarget = el.dataset.target; $('uploadInput').click(); return; }
+        if (action === 'open-frame-settings') { openFrameSettings(el.dataset.target); renderPage(); return; }
+        if (action === 'cancel-frame') { state.frameSettings = null; renderPage(); return; }
+        if (action === 'save-frame') {
+          const view = getMediaView(state.frameSettings.view);
+          if (state.frameSettings.target === 'hero-image') state.draft.imageView = view;
+          if (state.frameSettings.target.startsWith('block-media-')) {
+            const index = Number(state.frameSettings.target.replace('block-media-', ''));
+            applyBlock(index, (block) => { block.mediaView = view; });
+          }
+          state.frameSettings = null;
           renderPage();
           return;
         }
-        if (action === 'clear-block-media') { applyBlock(blockIndex, (block) => { block.media = ''; }); renderPage(); return; }
-        if (action === 'edit-block-placeholder') {
-          const value = prompt('Подпись placeholder', getBlock(blockIndex).placeholderLabel || '');
-          if (value !== null) { applyBlock(blockIndex, (block) => { block.placeholderLabel = value; }); renderPage(); }
-          return;
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && (state.blockSettings || state.frameSettings)) {
+          closeModals();
+          renderPage();
         }
-        if (action === 'upload-image') { state.uploadTarget = el.dataset.target; $('uploadInput').click(); }
-      });
-
-      $('workspace').addEventListener('input', (event) => {
-        if (!event.target.dataset.modal || !state.blockSettings) return;
-        const key = event.target.dataset.modal;
-        state.blockSettings[key] = event.target.value;
-      });
-
-      $('workspace').addEventListener('change', (event) => {
-        if (!event.target.dataset.modal || !state.blockSettings) return;
-        const key = event.target.dataset.modal;
-        if (key === 'isActive') state.blockSettings.isActive = event.target.checked;
       });
 
       $('uploadInput').addEventListener('change', async (event) => {

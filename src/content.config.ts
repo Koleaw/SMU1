@@ -3,6 +3,14 @@ import { defineCollection, z } from 'astro:content';
 
 const pageBlockThemeSchema = z.enum(['dark', 'light', 'graphite']);
 
+
+const imageViewSchema = z.object({
+  fit: z.enum(['cover', 'contain']),
+  positionX: z.number().min(0).max(100),
+  positionY: z.number().min(0).max(100),
+  scale: z.number().min(1).max(3)
+}).strict();
+
 const pageCardItemSchema = z.object({
   title: z.string(),
   text: z.string(),
@@ -55,6 +63,7 @@ const pageBlockSchema = z.discriminatedUnion('type', [
     media: z.string().optional(),
     placeholderLabel: z.string().optional(),
     mediaPosition: z.enum(['left', 'right']),
+    mediaView: imageViewSchema.optional(),
     isActive: z.boolean().optional(),
     order: z.number()
   }).strict(),
@@ -66,6 +75,7 @@ const pageBlockSchema = z.discriminatedUnion('type', [
     media: z.string().optional(),
     placeholderLabel: z.string().optional(),
     mediaPosition: z.enum(['left', 'right']).optional(),
+    mediaView: imageViewSchema.optional(),
     isActive: z.boolean().optional(),
     order: z.number(),
     steps: z.array(pageProcessStepSchema)
@@ -114,6 +124,7 @@ const productSections = defineCollection({
     isActive: z.boolean(),
     mode: z.enum(['catalog-hub', 'custom-direction']),
     image: z.string(),
+    imageView: imageViewSchema.optional(),
     placeholderLabel: z.string(),
     seoTitle: z.string(),
     seoDescription: z.string(),
@@ -134,6 +145,7 @@ const productCategories = defineCollection({
     showInSectionGrid: z.boolean(),
     isActive: z.boolean(),
     image: z.string(),
+    imageView: imageViewSchema.optional(),
     placeholderLabel: z.string(),
     mode: z.enum(['catalog-list', 'custom-list']),
     seoTitle: z.string(),
@@ -153,6 +165,7 @@ const products = defineCollection({
     priceFrom: z.number().nullable(),
     currency: z.string(),
     image: z.string(),
+    imageView: imageViewSchema.optional(),
     placeholderLabel: z.string(),
     order: z.number(),
     isActive: z.boolean(),
@@ -174,6 +187,7 @@ const services = defineCollection({
     showOnHome: z.boolean(),
     isActive: z.boolean(),
     image: z.string(),
+    imageView: imageViewSchema.optional(),
     placeholderLabel: z.string(),
     seoTitle: z.string(),
     seoDescription: z.string(),
