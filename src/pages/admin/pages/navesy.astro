@@ -60,9 +60,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .hero-edit-box .btn-secondary.btn-xs:hover { background: #dbeaf8; border-color: #89a8c8; }
       .hero-edit-box .btn-primary.btn-xs { box-shadow: 0 1px 0 rgb(6 16 27 / 22%); }
       .admin-media-controls { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
-      .modal-backdrop { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; background: rgb(6 16 27 / 64%); padding: 16px; }
-      .modal { width: min(860px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; border-radius: 14px; border: 1px solid #d5e2ef; background: #fff; padding: 18px; box-shadow: 0 26px 56px rgb(6 16 27 / 30%); }
-      .frame-modal { display: grid; gap: 14px; }
+      .section-settings-inline { margin: 10px 0 0; border: 1px solid #c6d8ea; border-radius: 12px; background: #f7fbff; padding: 12px; display: grid; gap: 10px; }
+      .section-settings-inline .field { margin: 0; }
+      .section-settings-inline .admin-inline,
+      .section-settings-inline select,
+      .section-settings-inline textarea { width: 100%; border: 1px solid #9eb8d2; border-radius: 8px; padding: 9px 11px; font: inherit; color: #1f3448; background: #fff; }
+      .section-settings-inline label { color: #2a435c; font-weight: 700; font-size: 13px; }
+      .frame-editor-inline { margin-top: 12px; border: 1px solid #d5e2ef; border-radius: 14px; background: #fff; padding: 14px; display: grid; gap: 14px; box-shadow: 0 12px 26px rgb(6 16 27 / 12%); }
       .frame-modal-layout { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
       .frame-preview-wrap { background: linear-gradient(180deg, #f4f8fd, #edf4fb); border: 1px solid #d5e2ef; border-radius: 12px; padding: 14px; min-width: 0; }
       .frame-stage { position: relative; border-radius: 12px; background: #091520; padding: 20px; overflow: hidden; }
@@ -75,7 +79,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .frame-crop-guide::before { left: 50%; top: 0; bottom: 0; width: 1px; transform: translateX(-50%); }
       .frame-crop-guide::after { top: 50%; left: 0; right: 0; height: 1px; transform: translateY(-50%); }
       .frame-tip { margin: 10px 0 0; color: #5c7187; font-size: 12px; }
-      .frame-controls { border: 1px solid #d5e2ef; border-radius: 12px; background: #fff; padding: 12px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+      .frame-controls { border: 1px solid #d5e2ef; border-radius: 12px; background: #fff; padding: 12px; display: grid; gap: 10px; align-content: start; min-width: 0; max-height: 100%; }
       .frame-actions { margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
       .range-row { display: grid; gap: 6px; }
       .range-row-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: #36506a; }
@@ -121,8 +125,6 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       <main class="workspace" id="workspace"></main>
       <input id="uploadInput" type="file" accept="image/*,.svg" class="hidden" />
     </div>
-    <div id="modalRoot"></div>
-
     <script type="module" define:vars={{ adminApiBase, baseUrl }}>
       const API_BASE = adminApiBase;
       const BLOCK_LABELS = { cardGrid: 'Карточки', listPanel: 'Список', process: 'Процесс', factorList: 'Факторы', mediaText: 'Текст + изображение', notice: 'Вставка', exampleGrid: 'Примеры' };
@@ -211,7 +213,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const mediaControls = uploadTarget
           ? `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="${uploadTarget}">Заменить фото</button>${blockIndex !== null ? `<button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button>` : `<button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button>`}<button class="btn btn-secondary btn-xs" data-action="open-frame-settings" data-target="${uploadTarget}">Настроить кадр</button></div>`
           : '';
-        return `<article class="media-block placeholder placeholder--wide-feature">${src ? `<img class="media-thumb" src="${esc(toSrc(src))}" alt="${esc(alt)}" style="${esc(getMediaStyle(view))}" />` : ''}${caption ? `<p class="media-caption">${esc(caption)}</p>` : `<p class="media-caption">${DEFAULT_PLACEHOLDER}</p>`}${mediaControls}</article>`;
+        return `<article class="media-block placeholder placeholder--wide-feature">${src ? `<img class="media-thumb" src="${esc(toSrc(src))}" alt="${esc(alt)}" style="${esc(getMediaStyle(view))}" />` : ''}${caption ? `<p class="media-caption">${esc(caption)}</p>` : `<p class="media-caption">${DEFAULT_PLACEHOLDER}</p>`}${mediaControls}${renderFrameEditorInline(uploadTarget)}</article>`;
       }
 
       function renderHero() {
@@ -283,19 +285,19 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           content = `<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p></article>`;
         }
 
-        return `<section class="admin-block"><div class="admin-block-head"><span class="badge">${BLOCK_LABELS[block.type] || block.type}</span><button class="btn btn-secondary btn-xs" data-action="block-up" data-block="${blockIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="block-down" data-block="${blockIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-block" data-block="${blockIndex}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="btn btn-secondary btn-xs" data-action="open-settings" data-block="${blockIndex}">Настройки</button><button class="btn btn-danger btn-xs" data-action="delete-block" data-block="${blockIndex}">Удалить секцию</button></div><section class="${sectionClass}"><div class="container"><h2 class="section-title">${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}${content}</div></section></section>`;
+        return `<section class="admin-block"><div class="admin-block-head"><span class="badge">${BLOCK_LABELS[block.type] || block.type}</span><button class="btn btn-secondary btn-xs" data-action="block-up" data-block="${blockIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="block-down" data-block="${blockIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-block" data-block="${blockIndex}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="btn btn-secondary btn-xs" data-action="open-settings" data-block="${blockIndex}">Настройки</button><button class="btn btn-danger btn-xs" data-action="delete-block" data-block="${blockIndex}">Удалить секцию</button></div>${renderSectionSettingsInline(blockIndex)}<section class="${sectionClass}"><div class="container"><h2 class="section-title">${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}${content}</div></section></section>`;
       }
 
-      function renderSectionModal() {
-        if (!state.blockSettings) return '';
+      function renderSectionSettingsInline(blockIndex) {
+        if (!state.blockSettings || state.blockSettings.index !== blockIndex) return '';
         const s = state.blockSettings;
-        return `<div class="modal-backdrop" data-modal="section-settings"><div class="modal" role="dialog" aria-modal="true"><h3 style="margin-top:0;">Настройки блока</h3><div class="field"><label>Заголовок блока</label><input data-modal-field="title" value="${esc(s.title || '')}" /></div><div class="field"><label>Intro</label><textarea data-modal-field="intro">${esc(s.intro || '')}</textarea></div><div class="field"><label>Тема</label><select data-modal-field="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Темная</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Светлая</option><option value="graphite" ${s.theme === 'graphite' ? 'selected' : ''}>Графитовая</option></select></div>${Object.hasOwn(s, 'grid') ? `<div class="field"><label>Сетка</label><select data-modal-field="grid"><option value="auto" ${s.grid === 'auto' ? 'selected' : ''}>Авто</option><option value="2" ${s.grid === '2' ? 'selected' : ''}>2</option><option value="3" ${s.grid === '3' ? 'selected' : ''}>3</option><option value="4" ${s.grid === '4' ? 'selected' : ''}>4</option></select></div>` : ''}${Object.hasOwn(s, 'columns') ? `<div class="field"><label>Колонки</label><select data-modal-field="columns"><option value="2" ${String(s.columns) === '2' ? 'selected' : ''}>2</option><option value="3" ${String(s.columns) === '3' ? 'selected' : ''}>3</option></select></div>` : ''}<label><input type="checkbox" data-modal-field="isActive" ${s.isActive === false ? '' : 'checked'} /> Активный блок</label><div class="admin-strip" style="margin-top:12px;"><button class="btn btn-primary btn-xs" data-action="save-settings">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-settings">Отмена</button></div></div></div>`;
+        return `<div class="section-settings-inline"><h3 style="margin:0;color:#1e3247;">Настройки блока</h3><div class="field"><label>Заголовок блока</label><input class="admin-inline" data-modal-field="title" value="${esc(s.title || '')}" /></div><div class="field"><label>Intro</label><textarea class="admin-inline admin-inline-area" data-modal-field="intro">${esc(s.intro || '')}</textarea></div><div class="field"><label>Тема</label><select data-modal-field="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Темная</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Светлая</option><option value="graphite" ${s.theme === 'graphite' ? 'selected' : ''}>Графитовая</option></select></div>${Object.hasOwn(s, 'grid') ? `<div class="field"><label>Сетка</label><select data-modal-field="grid"><option value="auto" ${s.grid === 'auto' ? 'selected' : ''}>Авто</option><option value="2" ${s.grid === '2' ? 'selected' : ''}>2</option><option value="3" ${s.grid === '3' ? 'selected' : ''}>3</option><option value="4" ${s.grid === '4' ? 'selected' : ''}>4</option></select></div>` : ''}${Object.hasOwn(s, 'columns') ? `<div class="field"><label>Колонки</label><select data-modal-field="columns"><option value="2" ${String(s.columns) === '2' ? 'selected' : ''}>2</option><option value="3" ${String(s.columns) === '3' ? 'selected' : ''}>3</option></select></div>` : ''}<label style="color:#1f3448;"><input type="checkbox" data-modal-field="isActive" ${s.isActive === false ? '' : 'checked'} /> Активный блок</label><div class="admin-strip" style="margin-top:2px;"><button class="btn btn-primary btn-xs" data-action="save-settings">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-settings">Отмена</button></div></div>`;
       }
 
-      function renderFrameModal() {
-        if (!state.frameSettings) return '';
+      function renderFrameEditorInline(target) {
+        if (!state.frameSettings || state.frameSettings.target !== target || !target) return '';
         const f = state.frameSettings;
-        return `<div class="modal-backdrop" data-modal="frame-settings"><div class="modal frame-modal" role="dialog" aria-modal="true" aria-label="Настроить кадр"><h3 style="margin:0;">Настроить кадр</h3><div class="frame-modal-layout"><div class="frame-preview-wrap"><div class="frame-stage"><div class="frame-crop-mask"></div><div class="frame-crop-viewport" style="--crop-ratio:${esc(getFrameAspectRatio(f.target))};"><img class="frame-crop-image" data-crop-image="true" src="${esc(toSrc(f.src || ''))}" alt="preview" style="${esc(getMediaStyle(f.view))}" /><div class="frame-crop-guide"></div></div></div><p class="frame-tip">Перетаскивайте изображение мышью или пальцем. Колесо мыши меняет масштаб.</p></div><div class="frame-controls"><div class="field"><label>Режим отображения</label><select data-frame="fit"><option value="cover" ${f.view.fit === 'cover' ? 'selected' : ''}>Заполнить</option><option value="contain" ${f.view.fit === 'contain' ? 'selected' : ''}>Вписать</option></select></div><div class="range-row"><div class="range-row-head"><label>Масштаб</label><span class="range-value" data-frame-value="scale">${esc(frameValue(f.view.scale, 2))}</span></div><input data-frame="scale" type="range" min="1" max="3" step="0.05" value="${esc(f.view.scale)}" /></div><div class="range-row"><div class="range-row-head"><label>Сдвиг по X</label><span class="range-value" data-frame-value="positionX">${esc(frameValue(f.view.positionX, 0, '%'))}</span></div><input data-frame="positionX" type="range" min="0" max="100" step="1" value="${esc(f.view.positionX)}" /></div><div class="range-row"><div class="range-row-head"><label>Сдвиг по Y</label><span class="range-value" data-frame-value="positionY">${esc(frameValue(f.view.positionY, 0, '%'))}</span></div><input data-frame="positionY" type="range" min="0" max="100" step="1" value="${esc(f.view.positionY)}" /></div><div class="frame-actions"><button class="btn btn-primary btn-xs" data-action="save-frame">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-frame">Отмена</button></div></div></div></div></div>`;
+        return `<div class="frame-editor-inline"><h3 style="margin:0;color:#1e3247;">Настроить кадр</h3><div class="frame-modal-layout"><div class="frame-preview-wrap"><div class="frame-stage"><div class="frame-crop-mask"></div><div class="frame-crop-viewport" style="--crop-ratio:${esc(getFrameAspectRatio(f.target))};"><img class="frame-crop-image" data-crop-image="true" src="${esc(toSrc(f.src || ''))}" alt="preview" style="${esc(getMediaStyle(f.view))}" /><div class="frame-crop-guide"></div></div></div><p class="frame-tip">Перетаскивайте изображение мышью или пальцем. Колесо мыши меняет масштаб.</p></div><div class="frame-controls"><div class="field"><label>Режим отображения</label><select data-frame="fit"><option value="cover" ${f.view.fit === 'cover' ? 'selected' : ''}>Заполнить</option><option value="contain" ${f.view.fit === 'contain' ? 'selected' : ''}>Вписать</option></select></div><div class="range-row"><div class="range-row-head"><label>Масштаб</label><span class="range-value" data-frame-value="scale">${esc(frameValue(f.view.scale, 2))}</span></div><input data-frame="scale" type="range" min="1" max="3" step="0.05" value="${esc(f.view.scale)}" /></div><div class="range-row"><div class="range-row-head"><label>Сдвиг по X</label><span class="range-value" data-frame-value="positionX">${esc(frameValue(f.view.positionX, 0, '%'))}</span></div><input data-frame="positionX" type="range" min="0" max="100" step="1" value="${esc(f.view.positionX)}" /></div><div class="range-row"><div class="range-row-head"><label>Сдвиг по Y</label><span class="range-value" data-frame-value="positionY">${esc(frameValue(f.view.positionY, 0, '%'))}</span></div><input data-frame="positionY" type="range" min="0" max="100" step="1" value="${esc(f.view.positionY)}" /></div><div class="frame-actions"><button class="btn btn-primary btn-xs" data-action="save-frame">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-frame">Отмена</button></div></div></div></div>`;
       }
 
       function renderAddSectionPanel() {
@@ -304,10 +306,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function renderPage() {
         const root = $('workspace');
-        if (!state.draft) { root.innerHTML = ''; $('modalRoot').innerHTML = ''; return; }
+        if (!state.draft) { root.innerHTML = ''; return; }
         const blocks = getBlocks();
         root.innerHTML = `${state.alert ? `<div class="container" style="padding-top:12px;"><p class="${state.alertError ? 'error' : 'muted'}">${esc(state.alert)}</p></div>` : ''}${renderHero()}${blocks.map((block, idx) => renderBlock(block, idx)).join('')}${renderAddSectionPanel()}<section class="section"><div class="container"><details><summary>Показать JSON</summary><pre>${esc(JSON.stringify(state.draft, null, 2))}</pre></details></div></section>`;
-        $('modalRoot').innerHTML = `${renderSectionModal()}${renderFrameModal()}`;
         updateStatus();
       }
 
@@ -364,21 +365,21 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function syncFramePreviewUI() {
         if (!state.frameSettings) return;
-        const modal = $('modalRoot');
-        const image = modal.querySelector('.frame-crop-image');
+        const scope = $('workspace');
+        const image = scope.querySelector('.frame-crop-image');
         if (image) image.style.cssText = getMediaStyle(state.frameSettings.view);
 
-        const scale = modal.querySelector('[data-frame-value="scale"]');
-        const posX = modal.querySelector('[data-frame-value="positionX"]');
-        const posY = modal.querySelector('[data-frame-value="positionY"]');
+        const scale = scope.querySelector('[data-frame-value="scale"]');
+        const posX = scope.querySelector('[data-frame-value="positionX"]');
+        const posY = scope.querySelector('[data-frame-value="positionY"]');
         if (scale) scale.textContent = frameValue(state.frameSettings.view.scale, 2);
         if (posX) posX.textContent = frameValue(state.frameSettings.view.positionX, 0, '%');
         if (posY) posY.textContent = frameValue(state.frameSettings.view.positionY, 0, '%');
 
-        const fitInput = modal.querySelector('[data-frame="fit"]');
-        const scaleInput = modal.querySelector('[data-frame="scale"]');
-        const xInput = modal.querySelector('[data-frame="positionX"]');
-        const yInput = modal.querySelector('[data-frame="positionY"]');
+        const fitInput = scope.querySelector('[data-frame="fit"]');
+        const scaleInput = scope.querySelector('[data-frame="scale"]');
+        const xInput = scope.querySelector('[data-frame="positionX"]');
+        const yInput = scope.querySelector('[data-frame="positionY"]');
         if (fitInput) fitInput.value = state.frameSettings.view.fit;
         if (scaleInput) scaleInput.value = String(state.frameSettings.view.scale);
         if (xInput) xInput.value = String(state.frameSettings.view.positionX);
@@ -394,7 +395,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function stopFrameDrag() {
         state.frameDrag = null;
-        const image = $('modalRoot').querySelector('.frame-crop-image');
+        const image = $('workspace').querySelector('.frame-crop-image');
         if (image) image.classList.remove('dragging');
       }
 
@@ -454,13 +455,6 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function handleActionClick(event) {
-        const modalBackdrop = event.target.closest('.modal-backdrop');
-        if (modalBackdrop && event.target === modalBackdrop) {
-          closeModals();
-          renderPage();
-          return;
-        }
-
         const el = event.target.closest('[data-action]');
         if (!el) return;
         const action = el.dataset.action;
@@ -532,10 +526,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       $('workspace').addEventListener('input', handleInputEvent);
       $('workspace').addEventListener('change', handleChangeEvent);
       $('workspace').addEventListener('click', handleActionClick);
-      $('modalRoot').addEventListener('input', handleInputEvent);
-      $('modalRoot').addEventListener('change', handleChangeEvent);
-      $('modalRoot').addEventListener('click', handleActionClick);
-      $('modalRoot').addEventListener('pointerdown', (event) => {
+      $('workspace').addEventListener('pointerdown', (event) => {
         if (!state.frameSettings) return;
         const image = event.target.closest('[data-crop-image]');
         if (!image) return;
@@ -555,7 +546,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         };
       });
 
-      $('modalRoot').addEventListener('pointermove', (event) => {
+      $('workspace').addEventListener('pointermove', (event) => {
         if (!state.frameSettings || !state.frameDrag || state.frameDrag.pointerId !== event.pointerId) return;
         const drag = state.frameDrag;
         const dx = event.clientX - drag.startX;
@@ -566,9 +557,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         commitFramePreview();
       });
 
-      $('modalRoot').addEventListener('pointerup', stopFrameDrag);
-      $('modalRoot').addEventListener('pointercancel', stopFrameDrag);
-      $('modalRoot').addEventListener('wheel', (event) => {
+      $('workspace').addEventListener('pointerup', stopFrameDrag);
+      $('workspace').addEventListener('pointercancel', stopFrameDrag);
+      $('workspace').addEventListener('wheel', (event) => {
         if (!state.frameSettings) return;
         if (!event.target.closest('.frame-crop-viewport')) return;
         event.preventDefault();
