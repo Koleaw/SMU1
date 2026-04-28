@@ -31,6 +31,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .btn-primary.btn-xs { box-shadow: 0 1px 0 rgb(6 16 27 / 18%); }
       .btn-danger.btn-xs:hover { background: #942f2f; border-color: #942f2f; }
       .btn:focus-visible { outline: 2px solid #6f97bf; outline-offset: 1px; }
+      .section--dark .admin-strip { color: #deecfb; }
+      .section--dark .admin-strip .btn-secondary.btn-xs { background: rgb(219 233 247 / 92%); color: #1f3448; border-color: #9bb7d3; }
+      .section--dark .admin-strip .btn-secondary.btn-xs:hover { background: #fff; }
       .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 70; background: #fff; border-bottom: 1px solid #d8e3ed; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       .topbar h1 { margin: 0; font-size: 19px; }
       .topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -54,6 +57,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .hero-edit-grid .field { margin: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid rgb(136 164 192 / 35%); background: rgb(13 33 52 / 72%); }
       .hero-edit-grid .field--full { grid-column: 1 / -1; }
       .hero-edit-grid label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: #deecfb !important; letter-spacing: .01em; }
+      .hero-edit-box, .hero-edit-box p, .hero-edit-box .field, .hero-edit-box .field label { color: #deecfb !important; }
       .hero-edit-grid .admin-inline { border-color: #93b1cf; background: #f7fbff !important; color: #162738 !important; padding: 12px 13px; font-size: 14px; }
       .hero-edit-grid textarea.admin-inline, .hero-edit-grid input.admin-inline { color: #162738 !important; background: #f7fbff !important; }
       .hero-edit-grid .admin-inline-area { min-height: 130px; }
@@ -72,30 +76,15 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .section-settings-inline textarea { width: 100%; border: 1px solid #9eb8d2; border-radius: 8px; padding: 9px 11px; font: inherit; color: #1f3448; background: #fff; }
       .section-settings-inline label { color: #2a435c; font-weight: 700; font-size: 13px; }
       .frame-editor-inline { margin-top: 12px; border: 1px solid #d5e2ef; border-radius: 14px; background: #fff; padding: 14px; display: grid; gap: 14px; box-shadow: 0 12px 26px rgb(6 16 27 / 12%); }
-      .frame-modal-layout { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
-      .frame-preview-wrap { background: linear-gradient(180deg, #f4f8fd, #edf4fb); border: 1px solid #d5e2ef; border-radius: 12px; padding: 14px; min-width: 0; }
-      .frame-stage { position: relative; border-radius: 12px; background: #091520; padding: 20px; overflow: hidden; }
-      .frame-crop-viewport { position: relative; width: 100%; max-width: min(100%, 680px); margin: 0 auto; aspect-ratio: var(--crop-ratio, 16 / 10); border-radius: 10px; overflow: hidden; border: 1px solid rgb(229 238 248 / 72%); box-shadow: 0 0 0 1px rgb(7 15 24 / 30%); }
-      .frame-crop-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: var(--fit, cover); object-position: var(--x, 50%) var(--y, 50%); transform: scale(var(--scale, 1)); transform-origin: center center; cursor: grab; user-select: none; -webkit-user-drag: none; touch-action: none; }
-      .frame-crop-image.dragging { cursor: grabbing; }
-      .frame-crop-shell { position: relative; overflow: hidden; width: 100%; height: 100%; contain: layout paint; }
-      .frame-crop-mask { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 999px rgb(6 16 27 / 42%); }
-      .frame-crop-guide { position: absolute; inset: 0; pointer-events: none; border: 1px solid rgb(255 255 255 / 82%); }
-      .frame-crop-guide::before, .frame-crop-guide::after { content: ''; position: absolute; background: rgb(255 255 255 / 35%); }
-      .frame-crop-guide::before { left: 50%; top: 0; bottom: 0; width: 1px; transform: translateX(-50%); }
-      .frame-crop-guide::after { top: 50%; left: 0; right: 0; height: 1px; transform: translateY(-50%); }
+      .media-block--frame-live .media-thumb { cursor: grab; touch-action: none; user-select: none; -webkit-user-drag: none; }
+      .media-block--frame-live .media-thumb.dragging { cursor: grabbing; }
       .frame-tip { margin: 10px 0 0; color: #5c7187; font-size: 12px; }
       .frame-controls { border: 1px solid #d5e2ef; border-radius: 12px; background: #fff; padding: 12px; display: grid; gap: 10px; align-content: start; min-width: 0; max-height: 100%; position: relative; z-index: 2; }
       .frame-actions { margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
+      .frame-editor-inline--controls { margin-top: 10px; }
       .range-row { display: grid; gap: 6px; }
       .range-row-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: #36506a; }
       .range-value { font-variant-numeric: tabular-nums; color: #1f3449; font-weight: 600; }
-      @media (max-width: 899px) {
-        .frame-stage { padding: 12px; }
-      }
-      @media (min-width: 900px) {
-        .frame-modal-layout { grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); align-items: start; }
-      }
       .factor-item { display: grid; gap: 8px; border: 1px solid #c9d8e8; border-radius: var(--radius-base); padding: 10px; background: #fff; }
       .block-create { margin: 20px 0; padding: 14px; background: #fff; border: 1px solid #d5e2ef; border-radius: var(--radius-max); }
       pre { margin: 0; font-size: 12px; background: #0f1720; color: #d4e3f5; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
@@ -235,10 +224,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function renderMedia(src, alt, view, caption = '', uploadTarget = '', blockIndex = null) {
+        const isActiveFrameTarget = Boolean(uploadTarget && state.frameSettings?.target === uploadTarget);
+        const liveView = isActiveFrameTarget ? state.frameSettings.view : view;
         const mediaControls = uploadTarget
           ? `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="${uploadTarget}">Заменить фото</button>${blockIndex !== null ? `<button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button>` : `<button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button>`}<button class="btn btn-secondary btn-xs" data-action="open-frame-settings" data-target="${uploadTarget}">Настроить кадр</button></div>`
           : '';
-        return `<article class="media-block placeholder placeholder--wide-feature" data-media-target="${uploadTarget || ''}">${src ? `<img class="media-thumb" src="${esc(toSrc(src))}" alt="${esc(alt)}" style="${esc(getMediaStyle(view))}" />` : ''}${caption ? `<p class="media-caption">${esc(caption)}</p>` : `<p class="media-caption">${DEFAULT_PLACEHOLDER}</p>`}${mediaControls}${renderFrameEditorInline(uploadTarget)}</article>`;
+        return `<article class="media-block placeholder placeholder--wide-feature ${isActiveFrameTarget ? 'media-block--frame-live' : ''}" data-media-target="${uploadTarget || ''}">${src ? `<img class="media-thumb" data-crop-drag-target="${uploadTarget || ''}" src="${esc(toSrc(src))}" alt="${esc(alt)}" style="${esc(getMediaStyle(liveView))}" />` : ''}${caption ? `<p class="media-caption">${esc(caption)}</p>` : `<p class="media-caption">${DEFAULT_PLACEHOLDER}</p>`}${isActiveFrameTarget ? '<p class="frame-tip">Тяните фото прямо в этом прямоугольнике — это тот же кадр, что и на публичной странице.</p>' : ''}${mediaControls}${renderFrameEditorInline(uploadTarget)}</article>`;
       }
 
       function renderHero() {
@@ -326,13 +317,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       function renderSectionSettingsInline(blockIndex) {
         if (!state.blockSettings || state.blockSettings.index !== blockIndex) return '';
         const s = state.blockSettings;
-        return `<div class="section-settings-inline"><h3 style="margin:0;color:#1e3247;">Настройки блока</h3><div class="field"><label>Заголовок блока</label><input class="admin-inline" data-modal-field="title" value="${esc(s.title || '')}" /></div><div class="field"><label>Intro</label><textarea class="admin-inline admin-inline-area" data-modal-field="intro">${esc(s.intro || '')}</textarea></div><div class="field"><label>Тема</label><select data-modal-field="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Темная</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Светлая</option><option value="graphite" ${s.theme === 'graphite' ? 'selected' : ''}>Графитовая</option></select></div>${Object.hasOwn(s, 'grid') ? `<div class="field"><label>Сетка</label><select data-modal-field="grid"><option value="auto" ${s.grid === 'auto' ? 'selected' : ''}>Авто</option><option value="2" ${s.grid === '2' ? 'selected' : ''}>2</option><option value="3" ${s.grid === '3' ? 'selected' : ''}>3</option><option value="4" ${s.grid === '4' ? 'selected' : ''}>4</option></select></div>` : ''}${Object.hasOwn(s, 'columns') ? `<div class="field"><label>Колонки</label><select data-modal-field="columns"><option value="2" ${String(s.columns) === '2' ? 'selected' : ''}>2</option><option value="3" ${String(s.columns) === '3' ? 'selected' : ''}>3</option></select></div>` : ''}<label style="color:#1f3448;"><input type="checkbox" data-modal-field="isActive" ${s.isActive === false ? '' : 'checked'} /> Активный блок</label><div class="admin-strip" style="margin-top:2px;"><button class="btn btn-primary btn-xs" data-action="save-settings">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-settings">Отмена</button></div></div>`;
+        return `<div class="section-settings-inline" data-settings-for="${blockIndex}"><h3 style="margin:0;color:#1e3247;">Настройки блока</h3><div class="field"><label>Заголовок блока</label><input class="admin-inline" data-modal-field="title" value="${esc(s.title || '')}" /></div><div class="field"><label>Intro</label><textarea class="admin-inline admin-inline-area" data-modal-field="intro">${esc(s.intro || '')}</textarea></div><div class="field"><label>Тема</label><select data-modal-field="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Темная</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Светлая</option><option value="graphite" ${s.theme === 'graphite' ? 'selected' : ''}>Графитовая</option></select></div>${Object.hasOwn(s, 'grid') ? `<div class="field"><label>Сетка</label><select data-modal-field="grid"><option value="auto" ${s.grid === 'auto' ? 'selected' : ''}>Авто</option><option value="2" ${s.grid === '2' ? 'selected' : ''}>2</option><option value="3" ${s.grid === '3' ? 'selected' : ''}>3</option><option value="4" ${s.grid === '4' ? 'selected' : ''}>4</option></select></div>` : ''}${Object.hasOwn(s, 'columns') ? `<div class="field"><label>Колонки</label><select data-modal-field="columns"><option value="2" ${String(s.columns) === '2' ? 'selected' : ''}>2</option><option value="3" ${String(s.columns) === '3' ? 'selected' : ''}>3</option></select></div>` : ''}<label style="color:#1f3448;"><input type="checkbox" data-modal-field="isActive" ${s.isActive === false ? '' : 'checked'} /> Активный блок</label><div class="admin-strip" style="margin-top:2px;"><button class="btn btn-primary btn-xs" data-action="save-settings">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-settings">Отмена</button></div></div>`;
       }
 
       function renderFrameEditorInline(target) {
         if (!state.frameSettings || state.frameSettings.target !== target || !target) return '';
         const f = state.frameSettings;
-        return `<div class="frame-editor-inline"><h3 style="margin:0;color:#1e3247;">Настроить кадр</h3><div class="frame-modal-layout"><div class="frame-preview-wrap"><div class="frame-stage"><div class="frame-crop-mask"></div><div class="frame-crop-viewport" style="--crop-ratio:${esc(getFrameAspectRatio(f.target))};"><div class="frame-crop-shell"><img class="frame-crop-image" data-crop-image="true" src="${esc(toSrc(f.src || ''))}" alt="preview" style="${esc(getMediaStyle(f.view))}" /></div><div class="frame-crop-guide"></div></div></div><p class="frame-tip">Перетаскивайте изображение мышью или пальцем. Колесо мыши меняет масштаб.</p></div><div class="frame-controls"><div class="field"><label>Режим отображения</label><select data-frame="fit"><option value="cover" ${f.view.fit === 'cover' ? 'selected' : ''}>Заполнить</option><option value="contain" ${f.view.fit === 'contain' ? 'selected' : ''}>Вписать</option></select></div><div class="range-row"><div class="range-row-head"><label>Масштаб</label><span class="range-value" data-frame-value="scale">${esc(frameValue(f.view.scale, 2))}</span></div><input data-frame="scale" type="range" min="1" max="3" step="0.05" value="${esc(f.view.scale)}" /></div><div class="range-row"><div class="range-row-head"><label>Сдвиг по X</label><span class="range-value" data-frame-value="positionX">${esc(frameValue(f.view.positionX, 0, '%'))}</span></div><input data-frame="positionX" type="range" min="0" max="100" step="1" value="${esc(f.view.positionX)}" /></div><div class="range-row"><div class="range-row-head"><label>Сдвиг по Y</label><span class="range-value" data-frame-value="positionY">${esc(frameValue(f.view.positionY, 0, '%'))}</span></div><input data-frame="positionY" type="range" min="0" max="100" step="1" value="${esc(f.view.positionY)}" /></div><div class="frame-actions"><button class="btn btn-secondary btn-xs" data-action="reset-frame">Сбросить</button><button class="btn btn-primary btn-xs" data-action="save-frame">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-frame">Отмена</button></div></div></div></div>`;
+        return `<div class="frame-editor-inline frame-editor-inline--controls" data-frame-editor-target="${esc(target)}"><h3 style="margin:0;color:#1e3247;">Настроить кадр</h3><p class="frame-tip">Редактирование происходит прямо в прямоугольнике изображения выше — как на публичной странице.</p><div class="frame-controls"><div class="field"><label>Режим отображения</label><select data-frame="fit"><option value="cover" ${f.view.fit === 'cover' ? 'selected' : ''}>Заполнить</option><option value="contain" ${f.view.fit === 'contain' ? 'selected' : ''}>Вписать</option></select></div><div class="range-row"><div class="range-row-head"><label>Масштаб</label><span class="range-value" data-frame-value="scale">${esc(frameValue(f.view.scale, 2))}</span></div><input data-frame="scale" type="range" min="1" max="3" step="0.05" value="${esc(f.view.scale)}" /></div><div class="range-row"><div class="range-row-head"><label>Сдвиг по X</label><span class="range-value" data-frame-value="positionX">${esc(frameValue(f.view.positionX, 0, '%'))}</span></div><input data-frame="positionX" type="range" min="0" max="100" step="1" value="${esc(f.view.positionX)}" /></div><div class="range-row"><div class="range-row-head"><label>Сдвиг по Y</label><span class="range-value" data-frame-value="positionY">${esc(frameValue(f.view.positionY, 0, '%'))}</span></div><input data-frame="positionY" type="range" min="0" max="100" step="1" value="${esc(f.view.positionY)}" /></div><div class="frame-actions"><button class="btn btn-secondary btn-xs" data-action="reset-frame">Сбросить</button><button class="btn btn-primary btn-xs" data-action="save-frame">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-frame">Отмена</button></div></div></div>`;
       }
 
       function renderAddSectionPanel() {
@@ -406,8 +397,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       function syncFramePreviewUI() {
         if (!state.frameSettings) return;
         const scope = $('workspace');
-        const image = scope.querySelector('.frame-crop-image');
-        if (image) image.style.cssText = getMediaStyle(state.frameSettings.view);
+        const liveImage = scope.querySelector(`[data-crop-drag-target="${state.frameSettings.target}"]`);
+        if (liveImage) liveImage.style.cssText = getMediaStyle(state.frameSettings.view);
 
         const scale = scope.querySelector('[data-frame-value="scale"]');
         const posX = scope.querySelector('[data-frame-value="positionX"]');
@@ -444,7 +435,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function stopFrameDrag() {
         state.frameDrag = null;
-        const image = $('workspace').querySelector('.frame-crop-image');
+        const image = $('workspace').querySelector(`[data-crop-drag-target="${state.frameSettings?.target || ''}"]`);
         if (image) image.classList.remove('dragging');
       }
 
@@ -557,7 +548,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
         if (action === 'block-up' || action === 'block-down') { const blocks = getBlocks(); const to = action === 'block-up' ? blockIndex - 1 : blockIndex + 1; if (to >= 0 && to < blocks.length) [blocks[blockIndex], blocks[to]] = [blocks[to], blocks[blockIndex]]; renumber(blocks); setBlocks(blocks); renderPage(); return; }
         if (action === 'toggle-block') { applyBlock(blockIndex, (block) => { block.isActive = block.isActive === false; }); renderPage(); return; }
-        if (action === 'open-settings') { state.editingTextBlock = null; state.blockSettings = { index: blockIndex, ...clone(getBlock(blockIndex)) }; renderPage(); scrollToInlineEditor('.section-settings-inline'); return; }
+        if (action === 'open-settings') { state.editingTextBlock = null; state.blockSettings = { index: blockIndex, ...clone(getBlock(blockIndex)) }; renderPage(); scrollToInlineEditor(`[data-settings-for="${blockIndex}"]`); return; }
         if (action === 'cancel-settings') { state.blockSettings = null; renderPage(); return; }
         if (action === 'save-settings') { const { index, ...payload } = state.blockSettings; applyBlock(index, (block) => { block.title = payload.title; block.intro = payload.intro; block.theme = payload.theme; if ('grid' in block) block.grid = payload.grid; if ('columns' in block) block.columns = Number(payload.columns); block.isActive = payload.isActive; }); state.blockSettings = null; renderPage(); return; }
         if (action === 'edit-text-block') { state.blockSettings = null; state.editingTextBlock = { index: blockIndex, draft: { title: getBlock(blockIndex).title || '', intro: getBlock(blockIndex).intro || '', text: getBlock(blockIndex).text || '' } }; renderPage(); return; }
@@ -568,7 +559,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
         if (action === 'clear-block-media') { applyBlock(blockIndex, (block) => { block.media = ''; }); renderPage(); return; }
         if (action === 'upload-image') { state.uploadTarget = el.dataset.target; $('uploadInput').click(); return; }
-        if (action === 'open-frame-settings') { state.blockSettings = null; state.editingTextBlock = null; openFrameSettings(el.dataset.target); renderPage(); scrollToInlineEditor('.frame-editor-inline'); return; }
+        if (action === 'open-frame-settings') { state.blockSettings = null; state.editingTextBlock = null; openFrameSettings(el.dataset.target); renderPage(); scrollToInlineEditor(`[data-frame-editor-target="${el.dataset.target}"]`); return; }
         if (action === 'reset-frame') { state.frameSettings.view = normalizeFrameView(clone(state.frameSettings.initialView)); commitFramePreview(); return; }
         if (action === 'cancel-frame') { stopFrameDrag(); closeFrameSettings(true); renderPage(); return; }
         if (action === 'save-frame') {
@@ -585,9 +576,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       $('workspace').addEventListener('click', handleActionClick);
       $('workspace').addEventListener('pointerdown', (event) => {
         if (!state.frameSettings) return;
-        const image = event.target.closest('[data-crop-image]');
+        const image = event.target.closest('[data-crop-drag-target]');
         if (!image) return;
-        const viewport = image.closest('.frame-crop-viewport');
+        if (image.dataset.cropDragTarget !== state.frameSettings.target) return;
+        const viewport = image.closest('[data-media-target]');
         if (!viewport) return;
         event.preventDefault();
         image.setPointerCapture(event.pointerId);
@@ -619,7 +611,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       $('workspace').addEventListener('pointercancel', stopFrameDrag);
       $('workspace').addEventListener('wheel', (event) => {
         if (!state.frameSettings) return;
-        if (!event.target.closest('.frame-crop-viewport')) return;
+        const mediaHost = event.target.closest('[data-media-target]');
+        if (!mediaHost || mediaHost.dataset.mediaTarget !== state.frameSettings.target) return;
         event.preventDefault();
         const delta = Math.sign(event.deltaY) * -0.08;
         state.frameSettings.view.scale = clamp(state.frameSettings.view.scale + delta, 1, 3);
