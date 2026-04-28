@@ -541,6 +541,7 @@ const contactDescription = isNavesyPage
     mediaImage={isCatalogHub ? undefined : withBase(item.image)}
     mediaAlt={isCatalogHub ? undefined : item.title}
     mediaCaption={isCatalogHub || isNavesyPage ? undefined : item.placeholderLabel}
+    mediaView={isCatalogHub ? undefined : (item as { imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number } }).imageView}
   />
 
   {isCatalogHub ? (

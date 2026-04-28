@@ -14,6 +14,12 @@ interface Props {
   mediaPoster?: string;
   mediaAlt?: string;
   mediaCaption?: string;
+  mediaView?: {
+    fit?: 'cover' | 'contain';
+    positionX?: number;
+    positionY?: number;
+    scale?: number;
+  };
 }
 import { withBase } from '../utils/withBase';
 
@@ -31,10 +37,13 @@ const {
   mediaVideo,
   mediaPoster,
   mediaAlt = 'Фоновое изображение первого экрана',
-  mediaCaption
+  mediaCaption,
+  mediaView
 } = Astro.props;
 
 const heroClass = ['hero', className].filter(Boolean).join(' ');
+const safeMediaView = { fit: 'cover', positionX: 50, positionY: 50, scale: 1, ...(mediaView || {}) };
+const heroImageStyle = `object-fit:${safeMediaView.fit};object-position:${safeMediaView.positionX}% ${safeMediaView.positionY}%;transform:scale(${safeMediaView.scale});transform-origin:center;`;
 ---
 <section class={heroClass}>
   {(mediaImage || mediaPoster) && (
@@ -47,7 +56,7 @@ const heroClass = ['hero', className].filter(Boolean).join(' ');
           {mediaPoster && <img class="hero-media__fallback" src={mediaPoster} alt={mediaAlt} loading="eager" />}
         </>
       ) : (
-        <img class="hero-media__image" src={mediaImage ?? mediaPoster} alt={mediaAlt} loading="eager" />
+        <img class="hero-media__image" src={mediaImage ?? mediaPoster} alt={mediaAlt} loading="eager" style={heroImageStyle} />
       )}
       <div class="hero-media__overlay"></div>
       {mediaCaption && <p class="hero-media__caption">{mediaCaption}</p>}
