@@ -1,0 +1,111 @@
+{
+  "$ref": "#/definitions/product-categories",
+  "definitions": {
+    "product-categories": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "parentSectionSlug": {
+          "type": "string"
+        },
+        "shortDescription": {
+          "type": "string"
+        },
+        "heroTitle": {
+          "type": "string"
+        },
+        "heroDescription": {
+          "type": "string"
+        },
+        "order": {
+          "type": "number"
+        },
+        "showInSectionGrid": {
+          "type": "boolean"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "image": {
+          "type": "string"
+        },
+        "imageView": {
+          "type": "object",
+          "properties": {
+            "fit": {
+              "type": "string",
+              "enum": [
+                "cover",
+                "contain"
+              ]
+            },
+            "positionX": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "positionY": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "scale": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 3
+            }
+          },
+          "required": [
+            "fit",
+            "positionX",
+            "positionY",
+            "scale"
+          ],
+          "additionalProperties": false
+        },
+        "placeholderLabel": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "catalog-list",
+            "custom-list"
+          ]
+        },
+        "seoTitle": {
+          "type": "string"
+        },
+        "seoDescription": {
+          "type": "string"
+        },
+        "$schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "slug",
+        "parentSectionSlug",
+        "shortDescription",
+        "heroTitle",
+        "heroDescription",
+        "order",
+        "showInSectionGrid",
+        "isActive",
+        "image",
+        "placeholderLabel",
+        "mode",
+        "seoTitle",
+        "seoDescription"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

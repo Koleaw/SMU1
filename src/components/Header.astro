@@ -34,6 +34,15 @@ const activePathMap: Record<string, string[]> = {
 
 const currentPathname = normalizePath(Astro.url.pathname);
 const isHomePage = currentPathname === '/';
+const overlayHeaderPaths = new Set([
+  '/',
+  '/navesy-i-kozyrki/',
+  '/metallokonstruktsii-dlya-biznesa/',
+  '/topiarii/',
+  '/blagoustroystvo-territoriy/',
+  '/stroitelstvo-i-remonty/'
+]);
+const usesOverlayHeader = overlayHeaderPaths.has(currentPathname);
 
 const isActive = (href: string) => {
   const normalizedHref = normalizePath(href);
@@ -45,7 +54,10 @@ const isActive = (href: string) => {
   });
 };
 ---
-<header class={`site-header${isHomePage ? ' site-header--home' : ''}`} data-home-header={isHomePage ? 'true' : undefined}>
+<header
+  class={`site-header${isHomePage ? ' site-header--home' : ''}${usesOverlayHeader ? ' site-header--overlay' : ''}`}
+  data-overlay-header={usesOverlayHeader ? 'true' : undefined}
+>
   <div class="container site-header__desktop">
     <div class="site-header__left">
       <a href={withBase('/')} class="site-header__logo-link" aria-label="СМУ-1 на главную">
@@ -91,10 +103,10 @@ const isActive = (href: string) => {
 </header>
 
 <script>
-  const initHomeHeaderState = () => {
-    const header = document.querySelector('[data-home-header="true"]');
+  const initOverlayHeaderState = () => {
+    const header = document.querySelector('[data-overlay-header="true"]');
     if (!(header instanceof HTMLElement)) return;
-    if (header.dataset.homeHeaderReady === 'true') return;
+    if (header.dataset.overlayHeaderReady === 'true') return;
 
     const hero = document.querySelector('.hero');
     if (!(hero instanceof HTMLElement)) return;
@@ -105,14 +117,16 @@ const isActive = (href: string) => {
       const heroBottom = hero.getBoundingClientRect().bottom;
       const shouldUseScrolledState = window.scrollY > SCROLL_THRESHOLD || heroBottom <= (header.offsetHeight + 8);
       header.classList.toggle('is-scrolled', shouldUseScrolledState);
+      document.documentElement.classList.toggle('overlay-header-scrolled', shouldUseScrolledState);
     };
 
+    document.documentElement.classList.add('has-overlay-header');
     window.addEventListener('scroll', updateState, { passive: true });
     window.addEventListener('resize', updateState);
     updateState();
-    header.dataset.homeHeaderReady = 'true';
+    header.dataset.overlayHeaderReady = 'true';
   };
 
-  initHomeHeaderState();
-  document.addEventListener('astro:page-load', initHomeHeaderState);
+  initOverlayHeaderState();
+  document.addEventListener('astro:page-load', initOverlayHeaderState);
 </script>

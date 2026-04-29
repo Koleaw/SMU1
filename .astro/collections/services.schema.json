@@ -1,0 +1,495 @@
+{
+  "$ref": "#/definitions/services",
+  "definitions": {
+    "services": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "shortDescription": {
+          "type": "string"
+        },
+        "heroTitle": {
+          "type": "string"
+        },
+        "heroDescription": {
+          "type": "string"
+        },
+        "order": {
+          "type": "number"
+        },
+        "showOnHome": {
+          "type": "boolean"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "image": {
+          "type": "string"
+        },
+        "imageView": {
+          "type": "object",
+          "properties": {
+            "fit": {
+              "type": "string",
+              "enum": [
+                "cover",
+                "contain"
+              ]
+            },
+            "positionX": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "positionY": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "scale": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 3
+            }
+          },
+          "required": [
+            "fit",
+            "positionX",
+            "positionY",
+            "scale"
+          ],
+          "additionalProperties": false
+        },
+        "placeholderLabel": {
+          "type": "string"
+        },
+        "seoTitle": {
+          "type": "string"
+        },
+        "seoDescription": {
+          "type": "string"
+        },
+        "pageBlocks": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "cardGrid"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "intro": {
+                    "type": "string"
+                  },
+                  "theme": {
+                    "type": "string",
+                    "enum": [
+                      "dark",
+                      "light",
+                      "graphite"
+                    ]
+                  },
+                  "grid": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "2",
+                      "3",
+                      "4"
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "order": {
+                    "type": "number"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "order": {
+                          "type": "number"
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "text",
+                        "order"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "title",
+                  "theme",
+                  "grid",
+                  "order",
+                  "items"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "listPanel"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "intro": {
+                    "type": "string"
+                  },
+                  "theme": {
+                    "$ref": "#/definitions/services/properties/pageBlocks/items/anyOf/0/properties/theme"
+                  },
+                  "columns": {
+                    "type": "number",
+                    "enum": [
+                      2,
+                      3
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "order": {
+                    "type": "number"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "text": {
+                              "type": "string"
+                            },
+                            "order": {
+                              "type": "number"
+                            },
+                            "isActive": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "text"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "title",
+                  "theme",
+                  "columns",
+                  "order",
+                  "items"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "mediaText"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "theme": {
+                    "$ref": "#/definitions/services/properties/pageBlocks/items/anyOf/0/properties/theme"
+                  },
+                  "media": {
+                    "type": "string"
+                  },
+                  "placeholderLabel": {
+                    "type": "string"
+                  },
+                  "mediaPosition": {
+                    "type": "string",
+                    "enum": [
+                      "left",
+                      "right"
+                    ]
+                  },
+                  "mediaView": {
+                    "$ref": "#/definitions/services/properties/imageView"
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "order": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "type",
+                  "title",
+                  "text",
+                  "theme",
+                  "mediaPosition",
+                  "order"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "process"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "intro": {
+                    "type": "string"
+                  },
+                  "theme": {
+                    "$ref": "#/definitions/services/properties/pageBlocks/items/anyOf/0/properties/theme"
+                  },
+                  "media": {
+                    "type": "string"
+                  },
+                  "placeholderLabel": {
+                    "type": "string"
+                  },
+                  "mediaPosition": {
+                    "type": "string",
+                    "enum": [
+                      "left",
+                      "right"
+                    ]
+                  },
+                  "mediaView": {
+                    "$ref": "#/definitions/services/properties/imageView"
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "order": {
+                    "type": "number"
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "order": {
+                          "type": "number"
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "order"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "title",
+                  "theme",
+                  "order",
+                  "steps"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "factorList"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "intro": {
+                    "type": "string"
+                  },
+                  "theme": {
+                    "$ref": "#/definitions/services/properties/pageBlocks/items/anyOf/0/properties/theme"
+                  },
+                  "columns": {
+                    "type": "number",
+                    "enum": [
+                      2,
+                      3
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "order": {
+                    "type": "number"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/services/properties/pageBlocks/items/anyOf/1/properties/items/items"
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "title",
+                  "theme",
+                  "columns",
+                  "order",
+                  "items"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "notice"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "theme": {
+                    "$ref": "#/definitions/services/properties/pageBlocks/items/anyOf/0/properties/theme"
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "order": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "type",
+                  "title",
+                  "text",
+                  "theme",
+                  "order"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "exampleGrid"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "intro": {
+                    "type": "string"
+                  },
+                  "theme": {
+                    "$ref": "#/definitions/services/properties/pageBlocks/items/anyOf/0/properties/theme"
+                  },
+                  "grid": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "2",
+                      "3",
+                      "4"
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "order": {
+                    "type": "number"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/services/properties/pageBlocks/items/anyOf/0/properties/items/items"
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "title",
+                  "theme",
+                  "grid",
+                  "order",
+                  "items"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "$schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "slug",
+        "shortDescription",
+        "heroTitle",
+        "heroDescription",
+        "order",
+        "showOnHome",
+        "isActive",
+        "image",
+        "placeholderLabel",
+        "seoTitle",
+        "seoDescription"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

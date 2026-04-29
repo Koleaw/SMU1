@@ -1,0 +1,77 @@
+{
+  "$ref": "#/definitions/site-settings",
+  "definitions": {
+    "site-settings": {
+      "type": "object",
+      "properties": {
+        "companyName": {
+          "type": "string"
+        },
+        "companyShortName": {
+          "type": "string"
+        },
+        "inn": {
+          "type": "string"
+        },
+        "kpp": {
+          "type": "string"
+        },
+        "ogrn": {
+          "type": "string"
+        },
+        "registrationDate": {
+          "type": "string"
+        },
+        "legalAddress": {
+          "type": "string"
+        },
+        "phonePrimary": {
+          "type": "string"
+        },
+        "phoneSecondary": {
+          "type": "string"
+        },
+        "telegram": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "vacanciesEmptyTitle": {
+          "type": "string"
+        },
+        "vacanciesEmptyText": {
+          "type": "string"
+        },
+        "$schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "companyName",
+        "companyShortName",
+        "inn",
+        "kpp",
+        "ogrn",
+        "registrationDate",
+        "legalAddress",
+        "phonePrimary",
+        "phoneSecondary",
+        "telegram",
+        "email",
+        "city",
+        "address",
+        "vacanciesEmptyTitle",
+        "vacanciesEmptyText"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

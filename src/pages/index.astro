@@ -40,7 +40,39 @@ const serviceDirections = (await getCollection('services'))
       mediaPoster={withBase('/assets/images/placeholders/construction.svg')}
       mediaAlt="Производственно-строительные работы СМУ-1"
       mediaCaption="Hero video-ready: до майского обновления используется постер, после загрузки финального ролика блок автоматически работает как фоновое видео без звука."
-    />
+    >
+      <div class="home-hero-meta" aria-label="Основные направления">
+        <a href="#home-products">Каталог изделий</a>
+        <a href="#home-services">Проектные услуги</a>
+        <a href="#home-trust">Выполненные объекты</a>
+      </div>
+    </Hero>
+
+    <section class="home-pathways section" aria-labelledby="home-pathways-title">
+      <div class="container">
+        <div class="section-heading home-pathways__heading">
+          <p class="kicker">Структура работы</p>
+          <h2 id="home-pathways-title" class="section-title">Три понятных сценария для разных задач объекта</h2>
+        </div>
+        <div class="home-pathways__grid">
+          <a class="home-pathway-card" href="#home-products">
+            <span class="home-pathway-card__index">01</span>
+            <h3>Каталог изделий</h3>
+            <p>Типовые направления продукции для городских, коммерческих и частных территорий.</p>
+          </a>
+          <a class="home-pathway-card" href="#home-services">
+            <span class="home-pathway-card__index">02</span>
+            <h3>Проектные услуги</h3>
+            <p>Работы под задачу объекта: от подбора решения до изготовления и реализации.</p>
+          </a>
+          <a class="home-pathway-card" href="#home-trust">
+            <span class="home-pathway-card__index">03</span>
+            <h3>Доверительный контур</h3>
+            <p>Объекты, контакты и открытая информация, которые помогают быстро проверить подрядчика.</p>
+          </a>
+        </div>
+      </div>
+    </section>
 
     <section id="home-products" class="section section--split">
       <div class="container">

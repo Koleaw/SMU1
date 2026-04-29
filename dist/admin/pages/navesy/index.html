@@ -1,0 +1,599 @@
+<!DOCTYPE html><html lang="ru" data-astro-cid-iiq56arf> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Редактирование: Навесы — Админка СМУ-1</title><link rel="stylesheet" href="/SMU1/_astro/_slug_.Bw0775Nz.css">
+<link rel="stylesheet" href="/SMU1/_astro/navesy.CwPy7a4Y.css"></head> <body data-astro-cid-iiq56arf> <div id="loginView" class="login-wrap hidden" data-astro-cid-iiq56arf> <form id="loginForm" class="login-card" data-astro-cid-iiq56arf> <h1 data-astro-cid-iiq56arf>Админка СМУ-1</h1> <p class="muted" data-astro-cid-iiq56arf>Войдите, чтобы редактировать страницу «Навесы».</p> <div class="field" data-astro-cid-iiq56arf><label data-astro-cid-iiq56arf>Логин</label><input name="login" required data-astro-cid-iiq56arf></div> <div class="field" data-astro-cid-iiq56arf><label data-astro-cid-iiq56arf>Пароль</label><input name="password" type="password" required data-astro-cid-iiq56arf></div> <button class="btn btn-primary" type="submit" data-astro-cid-iiq56arf>Войти</button> <p id="loginStatus" class="muted" data-astro-cid-iiq56arf></p> </form> </div> <div id="editorView" class="hidden" data-astro-cid-iiq56arf> <header class="topbar" data-astro-cid-iiq56arf> <div class="topbar-left" data-astro-cid-iiq56arf> <a class="btn btn-secondary btn-xs" href="/SMU1/admin/" data-astro-cid-iiq56arf>← В админку</a> <h1 data-astro-cid-iiq56arf>Редактирование: Навесы</h1> <span id="dirtyStatus" class="status-clean" data-astro-cid-iiq56arf>Нет изменений</span> </div> <div class="topbar-right" data-astro-cid-iiq56arf> <button id="saveBtn" class="btn btn-primary btn-xs" disabled data-astro-cid-iiq56arf>Сохранить</button> <a class="btn btn-secondary btn-xs" href="/SMU1/navesy-i-kozyrki/" target="_blank" rel="noreferrer" data-astro-cid-iiq56arf>Открыть публичную страницу</a> <button id="logoutBtn" class="btn btn-secondary btn-xs" type="button" data-astro-cid-iiq56arf>Выйти</button> </div> </header> <main class="workspace" id="workspace" data-astro-cid-iiq56arf></main> <input id="uploadInput" type="file" accept="image/*,.svg" class="hidden" data-astro-cid-iiq56arf> </div> <script type="module">const adminApiBase = "http://127.0.0.1:8787/api/admin";
+const baseUrl = "/SMU1";
+
+      const API_BASE = adminApiBase;
+      const BLOCK_LABELS = { cardGrid: 'Карточки', listPanel: 'Список', process: 'Процесс', factorList: 'Факторы', mediaText: 'Текст + изображение', notice: 'Вставка', exampleGrid: 'Примеры' };
+      const SECTION_TYPES = ['cardGrid', 'listPanel', 'process', 'factorList', 'mediaText', 'notice', 'exampleGrid'];
+      const DEFAULT_MEDIA_VIEW = { fit: 'cover', positionX: 50, positionY: 50, scale: 1 };
+      const DEFAULT_PLACEHOLDER = 'Фото или рендер будет добавлен позже';
+      const state = {
+        original: null,
+        draft: null,
+        alert: '',
+        alertError: false,
+        editingHero: null,
+        editingCard: null,
+        editingRow: null,
+        editingStep: null,
+        editingListBlock: null,
+        editingTextBlock: null,
+        blockSettings: null,
+        frameSettings: null,
+        frameDrag: null,
+        uploadTarget: null
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const clone = (v) => JSON.parse(JSON.stringify(v));
+      const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+      const sorted = (arr = []) => arr.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const renumber = (arr = []) => arr.forEach((item, i) => { if (item && typeof item === 'object' && 'order' in item) item.order = (i + 1) * 10; });
+      const isDirty = () => JSON.stringify(state.original) !== JSON.stringify(state.draft);
+      const getBlocks = () => sorted(state.draft?.pageBlocks || []);
+      const setBlocks = (blocks) => { state.draft.pageBlocks = blocks; };
+      const toSrc = (src) => {
+        if (!src) return '';
+        if (/^https?:\/\//.test(src)) return src;
+        const normBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+        const clean = src.startsWith('/') ? src.slice(1) : src;
+        return `${normBase}${clean}`;
+      };
+      const clamp = (num, min, max) => Math.min(max, Math.max(min, Number(num) || min));
+      const normalizeCards = (items = []) => sorted(items || []);
+      const normalizeSteps = (steps = []) => sorted(steps || []);
+      const normalizeListItems = (items = []) => (items || []).map((item) => (typeof item === 'string' ? item : { ...item }));
+      const getMediaView = (view) => ({ ...DEFAULT_MEDIA_VIEW, ...(view || {}) });
+      const getMediaStyle = (view) => {
+        const safe = getMediaView(view);
+        return `--fit:${safe.fit};--x:${safe.positionX}%;--y:${safe.positionY}%;--scale:${safe.scale};object-fit:${safe.fit};object-position:${safe.positionX}% ${safe.positionY}%;transform:scale(${safe.scale});transform-origin:center;`;
+      };
+      const frameValue = (value, precision = 0, suffix = '') => `${Number(value).toFixed(precision)}${suffix}`;
+      const frameBounds = (view) => {
+        const scale = Math.max(1, Number(view?.scale) || 1);
+        const spread = (scale - 1) * 50;
+        return {
+          minX: clamp(50 - spread, 0, 100),
+          maxX: clamp(50 + spread, 0, 100),
+          minY: clamp(50 - spread, 0, 100),
+          maxY: clamp(50 + spread, 0, 100)
+        };
+      };
+      const getTargetAspect = (target) => {
+        if (!target) return '16 / 10';
+        if (target === 'hero-image') return '16 / 9';
+        const targetNode = document.querySelector(`[data-crop-drag-frame="${target}"]`) || document.querySelector(`[data-media-target="${target}"]`);
+        if (!targetNode) return '16 / 10';
+        const rect = targetNode.getBoundingClientRect();
+        if (!rect.width || !rect.height) return '16 / 10';
+        return `${rect.width} / ${rect.height}`;
+      };
+
+      async function api(path, options = {}) {
+        const response = await fetch(`${API_BASE}${path}`, {
+          ...options,
+          credentials: 'include',
+          headers: options.body instanceof FormData ? {} : { 'Content-Type': 'application/json', ...(options.headers || {}) }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        return data;
+      }
+
+      function showLogin(msg = '') {
+        $('loginView').classList.remove('hidden');
+        $('editorView').classList.add('hidden');
+        $('loginStatus').textContent = msg;
+      }
+      function showEditor() {
+        $('loginView').classList.add('hidden');
+        $('editorView').classList.remove('hidden');
+      }
+      function setAlert(text = '', error = false) {
+        state.alert = text;
+        state.alertError = error;
+      }
+
+      function closeInlineEditors() {
+        state.editingHero = null;
+        state.editingCard = null;
+        state.editingRow = null;
+        state.editingStep = null;
+        state.editingListBlock = null;
+        state.editingTextBlock = null;
+        state.blockSettings = null;
+      }
+
+      function updateStatus() {
+        const dirty = isDirty();
+        $('dirtyStatus').textContent = dirty ? 'Есть несохраненные изменения' : 'Нет изменений';
+        $('dirtyStatus').className = dirty ? 'status-dirty' : 'status-clean';
+        $('saveBtn').disabled = !dirty;
+      }
+
+      function renderMedia(src, alt, view, caption = '', uploadTarget = '', blockIndex = null) {
+        const isActiveFrameTarget = Boolean(uploadTarget && state.frameSettings?.target === uploadTarget);
+        const liveView = isActiveFrameTarget ? state.frameSettings.view : view;
+        const aspect = isActiveFrameTarget ? (state.frameSettings?.aspect || '16 / 10') : getTargetAspect(uploadTarget || '');
+        const mediaControls = uploadTarget
+          ? `<div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="${uploadTarget}">Заменить фото</button>${blockIndex !== null ? `<button class="btn btn-secondary btn-xs" data-action="clear-block-media" data-block="${blockIndex}">Убрать фото</button>` : `<button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button>`}<button class="btn btn-secondary btn-xs" data-action="open-frame-settings" data-target="${uploadTarget}">Настроить кадр</button></div>`
+          : '';
+        return `<article class="media-block placeholder placeholder--wide-feature ${isActiveFrameTarget ? 'media-block--frame-live' : ''}" data-media-target="${uploadTarget || ''}"><div class="media-admin-shell"><div class="media-crop-frame ${isActiveFrameTarget ? 'media-crop-frame--live' : ''}" data-crop-drag-frame="${uploadTarget || ''}" style="--crop-aspect:${esc(aspect)};">${src ? `<img class="media-thumb" data-crop-drag-target="${uploadTarget || ''}" src="${esc(toSrc(src))}" alt="${esc(alt)}" style="${esc(getMediaStyle(liveView))}" />` : ''}</div>${caption ? `<p class="media-caption">${esc(caption)}</p>` : `<p class="media-caption">${DEFAULT_PLACEHOLDER}</p>`}${mediaControls}${renderFrameEditorInline(uploadTarget)}</div></article>`;
+      }
+
+      function renderHero() {
+        const d = state.draft;
+        const view = d.imageView || DEFAULT_MEDIA_VIEW;
+        if (!state.editingHero) {
+          return `<section class="section section--dark hero hero--compact"><div class="container"><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-hero">Редактировать hero</button><button class="btn btn-secondary btn-xs" data-action="open-frame-settings" data-target="hero-image">Настроить кадр</button></div><div class="grid grid-2" style="align-items:center;"><div><h1 class="hero-title" style="color:#fff;">${esc(d.heroTitle)}</h1><p class="hero-description" style="color:#e2ebf3;">${esc(d.heroDescription)}</p></div>${renderMedia(d.image, d.heroTitle, view, d.placeholderLabel, 'hero-image')}</div></div></section>`;
+        }
+
+        const e = state.editingHero;
+        return `<section class="section section--dark hero hero--compact"><div class="container"><div class="hero-edit-box"><h3 class="hero-edit-title">Редактирование hero</h3><div class="hero-edit-grid"><div class="field"><label>Заголовок</label><input class="admin-inline" data-inline="hero-title" value="${esc(e.heroTitle)}" placeholder="Заголовок" /></div><div class="field"><label>Путь изображения</label><input class="admin-inline" value="${esc(e.image || '')}" readonly placeholder="Путь изображения" /></div><div class="field field--full"><label>Описание</label><textarea class="admin-inline admin-inline-area" data-inline="hero-description" placeholder="Описание">${esc(e.heroDescription)}</textarea></div><div class="field"><label>Режим фото (imageView.fit)</label><select class="admin-inline" data-inline="hero-image-fit"><option value="cover" ${e.imageView?.fit === 'contain' ? '' : 'selected'}>Заполнить</option><option value="contain" ${e.imageView?.fit === 'contain' ? 'selected' : ''}>Вписать</option></select></div><div class="field field--full"><label>Подпись placeholder</label><input class="admin-inline" data-inline="hero-placeholder" value="${esc(e.placeholderLabel)}" placeholder="Подпись placeholder" /></div></div><div class="admin-media-controls"><button class="btn btn-secondary btn-xs" data-action="upload-image" data-target="hero-image">Заменить фото</button><button class="btn btn-secondary btn-xs" data-action="clear-hero-image">Убрать фото</button><button class="btn btn-secondary btn-xs" data-action="open-frame-settings" data-target="hero-image">Настроить кадр</button><button class="btn btn-primary btn-xs" data-action="save-hero">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-hero">Отмена</button></div></div></div></section>`;
+      }
+
+      function renderCardItem(blockIndex, itemIndex, item) {
+        const key = `${blockIndex}:${itemIndex}`;
+        const editing = state.editingCard && state.editingCard.key === key;
+        if (editing) {
+          const d = state.editingCard.draft;
+          return `<article class="card page-block-card item-editor"><input class="admin-inline" data-inline="card-title" value="${esc(d.title)}" placeholder="Заголовок" /><textarea class="admin-inline admin-inline-area" data-inline="card-text" placeholder="Описание">${esc(d.text)}</textarea><label><input type="checkbox" data-inline="card-active" ${d.isActive === false ? '' : 'checked'} /> Активна</label><div class="admin-strip"><button class="btn btn-primary btn-xs" data-action="save-card" data-block="${blockIndex}" data-item="${itemIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-card">Отмена</button></div></article>`;
+        }
+
+        return `<article class="card page-block-card"><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-card" data-block="${blockIndex}" data-item="${itemIndex}">Редактировать</button><button class="btn btn-secondary btn-xs" data-action="move-card-up" data-block="${blockIndex}" data-item="${itemIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="move-card-down" data-block="${blockIndex}" data-item="${itemIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-card" data-block="${blockIndex}" data-item="${itemIndex}">${item.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="btn btn-danger btn-xs" data-action="delete-card" data-block="${blockIndex}" data-item="${itemIndex}">Удалить</button></div></article>`;
+      }
+
+      function renderListItem(blockIndex, rowIndex, item) {
+        const key = `${blockIndex}:${rowIndex}`;
+        const editing = state.editingRow && state.editingRow.key === key;
+        const text = typeof item === 'string' ? item : item?.text || '';
+        if (editing) {
+          return `<li class="factor-item"><input class="admin-inline" data-inline="row-text" value="${esc(state.editingRow.draft.text)}" /><div class="admin-strip"><button class="btn btn-primary btn-xs" data-action="save-row" data-block="${blockIndex}" data-item="${rowIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-row">Отмена</button><button class="btn btn-danger btn-xs" data-action="delete-row" data-block="${blockIndex}" data-item="${rowIndex}">Удалить</button></div></li>`;
+        }
+        return `<li class="factor-item"><p>${esc(text)}</p><div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-row" data-block="${blockIndex}" data-item="${rowIndex}">Ред.</button><button class="btn btn-secondary btn-xs" data-action="move-row-up" data-block="${blockIndex}" data-item="${rowIndex}">↑</button><button class="btn btn-secondary btn-xs" data-action="move-row-down" data-block="${blockIndex}" data-item="${rowIndex}">↓</button><button class="btn btn-danger btn-xs" data-action="delete-row" data-block="${blockIndex}" data-item="${rowIndex}">✕</button></div></li>`;
+      }
+
+
+      function renderTextBlockEditor(blockIndex, block) {
+        const editing = state.editingTextBlock && state.editingTextBlock.index === blockIndex;
+        if (!editing) {
+          return `<div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-text-block" data-block="${blockIndex}">Редактировать текст</button></div>`;
+        }
+        const draft = state.editingTextBlock.draft;
+        return `<div class="item-editor"><div class="field"><label>Заголовок</label><input class="admin-inline" data-inline="text-block-title" value="${esc(draft.title || '')}" /></div>${Object.hasOwn(draft, 'intro') ? `<div class="field"><label>Intro</label><textarea class="admin-inline admin-inline-area" data-inline="text-block-intro">${esc(draft.intro || '')}</textarea></div>` : ''}<div class="field"><label>${block.type === 'notice' ? 'Текст вставки' : 'Основной текст'}</label><textarea class="admin-inline admin-inline-area" data-inline="text-block-body">${esc(draft.text || '')}</textarea></div><div class="admin-strip"><button class="btn btn-primary btn-xs" data-action="save-text-block" data-block="${blockIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-text-block">Отмена</button></div></div>`;
+      }
+
+      function renderStep(blockIndex, stepIndex, step) {
+        const key = `${blockIndex}:${stepIndex}`;
+        const editing = state.editingStep && state.editingStep.key === key;
+        if (editing) {
+          const d = state.editingStep.draft;
+          return `<li class="item-editor"><input class="admin-inline" data-inline="step-title" value="${esc(d.title)}" placeholder="Заголовок шага" /><textarea class="admin-inline admin-inline-area" data-inline="step-text" placeholder="Описание">${esc(d.text || '')}</textarea><label><input type="checkbox" data-inline="step-active" ${d.isActive === false ? '' : 'checked'} /> Активен</label><div class="admin-strip"><button class="btn btn-primary btn-xs" data-action="save-step" data-block="${blockIndex}" data-item="${stepIndex}">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-step">Отмена</button><button class="btn btn-danger btn-xs" data-action="delete-step" data-block="${blockIndex}" data-item="${stepIndex}">Удалить</button></div></li>`;
+        }
+        return `<li><strong>${esc(step.title)}</strong>${step.text ? `<p>${esc(step.text)}</p>` : ''}<div class="admin-strip"><button class="btn btn-secondary btn-xs" data-action="edit-step" data-block="${blockIndex}" data-item="${stepIndex}">Редактировать</button><button class="btn btn-secondary btn-xs" data-action="move-step-up" data-block="${blockIndex}" data-item="${stepIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="move-step-down" data-block="${blockIndex}" data-item="${stepIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-step" data-block="${blockIndex}" data-item="${stepIndex}">${step.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="btn btn-danger btn-xs" data-action="delete-step" data-block="${blockIndex}" data-item="${stepIndex}">Удалить</button></div></li>`;
+      }
+
+      function renderBlock(block, blockIndex) {
+        const sectionClass = block.theme === 'dark' ? 'section section--dark navesy-section-compact' : block.theme === 'light' ? 'section section--soft navesy-section-compact' : 'section navesy-section-compact';
+        let content = '';
+
+        if ((block.type === 'cardGrid' || block.type === 'exampleGrid') && Array.isArray(block.items)) {
+          content = `<div class="page-blocks-grid page-blocks-grid--${block.grid || 'auto'}">${normalizeCards(block.items).map((item, idx) => renderCardItem(blockIndex, idx, item)).join('')}</div><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="add-card" data-block="${blockIndex}">+ Добавить карточку</button></div>`;
+        }
+
+        if ((block.type === 'listPanel' || block.type === 'factorList') && Array.isArray(block.items)) {
+          const list = normalizeListItems(block.items);
+          const isEditList = state.editingListBlock === blockIndex;
+          content = `<ul class="page-blocks-columns page-blocks-columns--${block.columns || 2}">${list.map((item, idx) => isEditList ? renderListItem(blockIndex, idx, item) : `<li>${esc(typeof item === 'string' ? item : item?.text || '')}</li>`).join('')}</ul><div class="admin-strip" style="margin-top:10px;"><button class="btn btn-secondary btn-xs" data-action="toggle-list-edit" data-block="${blockIndex}">${isEditList ? 'Готово' : 'Редактировать список'}</button>${isEditList ? `<button class="btn btn-secondary btn-xs" data-action="add-row" data-block="${blockIndex}">+ Добавить строку</button>` : ''}</div>`;
+        }
+
+        if (block.type === 'process') {
+          const steps = normalizeSteps(block.steps || []);
+          content = `<div class="page-block-media-layout">${renderMedia(block.media, block.title, block.mediaView, block.placeholderLabel, `block-media-${blockIndex}`, blockIndex)}<article class="card page-block-panel"><h2>${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}<ol class="page-block-steps">${steps.map((step, idx) => renderStep(blockIndex, idx, step)).join('')}</ol><div class="admin-strip" style="margin-top:8px;"><button class="btn btn-secondary btn-xs" data-action="add-step" data-block="${blockIndex}">+ Добавить шаг</button></div></article></div>`;
+        }
+
+        if (block.type === 'mediaText') {
+          content = `<div class="page-block-media-layout">${renderMedia(block.media, block.title, block.mediaView, block.placeholderLabel, `block-media-${blockIndex}`, blockIndex)}<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p>${renderTextBlockEditor(blockIndex, block)}</article></div>`;
+        }
+
+        if (block.type === 'notice') {
+          content = `<article class="card page-block-panel"><h2>${esc(block.title)}</h2><p>${esc(block.text || '')}</p>${renderTextBlockEditor(blockIndex, block)}</article>`;
+        }
+
+        return `<section class="admin-block visual-section-shell"><div class="section-admin-toolbar"><span class="badge">${BLOCK_LABELS[block.type] || block.type}</span><button class="btn btn-secondary btn-xs" data-action="block-up" data-block="${blockIndex}">Выше</button><button class="btn btn-secondary btn-xs" data-action="block-down" data-block="${blockIndex}">Ниже</button><button class="btn btn-secondary btn-xs" data-action="toggle-block" data-block="${blockIndex}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="btn btn-secondary btn-xs" data-action="open-settings" data-block="${blockIndex}">Настройки</button><button class="btn btn-danger btn-xs" data-action="delete-block" data-block="${blockIndex}">Удалить секцию</button></div>${state.blockSettings && state.blockSettings.index === blockIndex ? `<div class="section-admin-panel">${renderSectionSettingsInline(blockIndex)}</div>` : ''}<section class="${sectionClass}"><div class="container"><h2 class="section-title">${esc(block.title)}</h2>${block.intro ? `<p class="lead">${esc(block.intro)}</p>` : ''}${content}</div></section></section>`;
+      }
+
+      function renderSectionSettingsInline(blockIndex) {
+        if (!state.blockSettings || state.blockSettings.index !== blockIndex) return '';
+        const s = state.blockSettings;
+        return `<div class="section-settings-inline" data-settings-for="${blockIndex}"><h3 style="margin:0;color:#1e3247;">Настройки блока</h3><div class="field"><label>Заголовок блока</label><input class="admin-inline" data-modal-field="title" value="${esc(s.title || '')}" /></div>${Object.hasOwn(s, 'intro') ? `<div class=\"field\"><label>Intro</label><textarea class=\"admin-inline admin-inline-area\" data-modal-field=\"intro\">${esc(s.intro || '')}</textarea></div>` : ''}<div class="field"><label>Тема</label><select data-modal-field="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Темная</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Светлая</option><option value="graphite" ${s.theme === 'graphite' ? 'selected' : ''}>Графитовая</option></select></div>${Object.hasOwn(s, 'grid') ? `<div class="field"><label>Сетка</label><select data-modal-field="grid"><option value="auto" ${s.grid === 'auto' ? 'selected' : ''}>Авто</option><option value="2" ${s.grid === '2' ? 'selected' : ''}>2</option><option value="3" ${s.grid === '3' ? 'selected' : ''}>3</option><option value="4" ${s.grid === '4' ? 'selected' : ''}>4</option></select></div>` : ''}${Object.hasOwn(s, 'columns') ? `<div class="field"><label>Колонки</label><select data-modal-field="columns"><option value="2" ${String(s.columns) === '2' ? 'selected' : ''}>2</option><option value="3" ${String(s.columns) === '3' ? 'selected' : ''}>3</option></select></div>` : ''}<label style="color:#1f3448;"><input type="checkbox" data-modal-field="isActive" ${s.isActive === false ? '' : 'checked'} /> Активный блок</label><div class="admin-strip" style="margin-top:2px;"><button class="btn btn-primary btn-xs" data-action="save-settings">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-settings">Отмена</button></div></div>`;
+      }
+
+      function renderFrameEditorInline(target) {
+        if (!state.frameSettings || state.frameSettings.target !== target || !target) return '';
+        const f = state.frameSettings;
+        return `<div class="frame-editor-inline frame-editor-inline--controls" data-frame-editor-target="${esc(target)}"><h3 style="margin:0;color:#1e3247;">Настроить кадр</h3><p class="frame-tip">Редактирование происходит прямо в прямоугольнике изображения выше — как на публичной странице.</p><div class="frame-controls"><div class="field"><label>Режим отображения</label><select data-frame="fit"><option value="cover" ${f.view.fit === 'cover' ? 'selected' : ''}>Заполнить</option><option value="contain" ${f.view.fit === 'contain' ? 'selected' : ''}>Вписать</option></select></div><div class="range-row"><div class="range-row-head"><label>Масштаб</label><span class="range-value" data-frame-value="scale">${esc(frameValue(f.view.scale, 2))}</span></div><input data-frame="scale" type="range" min="1" max="3" step="0.05" value="${esc(f.view.scale)}" /></div><div class="range-row"><div class="range-row-head"><label>Сдвиг по X</label><span class="range-value" data-frame-value="positionX">${esc(frameValue(f.view.positionX, 0, '%'))}</span></div><input data-frame="positionX" type="range" min="0" max="100" step="1" value="${esc(f.view.positionX)}" /></div><div class="range-row"><div class="range-row-head"><label>Сдвиг по Y</label><span class="range-value" data-frame-value="positionY">${esc(frameValue(f.view.positionY, 0, '%'))}</span></div><input data-frame="positionY" type="range" min="0" max="100" step="1" value="${esc(f.view.positionY)}" /></div><div class="frame-actions"><button class="btn btn-secondary btn-xs" data-action="reset-frame">Сбросить</button><button class="btn btn-primary btn-xs" data-action="save-frame">Готово</button><button class="btn btn-secondary btn-xs" data-action="cancel-frame">Отмена</button></div></div></div>`;
+      }
+
+      function renderAddSectionPanel() {
+        return `<section class="section"><div class="container"><div class="block-create"><h3 style="margin:0 0 10px;">Добавить секцию</h3><div class="admin-strip"><select id="newSectionType" class="admin-inline" style="max-width:240px;">${SECTION_TYPES.map((type) => `<option value="${type}">${BLOCK_LABELS[type]}</option>`).join('')}</select><button class="btn btn-primary btn-xs" data-action="add-block">+ Добавить секцию</button></div></div></div></section>`;
+      }
+
+      function renderPage() {
+        const root = $('workspace');
+        if (!state.draft) { root.innerHTML = ''; return; }
+        const blocks = getBlocks();
+        root.innerHTML = `${state.alert ? `<div class="container" style="padding-top:12px;"><p class="${state.alertError ? 'error' : 'muted'}">${esc(state.alert)}</p></div>` : ''}${renderHero()}${blocks.map((block, idx) => renderBlock(block, idx)).join('')}${renderAddSectionPanel()}<section class="section"><div class="container"><details><summary>Показать JSON</summary><pre>${esc(JSON.stringify(state.draft, null, 2))}</pre></details></div></section>`;
+        updateStatus();
+      }
+      function scrollToInlineEditor(selector) {
+        const panel = document.querySelector(selector);
+        if (!panel) return;
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      function getBlock(index) {
+        return getBlocks()[index];
+      }
+      function applyBlock(index, updater) {
+        const blocks = getBlocks();
+        updater(blocks[index]);
+        setBlocks(blocks);
+      }
+
+      function createDefaultBlock(type, order) {
+        if (type === 'cardGrid') return { type: 'cardGrid', title: 'Новая секция', theme: 'dark', grid: 'auto', order, isActive: true, items: [] };
+        if (type === 'listPanel') return { type: 'listPanel', title: 'Новая секция', theme: 'light', columns: 2, order, isActive: true, items: [] };
+        if (type === 'process') return { type: 'process', title: 'Новая секция', theme: 'light', mediaPosition: 'right', placeholderLabel: DEFAULT_PLACEHOLDER, order, isActive: true, steps: [] };
+        if (type === 'factorList') return { type: 'factorList', title: 'Новая секция', theme: 'graphite', columns: 2, order, isActive: true, items: [] };
+        if (type === 'mediaText') return { type: 'mediaText', title: 'Новая секция', text: '', theme: 'light', mediaPosition: 'right', placeholderLabel: DEFAULT_PLACEHOLDER, order, isActive: true };
+        if (type === 'notice') return { type: 'notice', title: 'Новая вставка', text: '', theme: 'light', order, isActive: true };
+        return { type: 'exampleGrid', title: 'Новая секция', theme: 'light', grid: 'auto', order, isActive: true, items: [] };
+      }
+
+      function openFrameSettings(target) {
+        const aspect = getTargetAspect(target);
+        if (target === 'hero-image') {
+          const startView = getMediaView(state.draft.imageView);
+          state.frameSettings = { target, src: state.draft.image || '', view: normalizeFrameView(clone(startView)), initialView: normalizeFrameView(clone(startView)), initialDraftView: clone(state.draft.imageView || DEFAULT_MEDIA_VIEW), aspect };
+          return;
+        }
+        if (target.startsWith('block-media-')) {
+          const index = Number(target.replace('block-media-', ''));
+          const block = getBlock(index);
+          const startView = getMediaView(block?.mediaView);
+          state.frameSettings = { target, src: block?.media || '', view: normalizeFrameView(clone(startView)), initialView: normalizeFrameView(clone(startView)), initialDraftView: clone(block?.mediaView || DEFAULT_MEDIA_VIEW), aspect };
+        }
+      }
+
+      function applyFrameViewToDraft(target, view) {
+        const safeView = getMediaView(view);
+        if (target === 'hero-image') {
+          state.draft.imageView = clone(safeView);
+          return;
+        }
+        if (target.startsWith('block-media-')) {
+          const index = Number(target.replace('block-media-', ''));
+          applyBlock(index, (block) => { block.mediaView = clone(safeView); });
+        }
+      }
+
+      function closeFrameSettings(rollback = false) {
+        if (!state.frameSettings) return;
+        if (rollback) {
+          applyFrameViewToDraft(state.frameSettings.target, state.frameSettings.initialDraftView || state.frameSettings.initialView);
+        }
+        state.frameSettings = null;
+      }
+
+      function syncFramePreviewUI() {
+        if (!state.frameSettings) return;
+        const scope = $('workspace');
+        const liveImage = scope.querySelector(`[data-crop-drag-target="${state.frameSettings.target}"]`);
+        if (liveImage) liveImage.style.cssText = getMediaStyle(state.frameSettings.view);
+
+        const scale = scope.querySelector('[data-frame-value="scale"]');
+        const posX = scope.querySelector('[data-frame-value="positionX"]');
+        const posY = scope.querySelector('[data-frame-value="positionY"]');
+        if (scale) scale.textContent = frameValue(state.frameSettings.view.scale, 2);
+        if (posX) posX.textContent = frameValue(state.frameSettings.view.positionX, 0, '%');
+        if (posY) posY.textContent = frameValue(state.frameSettings.view.positionY, 0, '%');
+
+        const fitInput = scope.querySelector('[data-frame="fit"]');
+        const scaleInput = scope.querySelector('[data-frame="scale"]');
+        const xInput = scope.querySelector('[data-frame="positionX"]');
+        const yInput = scope.querySelector('[data-frame="positionY"]');
+        if (fitInput) fitInput.value = state.frameSettings.view.fit;
+        if (scaleInput) scaleInput.value = String(state.frameSettings.view.scale);
+        if (xInput) xInput.value = String(state.frameSettings.view.positionX);
+        if (yInput) yInput.value = String(state.frameSettings.view.positionY);
+      }
+
+      function commitFramePreview() {
+        if (!state.frameSettings) return;
+        state.frameSettings.view = normalizeFrameView(state.frameSettings.view);
+        syncFramePreviewUI();
+      }
+
+
+      function normalizeFrameView(view) {
+        const safe = getMediaView(view);
+        const bounds = frameBounds(safe);
+        safe.positionX = clamp(safe.positionX, bounds.minX, bounds.maxX);
+        safe.positionY = clamp(safe.positionY, bounds.minY, bounds.maxY);
+        return safe;
+      }
+
+
+      function stopFrameDrag() {
+        state.frameDrag = null;
+        const image = $('workspace').querySelector(`[data-crop-drag-target="${state.frameSettings?.target || ''}"]`);
+        if (image) image.classList.remove('dragging');
+      }
+
+      async function uploadImage(file, target) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await api('/upload', { method: 'POST', body: formData });
+        if (target === 'hero-image') {
+          state.draft.image = res.path;
+          if (state.editingHero) state.editingHero.image = res.path;
+        }
+        if (target.startsWith('block-media-')) {
+          const index = Number(target.replace('block-media-', ''));
+          applyBlock(index, (block) => { block.media = res.path; });
+        }
+        setAlert('Изображение загружено');
+        renderPage();
+      }
+
+      function closeModals() {
+        state.blockSettings = null;
+        stopFrameDrag();
+        closeFrameSettings(true);
+      }
+
+      function handleInputEvent(event) {
+        const key = event.target.dataset.inline;
+        if (key === 'hero-title' && state.editingHero) state.editingHero.heroTitle = event.target.value;
+        if (key === 'hero-description' && state.editingHero) state.editingHero.heroDescription = event.target.value;
+        if (key === 'hero-placeholder' && state.editingHero) state.editingHero.placeholderLabel = event.target.value;
+        if (key === 'hero-image-fit' && state.editingHero) state.editingHero.imageView.fit = event.target.value === 'contain' ? 'contain' : 'cover';
+        if (key === 'card-title' && state.editingCard) state.editingCard.draft.title = event.target.value;
+        if (key === 'card-text' && state.editingCard) state.editingCard.draft.text = event.target.value;
+        if (key === 'row-text' && state.editingRow) state.editingRow.draft.text = event.target.value;
+        if (key === 'step-title' && state.editingStep) state.editingStep.draft.title = event.target.value;
+        if (key === 'step-text' && state.editingStep) state.editingStep.draft.text = event.target.value;
+        if (key === 'text-block-title' && state.editingTextBlock) state.editingTextBlock.draft.title = event.target.value;
+        if (key === 'text-block-intro' && state.editingTextBlock) state.editingTextBlock.draft.intro = event.target.value;
+        if (key === 'text-block-body' && state.editingTextBlock) state.editingTextBlock.draft.text = event.target.value;
+
+        const modalKey = event.target.dataset.modalField;
+        if (modalKey && state.blockSettings) state.blockSettings[modalKey] = event.target.value;
+
+        const frameKey = event.target.dataset.frame;
+        if (frameKey && state.frameSettings) {
+          if (frameKey === 'fit') state.frameSettings.view.fit = event.target.value === 'contain' ? 'contain' : 'cover';
+          if (frameKey === 'scale') state.frameSettings.view.scale = clamp(event.target.value, 1, 3);
+          const bounds = frameBounds(state.frameSettings.view);
+          if (frameKey === 'positionX') state.frameSettings.view.positionX = clamp(event.target.value, bounds.minX, bounds.maxX);
+          if (frameKey === 'positionY') state.frameSettings.view.positionY = clamp(event.target.value, bounds.minY, bounds.maxY);
+          commitFramePreview();
+        }
+      }
+
+      function handleChangeEvent(event) {
+        const key = event.target.dataset.inline;
+        if (key === 'card-active' && state.editingCard) state.editingCard.draft.isActive = event.target.checked;
+        if (key === 'step-active' && state.editingStep) state.editingStep.draft.isActive = event.target.checked;
+
+        const modalKey = event.target.dataset.modalField;
+        if (modalKey === 'isActive' && state.blockSettings) state.blockSettings.isActive = event.target.checked;
+      }
+
+      function handleActionClick(event) {
+        const el = event.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+        const blockIndex = Number(el.dataset.block);
+        const itemIndex = Number(el.dataset.item);
+
+        if (action === 'edit-hero') { closeInlineEditors(); state.editingHero = clone({ heroTitle: state.draft.heroTitle, heroDescription: state.draft.heroDescription, image: state.draft.image, placeholderLabel: state.draft.placeholderLabel, imageView: getMediaView(state.draft.imageView) }); renderPage(); return; }
+        if (action === 'cancel-hero') { state.editingHero = null; renderPage(); return; }
+        if (action === 'save-hero') { Object.assign(state.draft, state.editingHero); state.draft.imageView = getMediaView(state.editingHero.imageView); state.editingHero = null; renderPage(); return; }
+        if (action === 'clear-hero-image') { state.draft.image = ''; if (state.editingHero) state.editingHero.image = ''; renderPage(); return; }
+
+        if (action === 'edit-card') { closeInlineEditors(); state.editingCard = { key: `${blockIndex}:${itemIndex}`, draft: clone(getBlock(blockIndex).items[itemIndex]) }; renderPage(); return; }
+        if (action === 'cancel-card') { state.editingCard = null; renderPage(); return; }
+        if (action === 'save-card') { applyBlock(blockIndex, (block) => { block.items[itemIndex] = clone(state.editingCard.draft); }); state.editingCard = null; renderPage(); return; }
+        if (action === 'delete-card') { if (!confirm('Удалить карточку?')) return; applyBlock(blockIndex, (block) => { block.items.splice(itemIndex, 1); renumber(block.items); }); state.editingCard = null; renderPage(); return; }
+        if (action === 'move-card-up' || action === 'move-card-down') { applyBlock(blockIndex, (block) => { const arr = normalizeCards(block.items || []); const to = action === 'move-card-up' ? itemIndex - 1 : itemIndex + 1; if (to < 0 || to >= arr.length) return; [arr[itemIndex], arr[to]] = [arr[to], arr[itemIndex]]; renumber(arr); block.items = arr; }); renderPage(); return; }
+        if (action === 'toggle-card') { applyBlock(blockIndex, (block) => { block.items[itemIndex].isActive = block.items[itemIndex].isActive === false; }); renderPage(); return; }
+        if (action === 'add-card') { applyBlock(blockIndex, (block) => { block.items = normalizeCards(block.items || []); block.items.push({ title: 'Новая карточка', text: '', order: (block.items.length + 1) * 10, isActive: true }); renumber(block.items); }); const block = getBlock(blockIndex); state.editingCard = { key: `${blockIndex}:${block.items.length - 1}`, draft: clone(block.items[block.items.length - 1]) }; renderPage(); return; }
+
+        if (action === 'toggle-list-edit') { state.editingListBlock = state.editingListBlock === blockIndex ? null : blockIndex; state.editingRow = null; renderPage(); return; }
+        if (action === 'edit-row') {
+          const rawItem = getBlock(blockIndex).items[itemIndex];
+          state.editingRow = { key: `${blockIndex}:${itemIndex}`, wasString: typeof rawItem === 'string', original: clone(rawItem), draft: { text: typeof rawItem === 'string' ? rawItem : rawItem?.text || '' } };
+          renderPage();
+          return;
+        }
+        if (action === 'cancel-row') { state.editingRow = null; renderPage(); return; }
+        if (action === 'save-row') {
+          applyBlock(blockIndex, (block) => {
+            if (state.editingRow.wasString) block.items[itemIndex] = state.editingRow.draft.text;
+            else block.items[itemIndex] = { ...state.editingRow.original, text: state.editingRow.draft.text };
+          });
+          state.editingRow = null;
+          renderPage();
+          return;
+        }
+        if (action === 'add-row') { applyBlock(blockIndex, (block) => { block.items.push('Новая строка'); }); state.editingRow = { key: `${blockIndex}:${getBlock(blockIndex).items.length - 1}`, wasString: true, original: 'Новая строка', draft: { text: 'Новая строка' } }; renderPage(); return; }
+        if (action === 'delete-row') { if (!confirm('Удалить строку?')) return; applyBlock(blockIndex, (block) => { block.items.splice(itemIndex, 1); }); state.editingRow = null; renderPage(); return; }
+        if (action === 'move-row-up' || action === 'move-row-down') { applyBlock(blockIndex, (block) => { const to = action === 'move-row-up' ? itemIndex - 1 : itemIndex + 1; if (to < 0 || to >= block.items.length) return; [block.items[itemIndex], block.items[to]] = [block.items[to], block.items[itemIndex]]; }); renderPage(); return; }
+
+        if (action === 'edit-step') { closeInlineEditors(); state.editingStep = { key: `${blockIndex}:${itemIndex}`, draft: clone(getBlock(blockIndex).steps[itemIndex]) }; renderPage(); return; }
+        if (action === 'cancel-step') { state.editingStep = null; renderPage(); return; }
+        if (action === 'save-step') { applyBlock(blockIndex, (block) => { block.steps[itemIndex] = clone(state.editingStep.draft); }); state.editingStep = null; renderPage(); return; }
+        if (action === 'delete-step') { if (!confirm('Удалить шаг?')) return; applyBlock(blockIndex, (block) => { block.steps = normalizeSteps(block.steps || []); block.steps.splice(itemIndex, 1); renumber(block.steps); }); state.editingStep = null; renderPage(); return; }
+        if (action === 'move-step-up' || action === 'move-step-down') { applyBlock(blockIndex, (block) => { const arr = normalizeSteps(block.steps || []); const to = action === 'move-step-up' ? itemIndex - 1 : itemIndex + 1; if (to < 0 || to >= arr.length) return; [arr[itemIndex], arr[to]] = [arr[to], arr[itemIndex]]; renumber(arr); block.steps = arr; }); renderPage(); return; }
+        if (action === 'toggle-step') { applyBlock(blockIndex, (block) => { block.steps[itemIndex].isActive = block.steps[itemIndex].isActive === false; }); renderPage(); return; }
+        if (action === 'add-step') { applyBlock(blockIndex, (block) => { block.steps = normalizeSteps(block.steps || []); block.steps.push({ title: 'Новый шаг', text: '', order: (block.steps.length + 1) * 10, isActive: true }); renumber(block.steps); }); const b = getBlock(blockIndex); state.editingStep = { key: `${blockIndex}:${b.steps.length - 1}`, draft: clone(b.steps[b.steps.length - 1]) }; renderPage(); return; }
+
+        if (action === 'block-up' || action === 'block-down') { const blocks = getBlocks(); const to = action === 'block-up' ? blockIndex - 1 : blockIndex + 1; if (to >= 0 && to < blocks.length) [blocks[blockIndex], blocks[to]] = [blocks[to], blocks[blockIndex]]; renumber(blocks); setBlocks(blocks); renderPage(); return; }
+        if (action === 'toggle-block') { applyBlock(blockIndex, (block) => { block.isActive = block.isActive === false; }); renderPage(); return; }
+        if (action === 'open-settings') { closeInlineEditors(); state.blockSettings = { index: blockIndex, ...clone(getBlock(blockIndex)) }; renderPage(); scrollToInlineEditor(`[data-settings-for="${blockIndex}"]`); return; }
+        if (action === 'cancel-settings') { state.blockSettings = null; renderPage(); return; }
+        if (action === 'save-settings') { const { index, ...payload } = state.blockSettings; applyBlock(index, (block) => { block.title = payload.title; if ('intro' in block || Object.hasOwn(payload, 'intro')) block.intro = payload.intro; block.theme = payload.theme; if ('grid' in block) block.grid = payload.grid; if ('columns' in block) block.columns = Number(payload.columns); block.isActive = payload.isActive; }); state.blockSettings = null; renderPage(); return; }
+        if (action === 'edit-text-block') { closeInlineEditors(); state.editingTextBlock = { index: blockIndex, draft: { title: getBlock(blockIndex).title || '', intro: getBlock(blockIndex).intro || '', text: getBlock(blockIndex).text || '' } }; renderPage(); return; }
+        if (action === 'cancel-text-block') { state.editingTextBlock = null; renderPage(); return; }
+        if (action === 'save-text-block') { const payload = clone(state.editingTextBlock.draft); applyBlock(blockIndex, (block) => { block.title = payload.title; if ('intro' in block || payload.intro) block.intro = payload.intro; block.text = payload.text; }); state.editingTextBlock = null; renderPage(); return; }
+        if (action === 'delete-block') { if (!confirm('Удалить секцию?')) return; const blocks = getBlocks(); blocks.splice(blockIndex, 1); renumber(blocks); setBlocks(blocks); renderPage(); return; }
+        if (action === 'add-block') { const type = $('newSectionType')?.value || 'cardGrid'; const blocks = getBlocks(); blocks.push(createDefaultBlock(type, (blocks.length + 1) * 10)); renumber(blocks); setBlocks(blocks); renderPage(); return; }
+
+        if (action === 'clear-block-media') { applyBlock(blockIndex, (block) => { block.media = ''; }); renderPage(); return; }
+        if (action === 'upload-image') { state.uploadTarget = el.dataset.target; $('uploadInput').click(); return; }
+        if (action === 'open-frame-settings') { closeInlineEditors(); openFrameSettings(el.dataset.target); renderPage(); scrollToInlineEditor(`[data-frame-editor-target="${el.dataset.target}"]`); return; }
+        if (action === 'reset-frame') { state.frameSettings.view = normalizeFrameView(clone(state.frameSettings.initialView)); commitFramePreview(); return; }
+        if (action === 'cancel-frame') { stopFrameDrag(); closeFrameSettings(true); renderPage(); return; }
+        if (action === 'save-frame') {
+          stopFrameDrag();
+          applyFrameViewToDraft(state.frameSettings.target, state.frameSettings.view);
+          closeFrameSettings(false);
+          renderPage();
+          return;
+        }
+      }
+
+      $('workspace').addEventListener('input', handleInputEvent);
+      $('workspace').addEventListener('change', handleChangeEvent);
+      $('workspace').addEventListener('click', handleActionClick);
+      $('workspace').addEventListener('pointerdown', (event) => {
+        if (!state.frameSettings) return;
+        const image = event.target.closest('[data-crop-drag-target]');
+        if (!image) return;
+        if (image.dataset.cropDragTarget !== state.frameSettings.target) return;
+        const viewport = image.closest('[data-crop-drag-frame]') || image.closest('[data-media-target]');
+        if (!viewport) return;
+        event.preventDefault();
+        image.setPointerCapture(event.pointerId);
+        image.classList.add('dragging');
+        state.frameDrag = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          startPosX: state.frameSettings.view.positionX,
+          startPosY: state.frameSettings.view.positionY,
+          width: viewport.clientWidth,
+          height: viewport.clientHeight
+        };
+      });
+
+      $('workspace').addEventListener('pointermove', (event) => {
+        if (!state.frameSettings || !state.frameDrag || state.frameDrag.pointerId !== event.pointerId) return;
+        const drag = state.frameDrag;
+        const dx = event.clientX - drag.startX;
+        const dy = event.clientY - drag.startY;
+        const sensitivity = 1.15;
+        const bounds = frameBounds(state.frameSettings.view);
+        state.frameSettings.view.positionX = clamp(drag.startPosX - (dx / Math.max(drag.width, 1)) * 100 * sensitivity, bounds.minX, bounds.maxX);
+        state.frameSettings.view.positionY = clamp(drag.startPosY - (dy / Math.max(drag.height, 1)) * 100 * sensitivity, bounds.minY, bounds.maxY);
+        commitFramePreview();
+      });
+
+      $('workspace').addEventListener('pointerup', stopFrameDrag);
+      $('workspace').addEventListener('pointercancel', stopFrameDrag);
+      $('workspace').addEventListener('wheel', (event) => {
+        if (!state.frameSettings) return;
+        const mediaHost = event.target.closest('[data-media-target]');
+        if (!mediaHost || mediaHost.dataset.mediaTarget !== state.frameSettings.target) return;
+        event.preventDefault();
+        const delta = Math.sign(event.deltaY) * -0.08;
+        state.frameSettings.view.scale = clamp(state.frameSettings.view.scale + delta, 1, 3);
+        state.frameSettings.view = normalizeFrameView(state.frameSettings.view);
+        commitFramePreview();
+      }, { passive: false });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && (state.blockSettings || state.frameSettings)) {
+          closeModals();
+          renderPage();
+          return;
+        }
+        if (!state.frameSettings) return;
+        const step = event.shiftKey ? 5 : 1;
+        const bounds = frameBounds(state.frameSettings.view);
+        if (event.key === 'ArrowLeft') { event.preventDefault(); state.frameSettings.view.positionX = clamp(state.frameSettings.view.positionX - step, bounds.minX, bounds.maxX); commitFramePreview(); }
+        if (event.key === 'ArrowRight') { event.preventDefault(); state.frameSettings.view.positionX = clamp(state.frameSettings.view.positionX + step, bounds.minX, bounds.maxX); commitFramePreview(); }
+        if (event.key === 'ArrowUp') { event.preventDefault(); state.frameSettings.view.positionY = clamp(state.frameSettings.view.positionY - step, bounds.minY, bounds.maxY); commitFramePreview(); }
+        if (event.key === 'ArrowDown') { event.preventDefault(); state.frameSettings.view.positionY = clamp(state.frameSettings.view.positionY + step, bounds.minY, bounds.maxY); commitFramePreview(); }
+        if (event.key === '+' || event.key === '=') { event.preventDefault(); state.frameSettings.view.scale = clamp(state.frameSettings.view.scale + 0.05, 1, 3); state.frameSettings.view = normalizeFrameView(state.frameSettings.view); commitFramePreview(); }
+        if (event.key === '-') { event.preventDefault(); state.frameSettings.view.scale = clamp(state.frameSettings.view.scale - 0.05, 1, 3); state.frameSettings.view = normalizeFrameView(state.frameSettings.view); commitFramePreview(); }
+      });
+
+      $('uploadInput').addEventListener('change', async (event) => {
+        const file = event.target.files?.[0];
+        if (!file || !state.uploadTarget) return;
+        setAlert('Загрузка изображения...');
+        renderPage();
+        try {
+          await uploadImage(file, state.uploadTarget);
+        } catch (error) {
+          setAlert(error.message || 'Ошибка загрузки изображения', true);
+          renderPage();
+        } finally {
+          event.target.value = '';
+          state.uploadTarget = null;
+        }
+      });
+
+      $('saveBtn').addEventListener('click', async () => {
+        setAlert('Сохраняем...');
+        renderPage();
+        try {
+          await api('/content/product-sections/navesy', { method: 'PUT', body: JSON.stringify(state.draft) });
+          state.original = clone(state.draft);
+          setAlert('Сохранено');
+          renderPage();
+        } catch (error) {
+          setAlert(error.message || 'Ошибка сохранения', true);
+          renderPage();
+        }
+      });
+
+      $('logoutBtn').addEventListener('click', async () => {
+        await api('/logout', { method: 'POST' }).catch(() => {});
+        showLogin('Вы вышли из админки.');
+      });
+
+      $('loginForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        try {
+          await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
+          showEditor();
+          const data = await api('/content/product-sections/navesy');
+          state.original = clone(data.content);
+          state.draft = clone(data.content);
+          renderPage();
+        } catch (error) {
+          $('loginStatus').textContent = error.message || 'Ошибка входа';
+          $('loginStatus').className = 'muted error';
+        }
+      });
+
+      async function boot() {
+        try {
+          await api('/me');
+          showEditor();
+          const data = await api('/content/product-sections/navesy');
+          state.original = clone(data.content);
+          state.draft = clone(data.content);
+          renderPage();
+        } catch {
+          showLogin('Введите логин и пароль.');
+        }
+      }
+
+      boot();
+    </script> </body> </html>

@@ -106,5 +106,117 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     </main>
     <Footer />
     <CookieBanner />
+    <script is:inline>
+      (() => {
+        const revealSelector = [
+          '.hero-content',
+          '.section-heading',
+          '.trust-media',
+          '.home-contact-card',
+          '.cta-section',
+          '.form-block',
+          '.contacts-map-card'
+        ].join(',');
+
+        const revealItemSelector = [
+          '.card',
+          '.home-product-card',
+          '.home-service-card',
+          '.home-pathway-card',
+          '.category-choice-card',
+          '.product-showcase-card',
+          '.object-list-card',
+          '.workflow-step',
+          '.quick-entry-card'
+        ].join(',');
+
+        const staggerContainers = [
+          '.home-products-grid',
+          '.home-services-grid',
+          '.home-pathways__grid',
+          '.category-choice-grid',
+          '.product-catalog-grid',
+          '.object-list-grid',
+          '.workflow-grid',
+          '.quick-entry-grid',
+          '.page-blocks-grid',
+          '.contacts-top-grid',
+          '.grid'
+        ].join(',');
+
+        let revealObserver;
+
+        const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const markRevealElements = () => {
+          const elements = new Set();
+
+          document.querySelectorAll(revealSelector).forEach((element) => elements.add(element));
+          document.querySelectorAll(revealItemSelector).forEach((element) => elements.add(element));
+
+          document.querySelectorAll(staggerContainers).forEach((container) => {
+            const children = Array.from(container.children).filter((child) => child instanceof HTMLElement);
+            children.forEach((child, index) => {
+              child.style.setProperty('--reveal-delay', `${Math.min(index * 70, 280)}ms`);
+              elements.add(child);
+            });
+          });
+
+          return Array.from(elements).filter((element) => {
+            if (!(element instanceof HTMLElement)) return false;
+            if (element.closest('.site-header, .footer, .cookie-banner, .section-nav')) return false;
+            element.setAttribute('data-reveal', '');
+            return true;
+          });
+        };
+
+        const revealElement = (element) => {
+          element.classList.add('is-visible');
+          if (revealObserver) revealObserver.unobserve(element);
+        };
+
+        const initScrollReveal = () => {
+          const elements = markRevealElements();
+
+          if (!elements.length || prefersReducedMotion()) {
+            document.documentElement.classList.remove('reveal-js');
+            elements.forEach((element) => element.classList.add('is-visible'));
+            return;
+          }
+
+          document.documentElement.classList.add('reveal-js');
+
+          if (!('IntersectionObserver' in window)) {
+            elements.forEach(revealElement);
+            return;
+          }
+
+          if (revealObserver) revealObserver.disconnect();
+
+          revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) revealElement(entry.target);
+            });
+          }, {
+            rootMargin: '0px 0px -12% 0px',
+            threshold: 0.08
+          });
+
+          requestAnimationFrame(() => {
+            elements.forEach((element) => {
+              const rect = element.getBoundingClientRect();
+              if (rect.top < window.innerHeight * 0.92 && rect.bottom > 0) {
+                revealElement(element);
+              } else {
+                revealObserver.observe(element);
+              }
+            });
+          });
+        };
+
+        initScrollReveal();
+        document.addEventListener('astro:page-load', initScrollReveal);
+      })();
+    </script>
   </body>
 </html>

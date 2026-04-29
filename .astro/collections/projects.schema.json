@@ -1,0 +1,68 @@
+{
+  "$ref": "#/definitions/projects",
+  "definitions": {
+    "projects": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "shortDescription": {
+          "type": "string"
+        },
+        "whatWasDone": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "gallery": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "order": {
+          "type": "number"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "year": {
+          "type": "number"
+        },
+        "seoTitle": {
+          "type": "string"
+        },
+        "seoDescription": {
+          "type": "string"
+        },
+        "$schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "slug",
+        "city",
+        "shortDescription",
+        "whatWasDone",
+        "image",
+        "gallery",
+        "order",
+        "isActive",
+        "year",
+        "seoTitle",
+        "seoDescription"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

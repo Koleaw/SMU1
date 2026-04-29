@@ -1,0 +1,119 @@
+{
+  "$ref": "#/definitions/products",
+  "definitions": {
+    "products": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "productCategorySlug": {
+          "type": "string"
+        },
+        "shortDescription": {
+          "type": "string"
+        },
+        "leadText": {
+          "type": "string"
+        },
+        "priceMode": {
+          "type": "string",
+          "enum": [
+            "from",
+            "on_request",
+            "none"
+          ]
+        },
+        "priceFrom": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "currency": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "imageView": {
+          "type": "object",
+          "properties": {
+            "fit": {
+              "type": "string",
+              "enum": [
+                "cover",
+                "contain"
+              ]
+            },
+            "positionX": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "positionY": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "scale": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 3
+            }
+          },
+          "required": [
+            "fit",
+            "positionX",
+            "positionY",
+            "scale"
+          ],
+          "additionalProperties": false
+        },
+        "placeholderLabel": {
+          "type": "string"
+        },
+        "order": {
+          "type": "number"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "showInCatalog": {
+          "type": "boolean"
+        },
+        "seoTitle": {
+          "type": "string"
+        },
+        "seoDescription": {
+          "type": "string"
+        },
+        "$schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "slug",
+        "productCategorySlug",
+        "shortDescription",
+        "leadText",
+        "priceMode",
+        "priceFrom",
+        "currency",
+        "image",
+        "placeholderLabel",
+        "order",
+        "isActive",
+        "showInCatalog",
+        "seoTitle",
+        "seoDescription"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
