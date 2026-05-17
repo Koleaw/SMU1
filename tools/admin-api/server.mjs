@@ -3,10 +3,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
+const execFileAsync = promisify(execFile);
 
 const SAFE_SLUG_RE = /^[a-z0-9_-]+$/;
 const DEV_DEFAULTS = {
@@ -20,22 +23,22 @@ const DEV_DEFAULTS = {
 
 const COLLECTIONS = {
   'product-sections': {
-    label: 'Разделы продукции',
+    label: 'Страницы каталога',
     type: 'directory',
     path: path.join(repoRoot, 'src/content/product-sections')
   },
   services: {
-    label: 'Услуги',
+    label: 'Проектные страницы',
     type: 'directory',
     path: path.join(repoRoot, 'src/content/services')
   },
   'product-categories': {
-    label: 'Категории изделий',
+    label: 'Подстраницы каталога',
     type: 'directory',
     path: path.join(repoRoot, 'src/content/product-categories')
   },
   products: {
-    label: 'Изделия',
+    label: 'Товары каталога',
     type: 'directory',
     path: path.join(repoRoot, 'src/content/products')
   },
@@ -54,13 +57,43 @@ const COLLECTIONS = {
     type: 'single-file',
     path: path.join(repoRoot, 'src/content/site-settings/global.json'),
     slug: 'global'
+  },
+  'static-pages': {
+    label: 'Страницы',
+    type: 'directory',
+    path: path.join(repoRoot, 'src/content/static-pages')
   }
 };
 
 const sessions = new Map();
 const UPLOADS_DIR = path.join(repoRoot, 'public', 'uploads');
-const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg']);
+const MAX_IMAGE_UPLOAD_SIZE = 10 * 1024 * 1024;
+const MAX_VIDEO_UPLOAD_SIZE = 90 * 1024 * 1024;
+const MAX_UPLOAD_SIZE = MAX_VIDEO_UPLOAD_SIZE;
+const ALLOWED_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg']);
+const ALLOWED_VIDEO_EXTENSIONS = new Set(['.mp4', '.webm']);
+const ALLOWED_EXTENSIONS = new Set([...ALLOWED_IMAGE_EXTENSIONS, ...ALLOWED_VIDEO_EXTENSIONS]);
+const PUBLISH_PATHS = ['src/content', 'public/uploads'];
+const FULL_PUBLISH_PATHS = [
+  '.gitignore',
+  '.github',
+  '.pages.yml',
+  'AGENTS.md',
+  'README.md',
+  'astro.config.mjs',
+  'docs',
+  'package.json',
+  'package-lock.json',
+  'public',
+  'src',
+  'tools',
+  'tsconfig.json'
+];
+const DEFAULT_PUBLISH_BRANCHES = ['main', 'master'];
+
+function formatUploadLimit(bytes) {
+  return Math.round(bytes / (1024 * 1024));
+}
 
 function parseEnvText(source = '') {
   const lines = source.split(/\r?\n/);
@@ -142,7 +175,7 @@ function setCorsHeaders(req, res, allowedOrigins) {
     res.setHeader('Access-Control-Allow-Origin', requestOrigin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   }
 }
 
@@ -150,6 +183,97 @@ function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(payload));
+}
+
+async function runGit(args) {
+  try {
+    const { stdout, stderr } = await execFileAsync('git', args, {
+      cwd: repoRoot,
+      windowsHide: true,
+      maxBuffer: 10 * 1024 * 1024
+    });
+    return { stdout: stdout.trim(), stderr: stderr.trim() };
+  } catch (error) {
+    const message = [
+      error?.message,
+      error?.stdout?.trim(),
+      error?.stderr?.trim()
+    ].filter(Boolean).join('\n');
+    throw new Error(message || 'Git command failed');
+  }
+}
+
+async function existingGitPathspecs(paths) {
+  const result = [];
+  for (const relativePath of paths) {
+    try {
+      await fs.access(path.join(repoRoot, relativePath));
+      result.push(relativePath);
+    } catch {
+      try {
+        await runGit(['ls-files', '--error-unmatch', relativePath]);
+        result.push(relativePath);
+      } catch {
+        // optional path
+      }
+    }
+  }
+  return result;
+}
+
+function buildPublishMessage(scope = 'content') {
+  const timestamp = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
+  return `${scope}: update from local admin (${timestamp})`;
+}
+
+async function ensurePublishBranch() {
+  await runGit(['rev-parse', '--is-inside-work-tree']);
+  const branch = (await runGit(['branch', '--show-current'])).stdout || 'HEAD';
+  const publishBranches = String(process.env.ADMIN_PUBLISH_BRANCHES || DEFAULT_PUBLISH_BRANCHES.join(','))
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (publishBranches.length && !publishBranches.includes(branch)) {
+    throw new Error(`Текущая ветка "${branch}". Публичный хостинг должен быть подключен к ветке ${publishBranches.join('/')} или настройте ADMIN_PUBLISH_BRANCHES.`);
+  }
+  return branch;
+}
+
+async function publishPaths(paths, scope) {
+  const branch = await ensurePublishBranch();
+  const pathspecs = await existingGitPathspecs(paths);
+  if (!pathspecs.length) {
+    return { published: false, branch, message: 'Нет путей для публикации.' };
+  }
+
+  await runGit(['add', '-A', '--', ...pathspecs]);
+
+  try {
+    await runGit(['diff', '--cached', '--quiet', '--', ...pathspecs]);
+    return { published: false, branch, message: 'Нет изменений для публикации.' };
+  } catch {
+    // git diff --quiet exits with 1 when there are staged changes.
+  }
+
+  const commitMessage = buildPublishMessage(scope);
+  await runGit(['commit', '-m', commitMessage, '--', ...pathspecs]);
+  const commit = (await runGit(['rev-parse', '--short', 'HEAD'])).stdout;
+  await runGit(['push']);
+
+  return {
+    published: true,
+    branch,
+    commit,
+    message: `Опубликовано в GitHub: ${commit}. Публичный хостинг обновится после завершения автодеплоя.`
+  };
+}
+
+async function publishContentChanges() {
+  return publishPaths(PUBLISH_PATHS, 'content');
+}
+
+async function publishWholeSiteChanges() {
+  return publishPaths(FULL_PUBLISH_PATHS, 'site');
 }
 
 function readBody(req) {
@@ -183,7 +307,7 @@ function slugifyFilename(name) {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'image';
+    .slice(0, 80) || 'media';
 }
 
 function readRawBody(req, maxBytes = MAX_UPLOAD_SIZE + 1024) {
@@ -193,7 +317,7 @@ function readRawBody(req, maxBytes = MAX_UPLOAD_SIZE + 1024) {
     req.on('data', (chunk) => {
       size += chunk.length;
       if (size > maxBytes) {
-        reject(new Error('Файл слишком большой. Максимум 10 MB.'));
+        reject(new Error(`Файл слишком большой. Максимум ${formatUploadLimit(MAX_UPLOAD_SIZE)} MB.`));
         return;
       }
       chunks.push(chunk);
@@ -434,6 +558,18 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/api/admin/publish' && req.method === 'POST') {
+      const result = await publishContentChanges();
+      sendJson(res, 200, { ok: true, ...result });
+      return;
+    }
+
+    if (pathname === '/api/admin/publish-all' && req.method === 'POST') {
+      const result = await publishWholeSiteChanges();
+      sendJson(res, 200, { ok: true, ...result });
+      return;
+    }
+
     if (pathname === '/api/admin/upload' && req.method === 'POST') {
       const contentType = req.headers['content-type'] || '';
       if (!String(contentType).includes('multipart/form-data')) {
@@ -447,14 +583,17 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 400, { error: 'Пустой файл' });
         return;
       }
-      if (fileBuffer.length > MAX_UPLOAD_SIZE) {
-        sendJson(res, 400, { error: 'Файл слишком большой. Максимум 10 MB.' });
-        return;
-      }
 
       const ext = path.extname(filename).toLowerCase();
       if (!ALLOWED_EXTENSIONS.has(ext)) {
-        sendJson(res, 400, { error: 'Разрешены только jpg, jpeg, png, webp, svg' });
+        sendJson(res, 400, { error: 'Разрешены только jpg, jpeg, png, webp, svg, mp4, webm' });
+        return;
+      }
+
+      const isVideo = ALLOWED_VIDEO_EXTENSIONS.has(ext);
+      const maxFileSize = isVideo ? MAX_VIDEO_UPLOAD_SIZE : MAX_IMAGE_UPLOAD_SIZE;
+      if (fileBuffer.length > maxFileSize) {
+        sendJson(res, 400, { error: `Файл слишком большой. Максимум для ${isVideo ? 'видео' : 'фото'} ${formatUploadLimit(maxFileSize)} MB.` });
         return;
       }
 
@@ -463,7 +602,7 @@ const server = http.createServer(async (req, res) => {
       const safeName = `${baseName}-${Date.now()}${ext}`;
       const filePath = path.join(UPLOADS_DIR, safeName);
       await fs.writeFile(filePath, fileBuffer);
-      sendJson(res, 200, { path: `/uploads/${safeName}` });
+      sendJson(res, 200, { path: `/uploads/${safeName}`, type: isVideo ? 'video' : 'image' });
       return;
     }
 
@@ -481,6 +620,41 @@ const server = http.createServer(async (req, res) => {
       const [, collection] = matchList;
       const entries = await listCollectionEntries(collection);
       sendJson(res, 200, { entries });
+      return;
+    }
+
+    if (matchList && req.method === 'POST') {
+      const [, collection] = matchList;
+      const config = getCollectionConfig(collection);
+      if (config.type === 'single-file') {
+        sendJson(res, 400, { error: 'Для этой коллекции нельзя создавать новые записи' });
+        return;
+      }
+
+      const body = await readBody(req);
+      const content = body?.content && typeof body.content === 'object' && !Array.isArray(body.content)
+        ? body.content
+        : body;
+      const slug = sanitizeSlug(String(body?.slug ?? content?.slug ?? '').trim());
+      const filePath = await resolveJsonPath(collection, slug);
+
+      try {
+        await fs.access(filePath);
+        sendJson(res, 409, { error: 'Запись с таким slug уже существует' });
+        return;
+      } catch {
+        // file does not exist yet
+      }
+
+      if (!content || typeof content !== 'object' || Array.isArray(content)) {
+        sendJson(res, 400, { error: 'Ожидается JSON-объект' });
+        return;
+      }
+
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      await fs.writeFile(filePath, `${JSON.stringify({ ...content, slug }, null, 2)}\n`, 'utf8');
+      const saved = await readJsonFile(filePath);
+      sendJson(res, 201, { ok: true, slug, content: saved });
       return;
     }
 
@@ -506,6 +680,20 @@ const server = http.createServer(async (req, res) => {
       await fs.writeFile(filePath, `${JSON.stringify(body, null, 2)}\n`, 'utf8');
       const saved = await readJsonFile(filePath);
       sendJson(res, 200, { ok: true, content: saved });
+      return;
+    }
+
+    if (matchEntry && req.method === 'DELETE') {
+      const [, collection, slug] = matchEntry;
+      const config = getCollectionConfig(collection);
+      if (config.type === 'single-file') {
+        sendJson(res, 400, { error: 'Эту запись нельзя удалить' });
+        return;
+      }
+
+      const filePath = await resolveJsonPath(collection, slug);
+      await fs.unlink(filePath);
+      sendJson(res, 200, { ok: true });
       return;
     }
 

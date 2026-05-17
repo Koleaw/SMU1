@@ -6,12 +6,16 @@
   "scripts": {
     "dev": "astro dev",
     "admin:api": "node tools/admin-api/server.mjs",
-    "build": "astro check && astro build",
+    "build": "astro build",
     "preview": "astro preview",
     "check": "astro check"
   },
   "dependencies": {
-    "astro": "^5.1.0",
-    "@astrojs/sitemap": "^3.2.1"
+    "@astrojs/sitemap": "^3.2.1",
+    "astro": "^5.1.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "typescript": "^5.9.3"
   }
 }

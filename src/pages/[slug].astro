@@ -460,25 +460,25 @@ const isMetalPage = itemType === 'product-section' && item.slug === 'metallokons
 const isTopiaryPage = itemType === 'product-section' && item.slug === 'topiarii';
 const isLandscapingPage = itemType === 'service' && item.slug === 'blagoustroystvo-territoriy';
 const isConstructionPage = itemType === 'service' && item.slug === 'stroitelstvo-i-remonty';
-const navesyPageBlocks = isNavesyPage && Array.isArray(item.pageBlocks)
+const editablePageBlocks = Array.isArray(item.pageBlocks)
   ? item.pageBlocks
       .filter((block) => block?.isActive !== false)
       .slice()
       .sort((a, b) => a.order - b.order)
       .map((block, index) => ({
         ...block,
-        sectionId: `navesy-block-${index + 1}`
+        sectionId: `${item.slug}-block-${index + 1}`
       }))
   : [];
-const hasNavesyPageBlocks = navesyPageBlocks.length > 0;
+const hasEditablePageBlocks = editablePageBlocks.length > 0;
 
-const sectionNavItems = isNavesyPage
-  ? hasNavesyPageBlocks
-    ? navesyPageBlocks.map((block, index) => ({
-        id: block.sectionId ?? `navesy-block-${index + 1}`,
-        label: block.title
-      })).concat([{ id: 'direct-contact', label: 'Связаться напрямую' }])
-    : navesyContent.navItems
+const sectionNavItems = hasEditablePageBlocks
+  ? editablePageBlocks.map((block, index) => ({
+      id: block.sectionId ?? `${item.slug}-block-${index + 1}`,
+      label: block.title
+    })).concat([{ id: 'direct-contact', label: 'Связаться напрямую' }])
+  : isNavesyPage
+    ? navesyContent.navItems
   : isMetalPage
     ? metalContent.navItems
     : isTopiaryPage
@@ -496,7 +496,15 @@ const categories = isCatalogHub
       .sort((a, b) => a.order - b.order)
   : [];
 
-const contactTitle = isNavesyPage
+const pageContact = item as {
+  contactTitle?: string;
+  contactDescription?: string;
+  contactTelegramLabel?: string;
+  contactEmailLabel?: string;
+  contactPhoneLabel?: string;
+};
+
+const defaultContactTitle = isNavesyPage
   ? navesyContent.contactTitle
   : isMetalPage
     ? metalContent.contactTitle
@@ -510,7 +518,7 @@ const contactTitle = isNavesyPage
     ? 'Нужно ограждение под конкретный объект?'
     : 'Не нашли, что искали?';
 
-const contactDescription = isNavesyPage
+const defaultContactDescription = isNavesyPage
   ? navesyContent.contactDescription
   : isMetalPage
     ? metalContent.contactDescription
@@ -523,9 +531,20 @@ const contactDescription = isNavesyPage
     : item.slug === 'ograzhdeniya-i-zabory'
     ? 'Напишите нам, и мы подберем конструкцию под размеры, задачу, внешний вид территории и условия монтажа.'
     : 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.';
+
+const defaultTelegramLabel = isMetalPage || isTopiaryPage || isLandscapingPage || isConstructionPage ? 'Написать в Telegram' : undefined;
+const defaultEmailLabel = isMetalPage || isTopiaryPage || isLandscapingPage || isConstructionPage ? 'Написать на почту' : undefined;
+const defaultPhoneLabel = isMetalPage || isTopiaryPage || isLandscapingPage || isConstructionPage ? 'Позвонить' : undefined;
+
+const contactTitle = pageContact.contactTitle?.trim() || defaultContactTitle;
+const contactDescription = pageContact.contactDescription?.trim() || defaultContactDescription;
+const contactTelegramLabel = pageContact.contactTelegramLabel?.trim() || defaultTelegramLabel;
+const contactEmailLabel = pageContact.contactEmailLabel?.trim() || defaultEmailLabel;
+const contactPhoneLabel = pageContact.contactPhoneLabel?.trim() || defaultPhoneLabel;
+const shouldShowSectionNavigator = isProjectDirection || itemType === 'service';
 ---
 <BaseLayout title={item.seoTitle} description={item.seoDescription}>
-  {isProjectDirection && <SectionNavigator items={sectionNavItems} />}
+  {shouldShowSectionNavigator && <SectionNavigator items={sectionNavItems} />}
 
   <div class="breadcrumbs-bar">
     <div class="container">
@@ -587,13 +606,11 @@ const contactDescription = isNavesyPage
         </div>
       </section>
     </>
+  ) : hasEditablePageBlocks ? (
+    <PageBlocksRenderer pageBlocks={editablePageBlocks} />
   ) : isNavesyPage ? (
     <>
-      {hasNavesyPageBlocks ? (
-        <PageBlocksRenderer pageBlocks={navesyPageBlocks} />
-      ) : (
-        <>
-          <section id="navesy-types" class="section section--dark" data-section-theme="dark">
+      <section id="navesy-types" class="section section--dark" data-section-theme="dark">
             <div class="container">
               <div class="section-heading section-heading--light">
                 <h2 class="section-title">Какие навесы делаем</h2>
@@ -647,8 +664,6 @@ const contactDescription = isNavesyPage
               </article>
             </div>
           </section>
-        </>
-      )}
     </>
   ) : isMetalPage ? (
     <>
@@ -1048,9 +1063,9 @@ const contactDescription = isNavesyPage
   <DirectContactBlock
     title={contactTitle}
     description={contactDescription}
-    telegramLabel={isMetalPage || isTopiaryPage || isLandscapingPage || isConstructionPage ? 'Написать в Telegram' : undefined}
-    emailLabel={isMetalPage || isTopiaryPage || isLandscapingPage || isConstructionPage ? 'Написать на почту' : undefined}
-    phoneLabel={isMetalPage || isTopiaryPage || isLandscapingPage || isConstructionPage ? 'Позвонить' : undefined}
+    telegramLabel={contactTelegramLabel}
+    emailLabel={contactEmailLabel}
+    phoneLabel={contactPhoneLabel}
   />
 </BaseLayout>
 

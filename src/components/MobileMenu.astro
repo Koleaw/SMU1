@@ -1,8 +1,15 @@
 ---
+import { getCollection } from 'astro:content';
 import navItems from '../data/navigation.json';
-import site from '../data/site.json';
 import { withBase } from '../utils/withBase';
 
+const settingsEntry = (await getCollection('site-settings'))[0];
+if (!settingsEntry) {
+  throw new Error('site-settings collection must contain one entry.');
+}
+
+const site = settingsEntry.data;
+const telegramLabel = site.telegramLabel ?? site.telegram.replace(/^https?:\/\/t\.me\//, '@');
 const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href));
 const normalizePath = (path: string) => {
   const base = import.meta.env.BASE_URL || '/';
@@ -46,9 +53,9 @@ const isHomePage = normalizePath(Astro.url.pathname) === '/';
     </nav>
 
     <div class="mobile-menu-layer__contacts">
-      <a href={`tel:${site.phone}`}>
+      <a href={`tel:${site.phonePrimary}`}>
         <img src={withBase('/assets/icons/phone.svg')} alt="" aria-hidden="true" />
-        <span>{site.phone}</span>
+        <span>{site.phonePrimary}</span>
       </a>
       <a href={`tel:${site.phoneSecondary}`}>
         <img src={withBase('/assets/icons/phone.svg')} alt="" aria-hidden="true" />
@@ -58,9 +65,9 @@ const isHomePage = normalizePath(Astro.url.pathname) === '/';
         <img src={withBase('/assets/icons/mail.svg')} alt="" aria-hidden="true" />
         <span>{site.email}</span>
       </a>
-      <a href={site.telegramUrl} target="_blank" rel="noopener noreferrer">
+      <a href={site.telegram} target="_blank" rel="noopener noreferrer">
         <img src={withBase('/assets/icons/send.svg')} alt="" aria-hidden="true" />
-        <span>{site.telegram}</span>
+        <span>{telegramLabel}</span>
       </a>
       <p>
         <img src={withBase('/assets/icons/map-pin.svg')} alt="" aria-hidden="true" />

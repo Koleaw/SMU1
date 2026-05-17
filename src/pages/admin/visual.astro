@@ -1,0 +1,1389 @@
+---
+import '../../styles/global.css';
+import { withBase } from '../../utils/withBase';
+
+const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:8787/api/admin';
+const adminHome = withBase('/admin/');
+const baseUrl = import.meta.env.BASE_URL ?? '/';
+---
+
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Визуальный редактор — Админка СМУ-1</title>
+    <style is:global>
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #f2f5f7; }
+      button, input, select, textarea { font: inherit; }
+      .hidden { display: none !important; }
+      .admin-login { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: linear-gradient(180deg, #f7f9fb, #edf2f6); }
+      .admin-login-card { width: min(440px, 100%); display: grid; gap: 14px; padding: 26px; border: 1px solid rgb(16 22 27 / 12%); border-radius: 12px; background: #fff; box-shadow: 0 20px 50px rgb(16 22 27 / 10%); }
+      .admin-login-card h1, .admin-login-card p { margin: 0; }
+      .visual-shell { min-height: 100vh; display: grid; grid-template-columns: 310px minmax(0, 1fr); }
+      .visual-sidebar { position: sticky; top: 0; height: 100vh; overflow: auto; padding: 16px; border-right: 1px solid rgb(16 22 27 / 11%); background: #101820; color: #e8eef3; }
+      .visual-sidebar h1 { margin: 0 0 12px; font-size: 22px; color: #fff; }
+      .visual-sidebar__top { display: grid; gap: 10px; margin-bottom: 16px; }
+      .visual-main { min-width: 0; }
+      .visual-topbar { position: sticky; top: 0; z-index: 100; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid rgb(16 22 27 / 11%); background: rgb(255 255 255 / 94%); box-shadow: 0 12px 34px rgb(16 22 27 / 8%); backdrop-filter: blur(14px); }
+      .visual-topbar h2 { margin: 0; font-size: 19px; }
+      .visual-topbar__left, .visual-topbar__right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      .visual-canvas { background: #fff; min-height: calc(100vh - 58px); }
+      .admin-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 7px 10px; border: 1px solid #c4d0da; border-radius: 8px; background: #fff; color: #233445; font-size: 13px; font-weight: 700; line-height: 1; text-decoration: none; cursor: pointer; }
+      .admin-btn:hover, .admin-btn:focus-visible { border-color: #95a8b8; background: #f5f8fb; }
+      .admin-btn--primary { border-color: #167a50; background: #167a50; color: #fff; }
+      .admin-btn--danger { border-color: #b94a48; background: #b94a48; color: #fff; }
+      .admin-btn--dark { border-color: rgb(255 255 255 / 18%); background: rgb(255 255 255 / 9%); color: #fff; }
+      .admin-btn[disabled] { opacity: .45; cursor: not-allowed; }
+      .admin-field { display: grid; gap: 7px; }
+      .admin-field label, .admin-label { color: #516273; font-size: 13px; font-weight: 800; }
+      .admin-field input, .admin-field select, .admin-field textarea, .admin-input, .admin-select { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid #c9d5df; border-radius: 8px; background: #fff; color: #17212b; }
+      .admin-field textarea { min-height: 92px; resize: vertical; }
+      .sidebar-group { display: grid; gap: 8px; margin-bottom: 16px; }
+      .sidebar-group h2 { margin: 0; color: rgb(255 255 255 / 66%); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+      .sidebar-link { width: 100%; display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+      .sidebar-link:hover, .sidebar-link.is-active { background: #1b2834; }
+      .sidebar-entry { width: 100%; display: grid; gap: 4px; padding: 9px 10px; border: 1px solid rgb(255 255 255 / 9%); border-radius: 8px; background: rgb(255 255 255 / 4%); color: inherit; text-align: left; cursor: pointer; }
+      .sidebar-entry:hover, .sidebar-entry.is-active { border-color: rgb(255 255 255 / 22%); background: #1b2834; }
+      .sidebar-entry small { color: rgb(232 238 243 / 62%); }
+      .admin-alert { display: none; padding: 10px 16px; border-bottom: 1px solid rgb(16 22 27 / 9%); background: #edf7f1; color: #1f6a44; font-weight: 800; }
+      .admin-alert.is-visible { display: block; }
+      .admin-alert.is-error { background: #fff0ef; color: #a53532; }
+      .admin-status { color: #587085; font-size: 13px; font-weight: 800; }
+      .admin-status.is-dirty { color: #9a4f00; }
+      [data-editable] { min-width: 1ch; border-radius: 6px; outline: 1px dashed transparent; outline-offset: 4px; cursor: text; white-space: pre-wrap; }
+      [data-editable]:hover { outline-color: rgb(22 122 80 / 38%); background: rgb(22 122 80 / 5%); }
+      [data-editable]:focus { outline: 2px solid #18b663; background: rgb(255 255 255 / 94%); color: #17212b !important; }
+      [data-editable][data-placeholder]:empty::before { content: attr(data-placeholder); color: #8a98a5; }
+      .section--dark [data-editable]:focus, .hero [data-editable]:focus { background: rgb(255 255 255 / 96%); color: #17212b !important; }
+      .admin-tools { position: relative; z-index: 20; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 18px; }
+      .admin-item-tools { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 10px; opacity: .76; }
+      .card:hover .admin-item-tools, .product-showcase-card:hover .admin-item-tools, .category-choice-card:hover .admin-item-tools, .object-list-card:hover .admin-item-tools, .admin-item-tools:focus-within { opacity: 1; }
+      .admin-badge { display: inline-flex; align-items: center; width: fit-content; min-height: 26px; padding: 4px 8px; border-radius: 999px; background: #edf2f6; color: #425466; font-size: 12px; font-weight: 800; }
+      .admin-badge--hidden { background: #fff0ef; color: #9a3835; }
+      .admin-muted { color: #607386; }
+      .admin-create { padding: 20px 0; background: #f3f7f9; border-block: 1px solid rgb(16 22 27 / 9%); }
+      .admin-create-panel { display: grid; gap: 12px; padding: 16px; border: 1px solid #d0dbe4; border-radius: 12px; background: #fff; }
+      .admin-create-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+      .admin-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .admin-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .admin-panel { padding: 20px 0; background: #f7fafb; border-block: 1px solid rgb(16 22 27 / 8%); }
+      .admin-panel-card { display: grid; gap: 12px; padding: 16px; border: 1px solid #d0dbe4; border-radius: 12px; background: #fff; }
+      .admin-product-details { display: grid; gap: 18px; }
+      .admin-product-specs { display: grid; gap: 10px; }
+      .admin-product-spec-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 10px; padding: 12px; border: 1px solid #d8e2eb; border-radius: 10px; background: #fff; }
+      .admin-product-spec-row.is-hidden { opacity: .55; outline: 1px dashed #b94a48; outline-offset: -3px; }
+      .admin-media-frame { position: relative; overflow: hidden; contain: paint; isolation: isolate; background: linear-gradient(135deg, rgb(237 246 241 / 74%), rgb(255 255 255 / 82%) 42%, rgb(225 232 238 / 72%)), repeating-linear-gradient(135deg, #f0f0f0 0 11px, #e7e7e7 11px 22px); }
+      .admin-media-frame--card { aspect-ratio: 4 / 3; }
+      .admin-media-frame--wide { aspect-ratio: 16 / 9; }
+      .admin-media-frame--hero { position: absolute; inset: 0; }
+      .admin-media-frame img, .admin-media-frame video, .admin-media-frame .media-thumb, .admin-media-frame .hero-media__image, .admin-media-frame .hero-media__video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; aspect-ratio: auto; object-fit: cover; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+      .admin-media-frame.is-active-crop { outline: 3px solid #18b663; outline-offset: -3px; cursor: grab; touch-action: none; }
+      .admin-media-frame.is-active-crop::after { content: 'Перетащите фото внутри рамки'; position: absolute; z-index: 4; right: 12px; bottom: 12px; padding: 6px 9px; border-radius: 999px; background: rgb(16 22 27 / 72%); color: #fff; font-size: 12px; font-weight: 800; pointer-events: none; }
+      .admin-media-frame.is-dragging { cursor: grabbing; }
+      .admin-media-empty { display: grid; min-height: 100%; place-items: center; padding: 18px; color: #627487; font-size: 14px; font-weight: 800; text-align: center; }
+      .admin-media-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px var(--card-padding); border-top: 1px solid rgb(16 22 27 / 8%); background: #fff; }
+      .crop-editor { padding: 12px 0 0; }
+      .crop-panel { display: grid; gap: 12px; padding: 14px; border: 1px solid #c5d3df; border-radius: 12px; background: #fff; box-shadow: 0 12px 30px rgb(16 22 27 / 10%); }
+      .crop-panel h3, .crop-panel p { margin: 0; }
+      .range-row { display: grid; gap: 7px; }
+      .range-row__head { display: flex; justify-content: space-between; gap: 10px; color: #41556a; font-size: 13px; font-weight: 800; }
+      .range-row input[type='range'] { width: 100%; }
+      .range-value { color: #17212b; font-variant-numeric: tabular-nums; }
+      .page-blocks-grid { display: grid; gap: 16px; }
+      .page-blocks-grid--auto { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+      .page-blocks-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .page-blocks-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .page-blocks-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .page-block-card { min-height: 100%; }
+      .page-block-card--graphite { background: var(--color-surface); border-color: var(--color-border); }
+      .page-block-panel { display: flex; flex-direction: column; gap: 12px; }
+      .page-blocks-columns { margin: 0; padding-left: 18px; column-gap: 20px; row-gap: 8px; }
+      .page-blocks-columns--2 { columns: 2; }
+      .page-blocks-columns--3 { columns: 3; }
+      .page-block-media-layout { display: grid; gap: 20px; align-items: start; }
+      .page-block-media-layout .media-block { order: 1; }
+      .page-block-media-layout .page-block-panel { order: 0; }
+      .page-block-media-layout--left .media-block { order: 0; }
+      .page-block-media-layout--left .page-block-panel { order: 1; }
+      .page-block-steps { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+      .admin-row-hidden, .admin-card-hidden { opacity: .55; outline: 1px dashed #b94a48; outline-offset: -3px; }
+      .home-contact-card .admin-item-tools { margin-top: 12px; }
+      @media (min-width: 920px) { .page-block-media-layout { grid-template-columns: 1fr 1fr; } }
+      @media (max-width: 1100px) { .visual-shell { grid-template-columns: 1fr; } .visual-sidebar { position: relative; height: auto; } .admin-create-grid, .admin-grid-2, .admin-grid-3 { grid-template-columns: 1fr; } }
+      @media (max-width: 767px) { .page-blocks-grid, .page-blocks-grid--2, .page-blocks-grid--3, .page-blocks-grid--4, .page-blocks-grid--auto { grid-template-columns: 1fr; } .page-blocks-columns { columns: 1; } }
+    </style>
+  </head>
+  <body>
+    <div id="loginView" class="admin-login hidden">
+      <form id="loginForm" class="admin-login-card">
+        <h1>Админка СМУ-1</h1>
+        <p class="admin-muted">Войдите, чтобы открыть визуальный редактор.</p>
+        <div class="admin-field"><label for="login">Логин</label><input id="login" name="login" required /></div>
+        <div class="admin-field"><label for="password">Пароль</label><input id="password" name="password" type="password" required /></div>
+        <button class="admin-btn admin-btn--primary" type="submit">Войти</button>
+        <p id="loginStatus" class="admin-muted"></p>
+      </form>
+    </div>
+
+    <div id="appView" class="visual-shell hidden">
+      <aside class="visual-sidebar">
+        <div class="visual-sidebar__top">
+          <h1>Визуальный редактор</h1>
+          <a class="admin-btn admin-btn--dark" href={adminHome}>В админку</a>
+        </div>
+        <div id="collectionNav"></div>
+        <div id="entryNav"></div>
+      </aside>
+      <main class="visual-main">
+        <header class="visual-topbar">
+          <div class="visual-topbar__left">
+            <h2 id="editorTitle">Загрузка...</h2>
+            <span id="dirtyStatus" class="admin-status">Нет изменений</span>
+          </div>
+          <div class="visual-topbar__right">
+            <button id="saveBtn" class="admin-btn admin-btn--primary" type="button" disabled>Сохранить</button>
+            <button id="publishAllBtn" class="admin-btn" type="button">Опубликовать весь сайт</button>
+            <a id="publicLink" class="admin-btn" href="#" target="_blank" rel="noreferrer">Открыть страницу</a>
+            <button id="logoutBtn" class="admin-btn" type="button">Выйти</button>
+          </div>
+        </header>
+        <div id="alertBox" class="admin-alert"></div>
+        <div id="workspace" class="visual-canvas"></div>
+      </main>
+      <input id="uploadInput" class="hidden" type="file" accept="image/*,.svg" />
+      <input id="uploadVideoInput" class="hidden" type="file" accept="video/mp4,video/webm,.mp4,.webm" />
+    </div>
+
+    <script type="module" define:vars={{ adminApiBase, baseUrl }}>
+      const API_BASE = adminApiBase;
+      const DEFAULT_MEDIA_VIEW = { fit: 'cover', positionX: 50, positionY: 50, scale: 1 };
+      const COLLECTIONS = [
+        ['static-pages', 'Страницы сайта'],
+        ['product-sections', 'Страницы каталога'],
+        ['product-categories', 'Подстраницы каталога'],
+        ['products', 'Товары каталога'],
+        ['services', 'Проектные страницы'],
+        ['projects', 'Выполненные объекты'],
+        ['jobs', 'Вакансии'],
+        ['site-settings', 'Контакты и настройки']
+      ];
+      const COLLECTION_LABELS = Object.fromEntries(COLLECTIONS);
+      const SITE_NAV_ITEMS = [
+        { label: 'Главная страница', collection: 'static-pages', slug: 'home' },
+        { label: 'Уличная мебель', collection: 'product-sections', slug: 'ulichnaya-mebel' },
+        { label: 'Ограждения', collection: 'product-sections', slug: 'ograzhdeniya-i-zabory' },
+        { label: 'Навесы', collection: 'product-sections', slug: 'navesy-i-kozyrki' },
+        { label: 'Металлоконструкции', collection: 'product-sections', slug: 'metallokonstruktsii-dlya-biznesa' },
+        { label: 'Топиарии', collection: 'product-sections', slug: 'topiarii' },
+        { label: 'Благоустройство', collection: 'services', slug: 'blagoustroystvo-territoriy' },
+        { label: 'Строительство', collection: 'services', slug: 'stroitelstvo-i-remonty' },
+        { label: 'Выполненные объекты', collection: 'projects', slug: '' },
+        { label: 'Контакты', collection: 'site-settings', slug: 'global' },
+        { label: 'Вакансии', collection: 'jobs', slug: '' }
+      ];
+      const WORK_NAV_ITEMS = [
+        { label: 'Все модели изделий', collection: 'products', slug: '' },
+        { label: 'Все подстраницы каталога', collection: 'product-categories', slug: '' },
+        { label: 'Все служебные страницы', collection: 'static-pages', slug: '' }
+      ];
+      const SECTION_TYPES = [
+        ['cardGrid', 'Карточки'],
+        ['listPanel', 'Список'],
+        ['process', 'Процесс'],
+        ['factorList', 'Факторы стоимости'],
+        ['mediaText', 'Фото + текст'],
+        ['notice', 'Текстовая вставка'],
+        ['exampleGrid', 'Примеры']
+      ];
+      const state = {
+        collection: null,
+        selectedSlug: null,
+        entries: {},
+        records: {},
+        alert: '',
+        alertError: false,
+        crop: null,
+        cropDrag: null,
+        uploadTarget: null
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+      const clone = (value) => JSON.parse(JSON.stringify(value));
+      const keyOf = (collection, slug) => `${collection}:${slug}`;
+      const sorted = (items = []) => items.slice().sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0));
+      const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value) || min));
+      const slugify = (value) => String(value || '').toLowerCase().trim().replace(/ё/g, 'e').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+      const isDirtyRecord = (record) => record && JSON.stringify(record.original) !== JSON.stringify(record.draft);
+      const dirtyRecords = () => Object.values(state.records).filter(isDirtyRecord);
+      const getRecord = (ref) => state.records[ref];
+      const getMainRef = () => state.selectedSlug ? keyOf(state.collection, state.selectedSlug) : null;
+
+      function toSrc(src) {
+        if (!src) return '';
+        if (/^https?:\/\//i.test(src)) return src;
+        const normBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+        const clean = src.startsWith('/') ? src.slice(1) : src;
+        return `${normBase}${clean}`;
+      }
+
+      function mediaMimeType(src) {
+        return String(src || '').toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
+      }
+
+      function getPath(record, path) {
+        return String(path).split('.').reduce((cursor, part) => cursor?.[part], record?.draft);
+      }
+
+      function setPath(record, path, value) {
+        const parts = String(path).split('.');
+        let cursor = record.draft;
+        for (let i = 0; i < parts.length - 1; i += 1) {
+          const part = parts[i];
+          if (cursor[part] === undefined || cursor[part] === null) cursor[part] = /^\d+$/.test(parts[i + 1]) ? [] : {};
+          cursor = cursor[part];
+        }
+        cursor[parts[parts.length - 1]] = value;
+      }
+
+      function editable(ref, path, placeholder = 'Введите текст', singleLine = false, valueType = 'string') {
+        return `contenteditable="plaintext-only" spellcheck="true" data-editable data-ref="${esc(ref)}" data-path="${esc(path)}" data-placeholder="${esc(placeholder)}" data-value-type="${esc(valueType)}" ${singleLine ? 'data-single-line="true"' : ''}`;
+      }
+
+      function getMediaView(view) {
+        const safe = { ...DEFAULT_MEDIA_VIEW, ...(view || {}) };
+        return {
+          fit: safe.fit === 'contain' ? 'contain' : 'cover',
+          positionX: clamp(safe.positionX, 0, 100),
+          positionY: clamp(safe.positionY, 0, 100),
+          scale: clamp(safe.scale, 1, 3)
+        };
+      }
+
+      function mediaStyle(view) {
+        const safe = getMediaView(view);
+        return `object-fit:${safe.fit};object-position:${safe.positionX}% ${safe.positionY}%;transform:scale(${safe.scale});transform-origin:center;`;
+      }
+
+      function renumber(items = []) {
+        items.forEach((item, index) => {
+          if (item && typeof item === 'object' && 'order' in item) item.order = (index + 1) * 10;
+        });
+      }
+
+      async function api(path, options = {}) {
+        let response;
+        try {
+          response = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            credentials: 'include',
+            headers: options.body instanceof FormData ? (options.headers || {}) : { 'Content-Type': 'application/json', ...(options.headers || {}) }
+          });
+        } catch {
+          throw new Error('Не удалось подключиться к backend API. Запустите npm run admin:api.');
+        }
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        return data;
+      }
+
+      function setAlert(text = '', error = false) {
+        state.alert = text;
+        state.alertError = error;
+        renderAlert();
+      }
+
+      function renderAlert() {
+        const box = $('alertBox');
+        box.textContent = state.alert;
+        box.className = `admin-alert ${state.alert ? 'is-visible' : ''} ${state.alertError ? 'is-error' : ''}`;
+      }
+
+      function markDirty() {
+        const dirty = dirtyRecords().length > 0;
+        $('dirtyStatus').textContent = dirty ? `Есть изменения: ${dirtyRecords().length}` : 'Нет изменений';
+        $('dirtyStatus').classList.toggle('is-dirty', dirty);
+        $('saveBtn').disabled = !dirty;
+      }
+
+      function publicUrl(collection, item) {
+        if (!item) return '#';
+        if (collection === 'product-sections' || collection === 'services') return withBasePath(`/${item.slug}/`);
+        if (collection === 'product-categories') return withBasePath(item.parentSectionSlug === 'ulichnaya-mebel' ? `/ulichnaya-mebel/${item.slug}/` : `/${item.parentSectionSlug}/${item.slug}/`);
+        if (collection === 'products') {
+          const category = findRecordByField('product-categories', 'slug', item.productCategorySlug)?.draft;
+          if (!category) return withBasePath('/');
+          return withBasePath(`/${category.parentSectionSlug}/${category.slug}/${item.slug}/`);
+        }
+        if (collection === 'projects') return withBasePath(`/vypolnennye-obekty/${item.slug}/`);
+        if (collection === 'jobs') return withBasePath('/vakansii/');
+        if (collection === 'site-settings') return withBasePath('/kontakty/');
+        if (collection === 'static-pages') return item.slug === 'home' ? withBasePath('/') : item.slug === 'custom-order' ? withBasePath('/izgotovlenie-na-zakaz/') : withBasePath(`/${item.slug}/`);
+        return '#';
+      }
+
+      function withBasePath(path) {
+        const normBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+        return `${normBase}${path.startsWith('/') ? path.slice(1) : path}`;
+      }
+
+      function findRecordByField(collection, field, value) {
+        return Object.values(state.records).find((record) => record.collection === collection && record.draft?.[field] === value);
+      }
+
+      async function loadCollection(collection) {
+        const data = await api(`/content/${collection}`);
+        state.entries[collection] = data.entries || [];
+        return state.entries[collection];
+      }
+
+      async function loadRecord(collection, slug) {
+        const key = keyOf(collection, slug);
+        if (state.records[key]) return state.records[key];
+        const data = await api(`/content/${collection}/${slug}`);
+        state.records[key] = { collection, slug, original: clone(data.content), draft: clone(data.content) };
+        return state.records[key];
+      }
+
+      async function loadRecordsForCollection(collection) {
+        const entries = await loadCollection(collection);
+        await Promise.all(entries.map((entry) => loadRecord(collection, entry.slug)));
+      }
+
+      async function openEditor(collection, slug = '') {
+        if (dirtyRecords().length && !confirm('Есть несохраненные изменения. Перейти без сохранения?')) return;
+        state.collection = collection;
+        state.selectedSlug = slug;
+        state.records = {};
+        state.crop = null;
+        const params = new URLSearchParams();
+        params.set('collection', collection);
+        if (slug) params.set('slug', slug);
+        history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
+
+        await loadCollection(collection);
+        if (slug) await loadRecord(collection, slug);
+        if (collection === 'product-sections' || collection === 'services') {
+          await loadRecordsForCollection('product-categories');
+          await loadRecordsForCollection('products');
+        }
+        if (collection === 'product-categories') {
+          await loadRecordsForCollection('product-sections');
+          await loadRecordsForCollection('products');
+        }
+        if (collection === 'products') {
+          await loadRecordsForCollection('product-categories');
+        }
+        if (collection === 'static-pages') {
+          await loadRecordsForCollection('product-sections');
+          await loadRecordsForCollection('services');
+        }
+        if (collection === 'jobs' || collection === 'projects') {
+          await loadRecordsForCollection(collection);
+        }
+        if (collection === 'site-settings' && !slug) {
+          await loadRecord('site-settings', 'global');
+          state.selectedSlug = 'global';
+        }
+        renderApp();
+      }
+
+      function renderApp() {
+        renderNav();
+        renderWorkspace();
+        renderAlert();
+        markDirty();
+      }
+
+      function renderNav() {
+        const renderSiteButton = (item) => {
+          const active = state.collection === item.collection && (item.slug ? state.selectedSlug === item.slug : !state.selectedSlug);
+          return `<button class="sidebar-link ${active ? 'is-active' : ''}" type="button" data-action="open-related" data-collection="${item.collection}" data-slug="${item.slug}"><span>${item.label}</span></button>`;
+        };
+        $('collectionNav').innerHTML = `
+          <div class="sidebar-group"><h2>Страницы сайта</h2>${SITE_NAV_ITEMS.map(renderSiteButton).join('')}</div>
+          <div class="sidebar-group"><h2>Рабочие списки</h2>${WORK_NAV_ITEMS.map(renderSiteButton).join('')}</div>
+        `;
+        const entries = state.entries[state.collection] || [];
+        const groups = [];
+
+        if (state.collection === 'product-sections' && state.selectedSlug) {
+          const categories = Object.values(state.records)
+            .filter((record) => record.collection === 'product-categories' && record.draft.parentSectionSlug === state.selectedSlug)
+            .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+          if (categories.length) {
+            groups.push(`<div class="sidebar-group"><h2>Подстраницы раздела</h2>${categories.map((record) => `<button class="sidebar-entry" type="button" data-action="open-related" data-collection="product-categories" data-slug="${esc(record.slug)}"><strong>${esc(record.draft.title || record.slug)}</strong><small>${esc(record.slug)}</small></button>`).join('')}</div>`);
+          }
+        }
+
+        if (state.collection === 'product-categories' && state.selectedSlug) {
+          const products = Object.values(state.records)
+            .filter((record) => record.collection === 'products' && record.draft.productCategorySlug === state.selectedSlug)
+            .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+          if (products.length) {
+            groups.push(`<div class="sidebar-group"><h2>Товары подстраницы</h2>${products.map((record) => `<button class="sidebar-entry" type="button" data-action="open-related" data-collection="products" data-slug="${esc(record.slug)}"><strong>${esc(record.draft.title || record.slug)}</strong><small>${esc(record.slug)}</small></button>`).join('')}</div>`);
+          }
+        }
+
+        if (state.collection && (!state.selectedSlug || state.collection === 'products' || state.collection === 'static-pages')) {
+          groups.push(`<div class="sidebar-group"><h2>Записи</h2>${entries.map((entry) => `<button class="sidebar-entry ${state.selectedSlug === entry.slug ? 'is-active' : ''}" type="button" data-open-entry="${entry.slug}"><strong>${esc(entry.title || entry.slug)}</strong><small>${esc(entry.slug)}</small></button>`).join('')}</div>`);
+        }
+
+        $('entryNav').innerHTML = groups.join('');
+      }
+
+      function renderWorkspace() {
+        const collection = state.collection;
+        const ref = getMainRef();
+        const record = ref ? getRecord(ref) : null;
+        $('editorTitle').textContent = collection ? `${COLLECTION_LABELS[collection]}${record ? ` · ${record.draft.title || record.draft.companyName || record.slug}` : ''}` : 'Визуальный редактор';
+        $('publicLink').href = record ? publicUrl(collection, record.draft) : collection === 'jobs' ? withBasePath('/vakansii/') : collection === 'projects' ? withBasePath('/vypolnennye-obekty/') : '#';
+
+        if (!collection) {
+          $('workspace').innerHTML = renderWelcome();
+          return;
+        }
+        if ((collection === 'jobs' || collection === 'projects') && !state.selectedSlug) {
+          $('workspace').innerHTML = collection === 'jobs' ? renderJobsPage() : renderProjectsPage();
+          return;
+        }
+        if (!record) {
+          $('workspace').innerHTML = renderCollectionList(collection);
+          return;
+        }
+        if (collection === 'product-sections' || collection === 'services') $('workspace').innerHTML = renderDirectionPage(ref);
+        else if (collection === 'product-categories') $('workspace').innerHTML = renderCategoryPage(ref);
+        else if (collection === 'products') $('workspace').innerHTML = renderProductPage(ref);
+        else if (collection === 'projects') $('workspace').innerHTML = renderProjectPage(ref);
+        else if (collection === 'jobs') $('workspace').innerHTML = renderJobCard(ref, true);
+        else if (collection === 'static-pages') $('workspace').innerHTML = renderStaticPage(ref);
+        else $('workspace').innerHTML = renderSettingsPage(ref);
+      }
+
+      function renderWelcome() {
+        return `<section class="section section--soft"><div class="container"><article class="card"><h2>Выберите раздел слева</h2><p class="lead">Откроется визуальный редактор страницы или коллекции.</p></article></div></section>`;
+      }
+
+      function renderCollectionList(collection) {
+        const entries = state.entries[collection] || [];
+        return `
+          ${renderCreatePanel(collection)}
+          <section class="section">
+            <div class="container">
+              <div class="section-heading"><h2 class="section-title">${esc(COLLECTION_LABELS[collection])}</h2></div>
+              <div class="page-blocks-grid page-blocks-grid--auto">
+                ${entries.map((entry) => `<article class="card"><h3>${esc(entry.title || entry.slug)}</h3><p>${esc(entry.summary?.shortDescription || entry.slug)}</p><button class="admin-btn admin-btn--primary" type="button" data-open-entry="${entry.slug}">Открыть</button></article>`).join('')}
+              </div>
+            </div>
+          </section>`;
+      }
+
+      function renderCreatePanel(collection, context = {}) {
+        if (collection === 'site-settings') return '';
+        const title = collection === 'product-categories' ? 'Добавить тип изделия' : collection === 'products' ? 'Добавить модель изделия' : collection === 'jobs' ? 'Добавить вакансию' : collection === 'projects' ? 'Добавить объект' : collection === 'static-pages' ? 'Добавить страницу' : `Добавить запись`;
+        const parentField = collection === 'product-categories'
+          ? `<label class="admin-field"><span>Раздел</span><select data-create-field="parentSectionSlug">${productSectionsOptions(context.parentSectionSlug)}</select></label>`
+          : collection === 'products'
+            ? `<label class="admin-field"><span>Тип изделия</span><select data-create-field="productCategorySlug">${productCategoryOptions(context.productCategorySlug)}</select></label>`
+            : '';
+        return `
+          <section class="admin-create">
+            <div class="container">
+              <div class="admin-create-panel" data-create-panel="${collection}">
+                <strong>${title}</strong>
+                <div class="admin-create-grid">
+                  <label class="admin-field"><span>Название</span><input data-create-field="title" placeholder="Название" /></label>
+                  <label class="admin-field"><span>Slug латиницей</span><input data-create-field="slug" placeholder="novaya-zapis" /></label>
+                  ${parentField}
+                </div>
+                <button class="admin-btn admin-btn--primary" type="button" data-action="create-record" data-collection="${collection}">Создать</button>
+              </div>
+            </div>
+          </section>`;
+      }
+
+      function productSectionsOptions(selected = '') {
+        return Object.values(state.records)
+          .filter((record) => record.collection === 'product-sections')
+          .map((record) => `<option value="${esc(record.draft.slug)}" ${record.draft.slug === selected ? 'selected' : ''}>${esc(record.draft.title)}</option>`)
+          .join('');
+      }
+
+      function productCategoryOptions(selected = '') {
+        return Object.values(state.records)
+          .filter((record) => record.collection === 'product-categories')
+          .map((record) => `<option value="${esc(record.draft.slug)}" ${record.draft.slug === selected ? 'selected' : ''}>${esc(record.draft.title)}</option>`)
+          .join('');
+      }
+
+      function renderDirectionPage(ref) {
+        const record = getRecord(ref);
+        const item = record.draft;
+        const isCatalog = item.mode === 'catalog-hub';
+        const settingsFields = record.collection === 'product-sections'
+          ? ['title', 'slug', 'shortDescription', 'order', 'showOnHome', 'isActive', 'mode', 'seoTitle', 'seoDescription']
+          : ['title', 'slug', 'shortDescription', 'order', 'showOnHome', 'isActive', 'seoTitle', 'seoDescription'];
+        return `
+          ${renderHero(ref, isCatalog ? 'catalog' : 'media')}
+          ${renderRecordSettings(ref, settingsFields)}
+          ${isCatalog ? renderCatalogHub(ref) : renderPageBlocks(ref)}
+          ${renderContactBlock(ref)}
+        `;
+      }
+
+      function renderHero(ref, mode = 'catalog') {
+        const record = getRecord(ref);
+        const item = record.draft;
+        const hasMedia = mode === 'media';
+        const target = `${ref}:image`;
+        const isCrop = state.crop?.target === target;
+        return `
+          <section class="hero ${hasMedia ? 'hero--media navesy-hero' : 'hero--catalog hero--catalog-clean'}">
+            ${hasMedia ? `<div class="admin-media-frame admin-media-frame--hero ${isCrop ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${item.image ? `<img class="hero-media__image" data-image-img="${esc(target)}" src="${esc(toSrc(item.image))}" alt="${esc(item.title)}" style="${esc(mediaStyle(item.imageView))}" />` : '<div class="admin-media-empty">Фото не выбрано</div>'}<div class="hero-media__overlay"></div></div>` : ''}
+            <div class="container hero-content">
+              <p class="kicker">${hasMedia ? 'Проектное направление' : 'Каталог изделий'}</p>
+              <h1 ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(item.heroTitle || item.title)}</h1>
+              <p class="hero-description" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(item.heroDescription || item.shortDescription || '')}</p>
+              ${hasMedia ? renderMediaButtons(ref, 'image', 'imageView', target, 'placeholderLabel') : ''}
+            </div>
+          </section>
+          ${hasMedia && isCrop ? renderCropControls() : ''}
+        `;
+      }
+
+      function renderRecordSettings(ref, fields) {
+        const record = getRecord(ref);
+        return `
+          <section class="admin-panel">
+            <div class="container">
+              <div class="admin-panel-card">
+                <strong>Настройки записи</strong>
+                <div class="admin-grid-3">
+                  ${fields.map((field) => renderField(ref, field, record.draft[field])).join('')}
+                </div>
+              </div>
+            </div>
+          </section>`;
+      }
+
+      function renderField(ref, field, value) {
+        if (typeof value === 'boolean') return `<label class="admin-field"><span>${field}</span><select data-field-ref="${ref}" data-field-path="${field}" data-field-type="boolean"><option value="true" ${value ? 'selected' : ''}>Да</option><option value="false" ${!value ? 'selected' : ''}>Нет</option></select></label>`;
+        if (typeof value === 'number') return `<label class="admin-field"><span>${field}</span><input type="number" data-field-ref="${ref}" data-field-path="${field}" value="${esc(value)}" /></label>`;
+        if (field === 'mode') return `<label class="admin-field"><span>${field}</span><select data-field-ref="${ref}" data-field-path="${field}"><option value="catalog-hub" ${value === 'catalog-hub' ? 'selected' : ''}>catalog-hub</option><option value="custom-direction" ${value === 'custom-direction' ? 'selected' : ''}>custom-direction</option><option value="catalog-list" ${value === 'catalog-list' ? 'selected' : ''}>catalog-list</option><option value="custom-list" ${value === 'custom-list' ? 'selected' : ''}>custom-list</option></select></label>`;
+        return `<label class="admin-field"><span>${field}</span><input data-field-ref="${ref}" data-field-path="${field}" value="${esc(value ?? '')}" ${field === 'slug' ? 'readonly' : ''} /></label>`;
+      }
+
+      function renderCatalogHub(ref) {
+        const item = getRecord(ref).draft;
+        const categories = Object.values(state.records)
+          .filter((record) => record.collection === 'product-categories' && record.draft.parentSectionSlug === item.slug)
+          .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+        return `
+          ${renderCreatePanel('product-categories', { parentSectionSlug: item.slug })}
+          <section id="categories" class="section section--soft">
+            <div class="container">
+              <div class="section-heading"><h2 class="section-title">Типы изделий</h2><p class="lead">Карточки ниже сохраняются в коллекцию типов изделий.</p></div>
+              <div class="category-choice-grid">
+                ${categories.map((categoryRecord) => renderCategoryCard(categoryRecord)).join('')}
+              </div>
+            </div>
+          </section>`;
+      }
+
+      function renderCategoryCard(categoryRecord) {
+        const ref = keyOf(categoryRecord.collection, categoryRecord.slug);
+        const item = categoryRecord.draft;
+        const target = `${ref}:image`;
+        const isCrop = state.crop?.target === target;
+        return `
+          <article class="category-choice-card ${item.isActive === false ? 'admin-card-hidden' : ''}">
+            <div class="media-block placeholder placeholder--card">
+              <div class="admin-media-frame admin-media-frame--card ${isCrop ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">
+                ${item.image ? `<img class="media-thumb" data-image-img="${esc(target)}" src="${esc(toSrc(item.image))}" alt="${esc(item.title)}" style="${esc(mediaStyle(item.imageView))}" />` : '<div class="admin-media-empty">Фото не выбрано</div>'}
+              </div>
+              <p class="media-caption" ${editable(ref, 'placeholderLabel', 'Подпись изображения')}>${esc(item.placeholderLabel || '')}</p>
+              ${renderMediaButtons(ref, 'image', 'imageView', target)}
+              ${isCrop ? renderCropControls() : ''}
+            </div>
+            <div class="category-choice-card__body">
+              <h3 ${editable(ref, 'title', 'Название типа', true)}>${esc(item.title)}</h3>
+              <p ${editable(ref, 'shortDescription', 'Описание типа')}>${esc(item.shortDescription || '')}</p>
+              <div class="admin-item-tools">
+                <button class="admin-btn" type="button" data-action="toggle-record" data-ref="${ref}" data-field="isActive">${item.isActive === false ? 'Показать' : 'Скрыть'}</button>
+                <button class="admin-btn" type="button" data-action="open-related" data-collection="product-categories" data-slug="${esc(item.slug)}">Открыть тип</button>
+                <button class="admin-btn admin-btn--danger" type="button" data-action="delete-record" data-ref="${ref}">Удалить</button>
+              </div>
+            </div>
+          </article>`;
+      }
+
+      function renderCategoryPage(ref) {
+        const category = getRecord(ref).draft;
+        const products = Object.values(state.records)
+          .filter((record) => record.collection === 'products' && record.draft.productCategorySlug === category.slug)
+          .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+        return `
+          ${renderHero(ref, 'catalog')}
+          ${renderRecordSettings(ref, ['title', 'slug', 'parentSectionSlug', 'shortDescription', 'order', 'showInSectionGrid', 'isActive', 'mode', 'seoTitle', 'seoDescription'])}
+          ${renderCreatePanel('products', { productCategorySlug: category.slug })}
+          <section id="products" class="section">
+            <div class="container">
+              <div class="section-heading"><h2 class="section-title">Модели изделий</h2></div>
+              <div class="product-catalog-grid">
+                ${products.map((productRecord) => renderProductCard(productRecord)).join('')}
+              </div>
+            </div>
+          </section>
+          ${renderContactBlock()}`;
+      }
+
+      function formatPrice(product) {
+        if (product.priceMode === 'from' && typeof product.priceFrom === 'number') return `от ${product.priceFrom.toLocaleString('ru-RU')} ₽`;
+        if (product.priceMode === 'on_request') return 'Цена по запросу';
+        return '';
+      }
+
+      function renderProductCard(productRecord) {
+        const ref = keyOf(productRecord.collection, productRecord.slug);
+        const item = productRecord.draft;
+        const target = `${ref}:image`;
+        const isCrop = state.crop?.target === target;
+        return `
+          <article class="product-showcase-card ${item.isActive === false || item.showInCatalog === false ? 'admin-card-hidden' : ''}">
+            <div class="product-showcase-card__media-wrap">
+              <div class="admin-media-frame admin-media-frame--card ${isCrop ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">
+                ${item.image ? `<img class="product-showcase-card__media" data-image-img="${esc(target)}" src="${esc(toSrc(item.image))}" alt="${esc(item.title)}" style="${esc(mediaStyle(item.imageView))}" />` : '<div class="admin-media-empty">Фото не выбрано</div>'}
+              </div>
+            </div>
+            <div class="product-showcase-card__body">
+              <h3 ${editable(ref, 'title', 'Название модели', true)}>${esc(item.title)}</h3>
+              <p class="product-showcase-card__descriptor" ${editable(ref, 'shortDescription', 'Описание модели')}>${esc(item.shortDescription || '')}</p>
+              <p class="product-showcase-card__price">${esc(formatPrice(item))}</p>
+              ${renderProductControls(ref)}
+              ${renderMediaButtons(ref, 'image', 'imageView', target, 'placeholderLabel')}
+              ${isCrop ? renderCropControls() : ''}
+              <div class="admin-item-tools">
+                <button class="admin-btn" type="button" data-action="open-related" data-collection="products" data-slug="${esc(item.slug)}">Открыть модель</button>
+                <button class="admin-btn" type="button" data-action="toggle-record" data-ref="${ref}" data-field="showInCatalog">${item.showInCatalog === false ? 'В каталог' : 'Убрать из каталога'}</button>
+                <button class="admin-btn admin-btn--danger" type="button" data-action="delete-record" data-ref="${ref}">Удалить</button>
+              </div>
+            </div>
+          </article>`;
+      }
+
+      function renderProductControls(ref) {
+        const item = getRecord(ref).draft;
+        return `
+          <div class="admin-grid-3">
+            <label class="admin-field"><span>Цена</span><input type="number" data-field-ref="${ref}" data-field-path="priceFrom" value="${esc(item.priceFrom ?? '')}" /></label>
+            <label class="admin-field"><span>Режим цены</span><select data-field-ref="${ref}" data-field-path="priceMode"><option value="from" ${item.priceMode === 'from' ? 'selected' : ''}>от</option><option value="on_request" ${item.priceMode === 'on_request' ? 'selected' : ''}>по запросу</option><option value="none" ${item.priceMode === 'none' ? 'selected' : ''}>не показывать</option></select></label>
+            <label class="admin-field"><span>Порядок</span><input type="number" data-field-ref="${ref}" data-field-path="order" value="${esc(item.order ?? 0)}" /></label>
+          </div>`;
+      }
+
+      function renderProductSpecEditor(ref, path, title) {
+        const items = getPath(getRecord(ref), path) || [];
+        return `
+          <div class="admin-product-details">
+            <strong>${title}</strong>
+            <div class="admin-product-specs">
+              ${items.map((item, index) => `<div class="admin-product-spec-row ${item.isActive === false ? 'is-hidden' : ''}">
+                <label class="admin-field"><span>Параметр</span><input data-field-ref="${ref}" data-field-path="${path}.${index}.label" value="${esc(item.label || '')}" /></label>
+                <label class="admin-field"><span>Значение</span><input data-field-ref="${ref}" data-field-path="${path}.${index}.value" value="${esc(item.value || '')}" /></label>
+                <div class="admin-item-tools" style="grid-column: 1 / -1;">
+                  <button class="admin-btn" type="button" data-action="move-product-spec" data-ref="${ref}" data-path="${path}" data-index="${index}" data-dir="-1">Выше</button>
+                  <button class="admin-btn" type="button" data-action="move-product-spec" data-ref="${ref}" data-path="${path}" data-index="${index}" data-dir="1">Ниже</button>
+                  <button class="admin-btn" type="button" data-action="toggle-product-spec" data-ref="${ref}" data-path="${path}" data-index="${index}">${item.isActive === false ? 'Показать' : 'Скрыть'}</button>
+                  <button class="admin-btn admin-btn--danger" type="button" data-action="delete-product-spec" data-ref="${ref}" data-path="${path}" data-index="${index}">Удалить</button>
+                </div>
+              </div>`).join('')}
+            </div>
+            <button class="admin-btn admin-btn--primary" type="button" data-action="add-product-spec" data-ref="${ref}" data-path="${path}">Добавить параметр</button>
+          </div>`;
+      }
+
+      function renderProductPage(ref) {
+        const item = getRecord(ref).draft;
+        return `
+          <section class="section section--soft">
+            <div class="container page-block-media-layout">
+              <article class="media-block placeholder placeholder--wide-feature">
+                ${renderImageOnly(ref, 'image', 'imageView', 'wide')}
+                <p class="media-caption" ${editable(ref, 'placeholderLabel', 'Подпись фото')}>${esc(item.placeholderLabel || '')}</p>
+              </article>
+              <article class="card page-block-panel">
+                <span class="admin-badge">Модель изделия</span>
+                <h1 ${editable(ref, 'title', 'Название модели', true)}>${esc(item.title)}</h1>
+                <p class="lead" ${editable(ref, 'leadText', 'Лид-текст')}>${esc(item.leadText || '')}</p>
+                <p ${editable(ref, 'shortDescription', 'Краткое описание')}>${esc(item.shortDescription || '')}</p>
+                ${renderProductControls(ref)}
+              </article>
+            </div>
+          </section>
+          <section class="admin-panel">
+            <div class="container">
+              <div class="admin-panel-card">
+                <strong>Информация на странице товара</strong>
+                <label class="admin-field"><span>Подробное описание</span><textarea data-field-ref="${ref}" data-field-path="description">${esc(item.description || '')}</textarea></label>
+                ${renderArrayEditor(ref, 'materials', 'Материалы')}
+                ${renderArrayEditor(ref, 'colors', 'Цвета')}
+                ${renderArrayEditor(ref, 'features', 'Особенности')}
+                ${renderProductSpecEditor(ref, 'dimensions', 'Размеры и характеристики')}
+              </div>
+            </div>
+          </section>
+          ${renderRecordSettings(ref, ['title', 'slug', 'productCategorySlug', 'sku', 'order', 'isActive', 'showInCatalog', 'seoTitle', 'seoDescription'])}`;
+      }
+
+      function renderJobsPage() {
+        const jobs = Object.values(state.records).filter((record) => record.collection === 'jobs').sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+        return `
+          ${renderCreatePanel('jobs')}
+          <section class="hero hero--catalog-clean"><div class="container hero-content"><p class="kicker">Команда</p><h1>Вакансии</h1></div></section>
+          <section class="section section--soft"><div class="container"><div class="grid grid-2">${jobs.map((job) => renderJobCard(keyOf('jobs', job.slug))).join('')}</div></div></section>`;
+      }
+
+      function renderJobCard(ref, standalone = false) {
+        const job = getRecord(ref).draft;
+        return `
+          <article class="card ${job.isActive === false ? 'admin-card-hidden' : ''}">
+            <span class="admin-badge">Вакансия</span>
+            <h2 ${editable(ref, 'title', 'Название вакансии', true)}>${esc(job.title)}</h2>
+            <p><strong>Город:</strong> <span ${editable(ref, 'city', 'Город', true)}>${esc(job.city)}</span></p>
+            <p><strong>Формат:</strong> <span ${editable(ref, 'employmentType', 'Формат', true)}>${esc(job.employmentType)}</span></p>
+            <p><strong>Оплата:</strong> <span ${editable(ref, 'salary', 'Оплата', true)}>${esc(job.salary)}</span></p>
+            <p ${editable(ref, 'shortDescription', 'Краткое описание')}>${esc(job.shortDescription)}</p>
+            ${renderArrayEditor(ref, 'responsibilities', 'Обязанности')}
+            ${renderArrayEditor(ref, 'requirements', 'Требования')}
+            ${renderArrayEditor(ref, 'conditions', 'Условия')}
+            <div class="admin-item-tools">
+              <button class="admin-btn" type="button" data-action="toggle-record" data-ref="${ref}" data-field="isActive">${job.isActive === false ? 'Показать' : 'Скрыть'}</button>
+              <button class="admin-btn admin-btn--danger" type="button" data-action="delete-record" data-ref="${ref}">Удалить</button>
+            </div>
+          </article>`;
+      }
+
+      function renderArrayEditor(ref, path, title) {
+        const items = getPath(getRecord(ref), path) || [];
+        return `<div><strong>${title}</strong><ul>${items.map((item, index) => `<li><span ${editable(ref, `${path}.${index}`, 'Строка')}>${esc(item)}</span> <button class="admin-btn" type="button" data-action="delete-array-item" data-ref="${ref}" data-path="${path}" data-index="${index}">Удалить</button></li>`).join('')}</ul><button class="admin-btn" type="button" data-action="add-array-item" data-ref="${ref}" data-path="${path}">Добавить строку</button></div>`;
+      }
+
+      function renderProjectsPage() {
+        const projects = Object.values(state.records).filter((record) => record.collection === 'projects').sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+        return `
+          ${renderCreatePanel('projects')}
+          <section class="hero hero--trust hero--catalog-clean"><div class="container hero-content"><p class="kicker">Доверительный контур</p><h1>Выполненные объекты</h1></div></section>
+          <section class="section"><div class="container object-list-grid">${projects.map((project) => renderProjectListCard(keyOf('projects', project.slug))).join('')}</div></section>`;
+      }
+
+      function renderProjectListCard(ref) {
+        const item = getRecord(ref).draft;
+        return `<article class="object-list-card ${item.isActive === false ? 'admin-card-hidden' : ''}"><div class="media-block placeholder placeholder--card">${renderImageOnly(ref, 'image', null, 'card')}<p class="media-caption">Фото кейса.</p></div><div class="object-list-card__body"><h2 ${editable(ref, 'title', 'Название объекта', true)}>${esc(item.title)}</h2><p><span ${editable(ref, 'city', 'Город', true)}>${esc(item.city)}</span>, <span ${editable(ref, 'year', 'Год', true, 'number')}>${esc(item.year)}</span></p><p ${editable(ref, 'shortDescription', 'Краткое описание')}>${esc(item.shortDescription)}</p><div class="admin-item-tools"><button class="admin-btn" type="button" data-action="open-related" data-collection="projects" data-slug="${esc(item.slug)}">Открыть объект</button><button class="admin-btn" type="button" data-action="toggle-record" data-ref="${ref}" data-field="isActive">${item.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="admin-btn admin-btn--danger" type="button" data-action="delete-record" data-ref="${ref}">Удалить</button></div></div></article>`;
+      }
+
+      function renderProjectPage(ref) {
+        const item = getRecord(ref).draft;
+        return `${renderHeroLike('Кейс объекта', ref, 'title', `${esc(item.shortDescription)} · ${esc(item.city)}, ${esc(item.year)}`)}<section class="section"><div class="container object-hero-media"><article class="media-block placeholder placeholder--card">${renderImageOnly(ref, 'image', null, 'card')}<p class="media-caption">Ключевой кадр объекта.</p></article></div></section><section class="section section--soft"><div class="container object-story-grid"><article class="card"><h2>Кратко</h2><p class="lead" ${editable(ref, 'shortDescription', 'Кратко')}>${esc(item.shortDescription)}</p></article><article class="card"><h2>Что сделали</h2><p class="lead" ${editable(ref, 'whatWasDone', 'Что сделали')}>${esc(item.whatWasDone)}</p></article><article class="card"><h2>Город</h2><p class="lead" ${editable(ref, 'city', 'Город', true)}>${esc(item.city)}</p></article></div></section>${renderRecordSettings(ref, ['title', 'slug', 'city', 'year', 'order', 'isActive', 'seoTitle', 'seoDescription'])}`;
+      }
+
+      function renderHeroLike(kicker, ref, titlePath, description) {
+        const item = getRecord(ref).draft;
+        return `<section class="hero hero--trust"><div class="container hero-content"><p class="kicker">${kicker}</p><h1 ${editable(ref, titlePath, 'Заголовок', true)}>${esc(getPath(getRecord(ref), titlePath) || item.title)}</h1><p class="hero-description">${description}</p></div></section>`;
+      }
+
+      function renderSettingsPage(ref) {
+        const item = getRecord(ref).draft;
+        return `<section class="section section--soft"><div class="container contacts-layout-grid"><article class="card contacts-main-card"><h2>Контакты и настройки</h2><div class="contacts-list">${Object.keys(item).map((key) => Array.isArray(item[key]) ? renderArrayEditor(ref, key, key) : `<p><strong>${esc(key)}:</strong> <span ${editable(ref, key, key, true)}>${esc(item[key])}</span></p>`).join('')}</div></article></div></section>`;
+      }
+
+      function renderStaticPage(ref) {
+        const page = getRecord(ref).draft;
+        if (page.slug === 'home') return renderHomePage(ref);
+        return `
+          ${renderStaticHero(ref, 'hero--service')}
+          ${renderRecordSettings(ref, ['title', 'slug', 'seoTitle', 'seoDescription'])}
+          ${renderPageBlocks(ref)}
+          ${renderContactBlock(ref)}
+        `;
+      }
+
+      function renderStaticHero(ref, className = 'hero--catalog-clean') {
+        const page = getRecord(ref).draft;
+        const target = `${ref}:heroMediaPoster`;
+        const isCrop = state.crop?.target === target;
+        const isHomePage = page.slug === 'home';
+        const video = page.heroMediaVideo || '';
+        const hasMedia = Boolean(video || page.heroMediaPoster || page.image);
+        const mediaPath = (page.heroMediaPoster || isHomePage) ? 'heroMediaPoster' : 'image';
+        const image = getPath(getRecord(ref), mediaPath);
+        const poster = page.heroMediaPoster || page.image || '';
+        const mediaMarkup = video
+          ? `<video class="hero-media__video" autoplay muted loop playsinline poster="${esc(toSrc(poster))}"><source src="${esc(toSrc(video))}" type="${esc(mediaMimeType(video))}" /></video>`
+          : image
+            ? `<img class="hero-media__image" data-image-img="${esc(target)}" src="${esc(toSrc(image))}" alt="${esc(page.title)}" style="${esc(mediaStyle(page.imageView))}" />`
+            : '<div class="admin-media-empty">Фото не выбрано</div>';
+        return `
+          <section class="hero ${hasMedia ? 'hero--media' : className}">
+            ${hasMedia ? `<div class="admin-media-frame admin-media-frame--hero ${isCrop && !video ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${mediaMarkup}<div class="hero-media__overlay"></div></div>` : ''}
+            <div class="container hero-content">
+              <p class="kicker" ${editable(ref, 'heroKicker', 'Надзаголовок', true)}>${esc(page.heroKicker || '')}</p>
+              <h1 ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(page.heroTitle || page.title)}</h1>
+              <p class="hero-description" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(page.heroDescription || '')}</p>
+              ${hasMedia ? renderMediaButtons(ref, mediaPath, video ? '' : 'imageView', target, 'heroMediaCaption') : ''}
+              ${isHomePage ? renderVideoButtons(ref, 'heroMediaVideo') : ''}
+            </div>
+          </section>
+          ${hasMedia && isCrop && !video ? renderCropControls() : ''}`;
+      }
+
+      function renderHomePage(ref) {
+        const page = getRecord(ref).draft;
+        const productDirections = Object.values(state.records)
+          .filter((record) => record.collection === 'product-sections' && record.draft.showOnHome && record.draft.isActive)
+          .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+        const serviceDirections = Object.values(state.records)
+          .filter((record) => record.collection === 'services' && record.draft.showOnHome && record.draft.isActive)
+          .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+        const pathways = Array.isArray(page.pathwayCards) ? page.pathwayCards : (page.pathwayCards = []);
+        return `
+          ${renderStaticHero(ref, 'hero--media')}
+          ${renderRecordSettings(ref, ['title', 'slug', 'seoTitle', 'seoDescription'])}
+          <section class="home-pathways section">
+            <div class="container">
+              <div class="section-heading home-pathways__heading">
+                <p class="kicker" ${editable(ref, 'pathwaysKicker', 'Надзаголовок', true)}>${esc(page.pathwaysKicker || '')}</p>
+                <h2 class="section-title" ${editable(ref, 'pathwaysTitle', 'Заголовок секции', true)}>${esc(page.pathwaysTitle || '')}</h2>
+              </div>
+              <div class="home-pathways__grid">
+                ${pathways.map((card, index) => `<article class="home-pathway-card"><span class="home-pathway-card__index">${String(index + 1).padStart(2, '0')}</span><h3 ${editable(ref, `pathwayCards.${index}.title`, 'Заголовок карточки', true)}>${esc(card.title)}</h3><p ${editable(ref, `pathwayCards.${index}.text`, 'Текст карточки')}>${esc(card.text)}</p></article>`).join('')}
+              </div>
+            </div>
+          </section>
+          <section class="section section--split">
+            <div class="container">
+              <div class="section-heading"><h2 class="section-title" ${editable(ref, 'productsTitle', 'Заголовок продукции', true)}>${esc(page.productsTitle || '')}</h2><p class="lead" ${editable(ref, 'productsIntro', 'Описание продукции')}>${esc(page.productsIntro || '')}</p></div>
+              <div class="home-products-grid">${productDirections.map((record) => renderHomeDirectionCard(record)).join('')}</div>
+            </div>
+          </section>
+          <section class="section section--soft">
+            <div class="container">
+              <div class="section-heading"><h2 class="section-title" ${editable(ref, 'servicesTitle', 'Заголовок услуг', true)}>${esc(page.servicesTitle || '')}</h2><p class="lead" ${editable(ref, 'servicesIntro', 'Описание услуг')}>${esc(page.servicesIntro || '')}</p></div>
+              <div class="home-services-grid">${serviceDirections.map((record) => renderHomeServiceCard(record)).join('')}</div>
+            </div>
+          </section>
+          <section class="section section--dark">
+            <div class="container trust-media-grid">
+              <article class="trust-media trust-media--objects">
+                <div class="media-block placeholder placeholder--card">${renderImageOnly(ref, 'trustImage', null, 'card')}<p class="media-caption" ${editable(ref, 'trustCaption', 'Подпись изображения')}>${esc(page.trustCaption || '')}</p></div>
+                <h2 ${editable(ref, 'trustTitle', 'Заголовок блока', true)}>${esc(page.trustTitle || '')}</h2>
+                <p ${editable(ref, 'trustText', 'Текст блока')}>${esc(page.trustText || '')}</p>
+              </article>
+            </div>
+          </section>
+          ${renderContactBlock(ref)}
+        `;
+      }
+
+      function renderHomeDirectionCard(record) {
+        const ref = keyOf(record.collection, record.slug);
+        const item = record.draft;
+        return `<article class="home-product-card"><div class="media-block placeholder placeholder--card">${renderImageOnly(ref, 'image', 'imageView', 'card')}</div><div class="home-product-card__body"><h3 ${editable(ref, 'title', 'Название раздела', true)}>${esc(item.title)}</h3><p ${editable(ref, 'shortDescription', 'Описание раздела')}>${esc(item.shortDescription || '')}</p></div></article>`;
+      }
+
+      function renderHomeServiceCard(record) {
+        const ref = keyOf(record.collection, record.slug);
+        const item = record.draft;
+        return `<article class="home-service-card"><div class="media-block placeholder placeholder--wide-feature">${renderImageOnly(ref, 'image', 'imageView', 'wide')}</div><div class="home-service-card__body"><h3 ${editable(ref, 'title', 'Название услуги', true)}>${esc(item.title)}</h3><p ${editable(ref, 'shortDescription', 'Описание услуги')}>${esc(item.shortDescription || '')}</p></div></article>`;
+      }
+
+      function renderPageBlocks(ref) {
+        const record = getRecord(ref);
+        const blocks = Array.isArray(record.draft.pageBlocks) ? record.draft.pageBlocks : (record.draft.pageBlocks = []);
+        return `
+          <section class="admin-create"><div class="container"><div class="admin-create-panel"><strong>Добавить секцию</strong><div class="admin-create-grid"><select id="newBlockType" class="admin-select">${SECTION_TYPES.map(([type, label]) => `<option value="${type}">${label}</option>`).join('')}</select><button class="admin-btn admin-btn--primary" type="button" data-action="add-block" data-ref="${ref}">Добавить</button></div></div></div></section>
+          ${blocks.map((block, index) => renderBlock(ref, block, index)).join('')}`;
+      }
+
+      function sectionClass(theme) {
+        if (theme === 'dark') return 'section section--dark navesy-section-compact';
+        if (theme === 'light') return 'section section--soft navesy-section-compact';
+        return 'section navesy-section-compact';
+      }
+
+      function renderBlockToolbar(ref, block, index) {
+        return `<div class="admin-tools"><span class="admin-badge">${esc(block.type)}</span>${block.isActive === false ? '<span class="admin-badge admin-badge--hidden">Скрыта</span>' : ''}<button class="admin-btn" type="button" data-action="move-block" data-ref="${ref}" data-index="${index}" data-dir="-1">Выше</button><button class="admin-btn" type="button" data-action="move-block" data-ref="${ref}" data-index="${index}" data-dir="1">Ниже</button><button class="admin-btn" type="button" data-action="toggle-block" data-ref="${ref}" data-index="${index}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><select class="admin-select" data-field-ref="${ref}" data-field-path="pageBlocks.${index}.theme"><option value="dark" ${block.theme === 'dark' ? 'selected' : ''}>dark</option><option value="light" ${block.theme === 'light' ? 'selected' : ''}>light</option><option value="graphite" ${block.theme === 'graphite' ? 'selected' : ''}>graphite</option></select><button class="admin-btn admin-btn--danger" type="button" data-action="delete-block" data-ref="${ref}" data-index="${index}">Удалить секцию</button></div>`;
+      }
+
+      function renderBlock(ref, block, index) {
+        if (block.type === 'cardGrid' || block.type === 'exampleGrid') {
+          const items = Array.isArray(block.items) ? block.items : [];
+          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}<div class="${block.theme === 'dark' ? 'section-heading section-heading--light' : 'section-heading'}"><h2 class="section-title" ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок секции', true)}>${esc(block.title)}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p></div><div class="page-blocks-grid page-blocks-grid--${esc(block.grid || 'auto')}">${items.map((item, itemIndex) => `<article class="card page-block-card ${item.isActive === false ? 'admin-card-hidden' : ''}"><h3 ${editable(ref, `pageBlocks.${index}.items.${itemIndex}.title`, 'Заголовок карточки', true)}>${esc(item.title)}</h3><p ${editable(ref, `pageBlocks.${index}.items.${itemIndex}.text`, 'Текст карточки')}>${esc(item.text)}</p><div class="admin-item-tools"><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="-1">Выше</button><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="1">Ниже</button><button class="admin-btn admin-btn--danger" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">Удалить</button></div></article>`).join('')}</div><div class="admin-item-tools"><button class="admin-btn admin-btn--primary" type="button" data-action="add-block-card" data-ref="${ref}" data-index="${index}">Добавить карточку</button></div></div></section>`;
+        }
+        if (block.type === 'listPanel' || block.type === 'factorList') {
+          const items = Array.isArray(block.items) ? block.items : [];
+          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}<article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок секции', true)}>${esc(block.title)}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p><ul class="page-blocks-columns page-blocks-columns--${Number(block.columns) === 3 ? '3' : '2'}">${items.map((item, itemIndex) => `<li><span ${editable(ref, `pageBlocks.${index}.items.${itemIndex}${typeof item === 'string' ? '' : '.text'}`, 'Строка')}>${esc(typeof item === 'string' ? item : item.text)}</span> <button class="admin-btn" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">Удалить</button></li>`).join('')}</ul><div class="admin-item-tools"><button class="admin-btn admin-btn--primary" type="button" data-action="add-block-row" data-ref="${ref}" data-index="${index}">Добавить строку</button></div></article></div></section>`;
+        }
+        if (block.type === 'process') {
+          const steps = Array.isArray(block.steps) ? block.steps : [];
+          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}</div><div class="container page-block-media-layout ${block.mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}"><article class="media-block placeholder placeholder--wide-feature">${renderImageOnly(ref, `pageBlocks.${index}.media`, `pageBlocks.${index}.mediaView`, 'wide')}<p class="media-caption" ${editable(ref, `pageBlocks.${index}.placeholderLabel`, 'Подпись')}>${esc(block.placeholderLabel || '')}</p></article><article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок', true)}>${esc(block.title)}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p><ol class="page-block-steps">${steps.map((step, stepIndex) => `<li><strong ${editable(ref, `pageBlocks.${index}.steps.${stepIndex}.title`, 'Шаг', true)}>${esc(step.title)}</strong><p ${editable(ref, `pageBlocks.${index}.steps.${stepIndex}.text`, 'Описание шага')}>${esc(step.text || '')}</p><button class="admin-btn" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="steps" data-index="${stepIndex}">Удалить</button></li>`).join('')}</ol><button class="admin-btn admin-btn--primary" type="button" data-action="add-block-step" data-ref="${ref}" data-index="${index}">Добавить шаг</button></article></div></section>`;
+        }
+        if (block.type === 'mediaText') {
+          return `<section class="${sectionClass(block.theme)}"><div class="container">${renderBlockToolbar(ref, block, index)}</div><div class="container page-block-media-layout ${block.mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}"><article class="media-block placeholder placeholder--wide-feature">${renderImageOnly(ref, `pageBlocks.${index}.media`, `pageBlocks.${index}.mediaView`, 'wide')}<p class="media-caption" ${editable(ref, `pageBlocks.${index}.placeholderLabel`, 'Подпись')}>${esc(block.placeholderLabel || '')}</p></article><article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок', true)}>${esc(block.title)}</h2><p ${editable(ref, `pageBlocks.${index}.text`, 'Текст')}>${esc(block.text)}</p></article></div></section>`;
+        }
+        return `<section class="${sectionClass(block.theme)}"><div class="container">${renderBlockToolbar(ref, block, index)}<article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок', true)}>${esc(block.title)}</h2><p ${editable(ref, `pageBlocks.${index}.text`, 'Текст')}>${esc(block.text || '')}</p></article></div></section>`;
+      }
+
+      function renderImageOnly(ref, imagePath, viewPath = null, size = 'card') {
+        const record = getRecord(ref);
+        const target = `${ref}:${imagePath}`;
+        const isCrop = state.crop?.target === target;
+        const image = getPath(record, imagePath);
+        const view = viewPath ? getPath(record, viewPath) : null;
+        return `<div class="admin-media-frame admin-media-frame--${size} ${isCrop ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${image ? `<img class="media-thumb" data-image-img="${esc(target)}" src="${esc(toSrc(image))}" alt="" style="${esc(mediaStyle(view))}" />` : '<div class="admin-media-empty">Фото не выбрано</div>'}</div>${renderMediaButtons(ref, imagePath, viewPath, target)}${isCrop ? renderCropControls() : ''}`;
+      }
+
+      function renderMediaButtons(ref, imagePath, viewPath, target, captionPath = '') {
+        return `<div class="admin-media-actions"><button class="admin-btn" type="button" data-action="upload-image" data-ref="${ref}" data-path="${esc(imagePath)}" data-view-path="${esc(viewPath || '')}" data-target="${esc(target)}">Добавить/заменить фото</button>${viewPath ? `<button class="admin-btn" type="button" data-action="open-crop" data-ref="${ref}" data-path="${esc(imagePath)}" data-view-path="${esc(viewPath)}" data-target="${esc(target)}">Редактировать кадр</button>` : ''}<button class="admin-btn" type="button" data-action="clear-image" data-ref="${ref}" data-path="${esc(imagePath)}">Убрать фото</button></div>`;
+      }
+
+      function renderVideoButtons(ref, videoPath) {
+        const video = getPath(getRecord(ref), videoPath);
+        return `<div class="admin-media-actions"><button class="admin-btn admin-btn--primary" type="button" data-action="upload-video" data-ref="${ref}" data-path="${esc(videoPath)}">${video ? 'Заменить видео' : 'Загрузить видео'}</button>${video ? `<button class="admin-btn" type="button" data-action="clear-video" data-ref="${ref}" data-path="${esc(videoPath)}">Убрать видео</button>` : ''}</div>`;
+      }
+
+      function renderCropControls() {
+        if (!state.crop) return '';
+        const view = getMediaView(getPath(getRecord(state.crop.ref), state.crop.viewPath));
+        return `<div class="crop-editor"><aside class="crop-panel"><h3>Кадр изображения</h3><p class="admin-muted">Двигайте фото прямо в рамке. То, что видно внутри рамки сейчас, будет видно на сайте после сохранения.</p><label class="admin-field"><span>Режим</span><select data-crop-field="fit"><option value="cover" ${view.fit === 'cover' ? 'selected' : ''}>Заполнить</option><option value="contain" ${view.fit === 'contain' ? 'selected' : ''}>Показать целиком</option></select></label>${rangeControl('scale', 'Масштаб', view.scale, 1, 3, 0.01, `${view.scale.toFixed(2)}x`)}${rangeControl('positionX', 'Положение X', view.positionX, 0, 100, 1, `${Math.round(view.positionX)}%`)}${rangeControl('positionY', 'Положение Y', view.positionY, 0, 100, 1, `${Math.round(view.positionY)}%`)}<div class="admin-item-tools"><button class="admin-btn" type="button" data-action="reset-crop">Сбросить</button><button class="admin-btn" type="button" data-action="close-crop">Готово</button></div></aside></div>`;
+      }
+
+      function rangeControl(field, label, value, min, max, step, formatted) {
+        return `<label class="range-row"><span class="range-row__head"><span>${label}</span><span class="range-value" data-crop-value="${field}">${formatted}</span></span><input type="range" min="${min}" max="${max}" step="${step}" value="${esc(value)}" data-crop-field="${field}" /></label>`;
+      }
+
+      function renderContactBlock(ref = '') {
+        if (!ref) return `<section id="direct-contact" class="section"><div class="container"><article class="home-contact-card"><h2 class="section-title">Не нашли, что искали?</h2><p class="lead">Если типовое решение не закрывает задачу, напишите нам.</p></article></div></section>`;
+        const record = getRecord(ref);
+        const title = record.draft.contactTitle ?? 'Не нашли, что искали?';
+        const description = record.draft.contactDescription ?? 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.';
+        return `<section id="direct-contact" class="section"><div class="container"><article class="home-contact-card"><span class="admin-badge">Контактный блок</span><h2 class="section-title" ${editable(ref, 'contactTitle', 'Заголовок контактного блока', true)}>${esc(title)}</h2><p class="lead" ${editable(ref, 'contactDescription', 'Описание контактного блока')}>${esc(description)}</p><div class="home-contact-actions"><a class="btn btn-primary" href="#">Написать в Telegram</a><a class="btn btn-secondary" href="#">Написать на почту</a><a class="btn btn-secondary" href="#">Позвонить</a></div></article></div></section>`;
+      }
+
+      function defaultContent(collection, fields) {
+        const title = fields.title || 'Новая запись';
+        const slug = slugify(fields.slug || title) || 'novaya-zapis';
+        if (collection === 'product-sections') return { title, slug, shortDescription: 'Краткое описание раздела.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, mode: 'catalog-hub', image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.' };
+        if (collection === 'services') return { title, slug, shortDescription: 'Краткое описание услуги.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, image: '/assets/images/placeholders/construction.svg', placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.', pageBlocks: [] };
+        if (collection === 'product-categories') return { title, slug, parentSectionSlug: fields.parentSectionSlug || 'ulichnaya-mebel', shortDescription: 'Краткое описание типа изделий.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showInSectionGrid: true, isActive: true, image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото будут добавлены позже.', mode: 'catalog-list', seoTitle: title, seoDescription: 'Описание страницы.' };
+        if (collection === 'products') return { title, slug, productCategorySlug: fields.productCategorySlug || 'lavochki-i-skameyki', sku: '', shortDescription: 'Краткое описание модели.', leadText: 'Описание изделия.', description: 'Подробное описание изделия, назначения и вариантов исполнения.', materials: ['Стальной каркас', 'Покрытие по согласованию'], colors: ['По палитре RAL'], dimensions: [{ label: 'Размер', value: 'Уточняется при расчете', order: 10, isActive: true }], features: ['Изготавливаем под задачу объекта'], priceMode: 'on_request', priceFrom: null, currency: 'RUB', image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото изделия будут добавлены позже.', order: nextOrder(collection), isActive: true, showInCatalog: true, seoTitle: title, seoDescription: 'Описание изделия.' };
+        if (collection === 'projects') return { title, slug, city: 'Курган', shortDescription: 'Краткое описание объекта.', whatWasDone: 'Описание выполненных работ.', image: '/assets/images/objects/object-1.svg', gallery: ['/assets/images/objects/object-1.svg'], order: nextOrder(collection), isActive: true, year: new Date().getFullYear(), seoTitle: title, seoDescription: 'Описание объекта.' };
+        if (collection === 'jobs') return { title, slug, city: 'Курган', employmentType: 'Полная занятость', salary: 'По договоренности', shortDescription: 'Краткое описание вакансии.', responsibilities: ['Новая обязанность'], requirements: ['Новое требование'], conditions: ['Новое условие'], order: nextOrder(collection), isActive: true };
+        if (collection === 'static-pages') return { title, slug, seoTitle: title, seoDescription: 'Описание страницы.', heroKicker: '', heroTitle: title, heroDescription: 'Описание первого экрана.', contactTitle: 'Не нашли, что искали?', contactDescription: 'Напишите нам, и мы подберем решение под задачу.', pageBlocks: [] };
+        return { title, slug };
+      }
+
+      function nextOrder(collection) {
+        const records = Object.values(state.records).filter((record) => record.collection === collection);
+        return records.length ? Math.max(...records.map((record) => Number(record.draft.order) || 0)) + 10 : 10;
+      }
+
+      async function createRecord(collection, panel) {
+        const fields = {};
+        panel.querySelectorAll('[data-create-field]').forEach((input) => { fields[input.dataset.createField] = input.value; });
+        const content = defaultContent(collection, fields);
+        if (!content.slug) throw new Error('Заполните slug латиницей');
+        const data = await api(`/content/${collection}`, { method: 'POST', body: JSON.stringify({ slug: content.slug, content }) });
+        state.records[keyOf(collection, data.slug)] = { collection, slug: data.slug, original: clone(data.content), draft: clone(data.content) };
+        await loadCollection(collection);
+        if (state.collection === collection && collection !== 'jobs' && collection !== 'projects') state.selectedSlug = data.slug;
+        renderApp();
+        await publishSavedChanges('Запись создана.');
+      }
+
+      async function deleteRecord(ref) {
+        const record = getRecord(ref);
+        if (!record) return;
+        if (!confirm(`Удалить запись "${record.draft.title || record.slug}"?`)) return;
+        await api(`/content/${record.collection}/${record.slug}`, { method: 'DELETE' });
+        delete state.records[ref];
+        await loadCollection(record.collection);
+        if (state.selectedSlug === record.slug && state.collection === record.collection) state.selectedSlug = '';
+        renderApp();
+        await publishSavedChanges('Запись удалена.');
+      }
+
+      function createDefaultBlock(type, order) {
+        if (type === 'cardGrid' || type === 'exampleGrid') return { type, title: 'Новая секция', intro: '', theme: 'light', grid: 'auto', isActive: true, order, items: [{ title: 'Новая карточка', text: 'Описание карточки', order: 10, isActive: true }] };
+        if (type === 'listPanel' || type === 'factorList') return { type, title: 'Новая секция', intro: '', theme: 'light', columns: 2, isActive: true, order, items: ['Новая строка'] };
+        if (type === 'process') return { type, title: 'Новая секция', intro: '', theme: 'graphite', media: '', placeholderLabel: 'Фото будет добавлено позже', mediaPosition: 'right', isActive: true, order, steps: [{ title: 'Новый шаг', text: '', order: 10, isActive: true }] };
+        if (type === 'mediaText') return { type, title: 'Новая секция', text: 'Текст секции', theme: 'light', media: '', placeholderLabel: 'Фото будет добавлено позже', mediaPosition: 'right', isActive: true, order };
+        return { type: 'notice', title: 'Новая секция', text: 'Текст секции', theme: 'light', isActive: true, order };
+      }
+
+      function moveItem(items, index, dir) {
+        const to = index + dir;
+        if (to < 0 || to >= items.length) return;
+        [items[index], items[to]] = [items[to], items[index]];
+        renumber(items);
+      }
+
+      async function saveAll() {
+        const dirty = dirtyRecords();
+        if (!dirty.length) return;
+        $('saveBtn').disabled = true;
+        setAlert('Сохраняем...');
+        try {
+          for (const record of dirty) {
+            const data = await api(`/content/${record.collection}/${record.slug}`, { method: 'PUT', body: JSON.stringify(record.draft) });
+            record.original = clone(data.content);
+            record.draft = clone(data.content);
+          }
+          renderApp();
+          await publishSavedChanges('Изменения сохранены.');
+        } catch (error) {
+          setAlert(error.message || 'Ошибка сохранения', true);
+          markDirty();
+        }
+      }
+
+      async function publishSavedChanges(savedMessage) {
+        setAlert(`${savedMessage} Публикуем на GitHub...`);
+        try {
+          const publish = await api('/publish', { method: 'POST', body: JSON.stringify({}) });
+          setAlert(publish.message || 'Изменения опубликованы. Публичный хостинг обновится после завершения автодеплоя.');
+        } catch (publishError) {
+          setAlert(`${savedMessage} Но публикация не прошла: ${publishError.message || 'ошибка Git push'}`, true);
+        }
+      }
+
+      async function publishWholeSite() {
+        if (dirtyRecords().length) {
+          setAlert('Сначала нажмите «Сохранить», чтобы записать текущие правки страницы.', true);
+          return;
+        }
+        if (!confirm('Опубликовать весь сайт в GitHub? Будут отправлены исходники, настройки, public и docs.')) return;
+        $('publishAllBtn').disabled = true;
+        setAlert('Публикуем весь сайт на GitHub...');
+        try {
+          const publish = await api('/publish-all', { method: 'POST', body: JSON.stringify({}) });
+          setAlert(publish.message || 'Весь сайт опубликован. Публичный хостинг обновится после завершения автодеплоя.');
+        } catch (error) {
+          setAlert(error.message || 'Ошибка публикации всего сайта', true);
+        } finally {
+          $('publishAllBtn').disabled = false;
+        }
+      }
+
+      async function uploadImage(file) {
+        if (!state.uploadTarget) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        const data = await api('/upload', { method: 'POST', body: formData });
+        const record = getRecord(state.uploadTarget.ref);
+        setPath(record, state.uploadTarget.path, data.path);
+        if (state.uploadTarget.viewPath && !getPath(record, state.uploadTarget.viewPath)) setPath(record, state.uploadTarget.viewPath, clone(DEFAULT_MEDIA_VIEW));
+        state.crop = state.uploadTarget.viewPath ? { ...state.uploadTarget } : null;
+        renderApp();
+        setAlert('Фото загружено.');
+      }
+
+      async function uploadVideo(file) {
+        if (!state.uploadTarget) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        const data = await api('/upload', { method: 'POST', body: formData });
+        const record = getRecord(state.uploadTarget.ref);
+        setPath(record, state.uploadTarget.path, data.path);
+        state.crop = null;
+        renderApp();
+        setAlert('Видео загружено.');
+      }
+
+      function applyCropPreview() {
+        if (!state.crop) return;
+        const record = getRecord(state.crop.ref);
+        const view = getMediaView(getPath(record, state.crop.viewPath));
+        setPath(record, state.crop.viewPath, view);
+        document.querySelectorAll(`[data-image-img="${CSS.escape(state.crop.target)}"]`).forEach((img) => {
+          if (img instanceof HTMLElement) img.setAttribute('style', mediaStyle(view));
+        });
+        updateCropLabels(view);
+        markDirty();
+      }
+
+      function updateCropLabels(view) {
+        const labels = { scale: `${Number(view.scale).toFixed(2)}x`, positionX: `${Math.round(view.positionX)}%`, positionY: `${Math.round(view.positionY)}%` };
+        Object.entries(labels).forEach(([key, value]) => {
+          const node = document.querySelector(`[data-crop-value="${key}"]`);
+          if (node) node.textContent = value;
+        });
+      }
+
+      function bindEvents() {
+        document.body.addEventListener('click', async (event) => {
+          const collectionButton = event.target.closest('[data-open-collection]');
+          if (collectionButton) { await openEditor(collectionButton.dataset.openCollection); return; }
+          const entryButton = event.target.closest('[data-open-entry]');
+          if (entryButton) { await openEditor(state.collection, entryButton.dataset.openEntry); return; }
+          const relatedButton = event.target.closest('[data-action="open-related"]');
+          if (relatedButton) { await openEditor(relatedButton.dataset.collection, relatedButton.dataset.slug); return; }
+          const actionEl = event.target.closest('[data-action]');
+          if (!actionEl) return;
+          event.preventDefault();
+          try { await handleAction(actionEl); } catch (error) { setAlert(error.message || 'Ошибка действия', true); }
+        });
+
+        $('workspace').addEventListener('input', (event) => {
+          const editable = event.target.closest?.('[data-editable]');
+          if (editable) {
+            const record = getRecord(editable.dataset.ref);
+            const rawValue = String(editable.innerText || '').trim();
+            const value = editable.dataset.valueType === 'number' ? Number(rawValue) : rawValue;
+            setPath(record, editable.dataset.path, value);
+            markDirty();
+            return;
+          }
+          const cropField = event.target.closest?.('[data-crop-field]');
+          if (cropField && state.crop) {
+            const record = getRecord(state.crop.ref);
+            const view = getMediaView(getPath(record, state.crop.viewPath));
+            if (cropField.dataset.cropField === 'fit') view.fit = cropField.value === 'contain' ? 'contain' : 'cover';
+            if (cropField.dataset.cropField === 'scale') view.scale = Number(cropField.value);
+            if (cropField.dataset.cropField === 'positionX') view.positionX = Number(cropField.value);
+            if (cropField.dataset.cropField === 'positionY') view.positionY = Number(cropField.value);
+            setPath(record, state.crop.viewPath, view);
+            applyCropPreview();
+          }
+        });
+
+        $('workspace').addEventListener('change', (event) => {
+          const field = event.target.closest?.('[data-field-ref]');
+          if (!field) return;
+          const record = getRecord(field.dataset.fieldRef);
+          let value = field.value;
+          if (field.dataset.fieldType === 'boolean') value = value === 'true';
+          else if (field.type === 'number') value = value === '' ? null : Number(value);
+          setPath(record, field.dataset.fieldPath, value);
+          renderApp();
+        });
+
+        $('workspace').addEventListener('keydown', (event) => {
+          const editable = event.target.closest?.('[data-editable]');
+          if (editable?.dataset.singleLine === 'true' && event.key === 'Enter') {
+            event.preventDefault();
+            editable.blur();
+          }
+        });
+
+        $('workspace').addEventListener('pointerdown', (event) => {
+          if (!state.crop) return;
+          if (event.target.closest?.('[data-action], [data-editable], input, select, textarea, a, button')) return;
+          const frame = event.target.closest?.('[data-image-frame]');
+          if (!(frame instanceof HTMLElement) || frame.dataset.imageFrame !== state.crop.target) return;
+          event.preventDefault();
+          frame.setPointerCapture(event.pointerId);
+          frame.classList.add('is-dragging');
+          const record = getRecord(state.crop.ref);
+          const view = getMediaView(getPath(record, state.crop.viewPath));
+          state.cropDrag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, startPositionX: view.positionX, startPositionY: view.positionY, width: frame.clientWidth, height: frame.clientHeight };
+        });
+
+        $('workspace').addEventListener('pointermove', (event) => {
+          if (!state.crop || !state.cropDrag || state.cropDrag.pointerId !== event.pointerId) return;
+          const record = getRecord(state.crop.ref);
+          const view = getMediaView(getPath(record, state.crop.viewPath));
+          const dx = event.clientX - state.cropDrag.startX;
+          const dy = event.clientY - state.cropDrag.startY;
+          const scaleBoost = Math.max(1, view.scale);
+          view.positionX = clamp(state.cropDrag.startPositionX - (dx / Math.max(state.cropDrag.width, 1)) * 100 / scaleBoost, 0, 100);
+          view.positionY = clamp(state.cropDrag.startPositionY - (dy / Math.max(state.cropDrag.height, 1)) * 100 / scaleBoost, 0, 100);
+          setPath(record, state.crop.viewPath, view);
+          applyCropPreview();
+        });
+
+        const stopDrag = () => {
+          state.cropDrag = null;
+          if (state.crop) document.querySelector(`[data-image-frame="${CSS.escape(state.crop.target)}"]`)?.classList.remove('is-dragging');
+        };
+        $('workspace').addEventListener('pointerup', stopDrag);
+        $('workspace').addEventListener('pointercancel', stopDrag);
+
+        $('workspace').addEventListener('wheel', (event) => {
+          if (!state.crop) return;
+          const frame = event.target.closest?.('[data-image-frame]');
+          if (!frame || frame.dataset.imageFrame !== state.crop.target) return;
+          event.preventDefault();
+          const record = getRecord(state.crop.ref);
+          const view = getMediaView(getPath(record, state.crop.viewPath));
+          view.scale = clamp(view.scale + Math.sign(event.deltaY) * -0.06, 1, 3);
+          setPath(record, state.crop.viewPath, view);
+          applyCropPreview();
+        }, { passive: false });
+
+        $('uploadInput').addEventListener('change', async (event) => {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          try { await uploadImage(file); } catch (error) { setAlert(error.message || 'Ошибка загрузки фото', true); }
+          finally { event.target.value = ''; state.uploadTarget = null; }
+        });
+
+        $('uploadVideoInput').addEventListener('change', async (event) => {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          try { await uploadVideo(file); } catch (error) { setAlert(error.message || 'Ошибка загрузки видео', true); }
+          finally { event.target.value = ''; state.uploadTarget = null; }
+        });
+
+        $('saveBtn').addEventListener('click', saveAll);
+        $('publishAllBtn').addEventListener('click', publishWholeSite);
+        $('logoutBtn').addEventListener('click', async () => {
+          await api('/logout', { method: 'POST' }).catch(() => {});
+          showLogin('Вы вышли из админки.');
+        });
+        window.addEventListener('beforeunload', (event) => {
+          if (!dirtyRecords().length) return;
+          event.preventDefault();
+          event.returnValue = '';
+        });
+      }
+
+      async function handleAction(el) {
+        const action = el.dataset.action;
+        if (action === 'create-record') return createRecord(el.dataset.collection, el.closest('[data-create-panel]'));
+        if (action === 'delete-record') return deleteRecord(el.dataset.ref);
+        if (action === 'toggle-record') {
+          const record = getRecord(el.dataset.ref);
+          record.draft[el.dataset.field] = record.draft[el.dataset.field] === false;
+          renderApp();
+          return;
+        }
+        if (action === 'upload-image') {
+          state.uploadTarget = { ref: el.dataset.ref, path: el.dataset.path, viewPath: el.dataset.viewPath || '', target: el.dataset.target };
+          $('uploadInput').click();
+          return;
+        }
+        if (action === 'upload-video') {
+          state.uploadTarget = { ref: el.dataset.ref, path: el.dataset.path };
+          $('uploadVideoInput').click();
+          return;
+        }
+        if (action === 'clear-image') {
+          setPath(getRecord(el.dataset.ref), el.dataset.path, '');
+          renderApp();
+          return;
+        }
+        if (action === 'clear-video') {
+          setPath(getRecord(el.dataset.ref), el.dataset.path, '');
+          renderApp();
+          return;
+        }
+        if (action === 'open-crop') {
+          state.crop = { ref: el.dataset.ref, path: el.dataset.path, viewPath: el.dataset.viewPath, target: el.dataset.target };
+          if (!getPath(getRecord(state.crop.ref), state.crop.viewPath)) setPath(getRecord(state.crop.ref), state.crop.viewPath, clone(DEFAULT_MEDIA_VIEW));
+          renderApp();
+          document.querySelector(`[data-image-frame="${CSS.escape(state.crop.target)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          return;
+        }
+        if (action === 'close-crop') { state.crop = null; renderApp(); return; }
+        if (action === 'reset-crop') { setPath(getRecord(state.crop.ref), state.crop.viewPath, clone(DEFAULT_MEDIA_VIEW)); applyCropPreview(); return; }
+        if (action === 'add-array-item') {
+          const arr = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
+          arr.push('Новая строка');
+          setPath(getRecord(el.dataset.ref), el.dataset.path, arr);
+          renderApp();
+          return;
+        }
+        if (action === 'delete-array-item') {
+          const arr = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
+          arr.splice(Number(el.dataset.index), 1);
+          renderApp();
+          return;
+        }
+        if (action === 'add-block') {
+          const record = getRecord(el.dataset.ref);
+          const blocks = Array.isArray(record.draft.pageBlocks) ? record.draft.pageBlocks : (record.draft.pageBlocks = []);
+          blocks.push(createDefaultBlock($('newBlockType')?.value || 'cardGrid', (blocks.length + 1) * 10));
+          renderApp();
+          return;
+        }
+        if (action === 'delete-block') { getRecord(el.dataset.ref).draft.pageBlocks.splice(Number(el.dataset.index), 1); renumber(getRecord(el.dataset.ref).draft.pageBlocks); renderApp(); return; }
+        if (action === 'toggle-block') { const block = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.index)]; block.isActive = block.isActive === false; renderApp(); return; }
+        if (action === 'move-block') { moveItem(getRecord(el.dataset.ref).draft.pageBlocks, Number(el.dataset.index), Number(el.dataset.dir)); renderApp(); return; }
+        if (action === 'add-block-card') { const block = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.index)]; block.items.push({ title: 'Новая карточка', text: 'Описание карточки', order: (block.items.length + 1) * 10, isActive: true }); renderApp(); return; }
+        if (action === 'add-block-row') { getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.index)].items.push('Новая строка'); renderApp(); return; }
+        if (action === 'add-block-step') { const block = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.index)]; block.steps.push({ title: 'Новый шаг', text: '', order: (block.steps.length + 1) * 10, isActive: true }); renderApp(); return; }
+        if (action === 'delete-block-item') { const list = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.block)][el.dataset.list]; list.splice(Number(el.dataset.index), 1); renumber(list); renderApp(); return; }
+        if (action === 'move-block-item') { const list = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.block)][el.dataset.list]; moveItem(list, Number(el.dataset.index), Number(el.dataset.dir)); renderApp(); }
+        if (action === 'add-product-spec') {
+          const list = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
+          list.push({ label: 'Новый параметр', value: 'Значение', order: (list.length + 1) * 10, isActive: true });
+          setPath(getRecord(el.dataset.ref), el.dataset.path, list);
+          renderApp();
+          return;
+        }
+        if (action === 'delete-product-spec') {
+          const list = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
+          list.splice(Number(el.dataset.index), 1);
+          renumber(list);
+          renderApp();
+          return;
+        }
+        if (action === 'move-product-spec') {
+          const list = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
+          moveItem(list, Number(el.dataset.index), Number(el.dataset.dir));
+          renderApp();
+          return;
+        }
+        if (action === 'toggle-product-spec') {
+          const item = (getPath(getRecord(el.dataset.ref), el.dataset.path) || [])[Number(el.dataset.index)];
+          if (item) item.isActive = item.isActive === false;
+          renderApp();
+        }
+      }
+
+      function showLogin(message = '') {
+        $('loginView').classList.remove('hidden');
+        $('appView').classList.add('hidden');
+        $('loginStatus').textContent = message;
+      }
+
+      function showApp() {
+        $('loginView').classList.add('hidden');
+        $('appView').classList.remove('hidden');
+      }
+
+      async function boot() {
+        bindEvents();
+        $('loginForm').addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const formData = new FormData(event.currentTarget);
+          try {
+            await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
+            showApp();
+            await initFromUrl();
+          } catch (error) {
+            $('loginStatus').textContent = error.message || 'Ошибка входа';
+          }
+        });
+        try {
+          const me = await api('/me');
+          if (!me.authenticated) { showLogin('Введите логин и пароль.'); return; }
+          showApp();
+          await initFromUrl();
+        } catch (error) {
+          showLogin(error.message || 'Введите логин и пароль.');
+        }
+      }
+
+      async function initFromUrl() {
+        const params = new URLSearchParams(location.search);
+        const collection = params.get('collection') || 'static-pages';
+        const slug = params.get('slug') || (collection === 'static-pages' ? 'home' : '');
+        await openEditor(collection, slug);
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

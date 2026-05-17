@@ -1,23 +1,23 @@
 # Локальная админка СМУ-1 (Stage 1)
 
 ## Основной сценарий (visual edit mode)
-1. Откройте `http://127.0.0.1:4321/SMU1/admin/`.
+1. Откройте `http://127.0.0.1:4321/admin/`.
 2. Войдите (`admin / admin`).
 3. Нажмите карточку **«Редактировать страницу Навесы»**.
-4. Откроется visual edit mode: `http://127.0.0.1:4321/SMU1/admin/pages/navesy/`.
+4. Откроется visual edit mode: `http://127.0.0.1:4321/admin/pages/navesy/`.
 
 Это основной рабочий путь Stage 1.
 
 ## Технический режим
 Старый технический редактор сохранен как запасной:
-- `http://127.0.0.1:4321/SMU1/admin/technical/`
+- `http://127.0.0.1:4321/admin/technical/`
 
 По умолчанию он не используется.
 
 ## Запуск
 1. `npm run dev -- --host 127.0.0.1`
 2. `npm run admin:api`
-3. Открыть `http://127.0.0.1:4321/SMU1/admin/`
+3. Открыть `http://127.0.0.1:4321/admin/`
 
 ## Верхняя панель редактора
 В visual edit mode сверху фиксированная панель:
@@ -100,20 +100,23 @@
 - порядок `order` пересчитывается автоматически;
 - JSON на диске меняется только после `Сохранить`.
 
-## Загрузка фото
+## Загрузка медиа
 Endpoint:
 - `POST /api/admin/upload`
 
 Требования:
 - только с авторизацией;
 - `multipart/form-data`;
-- типы: `jpg`, `jpeg`, `png`, `webp`, `svg`;
-- максимум 10 MB;
+- типы фото: `jpg`, `jpeg`, `png`, `webp`, `svg`;
+- типы видео: `mp4`, `webm`;
+- максимум для фото 10 MB;
+- максимум для видео 90 MB;
 - файлы сохраняются в `public/uploads`;
-- ответ: `{ "path": "/uploads/file-name.ext" }`.
+- ответ: `{ "path": "/uploads/file-name.ext", "type": "image|video" }`.
 
 Где работает upload:
 - hero image;
+- hero video на главной странице;
 - `mediaText` блоки (поле `media`);
 - `process` блоки (поле `media`).
 
@@ -126,11 +129,26 @@ Endpoint:
 - dirty state сбрасывается;
 - без полной перезагрузки страницы.
 
+## Публикация
+После успешного сохранения visual editor вызывает:
+- `POST /api/admin/publish`
+
+Локальный admin API выполняет:
+- `git add -- src/content public/uploads`;
+- `git commit` только для `src/content` и `public/uploads`;
+- `git push`.
+
+После `git push` подключенный к GitHub хостинг запускает автодеплой и публикует новую версию сайта. Если Git не настроен, нет доступа к GitHub или ветка не пушится, изменения остаются сохраненными локально, а админка покажет ошибку публикации.
+
+В верхней панели visual editor есть запасная кнопка **«Опубликовать весь сайт»**. Она вызывает:
+- `POST /api/admin/publish-all`
+
+Этот режим делает `git add`, `git commit` и `git push` для основных файлов сайта: `src`, `public`, `docs`, `tools`, конфигов и package-файлов. Он не отправляет `node_modules`, `dist`, `.astro`, `.env*` и log-файлы. Если в редакторе есть несохраненные правки, сначала нужно нажать **«Сохранить»**.
+
 ## Debug JSON
 JSON доступен только как отладочная секция внизу под `Показать JSON`.
 
 ## Ограничения Stage 1
 Пока не реализовано:
 - массовый visual editor для всех страниц;
-- production hosting backend;
-- GitHub write mode.
+- production hosting backend.

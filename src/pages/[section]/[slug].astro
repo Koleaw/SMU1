@@ -70,7 +70,7 @@ const formatPrice = (item: (typeof products)[number]) => {
         </div>
         <div class="product-catalog-grid">
           {products.map((product) => (
-            <article class="product-showcase-card">
+            <a class="product-showcase-card" href={withBase(`/${section.slug}/${category.slug}/${product.slug}/`)}>
               <div class="product-showcase-card__media-wrap">
                 <img class="product-showcase-card__media" src={withBase(product.image)} alt={product.title} loading="lazy" />
               </div>
@@ -78,8 +78,9 @@ const formatPrice = (item: (typeof products)[number]) => {
                 <h3>{product.title}</h3>
                 <p class="product-showcase-card__descriptor">{product.shortDescription}</p>
                 {formatPrice(product) && <p class="product-showcase-card__price">{formatPrice(product)}</p>}
+                <span class="btn btn-secondary product-showcase-card__cta">Подробнее</span>
               </div>
-            </article>
+            </a>
           ))}
         </div>
       </div>

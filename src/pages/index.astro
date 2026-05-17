@@ -21,25 +21,40 @@ const serviceDirections = (await getCollection('services'))
   .map(({ data }) => data)
   .filter((item) => item.showOnHome && item.isActive)
   .sort((a, b) => a.order - b.order);
+
+const homePage = (await getCollection('static-pages')).find(({ data }) => data.slug === 'home')?.data;
+
+if (!homePage) {
+  throw new Error('static-pages collection must contain home.json.');
+}
+
+const pathwayLinks = ['#home-products', '#home-services', '#home-trust'];
+const pathwayCards = (homePage.pathwayCards ?? [])
+  .filter((item) => item.isActive !== false)
+  .slice()
+  .sort((a, b) => a.order - b.order);
+
+const homeHeroVideo = homePage.heroMediaVideo || '/assets/video/hero-home.mp4';
 ---
-<BaseLayout title="СМУ-1 — производство изделий, металлоконструкции и благоустройство" description="СМУ-1 в Кургане: изделия, навесы, металлоконструкции, строительство и благоустройство территорий для коммерческих и общественных объектов.">
+<BaseLayout title={homePage.seoTitle} description={homePage.seoDescription}>
   <div class="home-page">
     <SectionNavigator items={sectionNavItems} />
 
     <Hero
       className="hero--media"
-      kicker="СМУ-1 · Курган"
-      title="Закрываем объект комплексно: от изделий и металлоконструкций до строительства и благоустройства"
-      description="Работаем с коммерческими и общественными площадками: считаем задачу, подбираем формат работ, изготавливаем в цехе и сопровождаем реализацию на объекте."
-      primaryLabel="Получить расчет"
+      kicker={homePage.heroKicker}
+      title={homePage.heroTitle}
+      description={homePage.heroDescription}
+      primaryLabel={homePage.heroPrimaryLabel}
       primaryHref="#home-contact"
-      secondaryLabel="Наши объекты"
+      secondaryLabel={homePage.heroSecondaryLabel}
       secondaryHref={withBase('/vypolnennye-obekty/')}
       mediaType="video"
-      mediaVideo={withBase('/assets/video/hero-home.mp4')}
-      mediaPoster={withBase('/assets/images/placeholders/construction.svg')}
+      mediaVideo={withBase(homeHeroVideo)}
+      mediaPoster={withBase(homePage.heroMediaPoster ?? '/assets/images/placeholders/construction.svg')}
       mediaAlt="Производственно-строительные работы СМУ-1"
-      mediaCaption="Hero video-ready: до майского обновления используется постер, после загрузки финального ролика блок автоматически работает как фоновое видео без звука."
+      mediaCaption={homePage.heroMediaCaption}
+      mediaView={homePage.imageView}
     >
       <div class="home-hero-meta" aria-label="Основные направления">
         <a href="#home-products">Каталог изделий</a>
@@ -51,25 +66,17 @@ const serviceDirections = (await getCollection('services'))
     <section class="home-pathways section" aria-labelledby="home-pathways-title">
       <div class="container">
         <div class="section-heading home-pathways__heading">
-          <p class="kicker">Структура работы</p>
-          <h2 id="home-pathways-title" class="section-title">Три понятных сценария для разных задач объекта</h2>
+          <p class="kicker">{homePage.pathwaysKicker}</p>
+          <h2 id="home-pathways-title" class="section-title">{homePage.pathwaysTitle}</h2>
         </div>
         <div class="home-pathways__grid">
-          <a class="home-pathway-card" href="#home-products">
-            <span class="home-pathway-card__index">01</span>
-            <h3>Каталог изделий</h3>
-            <p>Типовые направления продукции для городских, коммерческих и частных территорий.</p>
-          </a>
-          <a class="home-pathway-card" href="#home-services">
-            <span class="home-pathway-card__index">02</span>
-            <h3>Проектные услуги</h3>
-            <p>Работы под задачу объекта: от подбора решения до изготовления и реализации.</p>
-          </a>
-          <a class="home-pathway-card" href="#home-trust">
-            <span class="home-pathway-card__index">03</span>
-            <h3>Доверительный контур</h3>
-            <p>Объекты, контакты и открытая информация, которые помогают быстро проверить подрядчика.</p>
-          </a>
+          {pathwayCards.map((card, index) => (
+            <a class="home-pathway-card" href={pathwayLinks[index] ?? '#home-contact'}>
+              <span class="home-pathway-card__index">{String(index + 1).padStart(2, '0')}</span>
+              <h3>{card.title}</h3>
+              <p>{card.text}</p>
+            </a>
+          ))}
         </div>
       </div>
     </section>
@@ -77,8 +84,8 @@ const serviceDirections = (await getCollection('services'))
     <section id="home-products" class="section section--split">
       <div class="container">
         <div class="section-heading">
-          <h2 class="section-title">Продукция</h2>
-          <p class="lead">Здесь собраны продуктовые направления компании для задач общественных, коммерческих и городских территорий.</p>
+          <h2 class="section-title">{homePage.productsTitle}</h2>
+          <p class="lead">{homePage.productsIntro}</p>
         </div>
         <div class="home-products-grid">
           {productDirections.map((item) => (
@@ -100,8 +107,8 @@ const serviceDirections = (await getCollection('services'))
     <section id="home-services" class="section section--soft">
       <div class="container">
         <div class="section-heading">
-          <h2 class="section-title">Услуги</h2>
-          <p class="lead">Сервисные направления для работ под задачу объекта: от подготовки решения до реализации на площадке.</p>
+          <h2 class="section-title">{homePage.servicesTitle}</h2>
+          <p class="lead">{homePage.servicesIntro}</p>
         </div>
         <div class="home-services-grid">
           {serviceDirections.map((item) => (
@@ -124,11 +131,11 @@ const serviceDirections = (await getCollection('services'))
       <div class="container trust-media-grid">
         <article class="trust-media trust-media--objects">
           <div class="media-block placeholder placeholder--card">
-            <img class="media-thumb" src={withBase('/assets/images/objects/object-2.svg')} alt="Выполненные объекты СМУ-1" loading="lazy" />
-            <p class="media-caption">Майское наполнение: фото реализованных объектов и фактические результаты работ.</p>
+            <img class="media-thumb" src={withBase(homePage.trustImage ?? '/assets/images/objects/object-2.svg')} alt="Выполненные объекты СМУ-1" loading="lazy" />
+            <p class="media-caption">{homePage.trustCaption}</p>
           </div>
-          <h2>Выполненные объекты</h2>
-          <p>Показываем не рендеры, а реальные площадки: задачу, объем работ, комплектацию и итог на объекте.</p>
+          <h2>{homePage.trustTitle}</h2>
+          <p>{homePage.trustText}</p>
           <a class="btn btn-primary" href={withBase('/vypolnennye-obekty/')}>Наши объекты</a>
         </article>
       </div>
@@ -137,8 +144,8 @@ const serviceDirections = (await getCollection('services'))
     <section id="home-contact" class="section section--split home-contact-section">
       <div class="container">
         <div class="home-contact-card">
-          <h2 class="section-title">Не нашли, что искали?</h2>
-          <p class="lead">Готовы выполнить решение под ваш объект, ТЗ, референс или чертеж. Напишите нам напрямую, и мы сориентируем по реализации.</p>
+          <h2 class="section-title">{homePage.contactTitle}</h2>
+          <p class="lead">{homePage.contactDescription}</p>
           <div class="home-contact-actions">
             <a class="btn btn-primary" href="https://t.me/smu1build" target="_blank" rel="noreferrer">Написать в Telegram</a>
             <a class="btn btn-secondary" href="mailto:smu1.kurgan@yandex.ru">Написать на почту</a>

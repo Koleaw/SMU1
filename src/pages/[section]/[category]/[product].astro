@@ -1,0 +1,167 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import DirectContactBlock from '../../../components/DirectContactBlock.astro';
+import { withBase } from '../../../utils/withBase';
+
+export async function getStaticPaths() {
+  const [sections, categories, products] = await Promise.all([
+    getCollection('product-sections'),
+    getCollection('product-categories'),
+    getCollection('products')
+  ]);
+
+  const activeSections = new Map(
+    sections
+      .map(({ data }) => data)
+      .filter((section) => section.isActive)
+      .map((section) => [section.slug, section])
+  );
+
+  const activeCategories = new Map(
+    categories
+      .map(({ data }) => data)
+      .filter((category) => category.isActive)
+      .map((category) => [category.slug, category])
+  );
+
+  return products
+    .map(({ data }) => data)
+    .filter((item) => item.isActive)
+    .map((item) => {
+      const category = activeCategories.get(item.productCategorySlug);
+      const section = category ? activeSections.get(category.parentSectionSlug) : undefined;
+
+      if (!category || !section) return null;
+
+      return {
+        params: { section: section.slug, category: category.slug, product: item.slug },
+        props: { section, category, product: item }
+      };
+    })
+    .filter(Boolean);
+}
+
+const { section, category, product } = Astro.props;
+
+const formatPrice = () => {
+  if (product.priceMode === 'from' && typeof product.priceFrom === 'number') {
+    return `от ${product.priceFrom.toLocaleString('ru-RU')} ₽`;
+  }
+
+  if (product.priceMode === 'on_request') return 'Цена по запросу';
+
+  return '';
+};
+
+const imageViewStyle = (view?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number }) => {
+  const safe = { fit: 'cover', positionX: 50, positionY: 50, scale: 1, ...(view || {}) };
+  return `object-fit:${safe.fit};object-position:${safe.positionX}% ${safe.positionY}%;transform:scale(${safe.scale});transform-origin:center;`;
+};
+
+const materials = Array.isArray(product.materials) ? product.materials.filter(Boolean) : [];
+const colors = Array.isArray(product.colors) ? product.colors.filter(Boolean) : [];
+const dimensions = Array.isArray(product.dimensions)
+  ? product.dimensions
+      .filter((item) => item && item.isActive !== false && (item.label || item.value))
+      .slice()
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  : [];
+const features = Array.isArray(product.features) ? product.features.filter(Boolean) : [];
+const productDescription = product.description?.trim() || product.leadText || product.shortDescription;
+const priceLabel = formatPrice();
+---
+
+<BaseLayout title={product.seoTitle} description={product.seoDescription} ogImage={product.image}>
+  <div class="breadcrumbs-bar">
+    <div class="container">
+      <Breadcrumbs
+        items={[
+          { title: 'Главная', href: withBase('/') },
+          { title: section.title, href: withBase(`/${section.slug}/`) },
+          { title: category.title, href: withBase(`/${section.slug}/${category.slug}/`) },
+          { title: product.title }
+        ]}
+      />
+    </div>
+  </div>
+
+  <section class="section product-detail-section">
+    <div class="container product-detail-layout">
+      <article class="media-block product-detail-media">
+        <img class="product-detail-image" src={withBase(product.image)} alt={product.title} loading="eager" style={imageViewStyle(product.imageView)} />
+        {product.placeholderLabel && <p class="media-caption">{product.placeholderLabel}</p>}
+      </article>
+
+      <article class="card product-detail-summary">
+        <p class="kicker">{category.title}</p>
+        <h1>{product.title}</h1>
+        {product.sku && <p class="product-detail-sku">Артикул: {product.sku}</p>}
+        <p class="lead">{product.leadText}</p>
+        {priceLabel && <p class="product-detail-price">{priceLabel}</p>}
+        <div class="product-detail-actions">
+          <a class="btn btn-primary" href={withBase('/kontakty/')}>Запросить расчет</a>
+          <a class="btn btn-secondary" href={`mailto:smu1.kurgan@yandex.ru?subject=${encodeURIComponent(`Расчет: ${product.title}`)}`}>Отправить задачу</a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section section--soft product-detail-info-section">
+    <div class="container product-detail-info-grid">
+      <article class="card product-detail-panel product-detail-panel--wide">
+        <h2>Описание</h2>
+        <p class="lead">{productDescription}</p>
+        {features.length > 0 && (
+          <ul class="product-detail-list">
+            {features.map((feature) => <li>{feature}</li>)}
+          </ul>
+        )}
+      </article>
+
+      <article class="card product-detail-panel">
+        <h2>Материалы</h2>
+        {materials.length > 0 ? (
+          <ul class="product-detail-list">
+            {materials.map((material) => <li>{material}</li>)}
+          </ul>
+        ) : (
+          <p>Материалы и покрытие уточняются под задачу объекта.</p>
+        )}
+      </article>
+
+      <article class="card product-detail-panel">
+        <h2>Цвета</h2>
+        {colors.length > 0 ? (
+          <ul class="product-detail-tag-list">
+            {colors.map((color) => <li>{color}</li>)}
+          </ul>
+        ) : (
+          <p>Цвет подбирается по согласованию, в том числе по палитре RAL.</p>
+        )}
+      </article>
+
+      <article class="card product-detail-panel product-detail-panel--wide">
+        <h2>Размеры и характеристики</h2>
+        {dimensions.length > 0 ? (
+          <dl class="product-detail-specs">
+            {dimensions.map((item) => (
+              <div class="product-detail-spec-row">
+                <dt>{item.label}</dt>
+                <dd>{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p>Размеры, комплектация и способ монтажа фиксируются при расчете.</p>
+        )}
+      </article>
+    </div>
+  </section>
+
+  <DirectContactBlock
+    title={`Нужен расчет: ${product.title}?`}
+    description="Свяжемся, уточним задачу, материалы, размеры, цвет и подготовим расчет."
+  />
+</BaseLayout>

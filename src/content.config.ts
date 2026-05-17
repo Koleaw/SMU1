@@ -25,6 +25,13 @@ const pageProcessStepSchema = z.object({
   isActive: z.boolean().optional()
 }).strict();
 
+const productSpecItemSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  order: z.number().optional(),
+  isActive: z.boolean().optional()
+}).strict();
+
 const pageListItemSchema = z.union([
   z.string(),
   z.object({
@@ -126,6 +133,11 @@ const productSections = defineCollection({
     image: z.string(),
     imageView: imageViewSchema.optional(),
     placeholderLabel: z.string(),
+    contactTitle: z.string().optional(),
+    contactDescription: z.string().optional(),
+    contactTelegramLabel: z.string().optional(),
+    contactEmailLabel: z.string().optional(),
+    contactPhoneLabel: z.string().optional(),
     seoTitle: z.string(),
     seoDescription: z.string(),
     pageBlocks: z.array(pageBlockSchema).optional()
@@ -159,8 +171,14 @@ const products = defineCollection({
     title: z.string(),
     slug: z.string(),
     productCategorySlug: z.string(),
+    sku: z.string().optional(),
     shortDescription: z.string(),
     leadText: z.string(),
+    description: z.string().optional(),
+    materials: z.array(z.string()).optional(),
+    colors: z.array(z.string()).optional(),
+    dimensions: z.array(productSpecItemSchema).optional(),
+    features: z.array(z.string()).optional(),
     priceMode: z.enum(['from', 'on_request', 'none']),
     priceFrom: z.number().nullable(),
     currency: z.string(),
@@ -189,6 +207,11 @@ const services = defineCollection({
     image: z.string(),
     imageView: imageViewSchema.optional(),
     placeholderLabel: z.string(),
+    contactTitle: z.string().optional(),
+    contactDescription: z.string().optional(),
+    contactTelegramLabel: z.string().optional(),
+    contactEmailLabel: z.string().optional(),
+    contactPhoneLabel: z.string().optional(),
     seoTitle: z.string(),
     seoDescription: z.string(),
     pageBlocks: z.array(pageBlockSchema).optional()
@@ -243,11 +266,48 @@ const siteSettings = defineCollection({
     phonePrimary: z.string(),
     phoneSecondary: z.string(),
     telegram: z.string(),
+    telegramLabel: z.string().optional(),
     email: z.string(),
     city: z.string(),
     address: z.string(),
+    regions: z.array(z.string()).optional(),
     vacanciesEmptyTitle: z.string(),
     vacanciesEmptyText: z.string()
+  }).strict()
+});
+
+const staticPages = defineCollection({
+  type: 'data',
+  schema: z.object({
+    title: z.string(),
+    slug: z.string(),
+    seoTitle: z.string(),
+    seoDescription: z.string(),
+    heroKicker: z.string().optional(),
+    heroTitle: z.string(),
+    heroDescription: z.string().optional(),
+    heroPrimaryLabel: z.string().optional(),
+    heroSecondaryLabel: z.string().optional(),
+    heroMediaVideo: z.string().optional(),
+    heroMediaPoster: z.string().optional(),
+    heroMediaCaption: z.string().optional(),
+    image: z.string().optional(),
+    imageView: imageViewSchema.optional(),
+    placeholderLabel: z.string().optional(),
+    pathwaysKicker: z.string().optional(),
+    pathwaysTitle: z.string().optional(),
+    pathwayCards: z.array(pageCardItemSchema).optional(),
+    productsTitle: z.string().optional(),
+    productsIntro: z.string().optional(),
+    servicesTitle: z.string().optional(),
+    servicesIntro: z.string().optional(),
+    trustTitle: z.string().optional(),
+    trustText: z.string().optional(),
+    trustImage: z.string().optional(),
+    trustCaption: z.string().optional(),
+    contactTitle: z.string().optional(),
+    contactDescription: z.string().optional(),
+    pageBlocks: z.array(pageBlockSchema).optional()
   }).strict()
 });
 
@@ -258,5 +318,6 @@ export const collections = {
   services,
   projects,
   jobs,
-  'site-settings': siteSettings
+  'site-settings': siteSettings,
+  'static-pages': staticPages
 };

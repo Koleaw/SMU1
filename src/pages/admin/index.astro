@@ -3,13 +3,18 @@ import { withBase } from '../../utils/withBase';
 const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:8787/api/admin';
 
 const cards = [
-  { title: 'Навесы', description: 'Визуальное редактирование страницы «Навесы»', href: withBase('/admin/pages/navesy/'), cta: 'Редактировать страницу Навесы', primary: true },
-  { title: 'Разделы продукции', description: 'Скоро: визуальный режим для всех разделов.' },
-  { title: 'Услуги', description: 'Скоро: отдельный сценарий редактирования услуг.' },
-  { title: 'Категории изделий', description: 'Скоро: визуальное редактирование каталога.' },
-  { title: 'Изделия', description: 'Скоро: удобный редактор карточек изделий.' },
-  { title: 'Выполненные объекты', description: 'Скоро: визуальный редактор объектов.' },
-  { title: 'Вакансии', description: 'Скоро: визуальный редактор вакансий.' }
+  { title: 'Главная страница', description: 'Первый экран, блоки главной, направления, доверительный блок и контакты.', href: withBase('/admin/visual/?collection=static-pages&slug=home'), cta: 'Редактировать главную', primary: true },
+  { title: 'Уличная мебель', description: 'Страница раздела, подстраницы лавочек, урн, вазонов, велопарковок и модели изделий внутри них.', href: withBase('/admin/visual/?collection=product-sections&slug=ulichnaya-mebel'), cta: 'Открыть раздел' },
+  { title: 'Ограждения', description: 'Страница ограждений и вложенные типы: заборы, ворота, калитки, секции, перила и другие позиции.', href: withBase('/admin/visual/?collection=product-sections&slug=ograzhdeniya-i-zabory'), cta: 'Открыть раздел' },
+  { title: 'Навесы', description: 'Страница направления навесов и козырьков с редактируемыми секциями.', href: withBase('/admin/visual/?collection=product-sections&slug=navesy-i-kozyrki'), cta: 'Редактировать навесы' },
+  { title: 'Металлоконструкции', description: 'Страница направления для бизнес-задач, сварочных работ и конструкций на заказ.', href: withBase('/admin/visual/?collection=product-sections&slug=metallokonstruktsii-dlya-biznesa'), cta: 'Открыть раздел' },
+  { title: 'Топиарии', description: 'Страница декоративных топиарных конструкций и проектных решений.', href: withBase('/admin/visual/?collection=product-sections&slug=topiarii'), cta: 'Открыть раздел' },
+  { title: 'Благоустройство', description: 'Страница проектной услуги по благоустройству территорий.', href: withBase('/admin/visual/?collection=services&slug=blagoustroystvo-territoriy'), cta: 'Редактировать страницу' },
+  { title: 'Строительство', description: 'Страница строительных и ремонтных работ.', href: withBase('/admin/visual/?collection=services&slug=stroitelstvo-i-remonty'), cta: 'Редактировать страницу' },
+  { title: 'Выполненные объекты', description: 'Листинг и карточки объектов доверительного контура.', href: withBase('/admin/visual/?collection=projects'), cta: 'Открыть объекты' },
+  { title: 'Контакты', description: 'Телефоны, Telegram, email, адрес, регионы и общие настройки компании.', href: withBase('/admin/visual/?collection=site-settings&slug=global'), cta: 'Редактировать контакты' },
+  { title: 'Вакансии', description: 'Добавление, удаление и редактирование вакансий.', href: withBase('/admin/visual/?collection=jobs'), cta: 'Открыть вакансии' },
+  { title: 'Изготовление на заказ', description: 'Служебная посадочная страница для индивидуальных заказов.', href: withBase('/admin/visual/?collection=static-pages&slug=custom-order'), cta: 'Редактировать страницу' }
 ];
 ---
 
@@ -120,8 +125,9 @@ const cards = [
 
       async function boot() {
         try {
-          await api('/me');
-          showApp();
+          const me = await api('/me');
+          if (me.authenticated) showApp();
+          else showLogin('Введите логин и пароль.');
         } catch {
           showLogin('Введите логин и пароль.');
         }

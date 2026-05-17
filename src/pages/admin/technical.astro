@@ -118,7 +118,7 @@ const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:
       const API_BASE = adminApiBase;
       const CONNECTION_ERROR_MESSAGE = 'Не удалось подключиться к локальному backend API. Проверьте, что запущен npm run admin:api и API доступен по http://127.0.0.1:8787/api/admin/me';
       const groupedCollections = [
-        { title: 'Страницы', keys: ['product-sections', 'services'] },
+        { title: 'Страницы сайта', keys: ['static-pages', 'product-sections', 'services'] },
         { title: 'Каталог', keys: ['product-categories', 'products'] },
         { title: 'Компания', keys: ['projects', 'jobs', 'site-settings'] }
       ];

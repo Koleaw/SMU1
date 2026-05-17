@@ -44,6 +44,7 @@ const {
 const heroClass = ['hero', className].filter(Boolean).join(' ');
 const safeMediaView = { fit: 'cover', positionX: 50, positionY: 50, scale: 1, ...(mediaView || {}) };
 const heroImageStyle = `object-fit:${safeMediaView.fit};object-position:${safeMediaView.positionX}% ${safeMediaView.positionY}%;transform:scale(${safeMediaView.scale});transform-origin:center;`;
+const mediaVideoType = mediaVideo?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
 ---
 <section class={heroClass}>
   {(mediaImage || mediaPoster) && (
@@ -51,7 +52,7 @@ const heroImageStyle = `object-fit:${safeMediaView.fit};object-position:${safeMe
       {mediaType === 'video' && mediaVideo ? (
         <>
           <video class="hero-media__video" autoplay muted loop playsinline poster={mediaPoster} data-hero-video>
-            <source src={mediaVideo} type="video/mp4" />
+            <source src={mediaVideo} type={mediaVideoType} />
           </video>
           {mediaPoster && <img class="hero-media__fallback" src={mediaPoster} alt={mediaAlt} loading="eager" />}
         </>
