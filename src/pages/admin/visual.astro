@@ -83,6 +83,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-media-frame.is-dragging { cursor: grabbing; }
       .admin-media-empty { display: grid; min-height: 100%; place-items: center; padding: 18px; color: #627487; font-size: 14px; font-weight: 800; text-align: center; }
       .admin-media-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px var(--card-padding); border-top: 1px solid rgb(16 22 27 / 8%); background: #fff; }
+      .admin-media-actions--settings { align-items: end; }
+      .admin-percent-field { display: grid; gap: 6px; min-width: 190px; max-width: 220px; }
+      .admin-percent-field span { color: #516273; font-size: 13px; font-weight: 800; }
+      .admin-percent-field input { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid #c9d5df; border-radius: 8px; background: #fff; color: #17212b; font: inherit; }
       .crop-editor { padding: 12px 0 0; }
       .crop-panel { display: grid; gap: 12px; padding: 14px; border: 1px solid #c5d3df; border-radius: 12px; background: #fff; box-shadow: 0 12px 30px rgb(16 22 27 / 10%); }
       .crop-panel h3, .crop-panel p { margin: 0; }
@@ -214,6 +218,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       const keyOf = (collection, slug) => `${collection}:${slug}`;
       const sorted = (items = []) => items.slice().sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0));
       const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value) || min));
+      const clampNumber = (value, min, max, fallback = min) => {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return fallback;
+        return Math.min(max, Math.max(min, number));
+      };
       const slugify = (value) => String(value || '').toLowerCase().trim().replace(/ё/g, 'e').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
       const isDirtyRecord = (record) => record && JSON.stringify(record.original) !== JSON.stringify(record.draft);
       const dirtyRecords = () => Object.values(state.records).filter(isDirtyRecord);
@@ -264,6 +273,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       function mediaStyle(view) {
         const safe = getMediaView(view);
         return `object-fit:${safe.fit};object-position:${safe.positionX}% ${safe.positionY}%;transform:scale(${safe.scale});transform-origin:center;`;
+      }
+
+      function heroOverlayPercent(value) {
+        return clampNumber(value, 0, 100, 100);
+      }
+
+      function heroOverlayStyle(value) {
+        return `--hero-overlay-strength:${heroOverlayPercent(value) / 100};`;
       }
 
       function renumber(items = []) {
@@ -818,6 +835,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const mediaPath = (page.heroMediaPoster || isHomePage) ? 'heroMediaPoster' : 'image';
         const image = getPath(getRecord(ref), mediaPath);
         const poster = page.heroMediaPoster || page.image || '';
+        const overlayStyle = heroOverlayStyle(page.heroOverlayOpacity);
         const mediaMarkup = video
           ? `<video class="hero-media__video" autoplay muted loop playsinline poster="${esc(toSrc(poster))}"><source src="${esc(toSrc(video))}" type="${esc(mediaMimeType(video))}" /></video>`
           : image
@@ -825,13 +843,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             : '<div class="admin-media-empty">Фото не выбрано</div>';
         return `
           <section class="hero ${hasMedia ? 'hero--media' : className}">
-            ${hasMedia ? `<div class="admin-media-frame admin-media-frame--hero ${isCrop && !video ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${mediaMarkup}<div class="hero-media__overlay"></div></div>` : ''}
+            ${hasMedia ? `<div class="admin-media-frame admin-media-frame--hero ${isCrop && !video ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${mediaMarkup}<div class="hero-media__overlay" style="${esc(overlayStyle)}"></div></div>` : ''}
             <div class="container hero-content">
               <p class="kicker" ${editable(ref, 'heroKicker', 'Надзаголовок', true)}>${esc(page.heroKicker || '')}</p>
               <h1 ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(page.heroTitle || page.title)}</h1>
               <p class="hero-description" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(page.heroDescription || '')}</p>
               ${hasMedia ? renderMediaButtons(ref, mediaPath, video ? '' : 'imageView', target, 'heroMediaCaption') : ''}
               ${isHomePage ? renderVideoButtons(ref, 'heroMediaVideo') : ''}
+              ${isHomePage && hasMedia ? renderHeroOverlayControl(ref) : ''}
             </div>
           </section>
           ${hasMedia && isCrop && !video ? renderCropControls() : ''}`;
@@ -952,6 +971,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `<div class="admin-media-actions"><button class="admin-btn admin-btn--primary" type="button" data-action="upload-video" data-ref="${ref}" data-path="${esc(videoPath)}">${video ? 'Заменить видео' : 'Загрузить видео'}</button>${video ? `<button class="admin-btn" type="button" data-action="clear-video" data-ref="${ref}" data-path="${esc(videoPath)}">Убрать видео</button>` : ''}</div>`;
       }
 
+      function renderHeroOverlayControl(ref) {
+        const value = heroOverlayPercent(getPath(getRecord(ref), 'heroOverlayOpacity'));
+        return `<div class="admin-media-actions admin-media-actions--settings"><label class="admin-percent-field"><span>Затемнение видео, %</span><input type="number" min="0" max="100" step="1" data-field-ref="${ref}" data-field-path="heroOverlayOpacity" data-field-min="0" data-field-max="100" data-field-empty="undefined" value="${esc(value)}" /></label></div>`;
+      }
+
       function renderCropControls() {
         if (!state.crop) return '';
         const view = getMediaView(getPath(getRecord(state.crop.ref), state.crop.viewPath));
@@ -979,7 +1003,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (collection === 'products') return { title, slug, productCategorySlug: fields.productCategorySlug || 'lavochki-i-skameyki', sku: '', shortDescription: 'Краткое описание модели.', leadText: 'Описание изделия.', description: 'Подробное описание изделия, назначения и вариантов исполнения.', materials: ['Стальной каркас', 'Покрытие по согласованию'], colors: ['По палитре RAL'], dimensions: [{ label: 'Размер', value: 'Уточняется при расчете', order: 10, isActive: true }], features: ['Изготавливаем под задачу объекта'], priceMode: 'on_request', priceFrom: null, currency: 'RUB', image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото изделия будут добавлены позже.', order: nextOrder(collection), isActive: true, showInCatalog: true, seoTitle: title, seoDescription: 'Описание изделия.' };
         if (collection === 'projects') return { title, slug, city: 'Курган', shortDescription: 'Краткое описание объекта.', whatWasDone: 'Описание выполненных работ.', image: '/assets/images/objects/object-1.svg', gallery: ['/assets/images/objects/object-1.svg'], order: nextOrder(collection), isActive: true, year: new Date().getFullYear(), seoTitle: title, seoDescription: 'Описание объекта.' };
         if (collection === 'jobs') return { title, slug, city: 'Курган', employmentType: 'Полная занятость', salary: 'По договоренности', shortDescription: 'Краткое описание вакансии.', responsibilities: ['Новая обязанность'], requirements: ['Новое требование'], conditions: ['Новое условие'], order: nextOrder(collection), isActive: true };
-        if (collection === 'static-pages') return { title, slug, seoTitle: title, seoDescription: 'Описание страницы.', heroKicker: '', heroTitle: title, heroDescription: 'Описание первого экрана.', contactTitle: 'Не нашли, что искали?', contactDescription: 'Напишите нам, и мы подберем решение под задачу.', pageBlocks: [] };
+        if (collection === 'static-pages') return { title, slug, seoTitle: title, seoDescription: 'Описание страницы.', heroKicker: '', heroTitle: title, heroDescription: 'Описание первого экрана.', heroOverlayOpacity: 100, contactTitle: 'Не нашли, что искали?', contactDescription: 'Напишите нам, и мы подберем решение под задачу.', pageBlocks: [] };
         return { title, slug };
       }
 
@@ -1163,7 +1187,15 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           const record = getRecord(field.dataset.fieldRef);
           let value = field.value;
           if (field.dataset.fieldType === 'boolean') value = value === 'true';
-          else if (field.type === 'number') value = value === '' ? null : Number(value);
+          else if (field.type === 'number') {
+            if (value === '') {
+              value = field.dataset.fieldEmpty === 'undefined' ? undefined : null;
+            } else {
+              const min = field.dataset.fieldMin !== undefined ? Number(field.dataset.fieldMin) : -Infinity;
+              const max = field.dataset.fieldMax !== undefined ? Number(field.dataset.fieldMax) : Infinity;
+              value = clampNumber(Number(value), min, max, Number(value));
+            }
+          }
           setPath(record, field.dataset.fieldPath, value);
           renderApp();
         });

@@ -303,6 +303,7 @@ small {
   position: absolute;
   inset: 0;
   background: var(--color-hero-overlay);
+  opacity: var(--hero-overlay-strength, 1);
 }
 
 .hero-media__caption {

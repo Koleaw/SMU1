@@ -10,6 +10,7 @@
   "heroSecondaryLabel": "Наши объекты",
   "heroMediaPoster": "/assets/images/placeholders/construction.svg",
   "heroMediaCaption": "Hero video-ready: до майского обновления используется постер, после загрузки финального ролика блок автоматически работает как фоновое видео без звука.",
+  "heroOverlayOpacity": 60,
   "pathwaysKicker": "Структура работы",
   "pathwaysTitle": "Три понятных сценария для разных задач объекта",
   "pathwayCards": [

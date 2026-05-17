@@ -14,6 +14,7 @@ interface Props {
   mediaPoster?: string;
   mediaAlt?: string;
   mediaCaption?: string;
+  overlayOpacity?: number;
   mediaView?: {
     fit?: 'cover' | 'contain';
     positionX?: number;
@@ -38,13 +39,20 @@ const {
   mediaPoster,
   mediaAlt = 'Фоновое изображение первого экрана',
   mediaCaption,
+  overlayOpacity,
   mediaView
 } = Astro.props;
 
 const heroClass = ['hero', className].filter(Boolean).join(' ');
+const normalizePercent = (value: unknown, fallback = 100) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(100, Math.max(0, number));
+};
 const safeMediaView = { fit: 'cover', positionX: 50, positionY: 50, scale: 1, ...(mediaView || {}) };
 const heroImageStyle = `object-fit:${safeMediaView.fit};object-position:${safeMediaView.positionX}% ${safeMediaView.positionY}%;transform:scale(${safeMediaView.scale});transform-origin:center;`;
 const mediaVideoType = mediaVideo?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
+const overlayStyle = `--hero-overlay-strength:${normalizePercent(overlayOpacity) / 100};`;
 ---
 <section class={heroClass}>
   {(mediaImage || mediaPoster) && (
@@ -59,7 +67,7 @@ const mediaVideoType = mediaVideo?.toLowerCase().endsWith('.webm') ? 'video/webm
       ) : (
         <img class="hero-media__image" src={mediaImage ?? mediaPoster} alt={mediaAlt} loading="eager" style={heroImageStyle} />
       )}
-      <div class="hero-media__overlay"></div>
+      <div class="hero-media__overlay" style={overlayStyle}></div>
       {mediaCaption && <p class="hero-media__caption">{mediaCaption}</p>}
     </div>
   )}
