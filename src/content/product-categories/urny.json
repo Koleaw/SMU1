@@ -8,9 +8,15 @@
   "order": 2,
   "showInSectionGrid": true,
   "isActive": true,
-  "image": "/assets/images/products/bins-1.svg",
+  "image": "/uploads/chatgpt-image-17-2026-15-37-11-2-1779040041432.png",
   "placeholderLabel": "Фото будут обновлены в мае: материалы по категории.",
   "mode": "catalog-list",
   "seoTitle": "Урны — СМУ-1",
-  "seoDescription": "Урны для общественных пространств и коммерческих территорий."
+  "seoDescription": "Урны для общественных пространств и коммерческих территорий.",
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }

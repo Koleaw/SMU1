@@ -9,9 +9,16 @@
   "phonePrimary": "+7 (912) 973-50-06",
   "phoneSecondary": "+7 (912) 579-96-65",
   "telegram": "https://t.me/smu1build",
+  "telegramLabel": "@smu1build",
   "email": "smu1.kurgan@yandex.ru",
   "city": "Курган",
   "address": "ул. Промышленная, 17, Курган",
+  "regions": [
+    "Курган",
+    "Курганская область",
+    "УрФО",
+    "по согласованию — соседние регионы"
+  ],
   "vacanciesEmptyTitle": "Сейчас активных вакансий нет",
   "vacanciesEmptyText": "Следите за обновлениями: как только откроем набор, разместим вакансии на этой странице."
 }

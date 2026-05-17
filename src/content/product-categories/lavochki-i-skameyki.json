@@ -8,9 +8,15 @@
   "order": 1,
   "showInSectionGrid": true,
   "isActive": true,
-  "image": "/assets/images/products/benches-1.svg",
+  "image": "/uploads/1-1777627157241.png",
   "placeholderLabel": "Фото будут обновлены в мае: материалы по категории.",
   "mode": "catalog-list",
   "seoTitle": "Лавочки и скамейки — СМУ-1",
-  "seoDescription": "Лавочки и скамейки для парков, дворов и коммерческих объектов."
+  "seoDescription": "Лавочки и скамейки для парков, дворов и коммерческих объектов.",
+  "imageView": {
+    "fit": "contain",
+    "positionX": 11.537939459752952,
+    "positionY": 83.9652781963952,
+    "scale": 1.06
+  }
 }

@@ -8,7 +8,7 @@
   "showOnHome": true,
   "isActive": true,
   "mode": "custom-direction",
-  "image": "/assets/images/placeholders/canopies.svg",
+  "image": "/uploads/2026-03-08-221112-1777541397642.png",
   "placeholderLabel": "Рендеры навесов будут добавлены позже",
   "seoTitle": "Навесы под заказ для объектов и благоустройства",
   "seoDescription": "Навесы для входных групп, зон ожидания, велопарковок, контейнерных площадок и общественных пространств под размеры объекта.",
@@ -17,7 +17,7 @@
       "type": "cardGrid",
       "title": "Какие навесы делаем",
       "theme": "dark",
-      "grid": "auto",
+      "grid": "2",
       "isActive": true,
       "order": 10,
       "items": [
@@ -122,7 +122,14 @@
           "order": 50,
           "isActive": true
         }
-      ]
+      ],
+      "media": "/uploads/2026-03-08-221112-1777541358247.png",
+      "mediaView": {
+        "fit": "cover",
+        "positionX": 31.944444444444446,
+        "positionY": 22.527472527472526,
+        "scale": 1
+      }
     },
     {
       "type": "factorList",
@@ -142,5 +149,12 @@
         "индивидуальные требования к внешнему виду"
       ]
     }
-  ]
+  ],
+  "contactTelegramLabel": "@smu1build · Написать в Telegram",
+  "imageView": {
+    "fit": "cover",
+    "positionX": 54.08586040747626,
+    "positionY": 38.26754385964912,
+    "scale": 1
+  }
 }
