@@ -289,6 +289,7 @@ const staticPages = defineCollection({
     heroPrimaryLabel: z.string().optional(),
     heroSecondaryLabel: z.string().optional(),
     heroMediaVideo: z.string().optional(),
+    heroMediaVideoMobile: z.string().optional(),
     heroMediaPoster: z.string().optional(),
     heroMediaCaption: z.string().optional(),
     heroOverlayOpacity: z.number().min(0).max(100).optional(),

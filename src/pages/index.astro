@@ -51,6 +51,7 @@ const homeHeroVideo = homePage.heroMediaVideo || '/assets/video/hero-home.mp4';
       secondaryHref={withBase('/vypolnennye-obekty/')}
       mediaType="video"
       mediaVideo={withBase(homeHeroVideo)}
+      mediaVideoMobile={homePage.heroMediaVideoMobile ? withBase(homePage.heroMediaVideoMobile) : undefined}
       mediaPoster={withBase(homePage.heroMediaPoster ?? '/assets/images/placeholders/construction.svg')}
       mediaAlt="Производственно-строительные работы СМУ-1"
       mediaCaption={homePage.heroMediaCaption}

@@ -849,7 +849,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
               <h1 ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(page.heroTitle || page.title)}</h1>
               <p class="hero-description" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(page.heroDescription || '')}</p>
               ${hasMedia ? renderMediaButtons(ref, mediaPath, video ? '' : 'imageView', target, 'heroMediaCaption') : ''}
-              ${isHomePage ? renderVideoButtons(ref, 'heroMediaVideo') : ''}
+              ${isHomePage ? renderVideoButtons(ref, 'heroMediaVideo', 'Видео для компьютеров') : ''}
+              ${isHomePage ? renderVideoButtons(ref, 'heroMediaVideoMobile', 'Видео для телефонов') : ''}
               ${isHomePage && hasMedia ? renderHeroOverlayControl(ref) : ''}
             </div>
           </section>
@@ -966,9 +967,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `<div class="admin-media-actions"><button class="admin-btn" type="button" data-action="upload-image" data-ref="${ref}" data-path="${esc(imagePath)}" data-view-path="${esc(viewPath || '')}" data-target="${esc(target)}">Добавить/заменить фото</button>${viewPath ? `<button class="admin-btn" type="button" data-action="open-crop" data-ref="${ref}" data-path="${esc(imagePath)}" data-view-path="${esc(viewPath)}" data-target="${esc(target)}">Редактировать кадр</button>` : ''}<button class="admin-btn" type="button" data-action="clear-image" data-ref="${ref}" data-path="${esc(imagePath)}">Убрать фото</button></div>`;
       }
 
-      function renderVideoButtons(ref, videoPath) {
+      function renderVideoButtons(ref, videoPath, label = 'Видео') {
         const video = getPath(getRecord(ref), videoPath);
-        return `<div class="admin-media-actions"><button class="admin-btn admin-btn--primary" type="button" data-action="upload-video" data-ref="${ref}" data-path="${esc(videoPath)}">${video ? 'Заменить видео' : 'Загрузить видео'}</button>${video ? `<button class="admin-btn" type="button" data-action="clear-video" data-ref="${ref}" data-path="${esc(videoPath)}">Убрать видео</button>` : ''}</div>`;
+        return `<div class="admin-media-actions"><span class="admin-badge">${esc(label)}</span><button class="admin-btn admin-btn--primary" type="button" data-action="upload-video" data-ref="${ref}" data-path="${esc(videoPath)}">${video ? 'Заменить видео' : 'Загрузить видео'}</button>${video ? `<button class="admin-btn" type="button" data-action="clear-video" data-ref="${ref}" data-path="${esc(videoPath)}">Убрать видео</button>` : ''}</div>`;
       }
 
       function renderHeroOverlayControl(ref) {

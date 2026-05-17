@@ -11,6 +11,7 @@ interface Props {
   mediaType?: 'image' | 'video';
   mediaImage?: string;
   mediaVideo?: string;
+  mediaVideoMobile?: string;
   mediaPoster?: string;
   mediaAlt?: string;
   mediaCaption?: string;
@@ -36,6 +37,7 @@ const {
   mediaType,
   mediaImage,
   mediaVideo,
+  mediaVideoMobile,
   mediaPoster,
   mediaAlt = 'Фоновое изображение первого экрана',
   mediaCaption,
@@ -52,6 +54,7 @@ const normalizePercent = (value: unknown, fallback = 100) => {
 const safeMediaView = { fit: 'cover', positionX: 50, positionY: 50, scale: 1, ...(mediaView || {}) };
 const heroImageStyle = `object-fit:${safeMediaView.fit};object-position:${safeMediaView.positionX}% ${safeMediaView.positionY}%;transform:scale(${safeMediaView.scale});transform-origin:center;`;
 const mediaVideoType = mediaVideo?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
+const mediaVideoMobileType = mediaVideoMobile?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
 const overlayStyle = `--hero-overlay-strength:${normalizePercent(overlayOpacity) / 100};`;
 ---
 <section class={heroClass}>
@@ -59,7 +62,8 @@ const overlayStyle = `--hero-overlay-strength:${normalizePercent(overlayOpacity)
     <div class="hero-media" aria-hidden="true" data-hero-media>
       {mediaType === 'video' && mediaVideo ? (
         <>
-          <video class="hero-media__video" autoplay muted loop playsinline poster={mediaPoster} data-hero-video>
+          <video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster={mediaPoster} data-hero-video>
+            {mediaVideoMobile && <source src={mediaVideoMobile} type={mediaVideoMobileType} media="(max-width: 900px)" />}
             <source src={mediaVideo} type={mediaVideoType} />
           </video>
           {mediaPoster && <img class="hero-media__fallback" src={mediaPoster} alt={mediaAlt} loading="eager" />}

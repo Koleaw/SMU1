@@ -43,5 +43,6 @@
   "trustCaption": "Майское наполнение: фото реализованных объектов и фактические результаты работ.",
   "contactTitle": "Не нашли, что искали?",
   "contactDescription": "Готовы выполнить решение под ваш объект, ТЗ, референс или чертеж. Напишите нам напрямую, и мы сориентируем по реализации.",
-  "heroMediaVideo": "/uploads/media-1779034941013.mp4"
+  "heroMediaVideo": "/uploads/media-1779034941013.mp4",
+  "heroMediaVideoMobile": "/uploads/hero-home-mobile.mp4"
 }
