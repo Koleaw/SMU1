@@ -1,15 +1,197 @@
 {
   "title": "Ограждения и заборы",
   "slug": "ograzhdeniya-i-zabory",
-  "shortDescription": "Заборы, ворота, калитки, секционные и декоративные ограждения для частных, коммерческих и общественных территорий.",
-  "heroTitle": "Ограждения, заборы и входные группы",
-  "heroDescription": "Изготавливаем ограждения для частных, коммерческих и общественных территорий: заборы, секции, ворота, калитки, перила и декоративные решения под размеры объекта.",
+  "shortDescription": "Ограждения, заборы, ворота, калитки, перила и входные группы, которые проектируются и изготавливаются под конкретный объект.",
+  "heroTitle": "Ограждения, заборы и входные группы под объект",
+  "heroDescription": "СМУ-1 не продает готовые заборы со склада. Мы проектируем, изготавливаем и адаптируем ограждения под размеры, основание, цвет, заполнение и условия монтажа.",
   "order": 2,
   "showOnHome": true,
   "isActive": true,
-  "mode": "catalog-hub",
+  "showInMenu": true,
+  "menuTitle": "Ограждения",
+  "showBadge": true,
+  "mode": "custom-direction",
   "image": "/assets/images/placeholders/landscaping.svg",
+  "heroMediaPoster": "/assets/images/placeholders/landscaping.svg",
+  "heroMediaVideo": "",
+  "heroMediaVideoMobile": "",
+  "heroOverlayOpacity": 68,
   "placeholderLabel": "Рендеры ограждений будут добавлены позже",
+  "contactTitle": "Нужно ограждение под конкретный объект?",
+  "contactDescription": "Напишите нам, и мы подберем конструкцию под размеры, основание, заполнение, цвет, условия монтажа и назначение территории.",
   "seoTitle": "Ограждения, заборы и входные группы под заказ",
-  "seoDescription": "Ограждения, заборы, ворота, калитки, перила и декоративные ограждения под размеры объекта для частных, коммерческих и общественных территорий."
+  "seoDescription": "Проектируем и изготавливаем ограждения, заборы, ворота, калитки, перила и входные группы под размеры и условия объекта.",
+  "pageBlocks": [
+    {
+      "type": "textBlock",
+      "sectionId": "ograzhdeniya-intro",
+      "title": "Проектируем и изготавливаем решение под площадку",
+      "intro": "",
+      "text": "Ограждение подбирается не как отдельная модель, а как часть объекта: учитываем протяженность, высоту, основание, ветровую нагрузку, заполнение, цвет, фурнитуру, проходы, въезды и монтаж.",
+      "theme": "light",
+      "textWidth": "820px",
+      "isActive": true,
+      "order": 10
+    },
+    {
+      "type": "directionCards",
+      "sectionId": "ograzhdeniya-directions",
+      "title": "Направления ограждений",
+      "intro": "Каждое направление можно адаптировать под объект, чертеж, референс или замер.",
+      "theme": "light",
+      "grid": "3",
+      "isActive": true,
+      "order": 20,
+      "items": [
+        {
+          "title": "Заборы",
+          "text": "Ограждения периметра для частных, коммерческих и производственных территорий.",
+          "image": "/assets/images/placeholders/landscaping.svg",
+          "buttonLabel": "Открыть направление",
+          "buttonHref": "/ograzhdeniya-i-zabory/zabory/",
+          "order": 10,
+          "isActive": true
+        },
+        {
+          "title": "Ворота",
+          "text": "Распашные и откатные решения под проем, тип открывания и условия эксплуатации.",
+          "image": "/assets/images/placeholders/metal-business.svg",
+          "buttonLabel": "Открыть направление",
+          "buttonHref": "/ograzhdeniya-i-zabory/vorota/",
+          "order": 20,
+          "isActive": true
+        },
+        {
+          "title": "Калитки",
+          "text": "Калитки под линию ограждения, проходную зону, фурнитуру и внешний вид территории.",
+          "image": "/assets/images/placeholders/street-furniture.svg",
+          "buttonLabel": "Открыть направление",
+          "buttonHref": "/ograzhdeniya-i-zabory/kalitki/",
+          "order": 30,
+          "isActive": true
+        },
+        {
+          "title": "Секционные ограждения",
+          "text": "Модульные секции для территорий, где важны повторяемость, монтаж и аккуратный внешний вид.",
+          "image": "/assets/images/placeholders/landscaping.svg",
+          "buttonLabel": "Открыть направление",
+          "buttonHref": "/ograzhdeniya-i-zabory/sekcionnye-ograzhdeniya/",
+          "order": 40,
+          "isActive": true
+        },
+        {
+          "title": "Декоративные ограждения",
+          "text": "Решения для входных зон, дворов, общественных пространств и коммерческих территорий.",
+          "image": "/assets/images/placeholders/street-furniture.svg",
+          "buttonLabel": "Открыть направление",
+          "buttonHref": "/ograzhdeniya-i-zabory/dekorativnye-ograzhdeniya/",
+          "order": 50,
+          "isActive": true
+        },
+        {
+          "title": "Газонные ограждения",
+          "text": "Низкие ограждения для зонирования газонов, дорожек, дворов и благоустроенных территорий.",
+          "image": "/assets/images/placeholders/landscaping.svg",
+          "buttonLabel": "Открыть направление",
+          "buttonHref": "/ograzhdeniya-i-zabory/gazonnye-ograzhdeniya/",
+          "order": 60,
+          "isActive": true
+        },
+        {
+          "title": "Перила и поручни",
+          "text": "Ограждения лестниц, пандусов, входных групп и зон с перепадами высоты.",
+          "image": "/assets/images/placeholders/metal-business.svg",
+          "buttonLabel": "Открыть направление",
+          "buttonHref": "/ograzhdeniya-i-zabory/perila-i-poruchni/",
+          "order": 70,
+          "isActive": true
+        },
+        {
+          "title": "Столбики и болларды",
+          "text": "Элементы ограничения проезда, защиты зон и визуального разделения потоков.",
+          "image": "/assets/images/placeholders/street-furniture.svg",
+          "buttonLabel": "Открыть направление",
+          "buttonHref": "/ograzhdeniya-i-zabory/stolbiki-i-bollardy/",
+          "order": 80,
+          "isActive": true
+        },
+        {
+          "title": "Ограждения контейнерных площадок",
+          "text": "Конструкции для ТКО и хозяйственных зон с учетом доступа, обслуживания и внешнего вида.",
+          "image": "/assets/images/placeholders/construction.svg",
+          "buttonLabel": "Открыть направление",
+          "buttonHref": "/ograzhdeniya-i-zabory/ograzhdeniya-kontejnernyh-ploshchadok/",
+          "order": 90,
+          "isActive": true
+        }
+      ]
+    },
+    {
+      "type": "customOrder",
+      "sectionId": "ograzhdeniya-custom",
+      "title": "Изготавливаем под объект",
+      "intro": "",
+      "text": "Адаптируем решение под размеры, основание, цвет, заполнение, фурнитуру, режим эксплуатации и условия монтажа. Можно обратиться с чертежом, референсом, фото места установки или описанием задачи.",
+      "theme": "light",
+      "media": "/assets/images/placeholders/metal-business.svg",
+      "placeholderLabel": "Фото или рендер ограждения под объект будет добавлен позже.",
+      "mediaPosition": "right",
+      "textWidth": "780px",
+      "isActive": true,
+      "order": 30
+    },
+    {
+      "type": "costFactors",
+      "sectionId": "ograzhdeniya-cost",
+      "title": "Что влияет на стоимость",
+      "intro": "Для расчета важен не только тип ограждения, но и условия конкретной площадки.",
+      "theme": "graphite",
+      "columns": 2,
+      "isActive": true,
+      "order": 40,
+      "items": [
+        {
+          "text": "протяженность, высота и конфигурация линии ограждения",
+          "order": 10,
+          "isActive": true
+        },
+        {
+          "text": "основание, опоры, способ крепления и условия монтажа",
+          "order": 20,
+          "isActive": true
+        },
+        {
+          "text": "материал, сечение профиля и сложность сварки",
+          "order": 30,
+          "isActive": true
+        },
+        {
+          "text": "тип заполнения, декоративные элементы и фурнитура",
+          "order": 40,
+          "isActive": true
+        },
+        {
+          "text": "ворота, калитки, поручни, болларды и дополнительные узлы",
+          "order": 50,
+          "isActive": true
+        },
+        {
+          "text": "покрытие, цвет, транспортировка, сроки и доступ к объекту",
+          "order": 60,
+          "isActive": true
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "sectionId": "ograzhdeniya-cta",
+      "title": "Рассчитать ограждение под ваш объект",
+      "text": "Свяжемся, уточним задачу и подготовим расчет.",
+      "theme": "light",
+      "buttonLabel": "Получить расчет",
+      "buttonHref": "/kontakty/",
+      "isActive": true,
+      "order": 50
+    }
+  ]
 }

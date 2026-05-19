@@ -9,8 +9,9 @@
   "heroPrimaryLabel": "Получить расчет",
   "heroSecondaryLabel": "Наши объекты",
   "heroMediaPoster": "/assets/images/placeholders/construction.svg",
-  "heroMediaCaption": "Hero video-ready: до майского обновления используется постер, после загрузки финального ролика блок автоматически работает как фоновое видео без звука.",
+  "heroMediaCaption": "",
   "heroOverlayOpacity": 30,
+  "showBadge": false,
   "pathwaysKicker": "Структура работы",
   "pathwaysTitle": "Три понятных сценария для разных задач объекта",
   "pathwayCards": [
@@ -43,6 +44,22 @@
   "trustCaption": "Майское наполнение: фото реализованных объектов и фактические результаты работ.",
   "contactTitle": "Не нашли, что искали?",
   "contactDescription": "Готовы выполнить решение под ваш объект, ТЗ, референс или чертеж. Напишите нам напрямую, и мы сориентируем по реализации.",
+  "pageBlocks": [
+    {
+      "type": "whoWeAre",
+      "sectionId": "home-about",
+      "title": "Кто мы и что мы делаем",
+      "intro": "",
+      "text": "СМУ-1 выполняет комплексные работы для коммерческих и общественных объектов: изготавливает изделия, металлоконструкции и элементы благоустройства, подбирает решения под задачу и сопровождает реализацию на объекте.",
+      "theme": "light",
+      "media": "/assets/images/placeholders/metal-business.svg",
+      "placeholderLabel": "Производство, металлоконструкции и благоустройство под задачу объекта.",
+      "mediaPosition": "right",
+      "textWidth": "760px",
+      "isActive": true,
+      "order": 10
+    }
+  ],
   "heroMediaVideo": "/uploads/media-1779034941013.mp4",
   "heroMediaVideoMobile": "/uploads/hero-home-mobile.mp4"
 }

@@ -1,0 +1,118 @@
+{
+  "title": "О нас",
+  "slug": "o-nas",
+  "seoTitle": "О СМУ-1 — производство, металлоконструкции и работы под объект",
+  "seoDescription": "СМУ-1 выполняет комплексные работы для коммерческих и общественных объектов: изделия, металлоконструкции, благоустройство и сопровождение реализации.",
+  "order": 80,
+  "isActive": true,
+  "showInMenu": true,
+  "menuTitle": "О нас",
+  "showBadge": true,
+  "heroKicker": "О компании",
+  "heroTitle": "СМУ-1 делает прикладные решения под задачу объекта",
+  "heroDescription": "Изготавливаем изделия, металлоконструкции и элементы благоустройства, подбираем конструктив под условия площадки и сопровождаем реализацию на объекте.",
+  "image": "/assets/images/placeholders/metal-business.svg",
+  "heroMediaPoster": "/assets/images/placeholders/metal-business.svg",
+  "heroMediaVideo": "",
+  "heroMediaVideoMobile": "",
+  "heroOverlayOpacity": 62,
+  "contactTitle": "Нужна команда под задачу объекта?",
+  "contactDescription": "Напишите нам, и мы уточним исходные данные, состав работ и подготовим понятный следующий шаг.",
+  "pageBlocks": [
+    {
+      "type": "whoWeAre",
+      "sectionId": "about-who",
+      "title": "Кто мы",
+      "text": "СМУ-1 работает на стыке производства, металлоконструкций, благоустройства и прикладных работ на объектах. Мы не ограничиваемся одной товарной линейкой: подбираем решение под назначение площадки, размеры, основание, внешний вид и условия эксплуатации.",
+      "theme": "light",
+      "media": "/assets/images/placeholders/construction.svg",
+      "placeholderLabel": "Фото производства и объектов будут добавляться по мере наполнения.",
+      "mediaPosition": "right",
+      "textWidth": "760px",
+      "isActive": true,
+      "order": 10
+    },
+    {
+      "type": "directionCards",
+      "sectionId": "about-do",
+      "title": "Что делаем",
+      "intro": "Берем задачи, где важны конструктив, изготовление и практичная реализация на объекте.",
+      "theme": "light",
+      "grid": "3",
+      "isActive": true,
+      "order": 20,
+      "items": [
+        {
+          "title": "Изделия и МАФ",
+          "text": "Лавки, урны, вазоны, велопарковки, перголы и другие элементы благоустройства.",
+          "image": "/assets/images/placeholders/street-furniture.svg",
+          "buttonLabel": "Смотреть направления",
+          "buttonHref": "/ulichnaya-mebel/",
+          "order": 10,
+          "isActive": true
+        },
+        {
+          "title": "Металлоконструкции",
+          "text": "Каркасы, рамы, опоры, площадки, лестницы и нестандартные конструкции по задаче.",
+          "image": "/assets/images/placeholders/metal-business.svg",
+          "buttonLabel": "Подробнее",
+          "buttonHref": "/metallokonstruktsii-dlya-biznesa/",
+          "order": 20,
+          "isActive": true
+        },
+        {
+          "title": "Благоустройство и монтаж",
+          "text": "Комплектуем территории, входные группы, хозяйственные зоны и общественные пространства.",
+          "image": "/assets/images/placeholders/landscaping.svg",
+          "buttonLabel": "Подробнее",
+          "buttonHref": "/blagoustroystvo-territoriy/",
+          "order": 30,
+          "isActive": true
+        }
+      ]
+    },
+    {
+      "type": "process",
+      "sectionId": "about-workflow",
+      "title": "Как работаем",
+      "intro": "Сначала разбираем задачу, затем подбираем реалистичный состав решения.",
+      "theme": "graphite",
+      "media": "/assets/images/placeholders/construction.svg",
+      "placeholderLabel": "Рабочий процесс и объекты.",
+      "mediaPosition": "right",
+      "isActive": true,
+      "order": 30,
+      "steps": [
+        {
+          "title": "Уточняем исходные данные",
+          "text": "Назначение, размеры, фото места, условия эксплуатации и сроки.",
+          "order": 10,
+          "isActive": true
+        },
+        {
+          "title": "Собираем решение",
+          "text": "Подбираем конструктив, материалы, покрытие, монтаж и этапность.",
+          "order": 20,
+          "isActive": true
+        },
+        {
+          "title": "Изготавливаем и сопровождаем",
+          "text": "Ведем задачу через производство и помогаем довести результат на объекте.",
+          "order": 30,
+          "isActive": true
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "sectionId": "about-cta",
+      "title": "Обсудим задачу?",
+      "text": "Свяжемся, уточним задачу и подготовим расчет.",
+      "theme": "light",
+      "buttonLabel": "Перейти к контактам",
+      "buttonHref": "/kontakty/",
+      "isActive": true,
+      "order": 40
+    }
+  ]
+}
