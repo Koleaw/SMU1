@@ -5,6 +5,7 @@ interface Props {
   telegramLabel?: string;
   emailLabel?: string;
   phoneLabel?: string;
+  className?: string;
 }
 
 const {
@@ -12,10 +13,11 @@ const {
   description = 'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.',
   telegramLabel = '@smu1build · Написать в Telegram',
   emailLabel = 'smu1.kurgan@yandex.ru · Написать на почту',
-  phoneLabel = '+7 (912) 973-50-06 · Позвонить'
+  phoneLabel = '+7 (912) 973-50-06 · Позвонить',
+  className = ''
 } = Astro.props as Props;
 ---
-<section id="direct-contact" class="section">
+<section id="direct-contact" class={`section ${className}`.trim()}>
   <div class="container">
     <article class="home-contact-card">
       <h2 class="section-title">{title}</h2>

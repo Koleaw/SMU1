@@ -36,9 +36,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-btn--dark { border-color: rgb(255 255 255 / 18%); background: rgb(255 255 255 / 9%); color: #fff; }
       .admin-btn[disabled] { opacity: .45; cursor: not-allowed; }
       .admin-field { display: grid; gap: 7px; }
-      .admin-field label, .admin-label { color: #516273; font-size: 13px; font-weight: 800; }
+      .admin-field label, .admin-field > span, .admin-label { color: #516273; font-size: 13px; font-weight: 800; }
       .admin-field input, .admin-field select, .admin-field textarea, .admin-input, .admin-select { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid #c9d5df; border-radius: 8px; background: #fff; color: #17212b; }
       .admin-field textarea { min-height: 92px; resize: vertical; }
+      .admin-field-hint { margin: 0; color: #687b8d; font-size: 12px; line-height: 1.45; }
       .sidebar-group { display: grid; gap: 8px; margin-bottom: 16px; }
       .sidebar-group h2 { margin: 0; color: rgb(255 255 255 / 66%); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
       .sidebar-link { width: 100%; display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
@@ -73,6 +74,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-block-settings summary { cursor: pointer; font-weight: 800; color: #31485d; }
       .admin-block-settings__body { display: grid; gap: 12px; margin-top: 12px; }
       .admin-product-details { display: grid; gap: 18px; }
+      .admin-product-panel-grid { display: grid; gap: 14px; }
+      .admin-product-media-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: 14px; align-items: start; }
+      .admin-product-media-grid .media-caption { min-height: 0; }
       .admin-product-specs { display: grid; gap: 10px; }
       .admin-product-spec-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 10px; padding: 12px; border: 1px solid #d8e2eb; border-radius: 10px; background: #fff; }
       .admin-product-spec-row.is-hidden { opacity: .55; outline: 1px dashed #b94a48; outline-offset: -3px; }
@@ -117,7 +121,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-row-hidden, .admin-card-hidden { opacity: .55; outline: 1px dashed #b94a48; outline-offset: -3px; }
       .home-contact-card .admin-item-tools { margin-top: 12px; }
       @media (min-width: 920px) { .page-block-media-layout { grid-template-columns: 1fr 1fr; } }
-      @media (max-width: 1100px) { .visual-shell { grid-template-columns: 1fr; } .visual-sidebar { position: relative; height: auto; } .admin-create-grid, .admin-grid-2, .admin-grid-3 { grid-template-columns: 1fr; } }
+      @media (max-width: 1100px) { .visual-shell { grid-template-columns: 1fr; } .visual-sidebar { position: relative; height: auto; } .admin-create-grid, .admin-grid-2, .admin-grid-3, .admin-product-media-grid { grid-template-columns: 1fr; } }
       @media (max-width: 767px) { .page-blocks-grid, .page-blocks-grid--2, .page-blocks-grid--3, .page-blocks-grid--4, .page-blocks-grid--auto { grid-template-columns: 1fr; } .page-blocks-columns { columns: 1; } }
     </style>
   </head>
@@ -212,6 +216,38 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         ['notice', 'Текстовая вставка']
       ];
       const SECTION_TYPE_LABELS = Object.fromEntries(SECTION_TYPES);
+      const FIELD_LABELS = {
+        title: 'Название',
+        slug: 'URL страницы',
+        productCategorySlug: 'Категория товара',
+        sku: 'Артикул',
+        order: 'Порядок показа',
+        isActive: 'Опубликовано',
+        showInCatalog: 'Показывать в каталоге',
+        seoTitle: 'SEO-заголовок',
+        seoDescription: 'SEO-описание',
+        shortDescription: 'Краткое описание',
+        leadText: 'Лид-текст',
+        priceFrom: 'Цена',
+        priceMode: 'Режим цены',
+        placeholderLabel: 'Подпись к фото',
+        showDeliveryBlock: 'Показывать доставку',
+        deliveryText: 'Текст доставки',
+        showCustomProjectBlock: 'Показывать индивидуальный проект',
+        customProjectTitle: 'Заголовок индивидуального проекта',
+        customProjectText: 'Текст индивидуального проекта'
+      };
+      const FIELD_HINTS = {
+        slug: 'Латиница, цифры и дефисы. Например: skamya-loft.',
+        sku: 'Внутренний код изделия. Можно оставить пустым.',
+        order: 'Чем меньше число, тем выше товар в каталоге.',
+        isActive: 'Если выключено, страница товара не должна быть доступна пользователям или не должна отображаться публично, в зависимости от текущей логики сайта.',
+        showInCatalog: 'Если выключено, страница может существовать, но товар не будет отображаться в общем каталоге.',
+        seoTitle: 'Заголовок страницы для поисковиков и вкладки браузера.',
+        seoDescription: 'Короткое описание страницы для поисковой выдачи.',
+        deliveryText: 'Если поле пустое, на сайте будет показан общий текст про самовывоз и отправку транспортной компанией.',
+        customProjectText: 'Коротко объясните, что можно изготовить по фото, эскизу, размерам или ТЗ.'
+      };
       const state = {
         collection: null,
         selectedSlug: null,
@@ -402,7 +438,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           await loadRecordsForCollection('products');
         }
         if (collection === 'products') {
+          await loadRecordsForCollection('product-sections');
           await loadRecordsForCollection('product-categories');
+          await loadRecordsForCollection('products');
         }
         if (collection === 'static-pages') {
           await loadRecordsForCollection('product-sections');
@@ -546,6 +584,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           .join('');
       }
 
+      function productSlugOptions(selected = '', currentSlug = '') {
+        return Object.values(state.records)
+          .filter((record) => record.collection === 'products' && record.draft.slug !== currentSlug)
+          .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0))
+          .map((record) => `<option value="${esc(record.draft.slug)}" ${record.draft.slug === selected ? 'selected' : ''}>${esc(record.draft.title || record.draft.slug)}</option>`)
+          .join('');
+      }
+
       function renderDirectionPage(ref) {
         const record = getRecord(ref);
         const item = record.draft;
@@ -605,15 +651,26 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function renderField(ref, field, value) {
-        const booleanFields = new Set(['showOnHome', 'showInSectionGrid', 'isActive', 'showInCatalog', 'showInMenu', 'showBadge']);
+        const booleanFields = new Set(['showOnHome', 'showInSectionGrid', 'isActive', 'showInCatalog', 'showInMenu', 'showBadge', 'showDeliveryBlock', 'showCustomProjectBlock']);
         const numberFields = new Set(['order', 'year', 'heroOverlayOpacity']);
+        const textareaFields = new Set(['seoDescription', 'deliveryText', 'customProjectText']);
+        const label = FIELD_LABELS[field] || field;
+        const hint = FIELD_HINTS[field] ? `<p class="admin-field-hint">${esc(FIELD_HINTS[field])}</p>` : '';
         if (typeof value === 'boolean' || booleanFields.has(field)) {
           const normalized = value !== false;
-          return `<label class="admin-field"><span>${field}</span><select data-field-ref="${ref}" data-field-path="${field}" data-field-type="boolean"><option value="true" ${normalized ? 'selected' : ''}>Да</option><option value="false" ${!normalized ? 'selected' : ''}>Нет</option></select></label>`;
+          return `<label class="admin-field"><span>${esc(label)}</span><select data-field-ref="${ref}" data-field-path="${field}" data-field-type="boolean"><option value="true" ${normalized ? 'selected' : ''}>Да</option><option value="false" ${!normalized ? 'selected' : ''}>Нет</option></select>${hint}</label>`;
         }
-        if (typeof value === 'number' || numberFields.has(field)) return `<label class="admin-field"><span>${field}</span><input type="number" data-field-ref="${ref}" data-field-path="${field}" value="${esc(value ?? '')}" /></label>`;
-        if (field === 'mode') return `<label class="admin-field"><span>${field}</span><select data-field-ref="${ref}" data-field-path="${field}"><option value="catalog-hub" ${value === 'catalog-hub' ? 'selected' : ''}>catalog-hub</option><option value="custom-direction" ${value === 'custom-direction' ? 'selected' : ''}>custom-direction</option><option value="catalog-list" ${value === 'catalog-list' ? 'selected' : ''}>catalog-list</option><option value="custom-list" ${value === 'custom-list' ? 'selected' : ''}>custom-list</option></select></label>`;
-        return `<label class="admin-field"><span>${field}</span><input data-field-ref="${ref}" data-field-path="${field}" value="${esc(value ?? '')}" ${field === 'slug' ? 'readonly' : ''} /></label>`;
+        if (field === 'productCategorySlug') {
+          return `<label class="admin-field"><span>${esc(label)}</span><select data-field-ref="${ref}" data-field-path="${field}">${productCategoryOptions(value)}</select>${hint}</label>`;
+        }
+        if (typeof value === 'number' || numberFields.has(field)) {
+          return `<label class="admin-field"><span>${esc(label)}</span><input type="number" data-field-ref="${ref}" data-field-path="${field}" value="${esc(value ?? '')}" />${hint}</label>`;
+        }
+        if (field === 'mode') return `<label class="admin-field"><span>${esc(label)}</span><select data-field-ref="${ref}" data-field-path="${field}"><option value="catalog-hub" ${value === 'catalog-hub' ? 'selected' : ''}>catalog-hub</option><option value="custom-direction" ${value === 'custom-direction' ? 'selected' : ''}>custom-direction</option><option value="catalog-list" ${value === 'catalog-list' ? 'selected' : ''}>catalog-list</option><option value="custom-list" ${value === 'custom-list' ? 'selected' : ''}>custom-list</option></select>${hint}</label>`;
+        if (textareaFields.has(field)) {
+          return `<label class="admin-field"><span>${esc(label)}</span><textarea data-field-ref="${ref}" data-field-path="${field}">${esc(value ?? '')}</textarea>${hint}</label>`;
+        }
+        return `<label class="admin-field"><span>${esc(label)}</span><input data-field-ref="${ref}" data-field-path="${field}" value="${esc(value ?? '')}" ${field === 'slug' ? 'readonly' : ''} />${hint}</label>`;
       }
 
       function renderHeroMediaPanel(ref) {
@@ -712,7 +769,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       function formatPrice(product) {
         if (product.priceMode === 'from' && typeof product.priceFrom === 'number') return `от ${product.priceFrom.toLocaleString('ru-RU')} ₽`;
         if (product.priceMode === 'on_request') return 'Цена по запросу';
-        return '';
+        return 'Рассчитывается индивидуально';
       }
 
       function renderProductCard(productRecord) {
@@ -748,8 +805,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `
           <div class="admin-grid-3">
             <label class="admin-field"><span>Цена</span><input type="number" data-field-ref="${ref}" data-field-path="priceFrom" value="${esc(item.priceFrom ?? '')}" /></label>
-            <label class="admin-field"><span>Режим цены</span><select data-field-ref="${ref}" data-field-path="priceMode"><option value="from" ${item.priceMode === 'from' ? 'selected' : ''}>от</option><option value="on_request" ${item.priceMode === 'on_request' ? 'selected' : ''}>по запросу</option><option value="none" ${item.priceMode === 'none' ? 'selected' : ''}>не показывать</option></select></label>
-            <label class="admin-field"><span>Порядок</span><input type="number" data-field-ref="${ref}" data-field-path="order" value="${esc(item.order ?? 0)}" /></label>
+            <label class="admin-field"><span>Режим цены</span><select data-field-ref="${ref}" data-field-path="priceMode"><option value="from" ${item.priceMode === 'from' ? 'selected' : ''}>от суммы</option><option value="on_request" ${item.priceMode === 'on_request' ? 'selected' : ''}>по запросу</option><option value="none" ${item.priceMode === 'none' ? 'selected' : ''}>индивидуальный расчет</option></select></label>
+            <label class="admin-field"><span>Порядок показа</span><input type="number" data-field-ref="${ref}" data-field-path="order" value="${esc(item.order ?? 0)}" /></label>
           </div>`;
       }
 
@@ -774,22 +831,64 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           </div>`;
       }
 
+      function renderProductSlugEditor(ref, path, title) {
+        const record = getRecord(ref);
+        const items = getPath(record, path) || [];
+        const currentSlug = record.draft.slug;
+        return `
+          <div class="admin-product-details">
+            <strong>${esc(title)}</strong>
+            <p class="admin-field-hint">Выберите изделия, которые будут показаны в блоке «Дополнить объект». Если список пустой, сайт подберет товары из той же или соседней категории.</p>
+            <div class="admin-product-specs">
+              ${items.map((slug, index) => `<div class="admin-product-spec-row">
+                <label class="admin-field"><span>Связанное изделие</span><select data-field-ref="${ref}" data-field-path="${path}.${index}">${productSlugOptions(slug, currentSlug)}</select></label>
+                <div class="admin-item-tools" style="grid-column: 1 / -1;">
+                  <button class="admin-btn" type="button" data-action="delete-array-item" data-ref="${ref}" data-path="${path}" data-index="${index}">Удалить</button>
+                </div>
+              </div>`).join('')}
+            </div>
+            <button class="admin-btn admin-btn--primary" type="button" data-action="add-related-product" data-ref="${ref}" data-path="${path}">Добавить связанное изделие</button>
+          </div>`;
+      }
+
       function renderProductPage(ref) {
         const item = getRecord(ref).draft;
         return `
-          <section class="section section--soft">
-            <div class="container page-block-media-layout">
-              <article class="media-block placeholder placeholder--wide-feature">
-                ${renderImageOnly(ref, 'image', 'imageView', 'wide')}
-                <p class="media-caption" ${editable(ref, 'placeholderLabel', 'Подпись фото')}>${esc(item.placeholderLabel || '')}</p>
-              </article>
-              <article class="card page-block-panel">
-                <span class="admin-badge">Модель изделия</span>
-                <h1 ${editable(ref, 'title', 'Название модели', true)}>${esc(item.title)}</h1>
-                <p class="lead" ${editable(ref, 'leadText', 'Лид-текст')}>${esc(item.leadText || '')}</p>
-                <p ${editable(ref, 'shortDescription', 'Краткое описание')}>${esc(item.shortDescription || '')}</p>
-                ${renderProductControls(ref)}
-              </article>
+          <section class="admin-panel">
+            <div class="container">
+              <div class="admin-panel-card admin-product-panel-grid">
+                <strong>Основное</strong>
+                <div class="admin-grid-2">
+                  ${renderField(ref, 'title', item.title)}
+                  ${renderField(ref, 'productCategorySlug', item.productCategorySlug)}
+                </div>
+                <div class="admin-grid-2">
+                  <label class="admin-field"><span>Лид-текст</span><textarea data-field-ref="${ref}" data-field-path="leadText">${esc(item.leadText || '')}</textarea></label>
+                  <label class="admin-field"><span>Краткое описание</span><textarea data-field-ref="${ref}" data-field-path="shortDescription">${esc(item.shortDescription || '')}</textarea></label>
+                </div>
+                <div class="admin-grid-3">
+                  <label class="admin-field"><span>Цена</span><input type="number" data-field-ref="${ref}" data-field-path="priceFrom" value="${esc(item.priceFrom ?? '')}" /></label>
+                  <label class="admin-field"><span>Режим цены</span><select data-field-ref="${ref}" data-field-path="priceMode"><option value="from" ${item.priceMode === 'from' ? 'selected' : ''}>от суммы</option><option value="on_request" ${item.priceMode === 'on_request' ? 'selected' : ''}>по запросу</option><option value="none" ${item.priceMode === 'none' ? 'selected' : ''}>индивидуальный расчет</option></select></label>
+                  ${renderField(ref, 'order', item.order)}
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="admin-panel">
+            <div class="container">
+              <div class="admin-panel-card admin-product-panel-grid">
+                <strong>Фото</strong>
+                <div class="admin-product-media-grid">
+                  <div>
+                    <strong>Текущее фото</strong>
+                    ${renderImageOnly(ref, 'image', 'imageView', 'wide')}
+                  </div>
+                  <div class="admin-product-panel-grid">
+                    ${renderField(ref, 'placeholderLabel', item.placeholderLabel)}
+                    <p class="admin-muted">Если подпись пустая, нижняя плашка под фото на странице товара не выводится.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
           <section class="admin-panel">
@@ -797,14 +896,40 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
               <div class="admin-panel-card">
                 <strong>Информация на странице товара</strong>
                 <label class="admin-field"><span>Подробное описание</span><textarea data-field-ref="${ref}" data-field-path="description">${esc(item.description || '')}</textarea></label>
+                ${renderArrayEditor(ref, 'gallery', 'Дополнительные фото')}
+                <p class="admin-field-hint">Для дополнительных фото укажите пути вида /assets/... или /uploads/.... Если фото одно, галерея на сайте не выводится.</p>
+                ${renderArrayEditor(ref, 'features', 'Преимущества товара')}
+                ${renderArrayEditor(ref, 'customizationItems', 'Пункты блока «Изготовление под задачу»')}
                 ${renderArrayEditor(ref, 'materials', 'Материалы')}
-                ${renderArrayEditor(ref, 'colors', 'Цвета')}
-                ${renderArrayEditor(ref, 'features', 'Особенности')}
+                ${renderArrayEditor(ref, 'colors', 'Цвета / покрытие')}
                 ${renderProductSpecEditor(ref, 'dimensions', 'Размеры и характеристики')}
               </div>
             </div>
           </section>
-          ${renderRecordSettings(ref, ['title', 'slug', 'productCategorySlug', 'sku', 'order', 'isActive', 'showInCatalog', 'seoTitle', 'seoDescription'])}`;
+          <section class="admin-panel">
+            <div class="container">
+              <div class="admin-panel-card admin-product-panel-grid">
+                <strong>Доставка и индивидуальный проект</strong>
+                <div class="admin-grid-2">
+                  ${renderField(ref, 'showDeliveryBlock', item.showDeliveryBlock)}
+                  ${renderField(ref, 'showCustomProjectBlock', item.showCustomProjectBlock)}
+                </div>
+                ${renderField(ref, 'deliveryText', item.deliveryText)}
+                <div class="admin-grid-2">
+                  ${renderField(ref, 'customProjectTitle', item.customProjectTitle)}
+                  ${renderField(ref, 'customProjectText', item.customProjectText)}
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="admin-panel">
+            <div class="container">
+              <div class="admin-panel-card">
+                ${renderProductSlugEditor(ref, 'relatedProductSlugs', 'Связанные товары')}
+              </div>
+            </div>
+          </section>
+          ${renderRecordSettings(ref, ['slug', 'sku', 'isActive', 'showInCatalog', 'seoTitle', 'seoDescription'])}`;
       }
 
       function renderJobsPage() {
@@ -1102,7 +1227,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (collection === 'product-sections') return { title, slug, shortDescription: 'Краткое описание раздела.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, showInMenu: true, menuTitle: title, showBadge: true, mode: 'custom-direction', image: '/assets/images/placeholders/street-furniture.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.', pageBlocks: [] };
         if (collection === 'services') return { title, slug, shortDescription: 'Краткое описание услуги.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, showInMenu: true, menuTitle: title, showBadge: true, image: '/assets/images/placeholders/construction.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.', pageBlocks: [] };
         if (collection === 'product-categories') return { title, slug, parentSectionSlug: fields.parentSectionSlug || 'ulichnaya-mebel', shortDescription: 'Краткое описание типа изделий.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showInSectionGrid: true, isActive: true, image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото будут добавлены позже.', mode: 'catalog-list', seoTitle: title, seoDescription: 'Описание страницы.' };
-        if (collection === 'products') return { title, slug, productCategorySlug: fields.productCategorySlug || 'lavochki-i-skameyki', sku: '', shortDescription: 'Краткое описание модели.', leadText: 'Описание изделия.', description: 'Подробное описание изделия, назначения и вариантов исполнения.', materials: ['Стальной каркас', 'Покрытие по согласованию'], colors: ['По палитре RAL'], dimensions: [{ label: 'Размер', value: 'Уточняется при расчете', order: 10, isActive: true }], features: ['Изготавливаем под задачу объекта'], priceMode: 'on_request', priceFrom: null, currency: 'RUB', image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото изделия будут добавлены позже.', order: nextOrder(collection), isActive: true, showInCatalog: true, seoTitle: title, seoDescription: 'Описание изделия.' };
+        if (collection === 'products') return { title, slug, productCategorySlug: fields.productCategorySlug || 'lavochki-i-skameyki', sku: '', shortDescription: 'Краткое описание модели.', leadText: 'Описание изделия.', description: 'Подробное описание изделия, назначения и вариантов исполнения.', materials: ['Стальной каркас', 'Покрытие по согласованию'], colors: ['По палитре RAL'], dimensions: [{ label: 'Размер', value: 'Уточняется при расчете', order: 10, isActive: true }], features: ['Изготавливаем под размеры объекта', 'Цвет металла по RAL', 'Доставка по России'], customizationItems: ['Размеры под объект', 'Цвет металла по RAL', 'Крепление и установка по задаче', 'Изготовим по фото, эскизу, ТЗ или чертежу'], gallery: [], showDeliveryBlock: true, deliveryText: '', relatedProductSlugs: [], showCustomProjectBlock: true, customProjectTitle: 'Не нашли подходящее изделие?', customProjectText: 'Изготовим решение под ваш объект: по фото, эскизу, размерам или техническому заданию.', priceMode: 'on_request', priceFrom: null, currency: 'RUB', image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото изделия будут добавлены позже.', order: nextOrder(collection), isActive: true, showInCatalog: true, seoTitle: title, seoDescription: 'Описание изделия.' };
         if (collection === 'projects') return { title, slug, city: 'Курган', shortDescription: 'Краткое описание объекта.', whatWasDone: 'Описание выполненных работ.', image: '/assets/images/objects/object-1.svg', gallery: ['/assets/images/objects/object-1.svg'], order: nextOrder(collection), isActive: true, year: new Date().getFullYear(), seoTitle: title, seoDescription: 'Описание объекта.' };
         if (collection === 'jobs') return { title, slug, city: 'Курган', employmentType: 'Полная занятость', salary: 'По договоренности', shortDescription: 'Краткое описание вакансии.', responsibilities: ['Новая обязанность'], requirements: ['Новое требование'], conditions: ['Новое условие'], order: nextOrder(collection), isActive: true };
         if (collection === 'static-pages') return { title, slug, seoTitle: title, seoDescription: 'Описание страницы.', order: nextOrder(collection), isActive: true, showInMenu: true, menuTitle: title, showBadge: true, heroKicker: '', heroTitle: title, heroDescription: 'Описание первого экрана.', image: '/assets/images/placeholders/construction.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, contactTitle: 'Не нашли, что искали?', contactDescription: 'Напишите нам, и мы подберем решение под задачу.', pageBlocks: [] };
@@ -1434,6 +1559,21 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           const arr = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
           arr.push('Новая строка');
           setPath(getRecord(el.dataset.ref), el.dataset.path, arr);
+          renderApp();
+          return;
+        }
+        if (action === 'add-related-product') {
+          const record = getRecord(el.dataset.ref);
+          const arr = getPath(record, el.dataset.path) || [];
+          const nextProduct = Object.values(state.records)
+            .filter((item) => item.collection === 'products' && item.draft.slug !== record.draft.slug && !arr.includes(item.draft.slug))
+            .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0))[0];
+          if (!nextProduct) {
+            setAlert('Нет доступных товаров для добавления.', true);
+            return;
+          }
+          arr.push(nextProduct.draft.slug);
+          setPath(record, el.dataset.path, arr);
           renderApp();
           return;
         }
