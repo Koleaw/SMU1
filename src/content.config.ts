@@ -15,15 +15,20 @@ const pageCardItemSchema = z.object({
   title: z.string(),
   text: z.string(),
   order: z.number(),
-  isActive: z.boolean().optional()
-}).strict();
+  isActive: z.boolean().optional(),
+  image: z.string().optional(),
+  imageView: imageViewSchema.optional(),
+  placeholderLabel: z.string().optional(),
+  buttonLabel: z.string().optional(),
+  buttonHref: z.string().optional()
+}).passthrough();
 
 const pageProcessStepSchema = z.object({
   title: z.string(),
   text: z.string().optional(),
   order: z.number(),
   isActive: z.boolean().optional()
-}).strict();
+}).passthrough();
 
 const productSpecItemSchema = z.object({
   label: z.string(),
@@ -32,90 +37,38 @@ const productSpecItemSchema = z.object({
   isActive: z.boolean().optional()
 }).strict();
 
-const pageListItemSchema = z.union([
-  z.string(),
-  z.object({
-    text: z.string(),
-    order: z.number().optional(),
-    isActive: z.boolean().optional()
-  }).strict()
-]);
-
-const pageBlockSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('cardGrid'),
-    title: z.string(),
-    intro: z.string().optional(),
-    theme: pageBlockThemeSchema,
-    grid: z.enum(['auto', '2', '3', '4']),
-    isActive: z.boolean().optional(),
-    order: z.number(),
-    items: z.array(pageCardItemSchema)
-  }).strict(),
-  z.object({
-    type: z.literal('listPanel'),
-    title: z.string(),
-    intro: z.string().optional(),
-    theme: pageBlockThemeSchema,
-    columns: z.union([z.literal(2), z.literal(3)]),
-    isActive: z.boolean().optional(),
-    order: z.number(),
-    items: z.array(pageListItemSchema)
-  }).strict(),
-  z.object({
-    type: z.literal('mediaText'),
-    title: z.string(),
-    text: z.string(),
-    theme: pageBlockThemeSchema,
-    media: z.string().optional(),
-    placeholderLabel: z.string().optional(),
-    mediaPosition: z.enum(['left', 'right']),
-    mediaView: imageViewSchema.optional(),
-    isActive: z.boolean().optional(),
-    order: z.number()
-  }).strict(),
-  z.object({
-    type: z.literal('process'),
-    title: z.string(),
-    intro: z.string().optional(),
-    theme: pageBlockThemeSchema,
-    media: z.string().optional(),
-    placeholderLabel: z.string().optional(),
-    mediaPosition: z.enum(['left', 'right']).optional(),
-    mediaView: imageViewSchema.optional(),
-    isActive: z.boolean().optional(),
-    order: z.number(),
-    steps: z.array(pageProcessStepSchema)
-  }).strict(),
-  z.object({
-    type: z.literal('factorList'),
-    title: z.string(),
-    intro: z.string().optional(),
-    theme: pageBlockThemeSchema,
-    columns: z.union([z.literal(2), z.literal(3)]),
-    isActive: z.boolean().optional(),
-    order: z.number(),
-    items: z.array(pageListItemSchema)
-  }).strict(),
-  z.object({
-    type: z.literal('notice'),
-    title: z.string(),
-    text: z.string(),
-    theme: pageBlockThemeSchema,
-    isActive: z.boolean().optional(),
-    order: z.number()
-  }).strict(),
-  z.object({
-    type: z.literal('exampleGrid'),
-    title: z.string(),
-    intro: z.string().optional(),
-    theme: pageBlockThemeSchema,
-    grid: z.enum(['auto', '2', '3', '4']),
-    isActive: z.boolean().optional(),
-    order: z.number(),
-    items: z.array(pageCardItemSchema)
-  }).strict()
-]);
+const pageBlockSchema = z.object({
+  type: z.string(),
+  title: z.string().optional(),
+  intro: z.string().optional(),
+  text: z.string().optional(),
+  theme: pageBlockThemeSchema.optional(),
+  background: pageBlockThemeSchema.optional(),
+  grid: z.enum(['auto', '2', '3', '4']).optional(),
+  columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional(),
+  isActive: z.boolean().optional(),
+  order: z.number(),
+  sectionId: z.string().optional(),
+  items: z.array(z.any()).optional(),
+  steps: z.array(pageProcessStepSchema).optional(),
+  media: z.string().optional(),
+  image: z.string().optional(),
+  video: z.string().optional(),
+  poster: z.string().optional(),
+  placeholderLabel: z.string().optional(),
+  mediaPosition: z.enum(['left', 'right']).optional(),
+  mediaView: imageViewSchema.optional(),
+  buttonLabel: z.string().optional(),
+  buttonHref: z.string().optional(),
+  textWidth: z.string().optional(),
+  textAlign: z.enum(['left', 'center', 'right']).optional(),
+  titleSize: z.string().optional(),
+  textSize: z.string().optional(),
+  textWeight: z.union([z.string(), z.number()]).optional(),
+  textItalic: z.boolean().optional(),
+  paddingTop: z.string().optional(),
+  paddingBottom: z.string().optional()
+}).passthrough();
 
 
 const productSections = defineCollection({
@@ -130,6 +83,14 @@ const productSections = defineCollection({
     showOnHome: z.boolean(),
     isActive: z.boolean(),
     mode: z.enum(['catalog-hub', 'custom-direction']),
+    showInMenu: z.boolean().optional(),
+    menuTitle: z.string().optional(),
+    heroKicker: z.string().optional(),
+    showBadge: z.boolean().optional(),
+    heroMediaVideo: z.string().optional(),
+    heroMediaVideoMobile: z.string().optional(),
+    heroMediaPoster: z.string().optional(),
+    heroOverlayOpacity: z.number().min(0).max(100).optional(),
     image: z.string(),
     imageView: imageViewSchema.optional(),
     placeholderLabel: z.string(),
@@ -204,6 +165,14 @@ const services = defineCollection({
     order: z.number(),
     showOnHome: z.boolean(),
     isActive: z.boolean(),
+    showInMenu: z.boolean().optional(),
+    menuTitle: z.string().optional(),
+    heroKicker: z.string().optional(),
+    showBadge: z.boolean().optional(),
+    heroMediaVideo: z.string().optional(),
+    heroMediaVideoMobile: z.string().optional(),
+    heroMediaPoster: z.string().optional(),
+    heroOverlayOpacity: z.number().min(0).max(100).optional(),
     image: z.string(),
     imageView: imageViewSchema.optional(),
     placeholderLabel: z.string(),
@@ -283,6 +252,11 @@ const staticPages = defineCollection({
     slug: z.string(),
     seoTitle: z.string(),
     seoDescription: z.string(),
+    isActive: z.boolean().optional(),
+    order: z.number().optional(),
+    showInMenu: z.boolean().optional(),
+    menuTitle: z.string().optional(),
+    showBadge: z.boolean().optional(),
     heroKicker: z.string().optional(),
     heroTitle: z.string(),
     heroDescription: z.string().optional(),

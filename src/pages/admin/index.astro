@@ -4,6 +4,7 @@ const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:
 
 const cards = [
   { title: 'Главная страница', description: 'Первый экран, блоки главной, направления, доверительный блок и контакты.', href: withBase('/admin/visual/?collection=static-pages&slug=home'), cta: 'Редактировать главную', primary: true },
+  { title: 'Страницы и услуги', description: 'Создание новых страниц, меню, публикация, hero-медиа и конструктор секций.', href: withBase('/admin/visual/?collection=static-pages'), cta: 'Открыть список страниц', primary: true },
   { title: 'Уличная мебель', description: 'Страница раздела, подстраницы лавочек, урн, вазонов, велопарковок и модели изделий внутри них.', href: withBase('/admin/visual/?collection=product-sections&slug=ulichnaya-mebel'), cta: 'Открыть раздел' },
   { title: 'Ограждения', description: 'Страница ограждений и вложенные типы: заборы, ворота, калитки, секции, перила и другие позиции.', href: withBase('/admin/visual/?collection=product-sections&slug=ograzhdeniya-i-zabory'), cta: 'Открыть раздел' },
   { title: 'Навесы', description: 'Страница направления навесов и козырьков с редактируемыми секциями.', href: withBase('/admin/visual/?collection=product-sections&slug=navesy-i-kozyrki'), cta: 'Редактировать навесы' },

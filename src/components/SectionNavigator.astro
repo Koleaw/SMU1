@@ -38,10 +38,10 @@ const shouldRender = safeItems.length >= 4;
       if (!(navRoot instanceof HTMLElement)) return;
       if (navRoot.dataset.sectionNavReady === 'true') return;
 
-      const links = Array.from(navRoot.querySelectorAll('[data-section-nav-link]'));
+      const links = Array.from(navRoot.querySelectorAll<HTMLAnchorElement>('[data-section-nav-link]'));
       if (!links.length) return;
 
-      const marker = navRoot.querySelector('[data-section-nav-marker]');
+      const marker = navRoot.querySelector<HTMLElement>('[data-section-nav-marker]');
 
       const getStickyOffset = () => {
         const header = document.querySelector('.site-header');
@@ -55,7 +55,7 @@ const shouldRender = safeItems.length >= 4;
         ...new Set(links.map((link) => link.getAttribute('data-section-nav-link')).filter(Boolean))
       ];
 
-      const parseColorChannels = (value) => {
+      const parseColorChannels = (value: string) => {
         const matches = value.match(/[\d.]+/g);
         if (!matches || matches.length < 3) return null;
 
@@ -68,7 +68,7 @@ const shouldRender = safeItems.length >= 4;
         };
       };
 
-      const resolveThemeFromColor = (colorValue) => {
+      const resolveThemeFromColor = (colorValue: string) => {
         const channels = parseColorChannels(colorValue);
         if (!channels) return null;
         if (channels.alpha === 0) return null;
@@ -77,7 +77,7 @@ const shouldRender = safeItems.length >= 4;
         return luminance < 0.53 ? 'dark' : 'light';
       };
 
-      const getThemeFromSection = (element) => {
+      const getThemeFromSection = (element?: Element | null) => {
         if (!(element instanceof HTMLElement)) return 'light';
 
         const host = element.closest('[data-section-theme], .section, .hero') ?? element;
@@ -91,7 +91,7 @@ const shouldRender = safeItems.length >= 4;
           return 'light';
         }
 
-        let current = host;
+        let current: HTMLElement | null = host;
         while (current instanceof HTMLElement && current !== document.body) {
           const colorTheme = resolveThemeFromColor(window.getComputedStyle(current).backgroundColor);
           if (colorTheme) return colorTheme;
@@ -107,14 +107,14 @@ const shouldRender = safeItems.length >= 4;
           if (!element) return null;
           return { id, el: element };
         })
-        .filter(Boolean);
+        .filter((section): section is { id: string; el: HTMLElement } => Boolean(section));
 
       if (sections.length < 4) {
         navRoot.remove();
         return;
       }
 
-      const setActive = (activeId, forcedTheme) => {
+      const setActive = (activeId: string, forcedTheme?: string) => {
         links.forEach((link) => {
           if (!(link instanceof HTMLAnchorElement)) return;
           const isActive = link.getAttribute('data-section-nav-link') === activeId;
@@ -148,7 +148,7 @@ const shouldRender = safeItems.length >= 4;
         });
       };
 
-      const scrollToSection = (sectionId) => {
+      const scrollToSection = (sectionId: string) => {
         const target = sections.find((section) => section.id === sectionId)?.el;
         if (!(target instanceof HTMLElement)) return;
 

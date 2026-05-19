@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
-import navItems from '../data/navigation.json';
 import { withBase } from '../utils/withBase';
+import { getNavigationItems } from '../utils/navigation';
 
 const settingsEntry = (await getCollection('site-settings'))[0];
 if (!settingsEntry) {
@@ -9,8 +9,8 @@ if (!settingsEntry) {
 }
 
 const site = settingsEntry.data;
+const navItems = await getNavigationItems();
 const telegramLabel = site.telegramLabel ?? site.telegram.replace(/^https?:\/\/t\.me\//, '@');
-const isActive = (href: string) => (href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href));
 const normalizePath = (path: string) => {
   const base = import.meta.env.BASE_URL || '/';
   const normalizedBase = base === '/' ? '/' : base.replace(/\/$/, '');
@@ -23,7 +23,12 @@ const normalizePath = (path: string) => {
   if (normalized !== '/' && !normalized.endsWith('/')) normalized = `${normalized}/`;
   return normalized;
 };
-const isHomePage = normalizePath(Astro.url.pathname) === '/';
+const currentPathname = normalizePath(Astro.url.pathname);
+const isActive = (href: string) => {
+  const normalizedHref = normalizePath(href);
+  return normalizedHref === '/' ? currentPathname === '/' : currentPathname === normalizedHref || currentPathname.startsWith(normalizedHref);
+};
+const isHomePage = currentPathname === '/';
 ---
 <div class={`mobile-menu-layer${isHomePage ? ' mobile-menu-layer--home' : ''}`} id="mobile-menu-layer" aria-hidden="true" data-mobile-menu-layer>
   <div class="container mobile-menu-layer__top">
@@ -83,7 +88,7 @@ const isHomePage = normalizePath(Astro.url.pathname) === '/';
     const openButton = document.querySelector('[data-mobile-menu-open]');
     const closeButton = document.querySelector('[data-mobile-menu-close]');
 
-    if (!menuLayer || !openButton || !closeButton) return;
+    if (!(menuLayer instanceof HTMLElement) || !(openButton instanceof HTMLElement) || !(closeButton instanceof HTMLElement)) return;
     if (menuLayer.dataset.mobileMenuReady === 'true') return;
 
     const links = menuLayer.querySelectorAll('[data-mobile-menu-link]');

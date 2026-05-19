@@ -1,6 +1,8 @@
 ---
-import navItems from '../data/navigation.json';
 import { withBase } from '../utils/withBase';
+import { getNavigationItems } from '../utils/navigation';
+
+const navItems = await getNavigationItems();
 
 const normalizePath = (path: string) => {
   const base = import.meta.env.BASE_URL || '/';

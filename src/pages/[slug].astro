@@ -440,6 +440,7 @@ const constructionContent = {
 export async function getStaticPaths() {
   const productSections = await getCollection('product-sections');
   const services = await getCollection('services');
+  const staticPages = await getCollection('static-pages');
 
   const productSectionPaths = productSections
     .filter(({ data }) => data.isActive && data.slug !== 'ulichnaya-mebel')
@@ -449,12 +450,37 @@ export async function getStaticPaths() {
     .filter(({ data }) => data.isActive)
     .map(({ data }) => ({ params: { slug: data.slug }, props: { item: data, itemType: 'service' } }));
 
-  return [...productSectionPaths, ...servicePaths];
+  const occupiedSlugs = new Set([
+    ...productSectionPaths.map((path) => path.params.slug),
+    ...servicePaths.map((path) => path.params.slug)
+  ]);
+
+  const staticPagePaths = staticPages
+    .filter(({ data }) => !['home', 'custom-order'].includes(data.slug))
+    .filter(({ data }) => data.isActive !== false)
+    .filter(({ data }) => !occupiedSlugs.has(data.slug))
+    .map(({ data }) => ({ params: { slug: data.slug }, props: { item: data, itemType: 'static-page' } }));
+
+  return [...productSectionPaths, ...servicePaths, ...staticPagePaths];
 }
 
 const { item, itemType } = Astro.props;
-const isCatalogHub = itemType === 'product-section' && item.mode === 'catalog-hub';
-const isProjectDirection = itemType === 'product-section' && item.mode === 'custom-direction';
+const itemAny = item as {
+  image?: string;
+  imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
+  heroKicker?: string;
+  showBadge?: boolean;
+  heroMediaVideo?: string;
+  heroMediaVideoMobile?: string;
+  heroMediaPoster?: string;
+  heroMediaCaption?: string;
+  heroOverlayOpacity?: number;
+  placeholderLabel?: string;
+  mode?: string;
+};
+const isCatalogHub = itemType === 'product-section' && itemAny.mode === 'catalog-hub';
+const isProjectDirection = itemType === 'product-section' && itemAny.mode === 'custom-direction';
+const isStaticPage = itemType === 'static-page';
 const isNavesyPage = itemType === 'product-section' && item.slug === 'navesy-i-kozyrki';
 const isMetalPage = itemType === 'product-section' && item.slug === 'metallokonstruktsii-dlya-biznesa';
 const isTopiaryPage = itemType === 'product-section' && item.slug === 'topiarii';
@@ -467,7 +493,7 @@ const editablePageBlocks = Array.isArray(item.pageBlocks)
       .sort((a, b) => a.order - b.order)
       .map((block, index) => ({
         ...block,
-        sectionId: `${item.slug}-block-${index + 1}`
+        sectionId: block.sectionId ?? `${item.slug}-block-${index + 1}`
       }))
   : [];
 const hasEditablePageBlocks = editablePageBlocks.length > 0;
@@ -475,7 +501,7 @@ const hasEditablePageBlocks = editablePageBlocks.length > 0;
 const sectionNavItems = hasEditablePageBlocks
   ? editablePageBlocks.map((block, index) => ({
       id: block.sectionId ?? `${item.slug}-block-${index + 1}`,
-      label: block.title
+      label: block.title ?? `Блок ${index + 1}`
     })).concat([{ id: 'direct-contact', label: 'Связаться напрямую' }])
   : isNavesyPage
     ? navesyContent.navItems
@@ -541,7 +567,20 @@ const contactDescription = pageContact.contactDescription?.trim() || defaultCont
 const contactTelegramLabel = pageContact.contactTelegramLabel?.trim() || defaultTelegramLabel;
 const contactEmailLabel = pageContact.contactEmailLabel?.trim() || defaultEmailLabel;
 const contactPhoneLabel = pageContact.contactPhoneLabel?.trim() || defaultPhoneLabel;
-const shouldShowSectionNavigator = isProjectDirection || itemType === 'service';
+const shouldShowSectionNavigator = isProjectDirection || itemType === 'service' || isStaticPage;
+const heroVideo = itemAny.heroMediaVideo;
+const heroPoster = itemAny.heroMediaPoster || itemAny.image;
+const hasMediaHero = !isCatalogHub && Boolean(heroVideo || heroPoster);
+const heroKicker = itemAny.showBadge === false
+  ? undefined
+  : itemAny.heroKicker || (isCatalogHub ? 'Каталог направлений' : isStaticPage ? 'СМУ-1' : 'Проектное направление');
+const heroClassName = hasMediaHero
+  ? isTopiaryPage
+    ? 'hero--media navesy-hero topiary-hero'
+    : 'hero--media navesy-hero'
+  : isCatalogHub
+    ? 'hero--catalog hero--catalog-clean'
+    : 'hero--project';
 ---
 <BaseLayout title={item.seoTitle} description={item.seoDescription}>
   {shouldShowSectionNavigator && <SectionNavigator items={sectionNavItems} />}
@@ -553,14 +592,19 @@ const shouldShowSectionNavigator = isProjectDirection || itemType === 'service';
   </div>
 
   <Hero
-    kicker={isCatalogHub ? 'Каталог направлений' : 'Проектное направление'}
-    className={isTopiaryPage ? 'hero--media navesy-hero topiary-hero' : isNavesyPage || isMetalPage || isLandscapingPage || isConstructionPage ? 'hero--media navesy-hero' : isCatalogHub ? 'hero--catalog hero--catalog-clean' : 'hero--project'}
+    kicker={heroKicker}
+    className={heroClassName}
     title={item.heroTitle}
     description={item.heroDescription}
-    mediaImage={isCatalogHub ? undefined : withBase(item.image)}
+    mediaType={heroVideo ? 'video' : 'image'}
+    mediaVideo={heroVideo ? withBase(heroVideo) : undefined}
+    mediaVideoMobile={itemAny.heroMediaVideoMobile ? withBase(itemAny.heroMediaVideoMobile) : undefined}
+    mediaImage={hasMediaHero && heroPoster ? withBase(heroPoster) : undefined}
+    mediaPoster={hasMediaHero && heroPoster ? withBase(heroPoster) : undefined}
     mediaAlt={isCatalogHub ? undefined : item.title}
-    mediaCaption={isCatalogHub || isNavesyPage ? undefined : item.placeholderLabel}
-    mediaView={isCatalogHub ? undefined : (item as { imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number } }).imageView}
+    mediaCaption={isCatalogHub || heroVideo ? itemAny.heroMediaCaption : itemAny.heroMediaCaption || itemAny.placeholderLabel}
+    overlayOpacity={itemAny.heroOverlayOpacity}
+    mediaView={isCatalogHub ? undefined : itemAny.imageView}
   />
 
   {isCatalogHub ? (
@@ -608,6 +652,15 @@ const shouldShowSectionNavigator = isProjectDirection || itemType === 'service';
     </>
   ) : hasEditablePageBlocks ? (
     <PageBlocksRenderer pageBlocks={editablePageBlocks} />
+  ) : isStaticPage ? (
+    <section class="section section--soft">
+      <div class="container">
+        <article class="card page-block-panel">
+          <h2>{item.title}</h2>
+          <p class="lead">{item.heroDescription}</p>
+        </article>
+      </div>
+    </section>
   ) : isNavesyPage ? (
     <>
       <section id="navesy-types" class="section section--dark" data-section-theme="dark">
@@ -707,7 +760,7 @@ const shouldShowSectionNavigator = isProjectDirection || itemType === 'service';
             </ul>
           </article>
           <article class="media-block placeholder placeholder--wide-feature">
-            <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
+            <img class="media-thumb" src={withBase(itemAny.image ?? '/assets/images/placeholders/construction.svg')} alt={item.title} loading="lazy" />
             <p class="media-caption">Фото или рендер выполненного объекта будет добавлен позже</p>
           </article>
         </div>
@@ -788,7 +841,7 @@ const shouldShowSectionNavigator = isProjectDirection || itemType === 'service';
       <section id="topiary-workflow" class="section navesy-section-compact">
         <div class="container topiary-workflow-layout">
           <article class="media-block placeholder placeholder--wide-feature">
-            <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
+            <img class="media-thumb" src={withBase(itemAny.image ?? '/assets/images/placeholders/construction.svg')} alt={item.title} loading="lazy" />
             <p class="media-caption">{topiaryContent.processMediaCaption}</p>
           </article>
           <article class="card topiary-panel topiary-panel--graphite">
@@ -870,7 +923,7 @@ const shouldShowSectionNavigator = isProjectDirection || itemType === 'service';
             </ul>
           </article>
           <article class="media-block placeholder placeholder--wide-feature">
-            <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
+            <img class="media-thumb" src={withBase(itemAny.image ?? '/assets/images/placeholders/construction.svg')} alt={item.title} loading="lazy" />
             <p class="media-caption">{landscapingContent.scopeMediaCaption}</p>
           </article>
         </div>
@@ -957,7 +1010,7 @@ const shouldShowSectionNavigator = isProjectDirection || itemType === 'service';
             </ul>
           </article>
           <article class="media-block placeholder placeholder--wide-feature">
-            <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
+            <img class="media-thumb" src={withBase(itemAny.image ?? '/assets/images/placeholders/construction.svg')} alt={item.title} loading="lazy" />
             <p class="media-caption">{constructionContent.scopeMediaCaption}</p>
           </article>
         </div>
@@ -1032,7 +1085,7 @@ const shouldShowSectionNavigator = isProjectDirection || itemType === 'service';
             </ul>
           </article>
           <article class="media-block placeholder placeholder--wide-feature project-media-block">
-            <img class="media-thumb" src={withBase(item.image)} alt={item.title} loading="lazy" />
+            <img class="media-thumb" src={withBase(itemAny.image ?? '/assets/images/placeholders/construction.svg')} alt={item.title} loading="lazy" />
             <p class="media-caption">{item.placeholderLabel}</p>
           </article>
         </div>

@@ -4317,3 +4317,44 @@ html.reveal-js [data-reveal].is-visible {
     transition: none;
   }
 }
+
+h1,
+h2,
+h3,
+h4,
+.hero h1,
+.hero--media h1,
+.section-title {
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: auto;
+}
+
+p,
+li,
+.lead,
+.hero-description,
+.btn,
+.site-header__nav a,
+.mobile-menu-layer__nav a {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.hero-content,
+.section-heading,
+.card,
+.home-product-card,
+.home-service-card,
+.category-choice-card,
+.product-showcase-card,
+.object-list-card,
+.page-block-panel {
+  min-width: 0;
+}
+
+.hero-actions .btn,
+.home-contact-actions .btn {
+  max-width: 100%;
+}

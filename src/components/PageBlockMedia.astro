@@ -1,0 +1,39 @@
+---
+import { withBase } from '../utils/withBase';
+
+type MediaView = { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
+
+interface Props {
+  block: {
+    title?: string;
+    image?: string;
+    media?: string;
+    video?: string;
+    poster?: string;
+    placeholderLabel?: string;
+    mediaView?: MediaView;
+  };
+  ratio?: 'card' | 'wide';
+}
+
+const { block, ratio = 'wide' } = Astro.props;
+const image = block.image || block.media || block.poster || '';
+const video = block.video || '';
+const poster = block.poster || image || '';
+const label = block.placeholderLabel || '';
+const view = { fit: 'cover', positionX: 50, positionY: 50, scale: 1, ...(block.mediaView || {}) };
+const imageStyle = `object-fit:${view.fit};object-position:${view.positionX}% ${view.positionY}%;transform:scale(${view.scale});transform-origin:center;`;
+const videoType = String(video || '').toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
+---
+{(image || video || label) && (
+  <article class={`media-block placeholder page-block-media page-block-media--${ratio}`}>
+    {video ? (
+      <video class="media-thumb page-block-media__video" autoplay muted loop playsinline preload="metadata" poster={poster ? withBase(poster) : undefined}>
+        <source src={withBase(video)} type={videoType} />
+      </video>
+    ) : image ? (
+      <img class="media-thumb" src={withBase(image)} alt={block.title || label || ''} loading="lazy" style={imageStyle} />
+    ) : null}
+    {label && <p class="media-caption">{label}</p>}
+  </article>
+)}

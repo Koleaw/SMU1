@@ -56,17 +56,18 @@ const heroImageStyle = `object-fit:${safeMediaView.fit};object-position:${safeMe
 const mediaVideoType = mediaVideo?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
 const mediaVideoMobileType = mediaVideoMobile?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
 const overlayStyle = `--hero-overlay-strength:${normalizePercent(overlayOpacity) / 100};`;
+const resolvedPoster = mediaPoster || mediaImage;
 ---
 <section class={heroClass}>
-  {(mediaImage || mediaPoster) && (
+  {(mediaImage || mediaPoster || mediaVideo) && (
     <div class="hero-media" aria-hidden="true" data-hero-media>
       {mediaType === 'video' && mediaVideo ? (
         <>
-          <video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster={mediaPoster} data-hero-video>
+          <video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster={resolvedPoster} data-hero-video>
             {mediaVideoMobile && <source src={mediaVideoMobile} type={mediaVideoMobileType} media="(max-width: 900px)" />}
             <source src={mediaVideo} type={mediaVideoType} />
           </video>
-          {mediaPoster && <img class="hero-media__fallback" src={mediaPoster} alt={mediaAlt} loading="eager" />}
+          {resolvedPoster && <img class="hero-media__fallback" src={resolvedPoster} alt={mediaAlt} loading="eager" style={heroImageStyle} />}
         </>
       ) : (
         <img class="hero-media__image" src={mediaImage ?? mediaPoster} alt={mediaAlt} loading="eager" style={heroImageStyle} />

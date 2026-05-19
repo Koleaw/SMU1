@@ -69,6 +69,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
       .admin-panel { padding: 20px 0; background: #f7fafb; border-block: 1px solid rgb(16 22 27 / 8%); }
       .admin-panel-card { display: grid; gap: 12px; padding: 16px; border: 1px solid #d0dbe4; border-radius: 12px; background: #fff; }
+      .admin-block-settings { margin-bottom: 16px; padding: 12px; border: 1px solid #d0dbe4; border-radius: 10px; background: rgb(255 255 255 / 78%); }
+      .admin-block-settings summary { cursor: pointer; font-weight: 800; color: #31485d; }
+      .admin-block-settings__body { display: grid; gap: 12px; margin-top: 12px; }
       .admin-product-details { display: grid; gap: 18px; }
       .admin-product-specs { display: grid; gap: 10px; }
       .admin-product-spec-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 10px; padding: 12px; border: 1px solid #d8e2eb; border-radius: 10px; background: #fff; }
@@ -192,14 +195,23 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         { label: 'Все служебные страницы', collection: 'static-pages', slug: '' }
       ];
       const SECTION_TYPES = [
+        ['heroSection', 'Hero-секция'],
+        ['textBlock', 'Текстовый блок'],
+        ['whoWeAre', 'Кто мы и что делаем'],
+        ['directionCards', 'Карточки направлений / решений'],
+        ['benefits', 'Преимущества'],
+        ['process', 'Этапы работы'],
+        ['gallery', 'Галерея'],
+        ['cta', 'CTA'],
+        ['faq', 'FAQ'],
+        ['customOrder', 'Изготавливаем под объект'],
+        ['costFactors', 'Что влияет на стоимость'],
         ['cardGrid', 'Карточки'],
         ['listPanel', 'Список'],
-        ['process', 'Процесс'],
-        ['factorList', 'Факторы стоимости'],
         ['mediaText', 'Фото + текст'],
-        ['notice', 'Текстовая вставка'],
-        ['exampleGrid', 'Примеры']
+        ['notice', 'Текстовая вставка']
       ];
+      const SECTION_TYPE_LABELS = Object.fromEntries(SECTION_TYPES);
       const state = {
         collection: null,
         selectedSlug: null,
@@ -539,10 +551,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const item = record.draft;
         const isCatalog = item.mode === 'catalog-hub';
         const settingsFields = record.collection === 'product-sections'
-          ? ['title', 'slug', 'shortDescription', 'order', 'showOnHome', 'isActive', 'mode', 'seoTitle', 'seoDescription']
-          : ['title', 'slug', 'shortDescription', 'order', 'showOnHome', 'isActive', 'seoTitle', 'seoDescription'];
+          ? ['title', 'slug', 'shortDescription', 'order', 'showOnHome', 'isActive', 'showInMenu', 'menuTitle', 'showBadge', 'mode', 'seoTitle', 'seoDescription']
+          : ['title', 'slug', 'shortDescription', 'order', 'showOnHome', 'isActive', 'showInMenu', 'menuTitle', 'showBadge', 'seoTitle', 'seoDescription'];
         return `
           ${renderHero(ref, isCatalog ? 'catalog' : 'media')}
+          ${renderHeroMediaPanel(ref)}
           ${renderRecordSettings(ref, settingsFields)}
           ${isCatalog ? renderCatalogHub(ref) : renderPageBlocks(ref)}
           ${renderContactBlock(ref)}
@@ -555,17 +568,24 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const hasMedia = mode === 'media';
         const target = `${ref}:image`;
         const isCrop = state.crop?.target === target;
+        const video = item.heroMediaVideo || '';
+        const poster = item.heroMediaPoster || item.image || '';
+        const overlayStyle = heroOverlayStyle(item.heroOverlayOpacity);
+        const mediaMarkup = video
+          ? `<video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster="${esc(toSrc(poster))}"><source src="${esc(toSrc(video))}" type="${esc(mediaMimeType(video))}" /></video>${poster ? `<img class="hero-media__fallback" src="${esc(toSrc(poster))}" alt="${esc(item.title)}" />` : ''}`
+          : item.image
+            ? `<img class="hero-media__image" data-image-img="${esc(target)}" src="${esc(toSrc(item.image))}" alt="${esc(item.title)}" style="${esc(mediaStyle(item.imageView))}" />`
+            : '<div class="admin-media-empty">Фото не выбрано</div>';
         return `
           <section class="hero ${hasMedia ? 'hero--media navesy-hero' : 'hero--catalog hero--catalog-clean'}">
-            ${hasMedia ? `<div class="admin-media-frame admin-media-frame--hero ${isCrop ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${item.image ? `<img class="hero-media__image" data-image-img="${esc(target)}" src="${esc(toSrc(item.image))}" alt="${esc(item.title)}" style="${esc(mediaStyle(item.imageView))}" />` : '<div class="admin-media-empty">Фото не выбрано</div>'}<div class="hero-media__overlay"></div></div>` : ''}
+            ${hasMedia ? `<div class="admin-media-frame admin-media-frame--hero ${isCrop && !video ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${mediaMarkup}<div class="hero-media__overlay" style="${esc(overlayStyle)}"></div></div>` : ''}
             <div class="container hero-content">
-              <p class="kicker">${hasMedia ? 'Проектное направление' : 'Каталог изделий'}</p>
+              <p class="kicker" ${editable(ref, 'heroKicker', 'Надзаголовок', true)}>${esc(item.showBadge === false ? '' : item.heroKicker || (hasMedia ? 'Проектное направление' : 'Каталог изделий'))}</p>
               <h1 ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(item.heroTitle || item.title)}</h1>
               <p class="hero-description" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(item.heroDescription || item.shortDescription || '')}</p>
-              ${hasMedia ? renderMediaButtons(ref, 'image', 'imageView', target, 'placeholderLabel') : ''}
             </div>
           </section>
-          ${hasMedia && isCrop ? renderCropControls() : ''}
+          ${hasMedia && isCrop && !video ? renderCropControls() : ''}
         `;
       }
 
@@ -585,10 +605,44 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function renderField(ref, field, value) {
-        if (typeof value === 'boolean') return `<label class="admin-field"><span>${field}</span><select data-field-ref="${ref}" data-field-path="${field}" data-field-type="boolean"><option value="true" ${value ? 'selected' : ''}>Да</option><option value="false" ${!value ? 'selected' : ''}>Нет</option></select></label>`;
-        if (typeof value === 'number') return `<label class="admin-field"><span>${field}</span><input type="number" data-field-ref="${ref}" data-field-path="${field}" value="${esc(value)}" /></label>`;
+        const booleanFields = new Set(['showOnHome', 'showInSectionGrid', 'isActive', 'showInCatalog', 'showInMenu', 'showBadge']);
+        const numberFields = new Set(['order', 'year', 'heroOverlayOpacity']);
+        if (typeof value === 'boolean' || booleanFields.has(field)) {
+          const normalized = value !== false;
+          return `<label class="admin-field"><span>${field}</span><select data-field-ref="${ref}" data-field-path="${field}" data-field-type="boolean"><option value="true" ${normalized ? 'selected' : ''}>Да</option><option value="false" ${!normalized ? 'selected' : ''}>Нет</option></select></label>`;
+        }
+        if (typeof value === 'number' || numberFields.has(field)) return `<label class="admin-field"><span>${field}</span><input type="number" data-field-ref="${ref}" data-field-path="${field}" value="${esc(value ?? '')}" /></label>`;
         if (field === 'mode') return `<label class="admin-field"><span>${field}</span><select data-field-ref="${ref}" data-field-path="${field}"><option value="catalog-hub" ${value === 'catalog-hub' ? 'selected' : ''}>catalog-hub</option><option value="custom-direction" ${value === 'custom-direction' ? 'selected' : ''}>custom-direction</option><option value="catalog-list" ${value === 'catalog-list' ? 'selected' : ''}>catalog-list</option><option value="custom-list" ${value === 'custom-list' ? 'selected' : ''}>custom-list</option></select></label>`;
         return `<label class="admin-field"><span>${field}</span><input data-field-ref="${ref}" data-field-path="${field}" value="${esc(value ?? '')}" ${field === 'slug' ? 'readonly' : ''} /></label>`;
+      }
+
+      function renderHeroMediaPanel(ref) {
+        const imageTarget = `${ref}:image`;
+        const posterTarget = `${ref}:heroMediaPoster`;
+        return `
+          <section class="admin-panel">
+            <div class="container">
+              <div class="admin-panel-card">
+                <strong>Hero-медиа</strong>
+                <p class="admin-muted">Видео работает как фоновое: muted, autoplay, loop, playsinline. Poster показывается до загрузки видео и при ошибке. Если poster не задан, используется hero-фото.</p>
+                <div class="admin-grid-2">
+                  <div>
+                    <strong>Hero-фото</strong>
+                    ${renderMediaButtons(ref, 'image', 'imageView', imageTarget)}
+                  </div>
+                  <div>
+                    <strong>Poster / превью видео</strong>
+                    ${renderMediaButtons(ref, 'heroMediaPoster', '', posterTarget)}
+                  </div>
+                </div>
+                <div class="admin-grid-2">
+                  ${renderVideoButtons(ref, 'heroMediaVideo', 'Hero-видео')}
+                  ${renderVideoButtons(ref, 'heroMediaVideoMobile', 'Hero-видео для мобильных')}
+                </div>
+                ${renderHeroOverlayControl(ref)}
+              </div>
+            </div>
+          </section>`;
       }
 
       function renderCatalogHub(ref) {
@@ -819,7 +873,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (page.slug === 'home') return renderHomePage(ref);
         return `
           ${renderStaticHero(ref, 'hero--service')}
-          ${renderRecordSettings(ref, ['title', 'slug', 'seoTitle', 'seoDescription'])}
+          ${renderHeroMediaPanel(ref)}
+          ${renderRecordSettings(ref, ['title', 'slug', 'order', 'isActive', 'showInMenu', 'menuTitle', 'showBadge', 'seoTitle', 'seoDescription'])}
           ${renderPageBlocks(ref)}
           ${renderContactBlock(ref)}
         `;
@@ -827,17 +882,17 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function renderStaticHero(ref, className = 'hero--catalog-clean') {
         const page = getRecord(ref).draft;
-        const target = `${ref}:heroMediaPoster`;
-        const isCrop = state.crop?.target === target;
         const isHomePage = page.slug === 'home';
         const video = page.heroMediaVideo || '';
         const hasMedia = Boolean(video || page.heroMediaPoster || page.image);
         const mediaPath = (page.heroMediaPoster || isHomePage) ? 'heroMediaPoster' : 'image';
+        const target = `${ref}:${mediaPath}`;
+        const isCrop = state.crop?.target === target;
         const image = getPath(getRecord(ref), mediaPath);
         const poster = page.heroMediaPoster || page.image || '';
         const overlayStyle = heroOverlayStyle(page.heroOverlayOpacity);
         const mediaMarkup = video
-          ? `<video class="hero-media__video" autoplay muted loop playsinline poster="${esc(toSrc(poster))}"><source src="${esc(toSrc(video))}" type="${esc(mediaMimeType(video))}" /></video>`
+          ? `<video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster="${esc(toSrc(poster))}"><source src="${esc(toSrc(video))}" type="${esc(mediaMimeType(video))}" /></video>${poster ? `<img class="hero-media__fallback" src="${esc(toSrc(poster))}" alt="${esc(page.title)}" />` : ''}`
           : image
             ? `<img class="hero-media__image" data-image-img="${esc(target)}" src="${esc(toSrc(image))}" alt="${esc(page.title)}" style="${esc(mediaStyle(page.imageView))}" />`
             : '<div class="admin-media-empty">Фото не выбрано</div>';
@@ -845,13 +900,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           <section class="hero ${hasMedia ? 'hero--media' : className}">
             ${hasMedia ? `<div class="admin-media-frame admin-media-frame--hero ${isCrop && !video ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${mediaMarkup}<div class="hero-media__overlay" style="${esc(overlayStyle)}"></div></div>` : ''}
             <div class="container hero-content">
-              <p class="kicker" ${editable(ref, 'heroKicker', 'Надзаголовок', true)}>${esc(page.heroKicker || '')}</p>
+              ${page.showBadge === false ? '' : `<p class="kicker" ${editable(ref, 'heroKicker', 'Надзаголовок', true)}>${esc(page.heroKicker || '')}</p>`}
               <h1 ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(page.heroTitle || page.title)}</h1>
               <p class="hero-description" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(page.heroDescription || '')}</p>
-              ${hasMedia ? renderMediaButtons(ref, mediaPath, video ? '' : 'imageView', target, 'heroMediaCaption') : ''}
-              ${isHomePage ? renderVideoButtons(ref, 'heroMediaVideo', 'Видео для компьютеров') : ''}
-              ${isHomePage ? renderVideoButtons(ref, 'heroMediaVideoMobile', 'Видео для телефонов') : ''}
-              ${isHomePage && hasMedia ? renderHeroOverlayControl(ref) : ''}
             </div>
           </section>
           ${hasMedia && isCrop && !video ? renderCropControls() : ''}`;
@@ -868,7 +919,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const pathways = Array.isArray(page.pathwayCards) ? page.pathwayCards : (page.pathwayCards = []);
         return `
           ${renderStaticHero(ref, 'hero--media')}
-          ${renderRecordSettings(ref, ['title', 'slug', 'seoTitle', 'seoDescription'])}
+          ${renderHeroMediaPanel(ref)}
+          ${renderRecordSettings(ref, ['title', 'slug', 'order', 'isActive', 'showInMenu', 'menuTitle', 'showBadge', 'seoTitle', 'seoDescription'])}
+          ${renderPageBlocks(ref)}
           <section class="home-pathways section">
             <div class="container">
               <div class="section-heading home-pathways__heading">
@@ -921,7 +974,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const record = getRecord(ref);
         const blocks = Array.isArray(record.draft.pageBlocks) ? record.draft.pageBlocks : (record.draft.pageBlocks = []);
         return `
-          <section class="admin-create"><div class="container"><div class="admin-create-panel"><strong>Добавить секцию</strong><div class="admin-create-grid"><select id="newBlockType" class="admin-select">${SECTION_TYPES.map(([type, label]) => `<option value="${type}">${label}</option>`).join('')}</select><button class="admin-btn admin-btn--primary" type="button" data-action="add-block" data-ref="${ref}">Добавить</button></div></div></div></section>
+          <section class="admin-create"><div class="container"><div class="admin-create-panel"><strong>Секции страницы</strong><p class="admin-muted">Добавляйте, скрывайте, удаляйте и меняйте порядок блоков. Кнопки «Выше» и «Ниже» сразу переставляют секцию в данных.</p><div class="admin-create-grid"><select id="newBlockType" class="admin-select">${SECTION_TYPES.map(([type, label]) => `<option value="${type}">${label}</option>`).join('')}</select><button class="admin-btn admin-btn--primary" type="button" data-action="add-block" data-ref="${ref}">Добавить секцию</button></div></div></div></section>
           ${blocks.map((block, index) => renderBlock(ref, block, index)).join('')}`;
       }
 
@@ -932,26 +985,74 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function renderBlockToolbar(ref, block, index) {
-        return `<div class="admin-tools"><span class="admin-badge">${esc(block.type)}</span>${block.isActive === false ? '<span class="admin-badge admin-badge--hidden">Скрыта</span>' : ''}<button class="admin-btn" type="button" data-action="move-block" data-ref="${ref}" data-index="${index}" data-dir="-1">Выше</button><button class="admin-btn" type="button" data-action="move-block" data-ref="${ref}" data-index="${index}" data-dir="1">Ниже</button><button class="admin-btn" type="button" data-action="toggle-block" data-ref="${ref}" data-index="${index}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><select class="admin-select" data-field-ref="${ref}" data-field-path="pageBlocks.${index}.theme"><option value="dark" ${block.theme === 'dark' ? 'selected' : ''}>dark</option><option value="light" ${block.theme === 'light' ? 'selected' : ''}>light</option><option value="graphite" ${block.theme === 'graphite' ? 'selected' : ''}>graphite</option></select><button class="admin-btn admin-btn--danger" type="button" data-action="delete-block" data-ref="${ref}" data-index="${index}">Удалить секцию</button></div>`;
+        return `<div class="admin-tools"><span class="admin-badge">${esc(SECTION_TYPE_LABELS[block.type] || block.type)}</span>${block.isActive === false ? '<span class="admin-badge admin-badge--hidden">Скрыта</span>' : ''}<button class="admin-btn" type="button" data-action="move-block" data-ref="${ref}" data-index="${index}" data-dir="-1">Выше</button><button class="admin-btn" type="button" data-action="move-block" data-ref="${ref}" data-index="${index}" data-dir="1">Ниже</button><button class="admin-btn" type="button" data-action="toggle-block" data-ref="${ref}" data-index="${index}">${block.isActive === false ? 'Показать' : 'Скрыть'}</button><select class="admin-select" data-field-ref="${ref}" data-field-path="pageBlocks.${index}.theme"><option value="dark" ${block.theme === 'dark' ? 'selected' : ''}>Темный фон</option><option value="light" ${block.theme === 'light' ? 'selected' : ''}>Светлый фон</option><option value="graphite" ${block.theme === 'graphite' ? 'selected' : ''}>Графитовая карточка</option></select><button class="admin-btn admin-btn--danger" type="button" data-action="delete-block" data-ref="${ref}" data-index="${index}">Удалить секцию</button></div>${renderBlockSettings(ref, block, index)}`;
+      }
+
+      function renderBlockSettings(ref, block, index) {
+        const isCards = ['cardGrid', 'exampleGrid', 'benefits', 'directionCards', 'solutions', 'gallery'].includes(block.type);
+        const isList = ['listPanel', 'factorList', 'costFactors'].includes(block.type);
+        return `
+          <details class="admin-block-settings">
+            <summary>Настройки секции</summary>
+            <div class="admin-block-settings__body">
+              <div class="admin-grid-3">
+                <label class="admin-field"><span>ID секции</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.sectionId" value="${esc(block.sectionId || '')}" placeholder="about-company" /></label>
+                <label class="admin-field"><span>Отступ сверху</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.paddingTop" value="${esc(block.paddingTop || '')}" placeholder="56px" /></label>
+                <label class="admin-field"><span>Отступ снизу</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.paddingBottom" value="${esc(block.paddingBottom || '')}" placeholder="56px" /></label>
+              </div>
+              <div class="admin-grid-3">
+                ${isCards ? `<label class="admin-field"><span>Колонки карточек</span><select data-field-ref="${ref}" data-field-path="pageBlocks.${index}.grid"><option value="auto" ${(block.grid || 'auto') === 'auto' ? 'selected' : ''}>Авто</option><option value="2" ${block.grid === '2' ? 'selected' : ''}>2</option><option value="3" ${block.grid === '3' ? 'selected' : ''}>3</option><option value="4" ${block.grid === '4' ? 'selected' : ''}>4</option></select></label>` : ''}
+                ${isList ? `<label class="admin-field"><span>Колонки списка</span><select data-field-ref="${ref}" data-field-path="pageBlocks.${index}.columns" data-field-type="number"><option value="2" ${Number(block.columns || 2) === 2 ? 'selected' : ''}>2</option><option value="3" ${Number(block.columns || 2) === 3 ? 'selected' : ''}>3</option></select></label>` : ''}
+                <label class="admin-field"><span>Ширина текста</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.textWidth" value="${esc(block.textWidth || '')}" placeholder="760px / 62ch" /></label>
+                <label class="admin-field"><span>Выравнивание</span><select data-field-ref="${ref}" data-field-path="pageBlocks.${index}.textAlign"><option value="left" ${(block.textAlign || 'left') === 'left' ? 'selected' : ''}>Слева</option><option value="center" ${block.textAlign === 'center' ? 'selected' : ''}>По центру</option><option value="right" ${block.textAlign === 'right' ? 'selected' : ''}>Справа</option></select></label>
+              </div>
+              <div class="admin-grid-3">
+                <label class="admin-field"><span>Размер заголовка</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.titleSize" value="${esc(block.titleSize || '')}" placeholder="40px" /></label>
+                <label class="admin-field"><span>Размер текста</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.textSize" value="${esc(block.textSize || '')}" placeholder="18px" /></label>
+                <label class="admin-field"><span>Жирность текста</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.textWeight" value="${esc(block.textWeight || '')}" placeholder="400 / 600 / 700" /></label>
+              </div>
+              <div class="admin-grid-3">
+                <label class="admin-field"><span>Курсив</span><select data-field-ref="${ref}" data-field-path="pageBlocks.${index}.textItalic" data-field-type="boolean"><option value="false" ${block.textItalic !== true ? 'selected' : ''}>Нет</option><option value="true" ${block.textItalic === true ? 'selected' : ''}>Да</option></select></label>
+                <label class="admin-field"><span>Подпись кнопки</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.buttonLabel" value="${esc(block.buttonLabel || '')}" /></label>
+                <label class="admin-field"><span>Ссылка кнопки</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.buttonHref" value="${esc(block.buttonHref || '')}" placeholder="/kontakty/" /></label>
+              </div>
+            </div>
+          </details>`;
       }
 
       function renderBlock(ref, block, index) {
-        if (block.type === 'cardGrid' || block.type === 'exampleGrid') {
+        const cardTypes = ['cardGrid', 'exampleGrid', 'benefits', 'directionCards', 'solutions'];
+        const listTypes = ['listPanel', 'factorList', 'costFactors'];
+        const mediaTextTypes = ['mediaText', 'whoWeAre', 'heroSection'];
+
+        if (cardTypes.includes(block.type) || block.type === 'gallery') {
           const items = Array.isArray(block.items) ? block.items : [];
-          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}<div class="${block.theme === 'dark' ? 'section-heading section-heading--light' : 'section-heading'}"><h2 class="section-title" ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок секции', true)}>${esc(block.title)}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p></div><div class="page-blocks-grid page-blocks-grid--${esc(block.grid || 'auto')}">${items.map((item, itemIndex) => `<article class="card page-block-card ${item.isActive === false ? 'admin-card-hidden' : ''}"><h3 ${editable(ref, `pageBlocks.${index}.items.${itemIndex}.title`, 'Заголовок карточки', true)}>${esc(item.title)}</h3><p ${editable(ref, `pageBlocks.${index}.items.${itemIndex}.text`, 'Текст карточки')}>${esc(item.text)}</p><div class="admin-item-tools"><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="-1">Выше</button><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="1">Ниже</button><button class="admin-btn admin-btn--danger" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">Удалить</button></div></article>`).join('')}</div><div class="admin-item-tools"><button class="admin-btn admin-btn--primary" type="button" data-action="add-block-card" data-ref="${ref}" data-index="${index}">Добавить карточку</button></div></div></section>`;
+          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}<div class="${block.theme === 'dark' ? 'section-heading section-heading--light' : 'section-heading'}"><h2 class="section-title" ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок секции', true)}>${esc(block.title || '')}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p></div><div class="page-blocks-grid page-blocks-grid--${esc(block.grid || 'auto')}">${items.map((item, itemIndex) => {
+            const itemPath = `pageBlocks.${index}.items.${itemIndex}`;
+            const isObject = typeof item === 'object' && item !== null;
+            const titlePath = isObject ? `${itemPath}.title` : itemPath;
+            const textPath = isObject ? `${itemPath}.text` : itemPath;
+            const itemTitle = isObject ? item.title : item;
+            const itemText = isObject ? item.text : '';
+            return `<article class="card page-block-card ${isObject && item.isActive === false ? 'admin-card-hidden' : ''}">${isObject ? renderImageOnly(ref, `${itemPath}.image`, `${itemPath}.imageView`, 'card') : ''}<h3 ${editable(ref, titlePath, 'Заголовок карточки', true)}>${esc(itemTitle || '')}</h3><p ${editable(ref, textPath, 'Текст карточки')}>${esc(itemText || '')}</p>${isObject ? `<div class="admin-grid-2"><label class="admin-field"><span>Подпись кнопки</span><input data-field-ref="${ref}" data-field-path="${itemPath}.buttonLabel" value="${esc(item.buttonLabel || '')}" /></label><label class="admin-field"><span>Ссылка кнопки</span><input data-field-ref="${ref}" data-field-path="${itemPath}.buttonHref" value="${esc(item.buttonHref || '')}" /></label></div>` : ''}<div class="admin-item-tools"><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="-1">Выше</button><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="1">Ниже</button>${isObject ? `<button class="admin-btn" type="button" data-action="toggle-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">${item.isActive === false ? 'Показать' : 'Скрыть'}</button>` : ''}<button class="admin-btn admin-btn--danger" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">Удалить</button></div></article>`;
+          }).join('')}</div><div class="admin-item-tools"><button class="admin-btn admin-btn--primary" type="button" data-action="add-block-card" data-ref="${ref}" data-index="${index}">Добавить карточку</button></div></div></section>`;
         }
-        if (block.type === 'listPanel' || block.type === 'factorList') {
+        if (listTypes.includes(block.type)) {
           const items = Array.isArray(block.items) ? block.items : [];
-          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}<article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок секции', true)}>${esc(block.title)}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p><ul class="page-blocks-columns page-blocks-columns--${Number(block.columns) === 3 ? '3' : '2'}">${items.map((item, itemIndex) => `<li><span ${editable(ref, `pageBlocks.${index}.items.${itemIndex}${typeof item === 'string' ? '' : '.text'}`, 'Строка')}>${esc(typeof item === 'string' ? item : item.text)}</span> <button class="admin-btn" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">Удалить</button></li>`).join('')}</ul><div class="admin-item-tools"><button class="admin-btn admin-btn--primary" type="button" data-action="add-block-row" data-ref="${ref}" data-index="${index}">Добавить строку</button></div></article></div></section>`;
+          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}<article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок секции', true)}>${esc(block.title || '')}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p><ul class="page-blocks-columns page-blocks-columns--${Number(block.columns) === 3 ? '3' : '2'}">${items.map((item, itemIndex) => `<li class="${typeof item === 'object' && item?.isActive === false ? 'admin-row-hidden' : ''}"><span ${editable(ref, `pageBlocks.${index}.items.${itemIndex}${typeof item === 'string' ? '' : '.text'}`, 'Строка')}>${esc(typeof item === 'string' ? item : item.text || item.title || '')}</span> <span class="admin-item-tools"><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="-1">Выше</button><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="1">Ниже</button>${typeof item === 'object' ? `<button class="admin-btn" type="button" data-action="toggle-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">${item.isActive === false ? 'Показать' : 'Скрыть'}</button>` : ''}<button class="admin-btn" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">Удалить</button></span></li>`).join('')}</ul><div class="admin-item-tools"><button class="admin-btn admin-btn--primary" type="button" data-action="add-block-row" data-ref="${ref}" data-index="${index}">Добавить строку</button></div></article></div></section>`;
         }
         if (block.type === 'process') {
           const steps = Array.isArray(block.steps) ? block.steps : [];
-          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}</div><div class="container page-block-media-layout ${block.mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}"><article class="media-block placeholder placeholder--wide-feature">${renderImageOnly(ref, `pageBlocks.${index}.media`, `pageBlocks.${index}.mediaView`, 'wide')}<p class="media-caption" ${editable(ref, `pageBlocks.${index}.placeholderLabel`, 'Подпись')}>${esc(block.placeholderLabel || '')}</p></article><article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок', true)}>${esc(block.title)}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p><ol class="page-block-steps">${steps.map((step, stepIndex) => `<li><strong ${editable(ref, `pageBlocks.${index}.steps.${stepIndex}.title`, 'Шаг', true)}>${esc(step.title)}</strong><p ${editable(ref, `pageBlocks.${index}.steps.${stepIndex}.text`, 'Описание шага')}>${esc(step.text || '')}</p><button class="admin-btn" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="steps" data-index="${stepIndex}">Удалить</button></li>`).join('')}</ol><button class="admin-btn admin-btn--primary" type="button" data-action="add-block-step" data-ref="${ref}" data-index="${index}">Добавить шаг</button></article></div></section>`;
+          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}</div><div class="container page-block-media-layout ${block.mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}"><article class="media-block placeholder placeholder--wide-feature">${renderImageOnly(ref, `pageBlocks.${index}.media`, `pageBlocks.${index}.mediaView`, 'wide')}<p class="media-caption" ${editable(ref, `pageBlocks.${index}.placeholderLabel`, 'Подпись')}>${esc(block.placeholderLabel || '')}</p></article><article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок', true)}>${esc(block.title || '')}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p><ol class="page-block-steps">${steps.map((step, stepIndex) => `<li class="${step.isActive === false ? 'admin-row-hidden' : ''}"><strong ${editable(ref, `pageBlocks.${index}.steps.${stepIndex}.title`, 'Шаг', true)}>${esc(step.title || '')}</strong><p ${editable(ref, `pageBlocks.${index}.steps.${stepIndex}.text`, 'Описание шага')}>${esc(step.text || '')}</p><div class="admin-item-tools"><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="steps" data-index="${stepIndex}" data-dir="-1">Выше</button><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="steps" data-index="${stepIndex}" data-dir="1">Ниже</button><button class="admin-btn" type="button" data-action="toggle-block-item" data-ref="${ref}" data-block="${index}" data-list="steps" data-index="${stepIndex}">${step.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="admin-btn" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="steps" data-index="${stepIndex}">Удалить</button></div></li>`).join('')}</ol><button class="admin-btn admin-btn--primary" type="button" data-action="add-block-step" data-ref="${ref}" data-index="${index}">Добавить шаг</button></article></div></section>`;
         }
-        if (block.type === 'mediaText') {
-          return `<section class="${sectionClass(block.theme)}"><div class="container">${renderBlockToolbar(ref, block, index)}</div><div class="container page-block-media-layout ${block.mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}"><article class="media-block placeholder placeholder--wide-feature">${renderImageOnly(ref, `pageBlocks.${index}.media`, `pageBlocks.${index}.mediaView`, 'wide')}<p class="media-caption" ${editable(ref, `pageBlocks.${index}.placeholderLabel`, 'Подпись')}>${esc(block.placeholderLabel || '')}</p></article><article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок', true)}>${esc(block.title)}</h2><p ${editable(ref, `pageBlocks.${index}.text`, 'Текст')}>${esc(block.text)}</p></article></div></section>`;
+        if (block.type === 'faq') {
+          const items = Array.isArray(block.items) ? block.items : [];
+          return `<section class="${sectionClass(block.theme)}"><div class="container">${renderBlockToolbar(ref, block, index)}<article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок', true)}>${esc(block.title || '')}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p>${items.map((item, itemIndex) => `<div class="card ${item.isActive === false ? 'admin-card-hidden' : ''}"><h3 ${editable(ref, `pageBlocks.${index}.items.${itemIndex}.title`, 'Вопрос', true)}>${esc(item.title || item.question || '')}</h3><p ${editable(ref, `pageBlocks.${index}.items.${itemIndex}.text`, 'Ответ')}>${esc(item.text || item.answer || '')}</p><div class="admin-item-tools"><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="-1">Выше</button><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="1">Ниже</button><button class="admin-btn" type="button" data-action="toggle-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">${item.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="admin-btn admin-btn--danger" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">Удалить</button></div></div>`).join('')}<button class="admin-btn admin-btn--primary" type="button" data-action="add-block-card" data-ref="${ref}" data-index="${index}">Добавить вопрос</button></article></div></section>`;
         }
-        return `<section class="${sectionClass(block.theme)}"><div class="container">${renderBlockToolbar(ref, block, index)}<article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок', true)}>${esc(block.title)}</h2><p ${editable(ref, `pageBlocks.${index}.text`, 'Текст')}>${esc(block.text || '')}</p></article></div></section>`;
+        if (mediaTextTypes.includes(block.type)) {
+          return `<section class="${sectionClass(block.theme)}"><div class="container">${renderBlockToolbar(ref, block, index)}</div><div class="container page-block-media-layout ${block.mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}"><article class="media-block placeholder placeholder--wide-feature">${renderImageOnly(ref, `pageBlocks.${index}.media`, `pageBlocks.${index}.mediaView`, 'wide')}<p class="media-caption" ${editable(ref, `pageBlocks.${index}.placeholderLabel`, 'Подпись')}>${esc(block.placeholderLabel || '')}</p></article><article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок', true)}>${esc(block.title || '')}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Подзаголовок')}>${esc(block.intro || '')}</p><p ${editable(ref, `pageBlocks.${index}.text`, 'Текст')}>${esc(block.text || '')}</p>${block.buttonLabel ? `<a class="btn btn-primary" href="#">${esc(block.buttonLabel)}</a>` : ''}</article></div></section>`;
+        }
+        return `<section class="${sectionClass(block.theme)}"><div class="container">${renderBlockToolbar(ref, block, index)}<article class="card page-block-card page-block-panel"><h2 ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок', true)}>${esc(block.title || '')}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Подзаголовок')}>${esc(block.intro || '')}</p><p ${editable(ref, `pageBlocks.${index}.text`, 'Текст')}>${esc(block.text || '')}</p>${block.buttonLabel ? `<a class="btn btn-primary" href="#">${esc(block.buttonLabel)}</a>` : ''}</article></div></section>`;
       }
 
       function renderImageOnly(ref, imagePath, viewPath = null, size = 'card') {
@@ -998,13 +1099,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       function defaultContent(collection, fields) {
         const title = fields.title || 'Новая запись';
         const slug = slugify(fields.slug || title) || 'novaya-zapis';
-        if (collection === 'product-sections') return { title, slug, shortDescription: 'Краткое описание раздела.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, mode: 'catalog-hub', image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.' };
-        if (collection === 'services') return { title, slug, shortDescription: 'Краткое описание услуги.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, image: '/assets/images/placeholders/construction.svg', placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.', pageBlocks: [] };
+        if (collection === 'product-sections') return { title, slug, shortDescription: 'Краткое описание раздела.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, showInMenu: true, menuTitle: title, showBadge: true, mode: 'custom-direction', image: '/assets/images/placeholders/street-furniture.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.', pageBlocks: [] };
+        if (collection === 'services') return { title, slug, shortDescription: 'Краткое описание услуги.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, showInMenu: true, menuTitle: title, showBadge: true, image: '/assets/images/placeholders/construction.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.', pageBlocks: [] };
         if (collection === 'product-categories') return { title, slug, parentSectionSlug: fields.parentSectionSlug || 'ulichnaya-mebel', shortDescription: 'Краткое описание типа изделий.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showInSectionGrid: true, isActive: true, image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото будут добавлены позже.', mode: 'catalog-list', seoTitle: title, seoDescription: 'Описание страницы.' };
         if (collection === 'products') return { title, slug, productCategorySlug: fields.productCategorySlug || 'lavochki-i-skameyki', sku: '', shortDescription: 'Краткое описание модели.', leadText: 'Описание изделия.', description: 'Подробное описание изделия, назначения и вариантов исполнения.', materials: ['Стальной каркас', 'Покрытие по согласованию'], colors: ['По палитре RAL'], dimensions: [{ label: 'Размер', value: 'Уточняется при расчете', order: 10, isActive: true }], features: ['Изготавливаем под задачу объекта'], priceMode: 'on_request', priceFrom: null, currency: 'RUB', image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото изделия будут добавлены позже.', order: nextOrder(collection), isActive: true, showInCatalog: true, seoTitle: title, seoDescription: 'Описание изделия.' };
         if (collection === 'projects') return { title, slug, city: 'Курган', shortDescription: 'Краткое описание объекта.', whatWasDone: 'Описание выполненных работ.', image: '/assets/images/objects/object-1.svg', gallery: ['/assets/images/objects/object-1.svg'], order: nextOrder(collection), isActive: true, year: new Date().getFullYear(), seoTitle: title, seoDescription: 'Описание объекта.' };
         if (collection === 'jobs') return { title, slug, city: 'Курган', employmentType: 'Полная занятость', salary: 'По договоренности', shortDescription: 'Краткое описание вакансии.', responsibilities: ['Новая обязанность'], requirements: ['Новое требование'], conditions: ['Новое условие'], order: nextOrder(collection), isActive: true };
-        if (collection === 'static-pages') return { title, slug, seoTitle: title, seoDescription: 'Описание страницы.', heroKicker: '', heroTitle: title, heroDescription: 'Описание первого экрана.', heroOverlayOpacity: 100, contactTitle: 'Не нашли, что искали?', contactDescription: 'Напишите нам, и мы подберем решение под задачу.', pageBlocks: [] };
+        if (collection === 'static-pages') return { title, slug, seoTitle: title, seoDescription: 'Описание страницы.', order: nextOrder(collection), isActive: true, showInMenu: true, menuTitle: title, showBadge: true, heroKicker: '', heroTitle: title, heroDescription: 'Описание первого экрана.', image: '/assets/images/placeholders/construction.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, contactTitle: 'Не нашли, что искали?', contactDescription: 'Напишите нам, и мы подберем решение под задачу.', pageBlocks: [] };
         return { title, slug };
       }
 
@@ -1039,11 +1140,20 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function createDefaultBlock(type, order) {
+        if (type === 'heroSection') return { type, title: 'Новая hero-секция', intro: '', text: 'Короткое описание секции.', theme: 'dark', media: '', placeholderLabel: 'Фото или видео будет добавлено позже', mediaPosition: 'right', buttonLabel: 'Связаться', buttonHref: '/kontakty/', textWidth: '760px', isActive: true, order };
+        if (type === 'whoWeAre') return { type, title: 'Кто мы и что делаем', intro: '', text: 'СМУ-1 выполняет комплексные работы для коммерческих и общественных объектов: изготавливает изделия, металлоконструкции и элементы благоустройства, подбирает решения под задачу и сопровождает реализацию на объекте.', theme: 'light', media: '', placeholderLabel: 'Фото производства или объекта', mediaPosition: 'right', textWidth: '760px', isActive: true, order };
+        if (type === 'directionCards') return { type, title: 'Направления и решения', intro: '', theme: 'light', grid: '3', isActive: true, order, items: [{ title: 'Новое направление', text: 'Изготавливаем и адаптируем под объект.', image: '/assets/images/placeholders/street-furniture.svg', buttonLabel: 'Подробнее', buttonHref: '/kontakty/', order: 10, isActive: true }] };
+        if (type === 'benefits') return { type, title: 'Преимущества', intro: '', theme: 'light', grid: '3', isActive: true, order, items: [{ title: 'Преимущество', text: 'Короткое описание преимущества.', order: 10, isActive: true }] };
+        if (type === 'gallery') return { type, title: 'Галерея', intro: '', theme: 'light', grid: '3', isActive: true, order, items: [{ title: 'Фото', text: '', image: '/assets/images/placeholders/construction.svg', order: 10, isActive: true }] };
+        if (type === 'faq') return { type, title: 'FAQ', intro: '', theme: 'light', isActive: true, order, items: [{ title: 'Вопрос', text: 'Ответ на вопрос.', order: 10, isActive: true }] };
+        if (type === 'cta') return { type, title: 'Нужен расчет?', intro: '', text: 'Напишите нам, и мы уточним задачу и подготовим расчет.', theme: 'light', buttonLabel: 'Получить расчет', buttonHref: '/kontakty/', isActive: true, order };
+        if (type === 'customOrder') return { type, title: 'Изготавливаем под объект', intro: '', text: 'Адаптируем размеры, основание, цвет, заполнение и условия монтажа под конкретную площадку.', theme: 'light', media: '', placeholderLabel: 'Фото или рендер решения', mediaPosition: 'right', isActive: true, order };
+        if (type === 'costFactors') return { type, title: 'Что влияет на стоимость', intro: '', theme: 'light', columns: 2, isActive: true, order, items: ['габариты и конструктив', 'материалы и покрытие', 'условия монтажа'] };
         if (type === 'cardGrid' || type === 'exampleGrid') return { type, title: 'Новая секция', intro: '', theme: 'light', grid: 'auto', isActive: true, order, items: [{ title: 'Новая карточка', text: 'Описание карточки', order: 10, isActive: true }] };
         if (type === 'listPanel' || type === 'factorList') return { type, title: 'Новая секция', intro: '', theme: 'light', columns: 2, isActive: true, order, items: ['Новая строка'] };
         if (type === 'process') return { type, title: 'Новая секция', intro: '', theme: 'graphite', media: '', placeholderLabel: 'Фото будет добавлено позже', mediaPosition: 'right', isActive: true, order, steps: [{ title: 'Новый шаг', text: '', order: 10, isActive: true }] };
         if (type === 'mediaText') return { type, title: 'Новая секция', text: 'Текст секции', theme: 'light', media: '', placeholderLabel: 'Фото будет добавлено позже', mediaPosition: 'right', isActive: true, order };
-        return { type: 'notice', title: 'Новая секция', text: 'Текст секции', theme: 'light', isActive: true, order };
+        return { type: type || 'textBlock', title: 'Новая секция', text: 'Текст секции', theme: 'light', isActive: true, order };
       }
 
       function moveItem(items, index, dir) {
@@ -1188,7 +1298,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           const record = getRecord(field.dataset.fieldRef);
           let value = field.value;
           if (field.dataset.fieldType === 'boolean') value = value === 'true';
-          else if (field.type === 'number') {
+          else if (field.dataset.fieldType === 'number' || field.type === 'number') {
             if (value === '') {
               value = field.dataset.fieldEmpty === 'undefined' ? undefined : null;
             } else {
@@ -1343,11 +1453,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (action === 'delete-block') { getRecord(el.dataset.ref).draft.pageBlocks.splice(Number(el.dataset.index), 1); renumber(getRecord(el.dataset.ref).draft.pageBlocks); renderApp(); return; }
         if (action === 'toggle-block') { const block = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.index)]; block.isActive = block.isActive === false; renderApp(); return; }
         if (action === 'move-block') { moveItem(getRecord(el.dataset.ref).draft.pageBlocks, Number(el.dataset.index), Number(el.dataset.dir)); renderApp(); return; }
-        if (action === 'add-block-card') { const block = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.index)]; block.items.push({ title: 'Новая карточка', text: 'Описание карточки', order: (block.items.length + 1) * 10, isActive: true }); renderApp(); return; }
-        if (action === 'add-block-row') { getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.index)].items.push('Новая строка'); renderApp(); return; }
-        if (action === 'add-block-step') { const block = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.index)]; block.steps.push({ title: 'Новый шаг', text: '', order: (block.steps.length + 1) * 10, isActive: true }); renderApp(); return; }
+        if (action === 'add-block-card') { const block = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.index)]; if (!Array.isArray(block.items)) block.items = []; block.items.push({ title: block.type === 'faq' ? 'Вопрос' : 'Новая карточка', text: block.type === 'faq' ? 'Ответ на вопрос.' : 'Описание карточки', image: block.type === 'gallery' || block.type === 'directionCards' ? '/assets/images/placeholders/street-furniture.svg' : '', buttonLabel: block.type === 'directionCards' ? 'Подробнее' : '', buttonHref: '', order: (block.items.length + 1) * 10, isActive: true }); renderApp(); return; }
+        if (action === 'add-block-row') { const block = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.index)]; if (!Array.isArray(block.items)) block.items = []; block.items.push('Новая строка'); renderApp(); return; }
+        if (action === 'add-block-step') { const block = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.index)]; if (!Array.isArray(block.steps)) block.steps = []; block.steps.push({ title: 'Новый шаг', text: '', order: (block.steps.length + 1) * 10, isActive: true }); renderApp(); return; }
         if (action === 'delete-block-item') { const list = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.block)][el.dataset.list]; list.splice(Number(el.dataset.index), 1); renumber(list); renderApp(); return; }
-        if (action === 'move-block-item') { const list = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.block)][el.dataset.list]; moveItem(list, Number(el.dataset.index), Number(el.dataset.dir)); renderApp(); }
+        if (action === 'toggle-block-item') { const list = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.block)][el.dataset.list]; const item = list?.[Number(el.dataset.index)]; if (item && typeof item === 'object') item.isActive = item.isActive === false; renderApp(); return; }
+        if (action === 'move-block-item') { const list = getRecord(el.dataset.ref).draft.pageBlocks[Number(el.dataset.block)][el.dataset.list]; moveItem(list, Number(el.dataset.index), Number(el.dataset.dir)); renderApp(); return; }
         if (action === 'add-product-spec') {
           const list = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
           list.push({ label: 'Новый параметр', value: 'Значение', order: (list.length + 1) * 10, isActive: true });

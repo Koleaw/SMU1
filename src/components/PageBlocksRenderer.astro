@@ -1,139 +1,167 @@
 ---
 import { withBase } from '../utils/withBase';
+import PageBlockMedia from './PageBlockMedia.astro';
 
 type Theme = 'dark' | 'light' | 'graphite';
 type GridValue = 'auto' | '2' | '3' | '4';
-type ColumnsValue = 2 | 3;
 type MediaView = { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
 
-interface BaseBlock {
+interface BlockItem {
+  title?: string;
+  text?: string;
+  question?: string;
+  answer?: string;
+  image?: string;
+  video?: string;
+  poster?: string;
+  placeholderLabel?: string;
+  buttonLabel?: string;
+  buttonHref?: string;
+  order?: number;
+  isActive?: boolean;
+}
+
+interface PageBlock {
   type: string;
-  title: string;
-  theme: Theme;
+  title?: string;
+  intro?: string;
+  text?: string;
+  theme?: Theme;
+  background?: Theme;
+  grid?: GridValue;
+  columns?: 2 | 3 | 4;
   isActive?: boolean;
   order: number;
   sectionId?: string;
-  intro?: string;
-}
-
-interface CardItem {
-  title: string;
-  text: string;
-  order: number;
-  isActive?: boolean;
-}
-
-interface ProcessStep {
-  title: string;
-  text?: string;
-  order: number;
-  isActive?: boolean;
-}
-
-interface CardGridBlock extends BaseBlock {
-  type: 'cardGrid' | 'exampleGrid';
-  grid: GridValue;
-  items: CardItem[];
-}
-
-interface ListBlock extends BaseBlock {
-  type: 'listPanel' | 'factorList';
-  columns: ColumnsValue;
-  items: Array<string | { text: string; order?: number; isActive?: boolean }>;
-}
-
-interface MediaTextBlock extends BaseBlock {
-  type: 'mediaText';
-  text: string;
+  items?: Array<string | BlockItem>;
+  steps?: BlockItem[];
   media?: string;
-  placeholderLabel?: string;
-  mediaPosition: 'left' | 'right';
-  mediaView?: MediaView;
-}
-
-interface ProcessBlock extends BaseBlock {
-  type: 'process';
-  media?: string;
+  image?: string;
+  video?: string;
+  poster?: string;
   placeholderLabel?: string;
   mediaPosition?: 'left' | 'right';
   mediaView?: MediaView;
-  steps: ProcessStep[];
+  buttonLabel?: string;
+  buttonHref?: string;
+  textWidth?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  titleSize?: string;
+  textSize?: string;
+  textWeight?: string | number;
+  textItalic?: boolean;
+  paddingTop?: string;
+  paddingBottom?: string;
 }
-
-interface NoticeBlock extends BaseBlock {
-  type: 'notice';
-  text: string;
-}
-
-type PageBlock = CardGridBlock | ListBlock | MediaTextBlock | ProcessBlock | NoticeBlock;
 
 interface Props {
   pageBlocks?: PageBlock[];
 }
 
 const { pageBlocks = [] } = Astro.props;
-const DEFAULT_MEDIA_VIEW = { fit: 'cover', positionX: 50, positionY: 50, scale: 1 };
-
 const visibleBlocks = pageBlocks
   .filter((block) => block && block.isActive !== false)
   .slice()
   .sort((a, b) => a.order - b.order);
 
-const getSectionClass = (theme: Theme) => {
-  if (theme === 'dark') return 'section section--dark navesy-section-compact';
-  if (theme === 'light') return 'section section--soft navesy-section-compact';
-
-  return 'section navesy-section-compact';
+const cleanCssValue = (value?: string) => {
+  const text = String(value ?? '').trim();
+  if (!text || /[;"{}]/.test(text)) return '';
+  return text;
 };
 
+const getTheme = (block: PageBlock): Theme => block.theme ?? block.background ?? 'light';
+const getSectionClass = (theme: Theme) => {
+  if (theme === 'dark') return 'section section--dark page-block-section';
+  if (theme === 'light') return 'section section--soft page-block-section';
+  return 'section page-block-section';
+};
 const getThemeAttr = (theme: Theme) => (theme === 'dark' ? 'dark' : undefined);
 const getHeadingClass = (theme: Theme) => (theme === 'dark' ? 'section-heading section-heading--light' : 'section-heading');
-const getGridClass = (grid: GridValue) => `page-blocks-grid page-blocks-grid--${grid}`;
-const getColumnsClass = (columns: ColumnsValue) => `page-blocks-columns page-blocks-columns--${columns}`;
+const getGridClass = (grid: GridValue = 'auto') => `page-blocks-grid page-blocks-grid--${grid}`;
+const getColumnsClass = (columns: number = 2) => `page-blocks-columns page-blocks-columns--${columns === 3 ? '3' : '2'}`;
 const isDarkCardTheme = (theme: Theme) => theme === 'dark' || theme === 'graphite';
-const getMediaView = (view?: MediaView) => ({ ...DEFAULT_MEDIA_VIEW, ...(view || {}) });
-const getMediaImageStyle = (view?: MediaView) => {
-  const safe = getMediaView(view);
-  return `object-fit:${safe.fit};object-position:${safe.positionX}% ${safe.positionY}%;transform:scale(${safe.scale});transform-origin:center;`;
+const resolveHref = (href?: string) => {
+  if (!href) return '';
+  if (/^(https?:|mailto:|tel:|#)/i.test(href)) return href;
+  return withBase(href);
 };
 
-const normalizeTextList = (items: Array<string | { text: string; order?: number; isActive?: boolean }>) =>
-  items
-    .map((item) => (typeof item === 'string' ? item.trim() : item.isActive === false ? '' : item.text?.trim()))
-    .filter(Boolean);
-const normalizeCardItems = (items: CardItem[]) =>
-  items
-    .filter((item) => item && item.isActive !== false && item.title?.trim() && item.text?.trim())
-    .slice()
-    .sort((a, b) => a.order - b.order);
+const getSectionStyle = (block: PageBlock) => {
+  const top = cleanCssValue(block.paddingTop);
+  const bottom = cleanCssValue(block.paddingBottom);
+  const styles = [];
+  if (top) styles.push(`--page-block-padding-top:${top}`);
+  if (bottom) styles.push(`--page-block-padding-bottom:${bottom}`);
+  return styles.length ? `${styles.join(';')};` : undefined;
+};
 
-const normalizeSteps = (steps: ProcessStep[]) =>
-  steps
-    .filter((step) => step && step.isActive !== false && step.title?.trim())
+const getTextStyle = (block: PageBlock) => {
+  const styles = [];
+  const width = cleanCssValue(block.textWidth);
+  const titleSize = cleanCssValue(block.titleSize);
+  const textSize = cleanCssValue(block.textSize);
+  const textWeight = cleanCssValue(String(block.textWeight ?? ''));
+  if (width) styles.push(`--page-block-text-width:${width}`);
+  if (titleSize) styles.push(`--page-block-title-size:${titleSize}`);
+  if (textSize) styles.push(`--page-block-text-size:${textSize}`);
+  if (textWeight) styles.push(`--page-block-text-weight:${textWeight}`);
+  styles.push(`--page-block-font-style:${block.textItalic ? 'italic' : 'normal'}`);
+  styles.push(`text-align:${block.textAlign ?? 'left'}`);
+  return `${styles.join(';')};`;
+};
+
+const normalizeTextList = (items: Array<string | BlockItem> = []) =>
+  items
+    .map((item) => (typeof item === 'string' ? item.trim() : item.isActive === false ? '' : item.text?.trim() ?? item.title?.trim() ?? ''))
+    .filter(Boolean);
+
+const normalizeCardItems = (items: Array<string | BlockItem> = []) =>
+  items
+    .map((item, index) => typeof item === 'string' ? { title: item, text: '', order: (index + 1) * 10, isActive: true } : item)
+    .filter((item) => item && item.isActive !== false && (item.title?.trim() || item.text?.trim() || item.image?.trim()))
     .slice()
-    .sort((a, b) => a.order - b.order);
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+const normalizeSteps = (steps: BlockItem[] = []) =>
+  steps
+    .filter((step) => step && step.isActive !== false && (step.title?.trim() || step.text?.trim()))
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+const simpleTextTypes = new Set(['textBlock', 'notice', 'cta', 'customOrder']);
+const listTypes = new Set(['listPanel', 'factorList', 'costFactors']);
+const cardTypes = new Set(['cardGrid', 'exampleGrid', 'benefits', 'directionCards', 'solutions']);
 ---
 {visibleBlocks.map((block, index) => {
   const sectionId = block.sectionId ?? `page-block-${index + 1}`;
-  const sectionClass = getSectionClass(block.theme);
-  const themeAttr = getThemeAttr(block.theme);
+  const theme = getTheme(block);
+  const sectionClass = getSectionClass(theme);
+  const themeAttr = getThemeAttr(theme);
+  const sectionStyle = getSectionStyle(block);
+  const mediaPosition = block.mediaPosition === 'left' ? 'left' : 'right';
 
-  if ((block.type === 'cardGrid' || block.type === 'exampleGrid') && block.items?.length) {
+  if (block.type === 'gallery') {
     const items = normalizeCardItems(block.items);
     if (!items.length) return null;
 
     return (
-      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
+      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr} style={sectionStyle}>
         <div class="container">
-          <div class={getHeadingClass(block.theme)}>
-            <h2 class="section-title">{block.title}</h2>
+          <div class={getHeadingClass(theme)}>
+            {block.title && <h2 class="section-title">{block.title}</h2>}
             {block.intro && <p class="lead">{block.intro}</p>}
           </div>
-          <div class={getGridClass(block.grid)}>
+          <div class={getGridClass(block.grid ?? 'auto')}>
             {items.map((item) => (
-              <article class={`card page-block-card ${isDarkCardTheme(block.theme) ? 'page-block-card--dark' : 'page-block-card--light'}`}>
-                <h3>{item.title}</h3>
-                <p>{item.text}</p>
+              <article class="page-block-gallery-card">
+                <PageBlockMedia block={item} ratio="card" />
+                {(item.title || item.text) && (
+                  <div class="page-block-gallery-card__body">
+                    {item.title && <h3>{item.title}</h3>}
+                    {item.text && <p>{item.text}</p>}
+                  </div>
+                )}
               </article>
             ))}
           </div>
@@ -142,20 +170,83 @@ const normalizeSteps = (steps: ProcessStep[]) =>
     );
   }
 
-  if ((block.type === 'listPanel' || block.type === 'factorList') && block.items?.length) {
+  if (block.type === 'faq') {
+    const items = normalizeCardItems(block.items);
+    if (!items.length) return null;
+
+    return (
+      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr} style={sectionStyle}>
+        <div class="container page-block-narrow" style={getTextStyle(block)}>
+          <div class={getHeadingClass(theme)}>
+            {block.title && <h2 class="section-title">{block.title}</h2>}
+            {block.intro && <p class="lead">{block.intro}</p>}
+          </div>
+          <div class="page-block-faq-list">
+            {items.map((item) => (
+              <details class="card page-block-faq-item">
+                <summary>{item.question || item.title}</summary>
+                <p>{item.answer || item.text}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (cardTypes.has(block.type)) {
+    const items = normalizeCardItems(block.items);
+    if (!items.length) return null;
+
+    return (
+      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr} style={sectionStyle}>
+        <div class="container">
+          <div class={getHeadingClass(theme)} style={getTextStyle(block)}>
+            {block.title && <h2 class="section-title">{block.title}</h2>}
+            {block.intro && <p class="lead">{block.intro}</p>}
+          </div>
+          <div class={getGridClass(block.grid ?? 'auto')}>
+            {items.map((item) => {
+              const href = resolveHref(item.buttonHref);
+              const content = (
+                <>
+                  <PageBlockMedia block={item} ratio="card" />
+                  <div class="page-block-card__body">
+                    {item.title && <h3>{item.title}</h3>}
+                    {item.text && <p>{item.text}</p>}
+                    {item.buttonLabel && <span class="btn btn-secondary page-block-card__cta">{item.buttonLabel}</span>}
+                  </div>
+                </>
+              );
+
+              return href ? (
+                <a class={`card page-block-card page-block-card--link ${isDarkCardTheme(theme) ? 'page-block-card--dark' : 'page-block-card--light'}`} href={href}>
+                  {content}
+                </a>
+              ) : (
+                <article class={`card page-block-card ${isDarkCardTheme(theme) ? 'page-block-card--dark' : 'page-block-card--light'}`}>
+                  {content}
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (listTypes.has(block.type)) {
     const items = normalizeTextList(block.items);
     if (!items.length) return null;
 
     return (
-      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
+      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr} style={sectionStyle}>
         <div class="container">
-          <article class={`card page-block-card page-block-panel ${block.theme === 'graphite' ? 'page-block-card--graphite' : ''}`}>
-            <h2>{block.title}</h2>
+          <article class={`card page-block-card page-block-panel ${theme === 'graphite' ? 'page-block-card--graphite' : ''}`} style={getTextStyle(block)}>
+            {block.title && <h2>{block.title}</h2>}
             {block.intro && <p class="lead">{block.intro}</p>}
             <ul class={getColumnsClass(block.columns)}>
-              {items.map((item) => (
-                <li>{item}</li>
-              ))}
+              {items.map((item) => <li>{item}</li>)}
             </ul>
           </article>
         </div>
@@ -163,47 +254,21 @@ const normalizeSteps = (steps: ProcessStep[]) =>
     );
   }
 
-  if (block.type === 'mediaText' && block.title?.trim() && block.text?.trim()) {
-    const mediaPosition = block.mediaPosition === 'left' ? 'left' : 'right';
-
-    return (
-      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
-        <div class={`container page-block-media-layout ${mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}`}>
-          <article class="media-block placeholder placeholder--wide-feature">
-            {block.media ? (
-              <img class="media-thumb" src={withBase(block.media)} alt={block.title} loading="lazy" style={getMediaImageStyle(block.mediaView)} />
-            ) : null}
-            {block.placeholderLabel && <p class="media-caption">{block.placeholderLabel}</p>}
-          </article>
-          <article class={`card page-block-card page-block-panel ${block.theme === 'graphite' ? 'page-block-card--graphite' : ''}`}>
-            <h2>{block.title}</h2>
-            <p>{block.text}</p>
-          </article>
-        </div>
-      </section>
-    );
-  }
-
-  if (block.type === 'process' && block.steps?.length) {
+  if (block.type === 'process') {
     const steps = normalizeSteps(block.steps);
     if (!steps.length) return null;
 
-    const mediaPosition = block.mediaPosition === 'left' ? 'left' : 'right';
-
     return (
-      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
+      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr} style={sectionStyle}>
         <div class={`container page-block-media-layout ${mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}`}>
-          <article class="media-block placeholder placeholder--wide-feature">
-            {block.media ? <img class="media-thumb" src={withBase(block.media)} alt={block.title} loading="lazy" style={getMediaImageStyle(block.mediaView)} /> : null}
-            {block.placeholderLabel && <p class="media-caption">{block.placeholderLabel}</p>}
-          </article>
-          <article class={`card page-block-card page-block-panel ${block.theme === 'graphite' ? 'page-block-card--graphite' : ''}`}>
-            <h2>{block.title}</h2>
+          <PageBlockMedia block={block} />
+          <article class={`card page-block-card page-block-panel ${theme === 'graphite' ? 'page-block-card--graphite' : ''}`} style={getTextStyle(block)}>
+            {block.title && <h2>{block.title}</h2>}
             {block.intro && <p class="lead">{block.intro}</p>}
             <ol class="page-block-steps">
               {steps.map((step) => (
                 <li>
-                  <strong>{step.title}</strong>
+                  {step.title && <strong>{step.title}</strong>}
                   {step.text && <p>{step.text}</p>}
                 </li>
               ))}
@@ -214,13 +279,31 @@ const normalizeSteps = (steps: ProcessStep[]) =>
     );
   }
 
-  if (block.type === 'notice' && block.title?.trim() && block.text?.trim()) {
+  if (block.type === 'mediaText' || block.type === 'whoWeAre' || block.type === 'heroSection') {
     return (
-      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr}>
+      <section id={sectionId} class={`${sectionClass} ${block.type === 'heroSection' ? 'page-block-hero-section' : ''}`} data-section-theme={themeAttr} style={sectionStyle}>
+        <div class={`container page-block-media-layout ${mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}`}>
+          <PageBlockMedia block={block} />
+          <article class={`card page-block-card page-block-panel ${theme === 'graphite' ? 'page-block-card--graphite' : ''}`} style={getTextStyle(block)}>
+            {block.title && <h2>{block.title}</h2>}
+            {block.intro && <p class="lead">{block.intro}</p>}
+            {block.text && <p>{block.text}</p>}
+            {block.buttonLabel && block.buttonHref && <a class="btn btn-primary page-block-button" href={resolveHref(block.buttonHref)}>{block.buttonLabel}</a>}
+          </article>
+        </div>
+      </section>
+    );
+  }
+
+  if (simpleTextTypes.has(block.type) || block.title || block.text) {
+    return (
+      <section id={sectionId} class={sectionClass} data-section-theme={themeAttr} style={sectionStyle}>
         <div class="container">
-          <article class={`card page-block-card page-block-panel ${block.theme === 'graphite' ? 'page-block-card--graphite' : ''}`}>
-            <h2>{block.title}</h2>
-            <p>{block.text}</p>
+          <article class={`card page-block-card page-block-panel page-block-narrow ${theme === 'graphite' ? 'page-block-card--graphite' : ''}`} style={getTextStyle(block)}>
+            {block.title && <h2>{block.title}</h2>}
+            {block.intro && <p class="lead">{block.intro}</p>}
+            {block.text && <p>{block.text}</p>}
+            {block.buttonLabel && block.buttonHref && <a class="btn btn-primary page-block-button" href={resolveHref(block.buttonHref)}>{block.buttonLabel}</a>}
           </article>
         </div>
       </section>
@@ -231,8 +314,8 @@ const normalizeSteps = (steps: ProcessStep[]) =>
 })}
 
 <style>
-  .navesy-section-compact {
-    padding-block: clamp(36px, 5vw, 56px);
+  .page-block-section {
+    padding-block: var(--page-block-padding-top, clamp(36px, 5vw, 56px)) var(--page-block-padding-bottom, clamp(36px, 5vw, 56px));
   }
 
   .page-blocks-grid {
@@ -258,6 +341,17 @@ const normalizeSteps = (steps: ProcessStep[]) =>
 
   .page-block-card {
     min-height: 100%;
+    overflow: hidden;
+  }
+
+  .page-block-card--link {
+    color: inherit;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  }
+
+  .page-block-card--link:hover,
+  .page-block-card--link:focus-visible {
+    transform: translateY(-2px);
   }
 
   .page-block-card--graphite {
@@ -269,6 +363,39 @@ const normalizeSteps = (steps: ProcessStep[]) =>
     display: flex;
     flex-direction: column;
     gap: 12px;
+    max-width: var(--page-block-text-width, none);
+    justify-self: stretch;
+  }
+
+  .page-block-panel h2,
+  .page-block-narrow h2,
+  .section-heading .section-title {
+    font-size: var(--page-block-title-size, var(--font-size-h2));
+  }
+
+  .page-block-panel p,
+  .page-block-panel li,
+  .page-block-narrow p,
+  .page-block-narrow li {
+    font-size: var(--page-block-text-size, var(--font-size-body));
+    font-style: var(--page-block-font-style, normal);
+    font-weight: var(--page-block-text-weight, 400);
+  }
+
+  .page-block-narrow {
+    max-width: var(--page-block-text-width, 860px);
+  }
+
+  .page-block-card__body,
+  .page-block-gallery-card__body {
+    display: grid;
+    gap: 10px;
+  }
+
+  .page-block-card__cta,
+  .page-block-button {
+    width: fit-content;
+    margin-top: 6px;
   }
 
   .page-blocks-columns {
@@ -289,10 +416,10 @@ const normalizeSteps = (steps: ProcessStep[]) =>
   .page-block-media-layout {
     display: grid;
     gap: 20px;
-    align-items: start;
+    align-items: stretch;
   }
 
-  .page-block-media-layout--left .media-block {
+  .page-block-media-layout--left .page-block-media {
     order: 0;
   }
 
@@ -300,12 +427,28 @@ const normalizeSteps = (steps: ProcessStep[]) =>
     order: 1;
   }
 
-  .page-block-media-layout .media-block {
+  .page-block-media-layout .page-block-media {
     order: 1;
   }
 
   .page-block-media-layout .page-block-panel {
     order: 0;
+  }
+
+  .page-block-media {
+    min-height: 100%;
+  }
+
+  .page-block-media--card .media-thumb {
+    --media-ratio: 4 / 3;
+  }
+
+  .page-block-media--wide .media-thumb {
+    --media-ratio: 16 / 10;
+  }
+
+  .page-block-media__video {
+    display: block;
   }
 
   .page-block-steps {
@@ -319,6 +462,30 @@ const normalizeSteps = (steps: ProcessStep[]) =>
     margin-top: 4px;
   }
 
+  .page-block-faq-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .page-block-faq-item {
+    padding: 0;
+  }
+
+  .page-block-faq-item summary {
+    cursor: pointer;
+    padding: 16px;
+    font-weight: 700;
+  }
+
+  .page-block-faq-item p {
+    padding: 0 16px 16px;
+  }
+
+  .page-block-gallery-card {
+    display: grid;
+    gap: 10px;
+  }
+
   @media (min-width: 920px) {
     .page-block-media-layout {
       grid-template-columns: 1fr 1fr;
@@ -326,10 +493,7 @@ const normalizeSteps = (steps: ProcessStep[]) =>
   }
 
   @media (max-width: 1024px) {
-    .page-blocks-grid--4 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
+    .page-blocks-grid--4,
     .page-blocks-grid--3 {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -346,6 +510,11 @@ const normalizeSteps = (steps: ProcessStep[]) =>
 
     .page-blocks-columns {
       columns: 1;
+    }
+
+    .page-block-card__cta,
+    .page-block-button {
+      width: 100%;
     }
   }
 </style>

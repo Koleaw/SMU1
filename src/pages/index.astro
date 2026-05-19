@@ -2,15 +2,9 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
+import PageBlocksRenderer from '../components/PageBlocksRenderer.astro';
 import SectionNavigator from '../components/SectionNavigator.astro';
 import { withBase } from '../utils/withBase';
-
-const sectionNavItems = [
-  { id: 'home-products', label: 'Продукция' },
-  { id: 'home-services', label: 'Услуги' },
-  { id: 'home-trust', label: 'Выполненные объекты' },
-  { id: 'home-contact', label: 'Связаться' }
-];
 
 const productDirections = (await getCollection('product-sections'))
   .map(({ data }) => data)
@@ -34,7 +28,30 @@ const pathwayCards = (homePage.pathwayCards ?? [])
   .slice()
   .sort((a, b) => a.order - b.order);
 
-const homeHeroVideo = homePage.heroMediaVideo || '/assets/video/hero-home.mp4';
+const homeEditablePageBlocks = Array.isArray(homePage.pageBlocks)
+  ? homePage.pageBlocks
+      .filter((block) => block?.isActive !== false)
+      .slice()
+      .sort((a, b) => a.order - b.order)
+      .map((block, index) => ({
+        ...block,
+        sectionId: block.sectionId ?? `home-block-${index + 1}`
+      }))
+  : [];
+
+const sectionNavItems = [
+  ...homeEditablePageBlocks.map((block, index) => ({
+    id: block.sectionId ?? `home-block-${index + 1}`,
+    label: block.title ?? `Блок ${index + 1}`
+  })),
+  { id: 'home-products', label: 'Продукция' },
+  { id: 'home-services', label: 'Услуги' },
+  { id: 'home-trust', label: 'Выполненные объекты' },
+  { id: 'home-contact', label: 'Связаться' }
+];
+
+const homeHeroVideo = homePage.heroMediaVideo;
+const homeHeroPoster = homePage.heroMediaPoster ?? homePage.image ?? '/assets/images/placeholders/construction.svg';
 ---
 <BaseLayout title={homePage.seoTitle} description={homePage.seoDescription}>
   <div class="home-page">
@@ -42,17 +59,18 @@ const homeHeroVideo = homePage.heroMediaVideo || '/assets/video/hero-home.mp4';
 
     <Hero
       className="hero--media"
-      kicker={homePage.heroKicker}
+      kicker={homePage.showBadge === false ? undefined : homePage.heroKicker}
       title={homePage.heroTitle}
       description={homePage.heroDescription}
       primaryLabel={homePage.heroPrimaryLabel}
       primaryHref="#home-contact"
       secondaryLabel={homePage.heroSecondaryLabel}
       secondaryHref={withBase('/vypolnennye-obekty/')}
-      mediaType="video"
-      mediaVideo={withBase(homeHeroVideo)}
+      mediaType={homeHeroVideo ? 'video' : 'image'}
+      mediaVideo={homeHeroVideo ? withBase(homeHeroVideo) : undefined}
       mediaVideoMobile={homePage.heroMediaVideoMobile ? withBase(homePage.heroMediaVideoMobile) : undefined}
-      mediaPoster={withBase(homePage.heroMediaPoster ?? '/assets/images/placeholders/construction.svg')}
+      mediaImage={withBase(homeHeroPoster)}
+      mediaPoster={withBase(homeHeroPoster)}
       mediaAlt="Производственно-строительные работы СМУ-1"
       mediaCaption={homePage.heroMediaCaption}
       overlayOpacity={homePage.heroOverlayOpacity}
@@ -64,6 +82,8 @@ const homeHeroVideo = homePage.heroMediaVideo || '/assets/video/hero-home.mp4';
         <a href="#home-trust">Выполненные объекты</a>
       </div>
     </Hero>
+
+    <PageBlocksRenderer pageBlocks={homeEditablePageBlocks} />
 
     <section class="home-pathways section" aria-labelledby="home-pathways-title">
       <div class="container">

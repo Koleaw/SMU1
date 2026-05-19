@@ -407,10 +407,11 @@ async function listCollectionEntries(collection) {
   for (const entry of dirEntries) {
     if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
 
-    const slug = entry.name.replace(/\.json$/i, '');
-    if (!SAFE_SLUG_RE.test(slug)) continue;
+    const fileSlug = entry.name.replace(/\.json$/i, '');
+    if (!SAFE_SLUG_RE.test(fileSlug)) continue;
 
     const json = await readJsonFile(path.join(config.path, entry.name));
+    const slug = typeof json.slug === 'string' && SAFE_SLUG_RE.test(json.slug) ? json.slug : fileSlug;
     items.push({
       slug,
       fileName: entry.name,
@@ -449,6 +450,23 @@ async function resolveJsonPath(collection, slug) {
 
   if (!normalizedPath.startsWith(normalizedBase + path.sep)) {
     throw new Error('Неверный путь');
+  }
+
+  try {
+    await fs.access(normalizedPath);
+    return fullPath;
+  } catch {
+    const dirEntries = await fs.readdir(config.path, { withFileTypes: true });
+    for (const entry of dirEntries) {
+      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      const fileSlug = entry.name.replace(/\.json$/i, '');
+      if (!SAFE_SLUG_RE.test(fileSlug)) continue;
+      const candidatePath = path.join(config.path, entry.name);
+      const json = await readJsonFile(candidatePath);
+      if (json?.slug === safeSlug) {
+        return candidatePath;
+      }
+    }
   }
 
   return fullPath;
