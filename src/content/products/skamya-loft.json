@@ -1,0 +1,37 @@
+{
+  "title": "Скамья Лофт",
+  "slug": "skamya-loft",
+  "productCategorySlug": "lavochki-i-skameyki",
+  "sku": "",
+  "shortDescription": "Краткое описание модели.",
+  "leadText": "Описание изделия.",
+  "description": "Подробное описание изделия, назначения и вариантов исполнения.",
+  "materials": [
+    "Стальной каркас",
+    "Покрытие по согласованию"
+  ],
+  "colors": [
+    "По палитре RAL"
+  ],
+  "dimensions": [
+    {
+      "label": "Размер",
+      "value": "Уточняется при расчете",
+      "order": 10,
+      "isActive": true
+    }
+  ],
+  "features": [
+    "Изготавливаем под задачу объекта"
+  ],
+  "priceMode": "on_request",
+  "priceFrom": null,
+  "currency": "RUB",
+  "image": "/assets/images/placeholders/street-furniture.svg",
+  "placeholderLabel": "Фото изделия будут добавлены позже.",
+  "order": 13,
+  "isActive": true,
+  "showInCatalog": true,
+  "seoTitle": "Скамья Лофт",
+  "seoDescription": "Описание изделия."
+}
