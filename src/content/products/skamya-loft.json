@@ -3,7 +3,7 @@
   "slug": "skamya-loft",
   "productCategorySlug": "lavochki-i-skameyki",
   "sku": "",
-  "shortDescription": "Краткое описание модели.",
+  "shortDescription": "Скамья без спинки с деревянным сиденьем и металлическими опорами.",
   "leadText": "Описание изделия.",
   "description": "Подробное описание изделия, назначения и вариантов исполнения.",
   "materials": [
@@ -27,11 +27,17 @@
   "priceMode": "on_request",
   "priceFrom": null,
   "currency": "RUB",
-  "image": "/assets/images/placeholders/street-furniture.svg",
+  "image": "/uploads/chatgpt-image-17-2026-15-31-52-1779219189181.png",
   "placeholderLabel": "Фото изделия будут добавлены позже.",
-  "order": 13,
+  "order": 0,
   "isActive": true,
   "showInCatalog": true,
   "seoTitle": "Скамья Лофт",
-  "seoDescription": "Описание изделия."
+  "seoDescription": "Описание изделия.",
+  "imageView": {
+    "fit": "contain",
+    "positionX": 47.22863741339492,
+    "positionY": 73.45679012345678,
+    "scale": 1
+  }
 }
