@@ -61,5 +61,9 @@
     }
   ],
   "heroMediaVideo": "/uploads/media-1779034941013.mp4",
-  "heroMediaVideoMobile": "/uploads/hero-home-mobile.mp4"
+  "heroMediaVideoMobile": "/uploads/hero-home-mobile.mp4",
+  "heroLayout": {
+    "widthPercent": 100,
+    "width": "wide"
+  }
 }
