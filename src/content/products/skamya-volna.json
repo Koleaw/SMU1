@@ -1,0 +1,52 @@
+{
+  "title": "Скамья Волна",
+  "slug": "skamya-volna",
+  "productCategorySlug": "lavochki-i-skameyki",
+  "sku": "",
+  "shortDescription": "Краткое описание модели.",
+  "leadText": "Описание изделия.",
+  "description": "Подробное описание изделия, назначения и вариантов исполнения.",
+  "materials": [
+    "Стальной каркас",
+    "Покрытие по согласованию"
+  ],
+  "colors": [
+    "По палитре RAL"
+  ],
+  "dimensions": [
+    {
+      "label": "Размер",
+      "value": "Уточняется при расчете",
+      "order": 10,
+      "isActive": true
+    }
+  ],
+  "features": [
+    "Изготавливаем под размеры объекта",
+    "Цвет металла по RAL",
+    "Доставка по России"
+  ],
+  "customizationItems": [
+    "Размеры под объект",
+    "Цвет металла по RAL",
+    "Крепление и установка по задаче",
+    "Изготовим по фото, эскизу, ТЗ или чертежу"
+  ],
+  "gallery": [],
+  "showDeliveryBlock": true,
+  "deliveryText": "",
+  "relatedProductSlugs": [],
+  "showCustomProjectBlock": true,
+  "customProjectTitle": "Не нашли подходящее изделие?",
+  "customProjectText": "Изготовим решение под ваш объект: по фото, эскизу, размерам или техническому заданию.",
+  "priceMode": "on_request",
+  "priceFrom": null,
+  "currency": "RUB",
+  "image": "/assets/images/placeholders/street-furniture.svg",
+  "placeholderLabel": "Фото изделия будут добавлены позже.",
+  "order": 13,
+  "isActive": true,
+  "showInCatalog": true,
+  "seoTitle": "Скамья Волна",
+  "seoDescription": "Описание изделия."
+}
