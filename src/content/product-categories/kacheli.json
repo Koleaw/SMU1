@@ -1,0 +1,16 @@
+{
+  "title": "Качели",
+  "slug": "kacheli",
+  "parentSectionSlug": "ulichnaya-mebel",
+  "shortDescription": "Краткое описание типа изделий.",
+  "heroTitle": "Качели",
+  "heroDescription": "Описание первого экрана.",
+  "order": 29,
+  "showInSectionGrid": true,
+  "isActive": true,
+  "image": "/assets/images/placeholders/street-furniture.svg",
+  "placeholderLabel": "Фото будут добавлены позже.",
+  "mode": "catalog-list",
+  "seoTitle": "Качели",
+  "seoDescription": "Описание страницы."
+}
