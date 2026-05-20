@@ -1,0 +1,16 @@
+{
+  "title": "Шезлонги",
+  "slug": "shezlongi",
+  "parentSectionSlug": "ulichnaya-mebel",
+  "shortDescription": "Краткое описание типа изделий.",
+  "heroTitle": "Шезлонги",
+  "heroDescription": "Описание первого экрана.",
+  "order": 39,
+  "showInSectionGrid": true,
+  "isActive": true,
+  "image": "/assets/images/placeholders/street-furniture.svg",
+  "placeholderLabel": "Фото будут добавлены позже.",
+  "mode": "catalog-list",
+  "seoTitle": "Шезлонги",
+  "seoDescription": "Описание страницы."
+}
