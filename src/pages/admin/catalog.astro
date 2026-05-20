@@ -1,0 +1,610 @@
+---
+import { withBase } from '../../utils/withBase';
+
+const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:8787/api/admin';
+const adminHome = withBase('/admin/');
+---
+
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Каталог и URL — админка СМУ-1</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Inter, system-ui, sans-serif; color: #1c2d3f; background: #f3f6f9; }
+      .hidden { display: none !important; }
+      .login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+      .login-card, .panel { background: #fff; border: 1px solid #d8e2ec; border-radius: 14px; box-shadow: 0 14px 34px rgb(23 39 56 / 8%); }
+      .login-card { width: min(460px, 100%); padding: 28px; }
+      .login-card h1, .topbar h1, .panel h2 { margin: 0; }
+      .login-card p, .topbar p, .panel-note { color: #5d7185; }
+      .field { display: grid; gap: 7px; }
+      .field label { font-size: 13px; font-weight: 700; color: #40566c; }
+      input, select { width: 100%; border: 1px solid #c7d6e5; border-radius: 8px; padding: 10px 11px; font: inherit; background: #fff; color: #1c2d3f; }
+      input[type="checkbox"] { width: 18px; height: 18px; padding: 0; }
+      input:disabled { background: #eef3f7; color: #66798b; }
+      .btn { border: 1px solid #0b6b4f; border-radius: 8px; background: #0b6b4f; color: #fff; padding: 10px 13px; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+      .btn:disabled { opacity: .55; cursor: wait; }
+      .btn-secondary { background: #fff; color: #26405a; border-color: #c2d2e2; }
+      .btn-light { background: #edf2f6; color: #314a62; border-color: #d6e1eb; }
+      .btn-danger { background: #fff5f5; color: #9f3131; border-color: #e7b8b8; }
+      .muted { color: #60758a; font-size: 14px; }
+      .error { color: #b13838; }
+      .app { min-height: 100vh; padding: 28px 20px 56px; }
+      .shell { max-width: 1380px; margin: 0 auto; display: grid; gap: 18px; }
+      .topbar { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+      .topbar h1 { font-size: clamp(28px, 3vw, 40px); }
+      .topbar p { margin: 8px 0 0; max-width: 760px; }
+      .topbar-actions, .actions, .inline-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+      .panel { padding: 18px; display: grid; gap: 16px; }
+      .panel-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+      .panel h2 { font-size: 22px; }
+      .panel-note { margin: 5px 0 0; font-size: 14px; }
+      .toolbar { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 12px; align-items: end; }
+      .create-grid { display: grid; grid-template-columns: 1.2fr 1fr 120px auto; gap: 10px; align-items: end; }
+      .table-wrap { overflow-x: auto; border: 1px solid #d9e4ee; border-radius: 12px; }
+      table { width: 100%; border-collapse: collapse; min-width: 980px; background: #fff; }
+      th, td { border-bottom: 1px solid #e4edf4; padding: 10px; text-align: left; vertical-align: middle; }
+      th { font-size: 12px; color: #60758a; text-transform: uppercase; letter-spacing: 0; background: #f7fafc; }
+      tr:last-child td { border-bottom: 0; }
+      .order-cell { width: 106px; }
+      .slug-cell { min-width: 230px; }
+      .title-cell { min-width: 250px; }
+      .check-cell { text-align: center; width: 96px; }
+      .row-actions { width: 230px; }
+      .small-btn { min-width: 36px; padding: 8px 9px; }
+      .status { min-height: 22px; color: #41566d; }
+      .status.error { color: #b13838; }
+      .hint { margin-top: 5px; font-size: 12px; color: #6f8294; }
+      @media (max-width: 820px) {
+        .topbar, .panel-head { display: grid; }
+        .toolbar, .create-grid { grid-template-columns: 1fr; }
+        .app { padding: 20px 12px 44px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loginView" class="login-wrap hidden">
+      <form id="loginForm" class="login-card">
+        <h1>Админка СМУ-1</h1>
+        <p>Войдите, чтобы управлять структурой каталога и URL.</p>
+        <div class="field"><label for="login">Логин</label><input id="login" name="login" required /></div>
+        <div class="field" style="margin-top: 12px;"><label for="password">Пароль</label><input id="password" type="password" name="password" required /></div>
+        <button class="btn" style="margin-top: 14px;" type="submit">Войти</button>
+        <p id="loginStatus" class="muted" style="margin-top: 12px;"></p>
+      </form>
+    </div>
+
+    <main id="appView" class="app hidden">
+      <div class="shell">
+        <div class="topbar">
+          <div>
+            <h1>Каталог и URL</h1>
+            <p>Здесь редактируются порядок типов изделий, slug типов изделий и slug страниц. Смена slug категории переносит связанные товары на новый `productCategorySlug`.</p>
+          </div>
+          <div class="topbar-actions">
+            <a class="btn btn-secondary" href={adminHome}>В админку</a>
+            <button id="reloadBtn" class="btn btn-light" type="button">Обновить</button>
+            <button id="logoutBtn" class="btn btn-secondary" type="button">Выйти</button>
+          </div>
+        </div>
+
+        <p id="status" class="status"></p>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Типы изделий / категории</h2>
+              <p class="panel-note">Сортировка идет по полю “Порядок показа”, затем по названию. Slug используется в публичном URL и в импорте товаров как `productCategorySlug`.</p>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <div class="field">
+              <label for="parentFilter">Раздел каталога</label>
+              <select id="parentFilter"></select>
+            </div>
+            <form id="createCategoryForm" class="create-grid">
+              <div class="field">
+                <label for="newCategoryTitle">Название</label>
+                <input id="newCategoryTitle" placeholder="Столы и комплекты" />
+              </div>
+              <div class="field">
+                <label for="newCategorySlug">URL страницы / slug</label>
+                <input id="newCategorySlug" placeholder="stoly-i-komplekty" />
+                <div class="hint">Латиница, цифры и дефисы. Например: stoly-i-komplekty</div>
+              </div>
+              <div class="field">
+                <label for="newCategoryOrder">Порядок</label>
+                <input id="newCategoryOrder" type="number" min="1" step="1" />
+              </div>
+              <button class="btn" type="submit">Создать</button>
+            </form>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="title-cell">Название</th>
+                  <th class="slug-cell">URL / slug</th>
+                  <th class="order-cell">Порядок</th>
+                  <th class="check-cell">Каталог</th>
+                  <th class="check-cell">Опубликовано</th>
+                  <th class="row-actions">Действия</th>
+                </tr>
+              </thead>
+              <tbody id="categoriesBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Страницы сайта</h2>
+              <p class="panel-note">Slug проверяется на конфликт с другими страницами верхнего уровня. Служебные страницы “Главная” и “Изготовление на заказ” защищены, потому что их маршруты закреплены отдельными Astro-страницами.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Тип</th>
+                  <th class="title-cell">Название</th>
+                  <th class="slug-cell">URL / slug</th>
+                  <th class="order-cell">Порядок</th>
+                  <th class="check-cell">Опубликовано</th>
+                  <th class="row-actions">Действия</th>
+                </tr>
+              </thead>
+              <tbody id="pagesBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" define:vars={{ adminApiBase }}>
+      const API_BASE = adminApiBase;
+      const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+      const ROUTE_COLLECTIONS = ['static-pages', 'product-sections', 'services'];
+      const PAGE_LABELS = {
+        'static-pages': 'Страница',
+        'product-sections': 'Раздел каталога',
+        services: 'Услуга'
+      };
+      const LOCKED_STATIC_SLUGS = new Set(['home', 'custom-order']);
+      const RESERVED_TOP_LEVEL_SLUGS = new Set(['admin', 'izgotovlenie-na-zakaz', '404']);
+
+      const state = {
+        categories: [],
+        products: [],
+        pages: [],
+        parentFilter: 'ulichnaya-mebel'
+      };
+
+      const loginView = document.getElementById('loginView');
+      const appView = document.getElementById('appView');
+      const loginStatus = document.getElementById('loginStatus');
+      const loginForm = document.getElementById('loginForm');
+      const statusEl = document.getElementById('status');
+      const parentFilter = document.getElementById('parentFilter');
+      const categoriesBody = document.getElementById('categoriesBody');
+      const pagesBody = document.getElementById('pagesBody');
+
+      const api = async (path, options = {}) => {
+        const response = await fetch(`${API_BASE}${path}`, {
+          ...options,
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        return data;
+      };
+
+      const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[char]);
+
+      const clone = (value) => JSON.parse(JSON.stringify(value));
+
+      function setStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.className = `status${isError ? ' error' : ''}`;
+      }
+
+      function normalizeSlug(value) {
+        return String(value ?? '')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
+
+      function validateSlug(value) {
+        const slug = normalizeSlug(value);
+        if (!slug) throw new Error('Slug не может быть пустым.');
+        if (!SAFE_SLUG_RE.test(slug)) throw new Error('Slug может содержать только латиницу, цифры и дефисы.');
+        return slug;
+      }
+
+      function sortByOrderAndTitle(left, right) {
+        const orderLeft = Number.isFinite(Number(left.content.order)) ? Number(left.content.order) : Number.MAX_SAFE_INTEGER;
+        const orderRight = Number.isFinite(Number(right.content.order)) ? Number(right.content.order) : Number.MAX_SAFE_INTEGER;
+        if (orderLeft !== orderRight) return orderLeft - orderRight;
+        return String(left.content.title ?? '').localeCompare(String(right.content.title ?? ''), 'ru');
+      }
+
+      async function loadCollection(collection) {
+        const list = await api(`/content/${collection}`);
+        const entries = list.entries ?? [];
+        return Promise.all(entries.map(async (entry) => {
+          const item = await api(`/content/${collection}/${encodeURIComponent(entry.slug)}`);
+          return { collection, originalSlug: entry.slug, content: item.content };
+        }));
+      }
+
+      async function publishAfterSave() {
+        try {
+          const result = await api('/publish', { method: 'POST', body: '{}' });
+          return result.message || 'Сохранено и отправлено на публикацию.';
+        } catch (error) {
+          return `Сохранено локально. Публикация не выполнена: ${error.message}`;
+        }
+      }
+
+      async function loadData() {
+        setStatus('Загружаю данные...');
+        const [categories, products, staticPages, productSections, services] = await Promise.all([
+          loadCollection('product-categories'),
+          loadCollection('products'),
+          loadCollection('static-pages'),
+          loadCollection('product-sections'),
+          loadCollection('services')
+        ]);
+        state.categories = categories;
+        state.products = products;
+        state.pages = [...staticPages, ...productSections, ...services];
+        render();
+        setStatus('Данные загружены.');
+      }
+
+      function getVisibleCategories() {
+        return state.categories
+          .filter((item) => (item.content.parentSectionSlug ?? '') === state.parentFilter)
+          .sort(sortByOrderAndTitle);
+      }
+
+      function renderParentFilter() {
+        const parents = new Map();
+        state.pages
+          .filter((item) => item.collection === 'product-sections')
+          .forEach((item) => parents.set(item.content.slug, item.content.title ?? item.content.slug));
+        state.categories.forEach((item) => {
+          const slug = item.content.parentSectionSlug;
+          if (slug && !parents.has(slug)) parents.set(slug, slug);
+        });
+        if (!parents.has(state.parentFilter)) {
+          state.parentFilter = parents.keys().next().value ?? 'ulichnaya-mebel';
+        }
+        parentFilter.innerHTML = Array.from(parents.entries()).map(([slug, title]) => (
+          `<option value="${escapeHtml(slug)}"${slug === state.parentFilter ? ' selected' : ''}>${escapeHtml(title)}</option>`
+        )).join('');
+      }
+
+      function renderCategories() {
+        const rows = getVisibleCategories();
+        const nextOrder = rows.reduce((max, item) => Math.max(max, Number(item.content.order) || 0), 0) + 1;
+        document.getElementById('newCategoryOrder').value = String(nextOrder);
+        categoriesBody.innerHTML = rows.map((item, index) => {
+          const content = item.content;
+          const title = escapeHtml(content.title);
+          const slug = escapeHtml(content.slug);
+          return `
+            <tr data-original-slug="${escapeHtml(item.originalSlug)}">
+              <td class="title-cell"><input data-field="title" value="${title}" /></td>
+              <td class="slug-cell">
+                <input data-field="slug" value="${slug}" />
+                <div class="hint">Латиница, цифры и дефисы. Например: stoly-i-komplekty</div>
+              </td>
+              <td class="order-cell"><input data-field="order" type="number" min="1" step="1" value="${escapeHtml(content.order ?? '')}" /></td>
+              <td class="check-cell"><input data-field="showInSectionGrid" type="checkbox"${content.showInSectionGrid !== false ? ' checked' : ''} /></td>
+              <td class="check-cell"><input data-field="isActive" type="checkbox"${content.isActive !== false ? ' checked' : ''} /></td>
+              <td class="row-actions">
+                <div class="inline-actions">
+                  <button class="btn btn-light small-btn" data-action="up" type="button"${index === 0 ? ' disabled' : ''}>Выше</button>
+                  <button class="btn btn-light small-btn" data-action="down" type="button"${index === rows.length - 1 ? ' disabled' : ''}>Ниже</button>
+                  <button class="btn" data-action="save" type="button">Сохранить</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function renderPages() {
+        const rows = state.pages.slice().sort((left, right) => {
+          const labelCompare = PAGE_LABELS[left.collection].localeCompare(PAGE_LABELS[right.collection], 'ru');
+          return labelCompare || sortByOrderAndTitle(left, right);
+        });
+        pagesBody.innerHTML = rows.map((item) => {
+          const content = item.content;
+          const locked = item.collection === 'static-pages' && LOCKED_STATIC_SLUGS.has(content.slug);
+          return `
+            <tr data-collection="${escapeHtml(item.collection)}" data-original-slug="${escapeHtml(item.originalSlug)}">
+              <td>${escapeHtml(PAGE_LABELS[item.collection])}</td>
+              <td class="title-cell"><input data-field="title" value="${escapeHtml(content.title ?? content.menuTitle ?? '')}" /></td>
+              <td class="slug-cell">
+                <input data-field="slug" value="${escapeHtml(content.slug)}"${locked ? ' disabled' : ''} />
+                <div class="hint">${locked ? 'Служебный маршрут закреплен в коде.' : 'Латиница, цифры и дефисы.'}</div>
+              </td>
+              <td class="order-cell"><input data-field="order" type="number" step="1" value="${escapeHtml(content.order ?? '')}" /></td>
+              <td class="check-cell"><input data-field="isActive" type="checkbox"${content.isActive !== false ? ' checked' : ''} /></td>
+              <td class="row-actions"><button class="btn" data-action="save-page" type="button">Сохранить</button></td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function render() {
+        renderParentFilter();
+        renderCategories();
+        renderPages();
+      }
+
+      function findCategory(originalSlug) {
+        const item = state.categories.find((entry) => entry.originalSlug === originalSlug);
+        if (!item) throw new Error('Категория не найдена.');
+        return item;
+      }
+
+      function findPage(collection, originalSlug) {
+        const item = state.pages.find((entry) => entry.collection === collection && entry.originalSlug === originalSlug);
+        if (!item) throw new Error('Страница не найдена.');
+        return item;
+      }
+
+      function ensureCategorySlugAvailable(slug, originalSlug) {
+        const conflict = state.categories.find((entry) => entry.originalSlug !== originalSlug && entry.content.slug === slug);
+        if (conflict) throw new Error(`Slug уже занят категорией “${conflict.content.title ?? conflict.content.slug}”.`);
+      }
+
+      function ensureRouteSlugAvailable(slug, collection, originalSlug) {
+        if (RESERVED_TOP_LEVEL_SLUGS.has(slug)) throw new Error('Этот slug занят системным маршрутом сайта.');
+        const conflict = state.pages.find((entry) => (
+          ROUTE_COLLECTIONS.includes(entry.collection)
+          && !(entry.collection === collection && entry.originalSlug === originalSlug)
+          && entry.content.slug === slug
+        ));
+        if (conflict) throw new Error(`Slug уже занят страницей “${conflict.content.title ?? conflict.content.slug}”.`);
+      }
+
+      function readCategoryRow(row) {
+        const source = findCategory(row.dataset.originalSlug);
+        const content = clone(source.content);
+        content.title = row.querySelector('[data-field="title"]').value.trim();
+        content.slug = validateSlug(row.querySelector('[data-field="slug"]').value);
+        content.order = Number.parseInt(row.querySelector('[data-field="order"]').value, 10) || 0;
+        content.showInSectionGrid = row.querySelector('[data-field="showInSectionGrid"]').checked;
+        content.isActive = row.querySelector('[data-field="isActive"]').checked;
+        content.parentSectionSlug = state.parentFilter;
+        if (!content.heroTitle) content.heroTitle = content.title;
+        if (!content.seoTitle) content.seoTitle = content.title;
+        ensureCategorySlugAvailable(content.slug, source.originalSlug);
+        return { source, content };
+      }
+
+      function readPageRow(row) {
+        const source = findPage(row.dataset.collection, row.dataset.originalSlug);
+        const content = clone(source.content);
+        content.title = row.querySelector('[data-field="title"]').value.trim();
+        content.slug = row.querySelector('[data-field="slug"]').disabled
+          ? source.content.slug
+          : validateSlug(row.querySelector('[data-field="slug"]').value);
+        content.order = Number.parseInt(row.querySelector('[data-field="order"]').value, 10) || 0;
+        content.isActive = row.querySelector('[data-field="isActive"]').checked;
+        ensureRouteSlugAvailable(content.slug, source.collection, source.originalSlug);
+        return { source, content };
+      }
+
+      async function saveCategoryRow(row) {
+        const { source, content } = readCategoryRow(row);
+        const oldSlug = source.content.slug;
+        const affectedProducts = state.products.filter((product) => product.content.productCategorySlug === oldSlug);
+        const result = await api(`/content/product-categories/${encodeURIComponent(source.originalSlug)}`, {
+          method: 'PUT',
+          body: JSON.stringify(content)
+        });
+
+        if (oldSlug !== content.slug && typeof result.updatedProductCount !== 'number') {
+          for (const product of affectedProducts) {
+            await api(`/content/products/${encodeURIComponent(product.originalSlug)}`, {
+              method: 'PUT',
+              body: JSON.stringify({ ...product.content, productCategorySlug: content.slug })
+            });
+          }
+        }
+
+        const publishMessage = await publishAfterSave();
+        await loadData();
+        const movedCount = oldSlug === content.slug
+          ? 0
+          : (typeof result.updatedProductCount === 'number' ? result.updatedProductCount : affectedProducts.length);
+        setStatus(movedCount ? `Категория сохранена. Товаров перенесено: ${movedCount}. ${publishMessage}` : `Категория сохранена. ${publishMessage}`);
+      }
+
+      async function savePageRow(row) {
+        const { source, content } = readPageRow(row);
+        await api(`/content/${source.collection}/${encodeURIComponent(source.originalSlug)}`, {
+          method: 'PUT',
+          body: JSON.stringify(content)
+        });
+        const publishMessage = await publishAfterSave();
+        await loadData();
+        setStatus(`Страница сохранена. ${publishMessage}`);
+      }
+
+      async function moveCategory(originalSlug, direction) {
+        const rows = getVisibleCategories();
+        const index = rows.findIndex((item) => item.originalSlug === originalSlug);
+        const nextIndex = index + direction;
+        if (index < 0 || nextIndex < 0 || nextIndex >= rows.length) return;
+
+        const reordered = rows.slice();
+        const current = reordered[index];
+        reordered[index] = reordered[nextIndex];
+        reordered[nextIndex] = current;
+        reordered.forEach((item, itemIndex) => {
+          item.content.order = itemIndex + 1;
+        });
+
+        setStatus('Сохраняю порядок категорий...');
+        for (const item of reordered) {
+          await api(`/content/product-categories/${encodeURIComponent(item.originalSlug)}`, {
+            method: 'PUT',
+            body: JSON.stringify(item.content)
+          });
+        }
+        const publishMessage = await publishAfterSave();
+        await loadData();
+        setStatus(`Порядок сохранен. ${publishMessage}`);
+      }
+
+      async function createCategory(event) {
+        event.preventDefault();
+        const title = document.getElementById('newCategoryTitle').value.trim();
+        const slug = validateSlug(document.getElementById('newCategorySlug').value);
+        const order = Number.parseInt(document.getElementById('newCategoryOrder').value, 10) || (getVisibleCategories().length + 1);
+        if (!title) throw new Error('Укажите название типа изделий.');
+        ensureCategorySlugAvailable(slug, '');
+
+        const content = {
+          title,
+          slug,
+          parentSectionSlug: state.parentFilter,
+          shortDescription: 'Краткое описание типа изделий.',
+          heroTitle: title,
+          heroDescription: 'Описание первого экрана.',
+          order,
+          showInSectionGrid: true,
+          isActive: true,
+          image: '/assets/images/placeholders/street-furniture.svg',
+          placeholderLabel: 'Фото будут добавлены позже.',
+          mode: 'catalog-list',
+          seoTitle: title,
+          seoDescription: 'Описание страницы.'
+        };
+
+        await api('/content/product-categories', {
+          method: 'POST',
+          body: JSON.stringify({ slug, content })
+        });
+        const publishMessage = await publishAfterSave();
+        document.getElementById('createCategoryForm').reset();
+        await loadData();
+        setStatus(`Категория создана. ${publishMessage}`);
+      }
+
+      categoriesBody.addEventListener('click', async (event) => {
+        const button = event.target.closest('button[data-action]');
+        if (!button) return;
+        const row = button.closest('tr');
+        try {
+          button.disabled = true;
+          const action = button.dataset.action;
+          if (action === 'save') await saveCategoryRow(row);
+          if (action === 'up') await moveCategory(row.dataset.originalSlug, -1);
+          if (action === 'down') await moveCategory(row.dataset.originalSlug, 1);
+        } catch (error) {
+          setStatus(error.message || 'Не удалось сохранить категорию.', true);
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      pagesBody.addEventListener('click', async (event) => {
+        const button = event.target.closest('button[data-action="save-page"]');
+        if (!button) return;
+        try {
+          button.disabled = true;
+          await savePageRow(button.closest('tr'));
+        } catch (error) {
+          setStatus(error.message || 'Не удалось сохранить страницу.', true);
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      parentFilter.addEventListener('change', () => {
+        state.parentFilter = parentFilter.value;
+        renderCategories();
+      });
+
+      document.getElementById('createCategoryForm').addEventListener('submit', async (event) => {
+        try {
+          await createCategory(event);
+        } catch (error) {
+          setStatus(error.message || 'Не удалось создать категорию.', true);
+        }
+      });
+
+      document.addEventListener('blur', (event) => {
+        if (event.target?.matches?.('input[data-field="slug"], #newCategorySlug')) {
+          event.target.value = normalizeSlug(event.target.value);
+        }
+      }, true);
+
+      document.getElementById('reloadBtn').addEventListener('click', () => loadData().catch((error) => setStatus(error.message, true)));
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await api('/logout', { method: 'POST' }).catch(() => {});
+        showLogin('Вы вышли из админки.');
+      });
+
+      const showLogin = (message = '') => {
+        loginView.classList.remove('hidden');
+        appView.classList.add('hidden');
+        loginStatus.textContent = message;
+        loginStatus.className = 'muted';
+      };
+
+      const showApp = async () => {
+        loginView.classList.add('hidden');
+        appView.classList.remove('hidden');
+        await loadData();
+      };
+
+      async function boot() {
+        try {
+          const me = await api('/me');
+          if (me.authenticated) await showApp();
+          else showLogin('Введите логин и пароль.');
+        } catch {
+          showLogin('Введите логин и пароль.');
+        }
+      }
+
+      loginForm?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        loginStatus.textContent = 'Выполняем вход...';
+        const formData = new FormData(loginForm);
+        try {
+          await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
+          await showApp();
+        } catch (error) {
+          loginStatus.textContent = error.message || 'Ошибка входа.';
+          loginStatus.className = 'muted error';
+        }
+      });
+
+      boot();
+    </script>
+  </body>
+</html>

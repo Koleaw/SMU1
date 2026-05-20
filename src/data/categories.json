@@ -10,10 +10,13 @@
     "ctaSecondary": "Рассчитать стоимость",
     "subcategories": [
       { "title": "Лавочки и скамейки", "slug": "lavochki-i-skameyki" },
+      { "title": "Столы и комплекты", "slug": "stoly-i-komplekty" },
       { "title": "Урны", "slug": "urny" },
       { "title": "Вазоны и цветочницы", "slug": "vazony-i-tsvetochnitsy" },
       { "title": "Велопарковки", "slug": "veloparkovki" },
-      { "title": "Качели, шезлонги, перголы", "slug": "kachali-shezlongi-pergoly" }
+      { "title": "Шезлонги", "slug": "shezlongi" },
+      { "title": "Качели", "slug": "kacheli" },
+      { "title": "Беседки и перголы", "slug": "besedki-i-pergoly" }
     ]
   }
 ]

@@ -70,9 +70,32 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
       .admin-panel { padding: 20px 0; background: #f7fafb; border-block: 1px solid rgb(16 22 27 / 8%); }
       .admin-panel-card { display: grid; gap: 12px; padding: 16px; border: 1px solid #d0dbe4; border-radius: 12px; background: #fff; }
+      .admin-import-page { display: grid; gap: 18px; }
+      .admin-import-head { display: grid; gap: 8px; }
+      .admin-import-head h1, .admin-import-head p { margin: 0; }
+      .admin-import-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+      .admin-import-toolbar .admin-field { min-width: min(420px, 100%); }
+      .admin-import-textarea { min-height: 360px; font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace; font-size: 13px; line-height: 1.55; }
+      .admin-import-table-wrap { width: 100%; overflow-x: auto; border: 1px solid #d0dbe4; border-radius: 10px; background: #fff; }
+      .admin-import-table { width: 100%; min-width: 920px; border-collapse: collapse; font-size: 13px; }
+      .admin-import-table th, .admin-import-table td { padding: 9px 10px; border-bottom: 1px solid #e2e9ef; vertical-align: top; text-align: left; }
+      .admin-import-table th { background: #f4f7fa; color: #405468; font-weight: 800; }
+      .admin-import-table tr:last-child td { border-bottom: 0; }
+      .admin-import-list { display: grid; gap: 4px; margin: 0; padding-left: 16px; }
+      .admin-import-list--errors { color: #a53532; }
+      .admin-import-list--warnings { color: #8a5b00; }
+      .admin-import-result { display: flex; flex-wrap: wrap; gap: 8px; }
+      .admin-import-result span { display: inline-flex; min-height: 30px; align-items: center; padding: 5px 9px; border-radius: 999px; background: #edf2f6; color: #31485d; font-weight: 800; }
       .admin-block-settings { margin-bottom: 16px; padding: 12px; border: 1px solid #d0dbe4; border-radius: 10px; background: rgb(255 255 255 / 78%); }
       .admin-block-settings summary { cursor: pointer; font-weight: 800; color: #31485d; }
       .admin-block-settings__body { display: grid; gap: 12px; margin-top: 12px; }
+      .admin-control-group { display: grid; gap: 10px; padding: 12px; border: 1px solid #e0e7ed; border-radius: 10px; background: #f8fbfd; }
+      .admin-control-group > strong { color: #31485d; }
+      .admin-gallery-list { display: grid; gap: 10px; }
+      .admin-gallery-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; align-items: start; padding: 12px; border: 1px solid #d8e2eb; border-radius: 10px; background: #fff; }
+      .admin-gallery-thumb { aspect-ratio: 4 / 3; overflow: hidden; border-radius: 8px; border: 1px solid #d0dbe4; background: #edf2f6; }
+      .admin-gallery-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      .admin-gallery-thumb span { display: grid; width: 100%; height: 100%; place-items: center; padding: 10px; color: #687b8d; font-size: 12px; font-weight: 800; text-align: center; }
       .admin-product-details { display: grid; gap: 18px; }
       .admin-product-panel-grid { display: grid; gap: 14px; }
       .admin-product-media-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: 14px; align-items: start; }
@@ -179,7 +202,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         ['jobs', 'Вакансии'],
         ['site-settings', 'Контакты и настройки']
       ];
-      const COLLECTION_LABELS = Object.fromEntries(COLLECTIONS);
+      const COLLECTION_LABELS = { ...Object.fromEntries(COLLECTIONS), 'data-import': 'Импорт данных' };
+      const IMPORT_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+      const IMPORT_MODES = [
+        ['upsert', 'Создать новые и обновить существующие по slug'],
+        ['create-only', 'Создать только новые'],
+        ['update-only', 'Обновить только существующие'],
+        ['skip-existing', 'Пропустить существующие']
+      ];
       const SITE_NAV_ITEMS = [
         { label: 'Главная страница', collection: 'static-pages', slug: 'home' },
         { label: 'Уличная мебель', collection: 'product-sections', slug: 'ulichnaya-mebel' },
@@ -194,6 +224,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         { label: 'Вакансии', collection: 'jobs', slug: '' }
       ];
       const WORK_NAV_ITEMS = [
+        { label: 'Импорт данных', collection: 'data-import', slug: '' },
         { label: 'Все модели изделий', collection: 'products', slug: '' },
         { label: 'Все подстраницы каталога', collection: 'product-categories', slug: '' },
         { label: 'Все служебные страницы', collection: 'static-pages', slug: '' }
@@ -216,6 +247,51 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         ['notice', 'Текстовая вставка']
       ];
       const SECTION_TYPE_LABELS = Object.fromEntries(SECTION_TYPES);
+      const TEXT_SIZE_OPTIONS = [
+        ['small', 'Маленький'],
+        ['base', 'Обычный'],
+        ['large', 'Крупный'],
+        ['xl', 'Очень крупный'],
+        ['2xl', 'Максимальный']
+      ];
+      const FONT_WEIGHT_OPTIONS = [
+        ['normal', 'Обычный'],
+        ['medium', 'Medium'],
+        ['semibold', 'Полужирный'],
+        ['bold', 'Жирный']
+      ];
+      const TEXT_ALIGN_OPTIONS = [
+        ['left', 'Слева'],
+        ['center', 'По центру'],
+        ['right', 'Справа']
+      ];
+      const LINE_HEIGHT_OPTIONS = [
+        ['compact', 'Плотный'],
+        ['normal', 'Обычный'],
+        ['relaxed', 'Свободный']
+      ];
+      const TEXT_COLOR_OPTIONS = [
+        ['primary', 'Основной графитовый'],
+        ['secondary', 'Второстепенный серый'],
+        ['white', 'Белый'],
+        ['accent', 'Зеленый акцент']
+      ];
+      const BLOCK_WIDTH_OPTIONS = [
+        ['narrow', 'Узкий'],
+        ['medium', 'Средний'],
+        ['wide', 'Широкий'],
+        ['full', 'Во всю ширину']
+      ];
+      const BLOCK_POSITION_OPTIONS = [
+        ['left', 'Слева'],
+        ['center', 'По центру'],
+        ['right', 'Справа']
+      ];
+      const BLOCK_SPACING_OPTIONS = [
+        ['compact', 'Компактные'],
+        ['normal', 'Обычные'],
+        ['large', 'Большие']
+      ];
       const FIELD_LABELS = {
         title: 'Название',
         slug: 'URL страницы',
@@ -257,7 +333,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         alertError: false,
         crop: null,
         cropDrag: null,
-        uploadTarget: null
+        uploadTarget: null,
+        importText: '',
+        importMode: 'upsert',
+        importPreview: null,
+        importResult: null
       };
 
       const $ = (id) => document.getElementById(id);
@@ -427,6 +507,15 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (slug) params.set('slug', slug);
         history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
 
+        if (collection === 'data-import') {
+          state.selectedSlug = '';
+          state.entries[collection] = [];
+          await loadRecordsForCollection('product-categories');
+          await loadRecordsForCollection('products');
+          renderApp();
+          return;
+        }
+
         await loadCollection(collection);
         if (slug) await loadRecord(collection, slug);
         if (collection === 'product-sections' || collection === 'services') {
@@ -493,7 +582,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           }
         }
 
-        if (state.collection && (!state.selectedSlug || state.collection === 'products' || state.collection === 'static-pages')) {
+        if (state.collection && state.collection !== 'data-import' && (!state.selectedSlug || state.collection === 'products' || state.collection === 'static-pages')) {
           groups.push(`<div class="sidebar-group"><h2>Записи</h2>${entries.map((entry) => `<button class="sidebar-entry ${state.selectedSlug === entry.slug ? 'is-active' : ''}" type="button" data-open-entry="${entry.slug}"><strong>${esc(entry.title || entry.slug)}</strong><small>${esc(entry.slug)}</small></button>`).join('')}</div>`);
         }
 
@@ -504,11 +593,16 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const collection = state.collection;
         const ref = getMainRef();
         const record = ref ? getRecord(ref) : null;
-        $('editorTitle').textContent = collection ? `${COLLECTION_LABELS[collection]}${record ? ` · ${record.draft.title || record.draft.companyName || record.slug}` : ''}` : 'Визуальный редактор';
+        const collectionLabel = COLLECTION_LABELS[collection] || collection;
+        $('editorTitle').textContent = collection ? `${collectionLabel}${record ? ` · ${record.draft.title || record.draft.companyName || record.slug}` : ''}` : 'Визуальный редактор';
         $('publicLink').href = record ? publicUrl(collection, record.draft) : collection === 'jobs' ? withBasePath('/vakansii/') : collection === 'projects' ? withBasePath('/vypolnennye-obekty/') : '#';
 
         if (!collection) {
           $('workspace').innerHTML = renderWelcome();
+          return;
+        }
+        if (collection === 'data-import') {
+          $('workspace').innerHTML = renderImportPage();
           return;
         }
         if ((collection === 'jobs' || collection === 'projects') && !state.selectedSlug) {
@@ -544,6 +638,402 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
               </div>
             </div>
           </section>`;
+      }
+
+      function renderImportPage() {
+        const preview = state.importPreview;
+        const result = state.importResult;
+        const modeOptions = IMPORT_MODES.map(([value, label]) => `<option value="${esc(value)}" ${state.importMode === value ? 'selected' : ''}>${esc(label)}</option>`).join('');
+        const canImport = Boolean(preview && !preview.hasBlockingErrors && preview.rows.length);
+        const previewMarkup = preview ? renderImportPreview(preview) : '';
+        const resultMarkup = result ? `
+          <article class="admin-panel-card">
+            <strong>Результат импорта</strong>
+            <div class="admin-import-result">
+              <span>Создано: ${result.created}</span>
+              <span>Обновлено: ${result.updated}</span>
+              <span>Пропущено: ${result.skipped}</span>
+              <span>Ошибок: ${result.errors}</span>
+            </div>
+            ${result.messages?.length ? `<ul class="admin-import-list admin-import-list--errors">${result.messages.map((message) => `<li>${esc(message)}</li>`).join('')}</ul>` : ''}
+          </article>` : '';
+        return `
+          <section class="section section--soft">
+            <div class="container admin-import-page">
+              <div class="admin-import-head">
+                <h1 class="section-title">Импорт данных</h1>
+                <p class="lead">Вставьте JSON с товарами каталога. Сначала проверьте файл, затем импортируйте позиции.</p>
+              </div>
+              <article class="admin-panel-card">
+                <label class="admin-field">
+                  <span>Режим импорта</span>
+                  <select data-import-mode>${modeOptions}</select>
+                </label>
+                <label class="admin-field">
+                  <span>Вставьте JSON сюда</span>
+                  <textarea class="admin-import-textarea" data-import-json spellcheck="false" placeholder='{"type":"products_import","version":1,"items":[]}' >${esc(state.importText)}</textarea>
+                </label>
+                <div class="admin-import-toolbar">
+                  <button class="admin-btn admin-btn--primary" type="button" data-action="validate-products-import">Проверить</button>
+                  <button class="admin-btn" type="button" data-action="run-products-import" ${canImport ? '' : 'disabled'}>Импортировать</button>
+                </div>
+              </article>
+              ${previewMarkup}
+              ${resultMarkup}
+            </div>
+          </section>`;
+      }
+
+      function renderImportPreview(preview) {
+        const totals = preview.rows.reduce((acc, row) => {
+          acc[row.action] = (acc[row.action] || 0) + 1;
+          return acc;
+        }, {});
+        const summary = `
+          <div class="admin-import-result">
+            <span>Всего: ${preview.rows.length}</span>
+            <span>Будет создано: ${totals.create || 0}</span>
+            <span>Будет обновлено: ${totals.update || 0}</span>
+            <span>Будет пропущено: ${totals.skip || 0}</span>
+            <span>Ошибок: ${preview.errorCount}</span>
+            <span>Предупреждений: ${preview.warningCount}</span>
+          </div>`;
+        const globalErrors = preview.errors.length
+          ? `<ul class="admin-import-list admin-import-list--errors">${preview.errors.map((error) => `<li>${esc(error)}</li>`).join('')}</ul>`
+          : '';
+        const rows = preview.rows.map((row) => `
+          <tr>
+            <td>${row.index + 1}</td>
+            <td>${esc(row.title || '-')}</td>
+            <td><code>${esc(row.slug || '-')}</code></td>
+            <td>${esc(row.categoryTitle || row.productCategorySlug || '-')}</td>
+            <td>${esc(importActionLabel(row.action))}</td>
+            <td>${renderImportMessageList(row.warnings, 'admin-import-list--warnings')}</td>
+            <td>${renderImportMessageList(row.errors, 'admin-import-list--errors')}</td>
+          </tr>`).join('');
+        return `
+          <article class="admin-panel-card">
+            <strong>Предпросмотр</strong>
+            ${summary}
+            ${globalErrors}
+            <div class="admin-import-table-wrap">
+              <table class="admin-import-table">
+                <thead>
+                  <tr>
+                    <th>№</th>
+                    <th>Название</th>
+                    <th>Slug</th>
+                    <th>Категория</th>
+                    <th>Действие</th>
+                    <th>Предупреждения</th>
+                    <th>Ошибки</th>
+                  </tr>
+                </thead>
+                <tbody>${rows || '<tr><td colspan="7">Нет товаров для импорта.</td></tr>'}</tbody>
+              </table>
+            </div>
+          </article>`;
+      }
+
+      function renderImportMessageList(items, className) {
+        return items.length ? `<ul class="admin-import-list ${className}">${items.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` : '<span class="admin-muted">-</span>';
+      }
+
+      function importActionLabel(action) {
+        if (action === 'create') return 'будет создан';
+        if (action === 'update') return 'будет обновлен';
+        return 'будет пропущен';
+      }
+
+      function validateProductsImport(rawText, mode = state.importMode) {
+        const preview = { rows: [], errors: [], errorCount: 0, warningCount: 0, hasBlockingErrors: false };
+        const text = String(rawText || '').trim();
+        if (!text) {
+          preview.errors.push('JSON пустой.');
+          return finishImportPreview(preview);
+        }
+
+        let payload;
+        try {
+          payload = JSON.parse(text);
+        } catch (error) {
+          preview.errors.push(`JSON не читается: ${error.message || 'ошибка синтаксиса'}`);
+          return finishImportPreview(preview);
+        }
+
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) preview.errors.push('Корневой объект JSON должен быть объектом.');
+        if (payload?.type !== 'products_import') preview.errors.push('type должен быть равен "products_import".');
+        if (!Array.isArray(payload?.items)) preview.errors.push('items отсутствует или не является массивом.');
+        if (preview.errors.length) return finishImportPreview(preview);
+
+        const categories = new Map(Object.values(state.records)
+          .filter((record) => record.collection === 'product-categories')
+          .map((record) => [record.draft.slug || record.slug, record]));
+        const products = new Map(Object.values(state.records)
+          .filter((record) => record.collection === 'products')
+          .map((record) => [record.draft.slug || record.slug, record]));
+        const importSlugCounts = countValues(payload.items.map((item) => safeText(item?.slug)));
+        const importOrderCounts = countValues(payload.items.map((item) => numberOrNull(item?.order)).filter((value) => value !== null));
+        const existingOrderMap = new Map();
+        products.forEach((record, slug) => {
+          const order = numberOrNull(record.draft.order);
+          if (order === null) return;
+          if (!existingOrderMap.has(order)) existingOrderMap.set(order, []);
+          existingOrderMap.get(order).push(slug);
+        });
+
+        payload.items.forEach((item, index) => {
+          const row = validateImportItem(item, index, mode, categories, products, importSlugCounts, importOrderCounts, existingOrderMap);
+          preview.rows.push(row);
+        });
+        return finishImportPreview(preview);
+      }
+
+      function finishImportPreview(preview) {
+        preview.errorCount = preview.errors.length + preview.rows.reduce((sum, row) => sum + row.errors.length, 0);
+        preview.warningCount = preview.rows.reduce((sum, row) => sum + row.warnings.length, 0);
+        preview.hasBlockingErrors = preview.errorCount > 0;
+        return preview;
+      }
+
+      function validateImportItem(rawItem, index, mode, categories, products, importSlugCounts, importOrderCounts, existingOrderMap) {
+        const errors = [];
+        const warnings = [];
+        const item = rawItem && typeof rawItem === 'object' && !Array.isArray(rawItem) ? rawItem : {};
+        if (item !== rawItem) errors.push('Товар должен быть объектом.');
+
+        const title = safeText(item.title);
+        const slug = safeText(item.slug);
+        const productCategorySlug = safeText(item.productCategorySlug);
+        const categoryRecord = categories.get(productCategorySlug);
+        const existingRecord = products.get(slug);
+        const exists = Boolean(existingRecord);
+
+        if (!title) errors.push('Нет title.');
+        if (!slug) errors.push('Нет slug.');
+        else if (!IMPORT_SLUG_RE.test(slug)) errors.push('slug содержит недопустимые символы. Разрешены латиница, цифры и дефисы.');
+        if (!productCategorySlug) errors.push('Нет productCategorySlug.');
+        else if (!categoryRecord) errors.push(`Категория "${productCategorySlug}" не найдена.`);
+        if (slug && importSlugCounts.get(slug) > 1) errors.push('slug повторяется в импортируемом JSON.');
+
+        validateArrayField(item, 'images', errors);
+        validateArrayField(item, 'advantages', errors);
+        validateArrayField(item, 'customProduction', errors);
+        validateArrayField(item, 'materials', errors);
+        validateArrayField(item, 'colors', errors);
+        validateArrayField(item, 'relatedProducts', errors);
+        validateSpecsField(item.specs, errors);
+
+        const images = Array.isArray(item.images) ? cleanStringArray(item.images) : [];
+        if (!images.length) warnings.push(exists ? 'images пустой: при обновлении существующие фото сохранятся.' : 'images пустой: товар будет создан без фото.');
+        if (!safeText(item.seoTitle)) warnings.push('seoTitle пустой: будет использовано название товара.');
+        if (!safeText(item.seoDescription)) warnings.push('seoDescription пустой: будет использовано краткое описание или лид-текст.');
+        if (!safeText(item.price) && numberOrNull(item.priceFrom) === null) warnings.push('price пустой.');
+        if (!safeText(item.sku)) warnings.push('sku пустой.');
+        if (exists) warnings.push('slug уже существует.');
+
+        const order = numberOrNull(item.order);
+        if (order !== null) {
+          const existingSameOrder = (existingOrderMap.get(order) || []).filter((existingSlug) => existingSlug !== slug);
+          if (existingSameOrder.length) warnings.push(`order совпадает с другим товаром: ${existingSameOrder.join(', ')}.`);
+          if (importOrderCounts.get(order) > 1) warnings.push('order совпадает с другим товаром в импортируемом JSON.');
+        }
+
+        const action = importActionForItem(exists, mode);
+        if (action === 'skip' && !exists && mode === 'update-only') warnings.push('Товар не найден и будет пропущен.');
+        if (action === 'skip' && exists && (mode === 'create-only' || mode === 'skip-existing')) warnings.push('Товар уже существует и будет пропущен.');
+
+        const normalized = errors.length ? null : normalizeImportedProduct(item, existingRecord?.draft);
+        return {
+          index,
+          title,
+          slug,
+          productCategorySlug,
+          categoryTitle: categoryRecord?.draft?.title || '',
+          action,
+          warnings,
+          errors,
+          normalized
+        };
+      }
+
+      function validateArrayField(item, field, errors) {
+        if (item[field] !== undefined && !Array.isArray(item[field])) errors.push(`${field} не является массивом.`);
+      }
+
+      function validateSpecsField(specs, errors) {
+        if (specs === undefined) return;
+        if (!Array.isArray(specs)) {
+          errors.push('specs имеет неправильный формат.');
+          return;
+        }
+        specs.forEach((spec, index) => {
+          if (!spec || typeof spec !== 'object' || Array.isArray(spec) || !safeText(spec.name ?? spec.label) || !safeText(spec.value)) {
+            errors.push(`specs[${index}] должен быть объектом с name и value.`);
+          }
+        });
+      }
+
+      function importActionForItem(exists, mode) {
+        if (mode === 'create-only') return exists ? 'skip' : 'create';
+        if (mode === 'update-only') return exists ? 'update' : 'skip';
+        if (mode === 'skip-existing') return exists ? 'skip' : 'create';
+        return exists ? 'update' : 'create';
+      }
+
+      function normalizeImportedProduct(item, existing = null) {
+        const title = safeText(item.title);
+        const leadText = safeText(item.leadText) || safeText(item.shortDescription);
+        const shortDescription = safeText(item.shortDescription) || leadText;
+        const next = existing ? clone(existing) : {};
+        const priceFrom = normalizePriceFrom(item.priceFrom ?? item.price);
+        const priceMode = normalizePriceMode(item.priceMode, priceFrom);
+
+        Object.assign(next, {
+          title,
+          slug: safeText(item.slug),
+          productCategorySlug: safeText(item.productCategorySlug),
+          sku: safeText(item.sku),
+          shortDescription,
+          leadText,
+          description: safeText(item.description),
+          materials: cleanStringArray(item.materials),
+          colors: cleanStringArray(item.colors),
+          dimensions: normalizeImportSpecs(item.specs),
+          features: cleanStringArray(item.advantages),
+          customizationItems: cleanStringArray(item.customProduction),
+          showDeliveryBlock: booleanOrDefault(item.showDelivery, true),
+          deliveryText: safeText(item.deliveryText),
+          relatedProductSlugs: cleanStringArray(item.relatedProducts),
+          showCustomProjectBlock: booleanOrDefault(item.showCustomProject, true),
+          customProjectTitle: safeText(item.customProjectTitle) || 'Не нашли подходящее изделие?',
+          customProjectText: safeText(item.customProjectText) || 'Изготовим решение под ваш объект: по фото, эскизу, размерам или техническому заданию.',
+          priceMode,
+          priceFrom: priceMode === 'from' ? priceFrom : null,
+          currency: safeText(item.currency) || next.currency || 'RUB',
+          placeholderLabel: safeText(item.placeholderLabel) || next.placeholderLabel || 'Фото изделия будут добавлены позже.',
+          order: numberOrNull(item.order) ?? 999,
+          isActive: booleanOrDefault(item.isActive, true),
+          showInCatalog: booleanOrDefault(item.showInCatalog, true),
+          seoTitle: safeText(item.seoTitle) || title,
+          seoDescription: safeText(item.seoDescription) || shortDescription || leadText
+        });
+
+        const images = Array.isArray(item.images) ? cleanStringArray(item.images) : [];
+        if (images.length) {
+          next.image = images[0];
+          next.gallery = images.slice(1);
+        } else if (!existing) {
+          next.image = '';
+          next.gallery = [];
+        } else {
+          next.image = typeof next.image === 'string' ? next.image : '';
+          next.gallery = Array.isArray(next.gallery) ? next.gallery : [];
+        }
+
+        return next;
+      }
+
+      function normalizePriceMode(mode, priceFrom) {
+        const value = safeText(mode).toLowerCase();
+        if (value === 'from') return 'from';
+        if (value === 'none') return 'none';
+        if (value === 'request' || value === 'on_request') return 'on_request';
+        if (value === '') return priceFrom !== null ? 'from' : 'on_request';
+        return priceFrom !== null ? 'from' : 'on_request';
+      }
+
+      function normalizePriceFrom(value) {
+        if (value === undefined || value === null || value === '') return null;
+        const prepared = String(value).replace(/\s+/g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+        const number = Number(prepared);
+        return Number.isFinite(number) && number >= 0 ? number : null;
+      }
+
+      function normalizeImportSpecs(specs) {
+        if (!Array.isArray(specs)) return [];
+        return specs
+          .map((spec, index) => ({
+            label: safeText(spec.name ?? spec.label),
+            value: safeText(spec.value),
+            order: numberOrNull(spec.order) ?? (index + 1) * 10,
+            isActive: booleanOrDefault(spec.isActive, true)
+          }))
+          .filter((spec) => spec.label && spec.value);
+      }
+
+      function cleanStringArray(value) {
+        return Array.isArray(value) ? value.map((item) => safeText(item)).filter(Boolean) : [];
+      }
+
+      function safeText(value) {
+        if (value === undefined || value === null) return '';
+        return String(value).replace(/\u0000/g, '').trim();
+      }
+
+      function booleanOrDefault(value, fallback) {
+        return typeof value === 'boolean' ? value : fallback;
+      }
+
+      function numberOrNull(value) {
+        if (value === undefined || value === null || value === '') return null;
+        const number = Number(value);
+        return Number.isFinite(number) ? number : null;
+      }
+
+      function countValues(values) {
+        const map = new Map();
+        values.forEach((value) => {
+          if (value === '' || value === null || value === undefined) return;
+          map.set(value, (map.get(value) || 0) + 1);
+        });
+        return map;
+      }
+
+      async function runProductsImport(preview, mode = state.importMode) {
+        const currentPreview = preview || validateProductsImport(state.importText, mode);
+        if (currentPreview.hasBlockingErrors) {
+          state.importPreview = currentPreview;
+          state.importResult = null;
+          renderApp();
+          setAlert('Исправьте ошибки перед импортом.', true);
+          return;
+        }
+
+        const result = { created: 0, updated: 0, skipped: 0, errors: 0, messages: [] };
+        setAlert('Импортируем товары...');
+        for (const row of currentPreview.rows) {
+          if (row.action === 'skip') {
+            result.skipped += 1;
+            continue;
+          }
+          try {
+            if (row.action === 'create') {
+              const data = await api('/content/products', { method: 'POST', body: JSON.stringify({ slug: row.normalized.slug, content: row.normalized }) });
+              state.records[keyOf('products', data.slug)] = { collection: 'products', slug: data.slug, original: clone(data.content), draft: clone(data.content) };
+              result.created += 1;
+            } else if (row.action === 'update') {
+              const data = await api(`/content/products/${encodeURIComponent(row.slug)}`, { method: 'PUT', body: JSON.stringify(row.normalized) });
+              state.records[keyOf('products', row.slug)] = { collection: 'products', slug: row.slug, original: clone(data.content), draft: clone(data.content) };
+              result.updated += 1;
+            }
+          } catch (error) {
+            result.errors += 1;
+            result.messages.push(`${row.title || row.slug || `строка ${row.index + 1}`}: ${error.message || 'ошибка импорта'}`);
+          }
+        }
+
+        await loadRecordsForCollection('product-categories');
+        await loadRecordsForCollection('products');
+        state.importPreview = validateProductsImport(state.importText, mode);
+        state.importResult = result;
+        renderApp();
+
+        if (result.created || result.updated) {
+          await publishSavedChanges('Импорт товаров завершен.');
+        } else {
+          setAlert('Импорт завершен без изменений.');
+        }
       }
 
       function renderCreatePanel(collection, context = {}) {
@@ -602,6 +1092,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `
           ${renderHero(ref, isCatalog ? 'catalog' : 'media')}
           ${renderHeroMediaPanel(ref)}
+          ${renderHeroTextSettings(ref)}
           ${renderRecordSettings(ref, settingsFields)}
           ${isCatalog ? renderCatalogHub(ref) : renderPageBlocks(ref)}
           ${renderContactBlock(ref)}
@@ -617,6 +1108,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const video = item.heroMediaVideo || '';
         const poster = item.heroMediaPoster || item.image || '';
         const overlayStyle = heroOverlayStyle(item.heroOverlayOpacity);
+        const heroLayoutStyle = adminLayoutStyle(item.heroLayout || {});
+        const heroTitleStyle = adminTextStyle(item.heroTitleStyle || {}, {}, true);
+        const heroDescriptionStyle = adminTextStyle(item.heroDescriptionStyle || {});
         const mediaMarkup = video
           ? `<video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster="${esc(toSrc(poster))}"><source src="${esc(toSrc(video))}" type="${esc(mediaMimeType(video))}" /></video>${poster ? `<img class="hero-media__fallback" src="${esc(toSrc(poster))}" alt="${esc(item.title)}" />` : ''}`
           : item.image
@@ -625,10 +1119,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `
           <section class="hero ${hasMedia ? 'hero--media navesy-hero' : 'hero--catalog hero--catalog-clean'}">
             ${hasMedia ? `<div class="admin-media-frame admin-media-frame--hero ${isCrop && !video ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${mediaMarkup}<div class="hero-media__overlay" style="${esc(overlayStyle)}"></div></div>` : ''}
-            <div class="container hero-content">
+            <div class="container hero-content" style="${esc(heroLayoutStyle)}">
               <p class="kicker" ${editable(ref, 'heroKicker', 'Надзаголовок', true)}>${esc(item.showBadge === false ? '' : item.heroKicker || (hasMedia ? 'Проектное направление' : 'Каталог изделий'))}</p>
-              <h1 ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(item.heroTitle || item.title)}</h1>
-              <p class="hero-description" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(item.heroDescription || item.shortDescription || '')}</p>
+              <h1 style="${esc(heroTitleStyle)}" ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(item.heroTitle || item.title)}</h1>
+              <p class="hero-description" style="${esc(heroDescriptionStyle)}" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(item.heroDescription || item.shortDescription || '')}</p>
             </div>
           </section>
           ${hasMedia && isCrop && !video ? renderCropControls() : ''}
@@ -670,7 +1164,124 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (textareaFields.has(field)) {
           return `<label class="admin-field"><span>${esc(label)}</span><textarea data-field-ref="${ref}" data-field-path="${field}">${esc(value ?? '')}</textarea>${hint}</label>`;
         }
-        return `<label class="admin-field"><span>${esc(label)}</span><input data-field-ref="${ref}" data-field-path="${field}" value="${esc(value ?? '')}" ${field === 'slug' ? 'readonly' : ''} />${hint}</label>`;
+        return `<label class="admin-field"><span>${esc(label)}</span><input data-field-ref="${ref}" data-field-path="${field}" value="${esc(value ?? '')}" ${field === 'slug' ? 'inputmode="url"' : ''} />${hint}</label>`;
+      }
+
+      function optionList(options, selected, emptyLabel = 'По умолчанию') {
+        return `<option value="" ${selected === undefined || selected === null || selected === '' ? 'selected' : ''}>${emptyLabel}</option>${options.map(([value, label]) => `<option value="${value}" ${selected === value ? 'selected' : ''}>${label}</option>`).join('')}`;
+      }
+
+      function renderSelectControl(ref, path, label, options, selected) {
+        return `<label class="admin-field"><span>${esc(label)}</span><select data-field-ref="${ref}" data-field-path="${path}" data-field-empty="undefined">${optionList(options, selected)}</select></label>`;
+      }
+
+      function renderNumberControl(ref, path, label, value, min, max, step = 1, placeholder = '') {
+        return `<label class="admin-field"><span>${esc(label)}</span><input type="number" min="${min}" max="${max}" step="${step}" data-field-ref="${ref}" data-field-path="${path}" data-field-min="${min}" data-field-max="${max}" data-field-empty="undefined" value="${esc(value ?? '')}" placeholder="${esc(placeholder)}" /></label>`;
+      }
+
+      function renderTextStyleControls(ref, basePath, value, title) {
+        const style = value || {};
+        return `<div class="admin-control-group"><strong>${esc(title)}</strong><div class="admin-grid-3">
+          ${renderSelectControl(ref, `${basePath}.fontSize`, 'Размер шрифта', TEXT_SIZE_OPTIONS, style.fontSize)}
+          ${renderSelectControl(ref, `${basePath}.fontWeight`, 'Жирность', FONT_WEIGHT_OPTIONS, style.fontWeight)}
+          <label class="admin-field"><span>Курсив</span><select data-field-ref="${ref}" data-field-path="${basePath}.italic" data-field-type="boolean" data-field-empty="undefined"><option value="" ${typeof style.italic !== 'boolean' ? 'selected' : ''}>По умолчанию</option><option value="false" ${style.italic === false ? 'selected' : ''}>Выключен</option><option value="true" ${style.italic === true ? 'selected' : ''}>Включен</option></select></label>
+          ${renderSelectControl(ref, `${basePath}.align`, 'Выравнивание', TEXT_ALIGN_OPTIONS, style.align)}
+          ${renderSelectControl(ref, `${basePath}.lineHeight`, 'Межстрочный интервал', LINE_HEIGHT_OPTIONS, style.lineHeight)}
+          ${renderSelectControl(ref, `${basePath}.color`, 'Цвет текста', TEXT_COLOR_OPTIONS, style.color)}
+        </div></div>`;
+      }
+
+      function renderTextLayoutControls(ref, basePath, value, title) {
+        const layout = value || {};
+        return `<div class="admin-control-group"><strong>${esc(title)}</strong><div class="admin-grid-3">
+          ${renderSelectControl(ref, `${basePath}.width`, 'Ширина блока', BLOCK_WIDTH_OPTIONS, layout.width)}
+          ${renderNumberControl(ref, `${basePath}.widthPercent`, 'Ширина блока, %', layout.widthPercent, 30, 100, 5, '70')}
+          ${renderNumberControl(ref, `${basePath}.maxWidth`, 'Максимальная ширина, px', layout.maxWidth, 280, 1200, 20, '720')}
+          ${renderSelectControl(ref, `${basePath}.position`, 'Положение', BLOCK_POSITION_OPTIONS, layout.position)}
+          ${renderSelectControl(ref, `${basePath}.padding`, 'Внутренние отступы', BLOCK_SPACING_OPTIONS, layout.padding)}
+          ${renderSelectControl(ref, `${basePath}.verticalPadding`, 'Отступы секции', BLOCK_SPACING_OPTIONS, layout.verticalPadding)}
+        </div><p class="admin-field-hint">На мобильной версии текстовый блок автоматически становится во всю ширину экрана.</p></div>`;
+      }
+
+      function renderHeroTextSettings(ref) {
+        const item = getRecord(ref).draft;
+        return `
+          <section class="admin-panel">
+            <div class="container">
+              <div class="admin-panel-card">
+                <strong>Текст Hero-блока</strong>
+                ${renderTextStyleControls(ref, 'heroTitleStyle', item.heroTitleStyle, 'Заголовок')}
+                ${renderTextStyleControls(ref, 'heroDescriptionStyle', item.heroDescriptionStyle, 'Описание')}
+                ${renderTextLayoutControls(ref, 'heroLayout', item.heroLayout, 'Ширина и положение текста')}
+              </div>
+            </div>
+          </section>`;
+      }
+
+      const PREVIEW_TEXT_SIZE = { small: '14px', base: '16px', large: '18px', xl: '22px', '2xl': '28px' };
+      const PREVIEW_TITLE_SIZE = { small: '28px', base: '36px', large: '44px', xl: '54px', '2xl': '64px' };
+      const PREVIEW_WEIGHT = { normal: 400, medium: 500, semibold: 600, bold: 700 };
+      const PREVIEW_LINE_HEIGHT = { compact: 1.28, normal: 1.55, relaxed: 1.75 };
+      const PREVIEW_COLOR = { primary: 'var(--color-text)', secondary: 'var(--color-muted)', white: '#fff', accent: 'var(--color-accent)' };
+      const PREVIEW_WIDTH = {
+        narrow: { width: '50%', maxWidth: '560px' },
+        medium: { width: '70%', maxWidth: '720px' },
+        wide: { width: '90%', maxWidth: '960px' },
+        full: { width: '100%' }
+      };
+      const PREVIEW_POSITION = {
+        left: { justify: 'start', margin: '0 auto 0 0' },
+        center: { justify: 'center', margin: '0 auto' },
+        right: { justify: 'end', margin: '0 0 0 auto' }
+      };
+      const PREVIEW_PADDING = { compact: '14px', normal: '22px', large: '32px' };
+
+      function adminStyleString(styles) {
+        return styles.filter(Boolean).join(';');
+      }
+
+      function adminTextStyle(style = {}, legacy = {}, title = false) {
+        const sizeMap = title ? PREVIEW_TITLE_SIZE : PREVIEW_TEXT_SIZE;
+        const styles = [];
+        if (sizeMap[style.fontSize]) styles.push(`font-size:${sizeMap[style.fontSize]}`);
+        else if (title && /^\d{1,2}px$/.test(String(legacy.titleSize || ''))) styles.push(`font-size:${legacy.titleSize}`);
+        else if (!title && /^\d{1,2}px$/.test(String(legacy.textSize || ''))) styles.push(`font-size:${legacy.textSize}`);
+        if (PREVIEW_WEIGHT[style.fontWeight]) styles.push(`font-weight:${PREVIEW_WEIGHT[style.fontWeight]}`);
+        else if (['400', '500', '600', '700'].includes(String(legacy.textWeight || ''))) styles.push(`font-weight:${legacy.textWeight}`);
+        if (typeof style.italic === 'boolean') styles.push(`font-style:${style.italic ? 'italic' : 'normal'}`);
+        else if (legacy.textItalic) styles.push('font-style:italic');
+        if (['left', 'center', 'right'].includes(style.align)) styles.push(`text-align:${style.align}`);
+        else if (['left', 'center', 'right'].includes(legacy.textAlign)) styles.push(`text-align:${legacy.textAlign}`);
+        if (PREVIEW_LINE_HEIGHT[style.lineHeight]) styles.push(`line-height:${PREVIEW_LINE_HEIGHT[style.lineHeight]}`);
+        if (PREVIEW_COLOR[style.color]) styles.push(`color:${PREVIEW_COLOR[style.color]}`);
+        return adminStyleString(styles);
+      }
+
+      function adminLayoutStyle(layout = {}, legacy = {}) {
+        const preset = PREVIEW_WIDTH[layout.width];
+        const position = PREVIEW_POSITION[layout.position];
+        const widthPercent = clampNumber(Number(layout.widthPercent), 30, 100, undefined);
+        const maxWidth = clampNumber(Number(layout.maxWidth), 280, 1200, undefined);
+        const styles = [];
+        if (widthPercent !== undefined) styles.push(`width:${Math.round(widthPercent)}%`);
+        else if (preset?.width) styles.push(`width:${preset.width}`);
+        else if (/^\d{2,3}%$/.test(String(legacy.textWidth || '')) || /^\d{3,4}px$/.test(String(legacy.textWidth || ''))) styles.push(`width:${legacy.textWidth}`);
+        if (maxWidth !== undefined) styles.push(`max-width:${Math.round(maxWidth)}px`);
+        else if (preset?.maxWidth) styles.push(`max-width:${preset.maxWidth}`);
+        if (position) {
+          styles.push(`justify-self:${position.justify}`);
+          styles.push(`margin:${position.margin}`);
+        }
+        if (PREVIEW_PADDING[layout.padding]) styles.push(`padding:${PREVIEW_PADDING[layout.padding]}`);
+        return adminStyleString(styles);
+      }
+
+      function blockTextStyle(block) {
+        return adminStyleString([adminLayoutStyle(block.layout || {}, block), adminTextStyle(block.textStyle || {}, block)]);
+      }
+
+      function blockTitleStyle(block) {
+        return adminTextStyle(block.titleStyle || block.textStyle || {}, block, true);
       }
 
       function renderHeroMediaPanel(ref) {
@@ -753,6 +1364,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
         return `
           ${renderHero(ref, 'catalog')}
+          ${renderHeroTextSettings(ref)}
           ${renderRecordSettings(ref, ['title', 'slug', 'parentSectionSlug', 'shortDescription', 'order', 'showInSectionGrid', 'isActive', 'mode', 'seoTitle', 'seoDescription'])}
           ${renderCreatePanel('products', { productCategorySlug: category.slug })}
           <section id="products" class="section">
@@ -896,7 +1508,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
               <div class="admin-panel-card">
                 <strong>Информация на странице товара</strong>
                 <label class="admin-field"><span>Подробное описание</span><textarea data-field-ref="${ref}" data-field-path="description">${esc(item.description || '')}</textarea></label>
-                ${renderArrayEditor(ref, 'gallery', 'Дополнительные фото')}
+                ${renderTextStyleControls(ref, 'descriptionTextStyle', item.descriptionTextStyle, 'Стиль подробного описания')}
+                ${renderTextLayoutControls(ref, 'descriptionLayout', item.descriptionLayout, 'Ширина подробного описания')}
+                ${renderImageListEditor(ref, 'gallery', 'Дополнительные фото')}
                 <p class="admin-field-hint">Для дополнительных фото укажите пути вида /assets/... или /uploads/.... Если фото одно, галерея на сайте не выводится.</p>
                 ${renderArrayEditor(ref, 'features', 'Преимущества товара')}
                 ${renderArrayEditor(ref, 'customizationItems', 'Пункты блока «Изготовление под задачу»')}
@@ -965,6 +1579,27 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `<div><strong>${title}</strong><ul>${items.map((item, index) => `<li><span ${editable(ref, `${path}.${index}`, 'Строка')}>${esc(item)}</span> <button class="admin-btn" type="button" data-action="delete-array-item" data-ref="${ref}" data-path="${path}" data-index="${index}">Удалить</button></li>`).join('')}</ul><button class="admin-btn" type="button" data-action="add-array-item" data-ref="${ref}" data-path="${path}">Добавить строку</button></div>`;
       }
 
+      function renderImageListEditor(ref, path, title) {
+        const record = getRecord(ref);
+        const items = getPath(record, path) || [];
+        return `<div class="admin-product-details"><strong>${esc(title)}</strong><div class="admin-gallery-list">${items.map((image, index) => {
+          const imagePath = `${path}.${index}`;
+          return `<div class="admin-gallery-row">
+            <div class="admin-gallery-thumb">${image ? `<img src="${esc(toSrc(image))}" alt="" />` : '<span>Фото не выбрано</span>'}</div>
+            <div class="admin-product-panel-grid">
+              <label class="admin-field"><span>Путь к фото</span><input data-field-ref="${ref}" data-field-path="${imagePath}" value="${esc(image || '')}" placeholder="/uploads/photo.jpg" /></label>
+              <div class="admin-item-tools">
+                <button class="admin-btn" type="button" data-action="upload-image" data-ref="${ref}" data-path="${esc(imagePath)}" data-target="${esc(`${ref}:${imagePath}`)}">Загрузить/заменить</button>
+                <button class="admin-btn" type="button" data-action="move-array-item" data-ref="${ref}" data-path="${path}" data-index="${index}" data-dir="-1">Выше</button>
+                <button class="admin-btn" type="button" data-action="move-array-item" data-ref="${ref}" data-path="${path}" data-index="${index}" data-dir="1">Ниже</button>
+                <button class="admin-btn" type="button" data-action="promote-gallery-image" data-ref="${ref}" data-path="${path}" data-index="${index}">Сделать основным</button>
+                <button class="admin-btn admin-btn--danger" type="button" data-action="delete-array-item" data-ref="${ref}" data-path="${path}" data-index="${index}">Удалить</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}</div><button class="admin-btn admin-btn--primary" type="button" data-action="add-gallery-image" data-ref="${ref}" data-path="${path}">Добавить фото</button></div>`;
+      }
+
       function renderProjectsPage() {
         const projects = Object.values(state.records).filter((record) => record.collection === 'projects').sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
         return `
@@ -999,6 +1634,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `
           ${renderStaticHero(ref, 'hero--service')}
           ${renderHeroMediaPanel(ref)}
+          ${renderHeroTextSettings(ref)}
           ${renderRecordSettings(ref, ['title', 'slug', 'order', 'isActive', 'showInMenu', 'menuTitle', 'showBadge', 'seoTitle', 'seoDescription'])}
           ${renderPageBlocks(ref)}
           ${renderContactBlock(ref)}
@@ -1016,6 +1652,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const image = getPath(getRecord(ref), mediaPath);
         const poster = page.heroMediaPoster || page.image || '';
         const overlayStyle = heroOverlayStyle(page.heroOverlayOpacity);
+        const heroLayoutStyle = adminLayoutStyle(page.heroLayout || {});
+        const heroTitleStyle = adminTextStyle(page.heroTitleStyle || {}, {}, true);
+        const heroDescriptionStyle = adminTextStyle(page.heroDescriptionStyle || {});
         const mediaMarkup = video
           ? `<video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster="${esc(toSrc(poster))}"><source src="${esc(toSrc(video))}" type="${esc(mediaMimeType(video))}" /></video>${poster ? `<img class="hero-media__fallback" src="${esc(toSrc(poster))}" alt="${esc(page.title)}" />` : ''}`
           : image
@@ -1024,10 +1663,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `
           <section class="hero ${hasMedia ? 'hero--media' : className}">
             ${hasMedia ? `<div class="admin-media-frame admin-media-frame--hero ${isCrop && !video ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${mediaMarkup}<div class="hero-media__overlay" style="${esc(overlayStyle)}"></div></div>` : ''}
-            <div class="container hero-content">
+            <div class="container hero-content" style="${esc(heroLayoutStyle)}">
               ${page.showBadge === false ? '' : `<p class="kicker" ${editable(ref, 'heroKicker', 'Надзаголовок', true)}>${esc(page.heroKicker || '')}</p>`}
-              <h1 ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(page.heroTitle || page.title)}</h1>
-              <p class="hero-description" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(page.heroDescription || '')}</p>
+              <h1 style="${esc(heroTitleStyle)}" ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(page.heroTitle || page.title)}</h1>
+              <p class="hero-description" style="${esc(heroDescriptionStyle)}" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(page.heroDescription || '')}</p>
             </div>
           </section>
           ${hasMedia && isCrop && !video ? renderCropControls() : ''}`;
@@ -1045,6 +1684,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `
           ${renderStaticHero(ref, 'hero--media')}
           ${renderHeroMediaPanel(ref)}
+          ${renderHeroTextSettings(ref)}
           ${renderRecordSettings(ref, ['title', 'slug', 'order', 'isActive', 'showInMenu', 'menuTitle', 'showBadge', 'seoTitle', 'seoDescription'])}
           ${renderPageBlocks(ref)}
           <section class="home-pathways section">
@@ -1116,28 +1756,32 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       function renderBlockSettings(ref, block, index) {
         const isCards = ['cardGrid', 'exampleGrid', 'benefits', 'directionCards', 'solutions', 'gallery'].includes(block.type);
         const isList = ['listPanel', 'factorList', 'costFactors'].includes(block.type);
+        const textStyle = { ...(block.textStyle || {}) };
+        const titleStyle = { ...(block.titleStyle || {}) };
+        const layout = { ...(block.layout || {}) };
+        if (!textStyle.align && block.textAlign) textStyle.align = block.textAlign;
+        if (textStyle.italic === undefined && typeof block.textItalic === 'boolean') textStyle.italic = block.textItalic;
+        if (!textStyle.fontWeight && String(block.textWeight || '') === '500') textStyle.fontWeight = 'medium';
+        if (!textStyle.fontWeight && String(block.textWeight || '') === '600') textStyle.fontWeight = 'semibold';
+        if (!textStyle.fontWeight && String(block.textWeight || '') === '700') textStyle.fontWeight = 'bold';
+        const legacyWidth = String(block.textWidth || '').trim();
+        const legacyPercent = legacyWidth.match(/^(\d{2,3})%$/);
+        const legacyPx = legacyWidth.match(/^(\d{3,4})px$/);
+        if (layout.widthPercent === undefined && legacyPercent) layout.widthPercent = Number(legacyPercent[1]);
+        if (layout.maxWidth === undefined && legacyPx) layout.maxWidth = Number(legacyPx[1]);
         return `
           <details class="admin-block-settings">
             <summary>Настройки секции</summary>
             <div class="admin-block-settings__body">
               <div class="admin-grid-3">
                 <label class="admin-field"><span>ID секции</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.sectionId" value="${esc(block.sectionId || '')}" placeholder="about-company" /></label>
-                <label class="admin-field"><span>Отступ сверху</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.paddingTop" value="${esc(block.paddingTop || '')}" placeholder="56px" /></label>
-                <label class="admin-field"><span>Отступ снизу</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.paddingBottom" value="${esc(block.paddingBottom || '')}" placeholder="56px" /></label>
-              </div>
-              <div class="admin-grid-3">
                 ${isCards ? `<label class="admin-field"><span>Колонки карточек</span><select data-field-ref="${ref}" data-field-path="pageBlocks.${index}.grid"><option value="auto" ${(block.grid || 'auto') === 'auto' ? 'selected' : ''}>Авто</option><option value="2" ${block.grid === '2' ? 'selected' : ''}>2</option><option value="3" ${block.grid === '3' ? 'selected' : ''}>3</option><option value="4" ${block.grid === '4' ? 'selected' : ''}>4</option></select></label>` : ''}
                 ${isList ? `<label class="admin-field"><span>Колонки списка</span><select data-field-ref="${ref}" data-field-path="pageBlocks.${index}.columns" data-field-type="number"><option value="2" ${Number(block.columns || 2) === 2 ? 'selected' : ''}>2</option><option value="3" ${Number(block.columns || 2) === 3 ? 'selected' : ''}>3</option></select></label>` : ''}
-                <label class="admin-field"><span>Ширина текста</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.textWidth" value="${esc(block.textWidth || '')}" placeholder="760px / 62ch" /></label>
-                <label class="admin-field"><span>Выравнивание</span><select data-field-ref="${ref}" data-field-path="pageBlocks.${index}.textAlign"><option value="left" ${(block.textAlign || 'left') === 'left' ? 'selected' : ''}>Слева</option><option value="center" ${block.textAlign === 'center' ? 'selected' : ''}>По центру</option><option value="right" ${block.textAlign === 'right' ? 'selected' : ''}>Справа</option></select></label>
               </div>
-              <div class="admin-grid-3">
-                <label class="admin-field"><span>Размер заголовка</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.titleSize" value="${esc(block.titleSize || '')}" placeholder="40px" /></label>
-                <label class="admin-field"><span>Размер текста</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.textSize" value="${esc(block.textSize || '')}" placeholder="18px" /></label>
-                <label class="admin-field"><span>Жирность текста</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.textWeight" value="${esc(block.textWeight || '')}" placeholder="400 / 600 / 700" /></label>
-              </div>
-              <div class="admin-grid-3">
-                <label class="admin-field"><span>Курсив</span><select data-field-ref="${ref}" data-field-path="pageBlocks.${index}.textItalic" data-field-type="boolean"><option value="false" ${block.textItalic !== true ? 'selected' : ''}>Нет</option><option value="true" ${block.textItalic === true ? 'selected' : ''}>Да</option></select></label>
+              ${renderTextStyleControls(ref, `pageBlocks.${index}.titleStyle`, titleStyle, 'Заголовок секции')}
+              ${renderTextStyleControls(ref, `pageBlocks.${index}.textStyle`, textStyle, 'Основной текст')}
+              ${renderTextLayoutControls(ref, `pageBlocks.${index}.layout`, layout, 'Ширина, положение и отступы блока')}
+              <div class="admin-grid-2">
                 <label class="admin-field"><span>Подпись кнопки</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.buttonLabel" value="${esc(block.buttonLabel || '')}" /></label>
                 <label class="admin-field"><span>Ссылка кнопки</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.buttonHref" value="${esc(block.buttonHref || '')}" placeholder="/kontakty/" /></label>
               </div>
@@ -1152,7 +1796,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
         if (cardTypes.includes(block.type) || block.type === 'gallery') {
           const items = Array.isArray(block.items) ? block.items : [];
-          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}<div class="${block.theme === 'dark' ? 'section-heading section-heading--light' : 'section-heading'}"><h2 class="section-title" ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок секции', true)}>${esc(block.title || '')}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p></div><div class="page-blocks-grid page-blocks-grid--${esc(block.grid || 'auto')}">${items.map((item, itemIndex) => {
+          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}<div class="${block.theme === 'dark' ? 'section-heading section-heading--light' : 'section-heading'}" style="${esc(blockTextStyle(block))}"><h2 class="section-title" style="${esc(blockTitleStyle(block))}" ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок секции', true)}>${esc(block.title || '')}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p></div><div class="page-blocks-grid page-blocks-grid--${esc(block.grid || 'auto')}">${items.map((item, itemIndex) => {
             const itemPath = `pageBlocks.${index}.items.${itemIndex}`;
             const isObject = typeof item === 'object' && item !== null;
             const titlePath = isObject ? `${itemPath}.title` : itemPath;
@@ -1395,6 +2039,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         });
 
         $('workspace').addEventListener('input', (event) => {
+          const importJson = event.target.closest?.('[data-import-json]');
+          if (importJson) {
+            state.importText = importJson.value;
+            state.importPreview = null;
+            state.importResult = null;
+            return;
+          }
           const editable = event.target.closest?.('[data-editable]');
           if (editable) {
             const record = getRecord(editable.dataset.ref);
@@ -1418,11 +2069,20 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         });
 
         $('workspace').addEventListener('change', (event) => {
+          const importMode = event.target.closest?.('[data-import-mode]');
+          if (importMode) {
+            state.importMode = importMode.value;
+            state.importPreview = null;
+            state.importResult = null;
+            renderApp();
+            return;
+          }
           const field = event.target.closest?.('[data-field-ref]');
           if (!field) return;
           const record = getRecord(field.dataset.fieldRef);
           let value = field.value;
-          if (field.dataset.fieldType === 'boolean') value = value === 'true';
+          if (value === '' && field.dataset.fieldEmpty === 'undefined') value = undefined;
+          else if (field.dataset.fieldType === 'boolean') value = value === 'true';
           else if (field.dataset.fieldType === 'number' || field.type === 'number') {
             if (value === '') {
               value = field.dataset.fieldEmpty === 'undefined' ? undefined : null;
@@ -1518,6 +2178,17 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       async function handleAction(el) {
         const action = el.dataset.action;
+        if (action === 'validate-products-import') {
+          state.importPreview = validateProductsImport(state.importText, state.importMode);
+          state.importResult = null;
+          renderApp();
+          setAlert(state.importPreview.hasBlockingErrors ? 'Проверка завершена: есть ошибки.' : 'Проверка завершена: JSON готов к импорту.', state.importPreview.hasBlockingErrors);
+          return;
+        }
+        if (action === 'run-products-import') {
+          await runProductsImport(state.importPreview, state.importMode);
+          return;
+        }
         if (action === 'create-record') return createRecord(el.dataset.collection, el.closest('[data-create-panel]'));
         if (action === 'delete-record') return deleteRecord(el.dataset.ref);
         if (action === 'toggle-record') {
@@ -1580,6 +2251,34 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (action === 'delete-array-item') {
           const arr = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
           arr.splice(Number(el.dataset.index), 1);
+          renderApp();
+          return;
+        }
+        if (action === 'move-array-item') {
+          const arr = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
+          moveItem(arr, Number(el.dataset.index), Number(el.dataset.dir));
+          setPath(getRecord(el.dataset.ref), el.dataset.path, arr);
+          renderApp();
+          return;
+        }
+        if (action === 'add-gallery-image') {
+          const arr = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
+          arr.push('');
+          setPath(getRecord(el.dataset.ref), el.dataset.path, arr);
+          renderApp();
+          return;
+        }
+        if (action === 'promote-gallery-image') {
+          const record = getRecord(el.dataset.ref);
+          const arr = getPath(record, el.dataset.path) || [];
+          const index = Number(el.dataset.index);
+          const image = arr[index];
+          if (!image) return;
+          const currentMain = record.draft.image || '';
+          record.draft.image = image;
+          if (currentMain) arr[index] = currentMain;
+          else arr.splice(index, 1);
+          setPath(record, el.dataset.path, arr);
           renderApp();
           return;
         }

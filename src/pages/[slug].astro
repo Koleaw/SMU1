@@ -604,7 +604,10 @@ const heroClassName = hasMediaHero
     mediaAlt={isCatalogHub ? undefined : item.title}
     mediaCaption={isCatalogHub || heroVideo ? itemAny.heroMediaCaption : itemAny.heroMediaCaption || itemAny.placeholderLabel}
     overlayOpacity={itemAny.heroOverlayOpacity}
-    mediaView={isCatalogHub ? undefined : itemAny.imageView}
+  mediaView={isCatalogHub ? undefined : itemAny.imageView}
+  titleStyle={itemAny.heroTitleStyle}
+  descriptionStyle={itemAny.heroDescriptionStyle}
+  contentLayout={itemAny.heroLayout}
   />
 
   {isCatalogHub ? (

@@ -11,7 +11,10 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
 const execFileAsync = promisify(execFile);
 
-const SAFE_SLUG_RE = /^[a-z0-9_-]+$/;
+const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const ROUTE_SLUG_COLLECTIONS = new Set(['static-pages', 'product-sections', 'services']);
+const LOCKED_STATIC_PAGE_SLUGS = new Set(['home', 'custom-order']);
+const RESERVED_TOP_LEVEL_SLUGS = new Set(['admin', 'izgotovlenie-na-zakaz', '404']);
 const DEV_DEFAULTS = {
   ADMIN_USERNAME: 'admin',
   ADMIN_PASSWORD: 'admin',
@@ -363,10 +366,14 @@ function normalizeOrderItems(items) {
 }
 
 function sanitizeSlug(slug) {
-  if (!SAFE_SLUG_RE.test(slug)) {
-    throw new Error('Некорректный slug. Разрешены только a-z, 0-9, -, _.');
+  const value = String(slug ?? '').trim().toLowerCase();
+  if (!value) {
+    throw new Error('Slug не может быть пустым');
   }
-  return slug;
+  if (!SAFE_SLUG_RE.test(value)) {
+    throw new Error('Некорректный slug. Разрешены только латиница a-z, цифры 0-9 и дефисы.');
+  }
+  return value;
 }
 
 function getCollectionConfig(collection) {
@@ -380,6 +387,106 @@ function getCollectionConfig(collection) {
 async function readJsonFile(fullPath) {
   const content = await fs.readFile(fullPath, 'utf8');
   return JSON.parse(content);
+}
+
+function isSamePath(left, right) {
+  return path.resolve(left) === path.resolve(right);
+}
+
+function getDirectoryEntryPath(config, slug) {
+  const fullPath = path.join(config.path, `${slug}.json`);
+  const normalizedBase = path.resolve(config.path);
+  const normalizedPath = path.resolve(fullPath);
+
+  if (!normalizedPath.startsWith(normalizedBase + path.sep)) {
+    throw new Error('Неверный путь');
+  }
+
+  return fullPath;
+}
+
+async function listJsonEntries(collection) {
+  const config = getCollectionConfig(collection);
+  if (config.type === 'single-file') return [];
+
+  const dirEntries = await fs.readdir(config.path, { withFileTypes: true });
+  const items = [];
+  for (const entry of dirEntries) {
+    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+
+    const fileSlug = entry.name.replace(/\.json$/i, '');
+    if (!SAFE_SLUG_RE.test(fileSlug)) continue;
+
+    const filePath = path.join(config.path, entry.name);
+    const json = await readJsonFile(filePath);
+    items.push({ fileSlug, filePath, json });
+  }
+  return items;
+}
+
+function getEntrySlug(entry) {
+  if (typeof entry.json?.slug === 'string') {
+    try {
+      return sanitizeSlug(entry.json.slug);
+    } catch {
+      // fall back to the file slug for malformed legacy content
+    }
+  }
+  return entry.fileSlug;
+}
+
+async function assertSlugIsUnique(collection, slug, currentPath = null) {
+  const entries = await listJsonEntries(collection);
+  for (const entry of entries) {
+    if (currentPath && isSamePath(entry.filePath, currentPath)) continue;
+    const occupiedSlugs = new Set([entry.fileSlug, getEntrySlug(entry)]);
+    if (occupiedSlugs.has(slug)) {
+      throw new Error('Запись с таким slug уже существует');
+    }
+  }
+}
+
+async function assertTopLevelRouteIsAvailable(collection, slug, currentPath = null) {
+  if (!ROUTE_SLUG_COLLECTIONS.has(collection)) return;
+  if (RESERVED_TOP_LEVEL_SLUGS.has(slug)) {
+    throw new Error('Этот slug занят системным маршрутом сайта');
+  }
+
+  for (const routeCollection of ROUTE_SLUG_COLLECTIONS) {
+    const entries = await listJsonEntries(routeCollection);
+    for (const entry of entries) {
+      if (currentPath && isSamePath(entry.filePath, currentPath)) continue;
+      const occupiedSlugs = new Set([entry.fileSlug, getEntrySlug(entry)]);
+      if (occupiedSlugs.has(slug)) {
+        throw new Error('Этот slug уже занят другой страницей сайта');
+      }
+    }
+  }
+}
+
+async function validateDirectoryContentSlug(collection, content, currentPath = null, previousSlug = null) {
+  const slug = sanitizeSlug(content?.slug ?? previousSlug);
+  if (collection === 'static-pages' && previousSlug && LOCKED_STATIC_PAGE_SLUGS.has(previousSlug) && slug !== previousSlug) {
+    throw new Error('Slug этой служебной страницы закреплен маршрутом сайта');
+  }
+
+  await assertSlugIsUnique(collection, slug, currentPath);
+  await assertTopLevelRouteIsAvailable(collection, slug, currentPath);
+  return slug;
+}
+
+async function updateProductsCategorySlug(previousSlug, nextSlug) {
+  if (previousSlug === nextSlug) return 0;
+
+  const entries = await listJsonEntries('products');
+  let updatedCount = 0;
+  for (const entry of entries) {
+    if (entry.json?.productCategorySlug !== previousSlug) continue;
+    const updated = { ...entry.json, productCategorySlug: nextSlug };
+    await fs.writeFile(entry.filePath, `${JSON.stringify(updated, null, 2)}\n`, 'utf8');
+    updatedCount += 1;
+  }
+  return updatedCount;
 }
 
 async function listCollectionEntries(collection) {
@@ -402,19 +509,14 @@ async function listCollectionEntries(collection) {
     ];
   }
 
-  const dirEntries = await fs.readdir(config.path, { withFileTypes: true });
+  const entries = await listJsonEntries(collection);
   const items = [];
-  for (const entry of dirEntries) {
-    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-
-    const fileSlug = entry.name.replace(/\.json$/i, '');
-    if (!SAFE_SLUG_RE.test(fileSlug)) continue;
-
-    const json = await readJsonFile(path.join(config.path, entry.name));
-    const slug = typeof json.slug === 'string' && SAFE_SLUG_RE.test(json.slug) ? json.slug : fileSlug;
+  for (const entry of entries) {
+    const json = entry.json;
+    const slug = getEntrySlug(entry);
     items.push({
       slug,
-      fileName: entry.name,
+      fileName: path.basename(entry.filePath),
       title: json.title ?? slug,
       isActive: typeof json.isActive === 'boolean' ? json.isActive : null,
       order: typeof json.order === 'number' ? json.order : null,
@@ -444,28 +546,15 @@ async function resolveJsonPath(collection, slug) {
   }
 
   const safeSlug = sanitizeSlug(slug);
-  const fullPath = path.join(config.path, `${safeSlug}.json`);
-  const normalizedBase = path.resolve(config.path);
-  const normalizedPath = path.resolve(fullPath);
-
-  if (!normalizedPath.startsWith(normalizedBase + path.sep)) {
-    throw new Error('Неверный путь');
-  }
+  const fullPath = getDirectoryEntryPath(config, safeSlug);
 
   try {
-    await fs.access(normalizedPath);
+    await fs.access(fullPath);
     return fullPath;
   } catch {
-    const dirEntries = await fs.readdir(config.path, { withFileTypes: true });
-    for (const entry of dirEntries) {
-      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-      const fileSlug = entry.name.replace(/\.json$/i, '');
-      if (!SAFE_SLUG_RE.test(fileSlug)) continue;
-      const candidatePath = path.join(config.path, entry.name);
-      const json = await readJsonFile(candidatePath);
-      if (json?.slug === safeSlug) {
-        return candidatePath;
-      }
+    const entries = await listJsonEntries(collection);
+    for (const entry of entries) {
+      if (getEntrySlug(entry) === safeSlug) return entry.filePath;
     }
   }
 
@@ -653,8 +742,17 @@ const server = http.createServer(async (req, res) => {
       const content = body?.content && typeof body.content === 'object' && !Array.isArray(body.content)
         ? body.content
         : body;
-      const slug = sanitizeSlug(String(body?.slug ?? content?.slug ?? '').trim());
-      const filePath = await resolveJsonPath(collection, slug);
+
+      if (!content || typeof content !== 'object' || Array.isArray(content)) {
+        sendJson(res, 400, { error: 'Ожидается JSON-объект' });
+        return;
+      }
+
+      const slug = await validateDirectoryContentSlug(collection, {
+        ...content,
+        slug: body?.slug ?? content?.slug
+      });
+      const filePath = getDirectoryEntryPath(config, slug);
 
       try {
         await fs.access(filePath);
@@ -664,11 +762,6 @@ const server = http.createServer(async (req, res) => {
         // file does not exist yet
       }
 
-      if (!content || typeof content !== 'object' || Array.isArray(content)) {
-        sendJson(res, 400, { error: 'Ожидается JSON-объект' });
-        return;
-      }
-
       await fs.mkdir(path.dirname(filePath), { recursive: true });
       await fs.writeFile(filePath, `${JSON.stringify({ ...content, slug }, null, 2)}\n`, 'utf8');
       const saved = await readJsonFile(filePath);
@@ -676,7 +769,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const matchEntry = pathname.match(/^\/api\/admin\/content\/([a-z0-9-]+)\/([a-z0-9_-]+)$/i);
+    const matchEntry = pathname.match(/^\/api\/admin\/content\/([a-z0-9-]+)\/([a-z0-9-]+)$/i);
     if (matchEntry && req.method === 'GET') {
       const [, collection, slug] = matchEntry;
       const filePath = await resolveJsonPath(collection, slug);
@@ -687,7 +780,9 @@ const server = http.createServer(async (req, res) => {
 
     if (matchEntry && req.method === 'PUT') {
       const [, collection, slug] = matchEntry;
+      const config = getCollectionConfig(collection);
       const filePath = await resolveJsonPath(collection, slug);
+      const previousContent = await readJsonFile(filePath);
       const body = await readBody(req);
 
       if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -695,9 +790,37 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      await fs.writeFile(filePath, `${JSON.stringify(body, null, 2)}\n`, 'utf8');
-      const saved = await readJsonFile(filePath);
-      sendJson(res, 200, { ok: true, content: saved });
+      if (config.type === 'single-file') {
+        await fs.writeFile(filePath, `${JSON.stringify(body, null, 2)}\n`, 'utf8');
+        const saved = await readJsonFile(filePath);
+        sendJson(res, 200, { ok: true, content: saved });
+        return;
+      }
+
+      const previousSlug = sanitizeSlug(previousContent?.slug ?? slug);
+      const nextSlug = await validateDirectoryContentSlug(collection, body, filePath, previousSlug);
+      const savedContent = { ...body, slug: nextSlug };
+      const nextPath = getDirectoryEntryPath(config, nextSlug);
+
+      if (!isSamePath(filePath, nextPath)) {
+        try {
+          await fs.access(nextPath);
+          sendJson(res, 409, { error: 'Запись с таким slug уже существует' });
+          return;
+        } catch {
+          // target file does not exist yet
+        }
+        await fs.writeFile(nextPath, `${JSON.stringify(savedContent, null, 2)}\n`, 'utf8');
+        await fs.unlink(filePath);
+      } else {
+        await fs.writeFile(filePath, `${JSON.stringify(savedContent, null, 2)}\n`, 'utf8');
+      }
+
+      const updatedProductCount = collection === 'product-categories'
+        ? await updateProductsCategorySlug(previousSlug, nextSlug)
+        : 0;
+      const saved = await readJsonFile(nextPath);
+      sendJson(res, 200, { ok: true, content: saved, previousSlug, slug: nextSlug, updatedProductCount });
       return;
     }
 

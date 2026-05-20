@@ -1,16 +1,16 @@
 {
   "title": "Беседки и перголы",
-  "slug": "kachali-shezlongi-pergoly",
+  "slug": "besedki-i-pergoly",
   "parentSectionSlug": "ulichnaya-mebel",
   "shortDescription": "Подбираем формат изделий для рекреационных зон, дворов и коммерческих пространств с учетом сценариев использования.",
-  "heroTitle": "Качели, шезлонги и перголы для зон отдыха",
+  "heroTitle": "Беседки и перголы для зон отдыха",
   "heroDescription": "Подбираем формат изделий для рекреационных зон, дворов и коммерческих пространств с учетом сценариев использования.",
-  "order": 5,
+  "order": 8,
   "showInSectionGrid": true,
   "isActive": true,
   "image": "/assets/images/placeholders/street-furniture.svg",
   "placeholderLabel": "Фото будут обновлены в мае: материалы по категории.",
   "mode": "catalog-list",
-  "seoTitle": "Качели, шезлонги, перголы — СМУ-1",
-  "seoDescription": "Качели, шезлонги и перголы для зон отдыха."
+  "seoTitle": "Беседки и перголы — СМУ-1",
+  "seoDescription": "Беседки и перголы для зон отдыха, дворов и коммерческих пространств."
 }

@@ -16,7 +16,7 @@ if (!section) {
 const categories = (await getCollection('product-categories'))
   .map(({ data }) => data)
   .filter((item) => item.parentSectionSlug === section.data.slug && item.isActive && item.showInSectionGrid)
-  .sort((a, b) => a.order - b.order);
+  .sort((a, b) => (a.order - b.order) || a.title.localeCompare(b.title, 'ru'));
 ---
 <BaseLayout title={section.data.seoTitle} description={section.data.seoDescription}>
   <div class="breadcrumbs-bar">
@@ -30,6 +30,9 @@ const categories = (await getCollection('product-categories'))
     title={section.data.heroTitle}
     description={section.data.heroDescription}
     className="hero--catalog hero--catalog-clean"
+    titleStyle={section.data.heroTitleStyle}
+    descriptionStyle={section.data.heroDescriptionStyle}
+    contentLayout={section.data.heroLayout}
   />
 
   <section id="categories" class="section section--soft">

@@ -1,4 +1,12 @@
 ---
+import { withBase } from '../utils/withBase';
+import {
+  getTextLayoutVars,
+  getTextStyleVars,
+  type TextLayoutSettings,
+  type TextStyleSettings,
+} from '../utils/textStyle';
+
 interface Props {
   className?: string;
   kicker?: string;
@@ -22,8 +30,10 @@ interface Props {
     positionY?: number;
     scale?: number;
   };
+  titleStyle?: TextStyleSettings;
+  descriptionStyle?: TextStyleSettings;
+  contentLayout?: TextLayoutSettings;
 }
-import { withBase } from '../utils/withBase';
 
 const {
   className,
@@ -42,8 +52,11 @@ const {
   mediaAlt = 'Фоновое изображение первого экрана',
   mediaCaption,
   overlayOpacity,
-  mediaView
-} = Astro.props;
+  mediaView,
+  titleStyle,
+  descriptionStyle,
+  contentLayout,
+} = Astro.props as Props;
 
 const heroClass = ['hero', className].filter(Boolean).join(' ');
 const normalizePercent = (value: unknown, fallback = 100) => {
@@ -57,6 +70,9 @@ const mediaVideoType = mediaVideo?.toLowerCase().endsWith('.webm') ? 'video/webm
 const mediaVideoMobileType = mediaVideoMobile?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
 const overlayStyle = `--hero-overlay-strength:${normalizePercent(overlayOpacity) / 100};`;
 const resolvedPoster = mediaPoster || mediaImage;
+const heroContentStyle = getTextLayoutVars(contentLayout);
+const titleInlineStyle = getTextStyleVars(titleStyle, undefined, true);
+const descriptionInlineStyle = getTextStyleVars(descriptionStyle);
 ---
 <section class={heroClass}>
   {(mediaImage || mediaPoster || mediaVideo) && (
@@ -77,10 +93,10 @@ const resolvedPoster = mediaPoster || mediaImage;
     </div>
   )}
 
-  <div class="container hero-content">
+  <div class="container hero-content" style={heroContentStyle}>
     {kicker && <p class="kicker">{kicker}</p>}
-    <h1>{title}</h1>
-    {description && <p class="hero-description">{description}</p>}
+    <h1 style={titleInlineStyle}>{title}</h1>
+    {description && <p class="hero-description" style={descriptionInlineStyle}>{description}</p>}
     <div class="hero-actions">
       {primaryLabel && <a class="btn btn-primary" href={primaryHref}>{primaryLabel}</a>}
       {secondaryLabel && <a class="btn btn-secondary" href={secondaryHref}>{secondaryLabel}</a>}

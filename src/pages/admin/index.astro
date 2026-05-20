@@ -3,8 +3,10 @@ import { withBase } from '../../utils/withBase';
 const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:8787/api/admin';
 
 const cards = [
+  { title: 'Каталог и URL', description: 'Порядок типов изделий, slug категорий, перенос товаров при смене URL и slug страниц сайта.', href: withBase('/admin/catalog/'), cta: 'Управлять структурой', primary: true },
   { title: 'Главная страница', description: 'Первый экран, блоки главной, направления, доверительный блок и контакты.', href: withBase('/admin/visual/?collection=static-pages&slug=home'), cta: 'Редактировать главную', primary: true },
   { title: 'Страницы и услуги', description: 'Создание новых страниц, меню, публикация, hero-медиа и конструктор секций.', href: withBase('/admin/visual/?collection=static-pages'), cta: 'Открыть список страниц', primary: true },
+  { title: 'Импорт данных', description: 'Массовая проверка и импорт товаров каталога из JSON с созданием новых и обновлением существующих по slug.', href: withBase('/admin/visual/?collection=data-import'), cta: 'Открыть импорт', primary: true },
   { title: 'Уличная мебель', description: 'Страница раздела, подстраницы лавочек, урн, вазонов, велопарковок и модели изделий внутри них.', href: withBase('/admin/visual/?collection=product-sections&slug=ulichnaya-mebel'), cta: 'Открыть раздел' },
   { title: 'Ограждения', description: 'Страница ограждений и вложенные типы: заборы, ворота, калитки, секции, перила и другие позиции.', href: withBase('/admin/visual/?collection=product-sections&slug=ograzhdeniya-i-zabory'), cta: 'Открыть раздел' },
   { title: 'Навесы', description: 'Страница направления навесов и козырьков с редактируемыми секциями.', href: withBase('/admin/visual/?collection=product-sections&slug=navesy-i-kozyrki'), cta: 'Редактировать навесы' },

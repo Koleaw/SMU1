@@ -11,6 +11,24 @@ const imageViewSchema = z.object({
   scale: z.number().min(1).max(3)
 }).strict();
 
+const textStyleSchema = z.object({
+  fontSize: z.enum(['small', 'base', 'large', 'xl', '2xl']).optional(),
+  fontWeight: z.enum(['normal', 'medium', 'semibold', 'bold']).optional(),
+  italic: z.boolean().optional(),
+  align: z.enum(['left', 'center', 'right']).optional(),
+  lineHeight: z.enum(['compact', 'normal', 'relaxed']).optional(),
+  color: z.enum(['primary', 'secondary', 'white', 'accent']).optional()
+}).strict();
+
+const textLayoutSchema = z.object({
+  width: z.enum(['narrow', 'medium', 'wide', 'full']).optional(),
+  widthPercent: z.number().min(30).max(100).optional(),
+  maxWidth: z.number().min(280).max(1200).optional(),
+  position: z.enum(['left', 'center', 'right']).optional(),
+  padding: z.enum(['compact', 'normal', 'large']).optional(),
+  verticalPadding: z.enum(['compact', 'normal', 'large']).optional()
+}).strict();
+
 const pageCardItemSchema = z.object({
   title: z.string(),
   text: z.string(),
@@ -66,6 +84,9 @@ const pageBlockSchema = z.object({
   textSize: z.string().optional(),
   textWeight: z.union([z.string(), z.number()]).optional(),
   textItalic: z.boolean().optional(),
+  textStyle: textStyleSchema.optional(),
+  titleStyle: textStyleSchema.optional(),
+  layout: textLayoutSchema.optional(),
   paddingTop: z.string().optional(),
   paddingBottom: z.string().optional()
 }).passthrough();
@@ -91,6 +112,9 @@ const productSections = defineCollection({
     heroMediaVideoMobile: z.string().optional(),
     heroMediaPoster: z.string().optional(),
     heroOverlayOpacity: z.number().min(0).max(100).optional(),
+    heroTitleStyle: textStyleSchema.optional(),
+    heroDescriptionStyle: textStyleSchema.optional(),
+    heroLayout: textLayoutSchema.optional(),
     image: z.string(),
     imageView: imageViewSchema.optional(),
     placeholderLabel: z.string(),
@@ -114,6 +138,9 @@ const productCategories = defineCollection({
     shortDescription: z.string(),
     heroTitle: z.string(),
     heroDescription: z.string(),
+    heroTitleStyle: textStyleSchema.optional(),
+    heroDescriptionStyle: textStyleSchema.optional(),
+    heroLayout: textLayoutSchema.optional(),
     order: z.number(),
     showInSectionGrid: z.boolean(),
     isActive: z.boolean(),
@@ -154,6 +181,8 @@ const products = defineCollection({
     showCustomProjectBlock: z.boolean().optional(),
     customProjectTitle: z.string().optional(),
     customProjectText: z.string().optional(),
+    descriptionTextStyle: textStyleSchema.optional(),
+    descriptionLayout: textLayoutSchema.optional(),
     order: z.number(),
     isActive: z.boolean(),
     showInCatalog: z.boolean(),
@@ -181,6 +210,9 @@ const services = defineCollection({
     heroMediaVideoMobile: z.string().optional(),
     heroMediaPoster: z.string().optional(),
     heroOverlayOpacity: z.number().min(0).max(100).optional(),
+    heroTitleStyle: textStyleSchema.optional(),
+    heroDescriptionStyle: textStyleSchema.optional(),
+    heroLayout: textLayoutSchema.optional(),
     image: z.string(),
     imageView: imageViewSchema.optional(),
     placeholderLabel: z.string(),
@@ -275,6 +307,9 @@ const staticPages = defineCollection({
     heroMediaPoster: z.string().optional(),
     heroMediaCaption: z.string().optional(),
     heroOverlayOpacity: z.number().min(0).max(100).optional(),
+    heroTitleStyle: textStyleSchema.optional(),
+    heroDescriptionStyle: textStyleSchema.optional(),
+    heroLayout: textLayoutSchema.optional(),
     image: z.string().optional(),
     imageView: imageViewSchema.optional(),
     placeholderLabel: z.string().optional(),

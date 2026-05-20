@@ -1,5 +1,13 @@
 ---
 import { withBase } from '../utils/withBase';
+import {
+  getSectionSpacingVars,
+  getTextLayoutVars,
+  getTextStyleVars,
+  mergeStyleStrings,
+  type TextLayoutSettings,
+  type TextStyleSettings,
+} from '../utils/textStyle';
 import PageBlockMedia from './PageBlockMedia.astro';
 
 type Theme = 'dark' | 'light' | 'graphite';
@@ -52,6 +60,9 @@ interface PageBlock {
   textItalic?: boolean;
   paddingTop?: string;
   paddingBottom?: string;
+  textStyle?: TextStyleSettings;
+  titleStyle?: TextStyleSettings;
+  layout?: TextLayoutSettings;
 }
 
 interface Props {
@@ -63,12 +74,6 @@ const visibleBlocks = pageBlocks
   .filter((block) => block && block.isActive !== false)
   .slice()
   .sort((a, b) => a.order - b.order);
-
-const cleanCssValue = (value?: string) => {
-  const text = String(value ?? '').trim();
-  if (!text || /[;"{}]/.test(text)) return '';
-  return text;
-};
 
 const getTheme = (block: PageBlock): Theme => block.theme ?? block.background ?? 'light';
 const getSectionClass = (theme: Theme) => {
@@ -87,29 +92,11 @@ const resolveHref = (href?: string) => {
   return withBase(href);
 };
 
-const getSectionStyle = (block: PageBlock) => {
-  const top = cleanCssValue(block.paddingTop);
-  const bottom = cleanCssValue(block.paddingBottom);
-  const styles = [];
-  if (top) styles.push(`--page-block-padding-top:${top}`);
-  if (bottom) styles.push(`--page-block-padding-bottom:${bottom}`);
-  return styles.length ? `${styles.join(';')};` : undefined;
-};
-
-const getTextStyle = (block: PageBlock) => {
-  const styles = [];
-  const width = cleanCssValue(block.textWidth);
-  const titleSize = cleanCssValue(block.titleSize);
-  const textSize = cleanCssValue(block.textSize);
-  const textWeight = cleanCssValue(String(block.textWeight ?? ''));
-  if (width) styles.push(`--page-block-text-width:${width}`);
-  if (titleSize) styles.push(`--page-block-title-size:${titleSize}`);
-  if (textSize) styles.push(`--page-block-text-size:${textSize}`);
-  if (textWeight) styles.push(`--page-block-text-weight:${textWeight}`);
-  styles.push(`--page-block-font-style:${block.textItalic ? 'italic' : 'normal'}`);
-  styles.push(`text-align:${block.textAlign ?? 'left'}`);
-  return `${styles.join(';')};`;
-};
+const getSectionStyle = (block: PageBlock) => getSectionSpacingVars(block.layout, block);
+const getTextStyle = (block: PageBlock) =>
+  mergeStyleStrings(getTextLayoutVars(block.layout, block), getTextStyleVars(block.textStyle, block));
+const getTitleStyle = (block: PageBlock) =>
+  mergeStyleStrings(getTextStyleVars(block.titleStyle ?? block.textStyle, block, true));
 
 const normalizeTextList = (items: Array<string | BlockItem> = []) =>
   items
@@ -148,8 +135,8 @@ const cardTypes = new Set(['cardGrid', 'exampleGrid', 'benefits', 'directionCard
     return (
       <section id={sectionId} class={sectionClass} data-section-theme={themeAttr} style={sectionStyle}>
         <div class="container">
-          <div class={getHeadingClass(theme)}>
-            {block.title && <h2 class="section-title">{block.title}</h2>}
+          <div class={getHeadingClass(theme)} style={getTextStyle(block)}>
+            {block.title && <h2 class="section-title" style={getTitleStyle(block)}>{block.title}</h2>}
             {block.intro && <p class="lead">{block.intro}</p>}
           </div>
           <div class={getGridClass(block.grid ?? 'auto')}>
@@ -178,7 +165,7 @@ const cardTypes = new Set(['cardGrid', 'exampleGrid', 'benefits', 'directionCard
       <section id={sectionId} class={sectionClass} data-section-theme={themeAttr} style={sectionStyle}>
         <div class="container page-block-narrow" style={getTextStyle(block)}>
           <div class={getHeadingClass(theme)}>
-            {block.title && <h2 class="section-title">{block.title}</h2>}
+            {block.title && <h2 class="section-title" style={getTitleStyle(block)}>{block.title}</h2>}
             {block.intro && <p class="lead">{block.intro}</p>}
           </div>
           <div class="page-block-faq-list">
@@ -202,7 +189,7 @@ const cardTypes = new Set(['cardGrid', 'exampleGrid', 'benefits', 'directionCard
       <section id={sectionId} class={sectionClass} data-section-theme={themeAttr} style={sectionStyle}>
         <div class="container">
           <div class={getHeadingClass(theme)} style={getTextStyle(block)}>
-            {block.title && <h2 class="section-title">{block.title}</h2>}
+            {block.title && <h2 class="section-title" style={getTitleStyle(block)}>{block.title}</h2>}
             {block.intro && <p class="lead">{block.intro}</p>}
           </div>
           <div class={getGridClass(block.grid ?? 'auto')}>
@@ -243,7 +230,7 @@ const cardTypes = new Set(['cardGrid', 'exampleGrid', 'benefits', 'directionCard
       <section id={sectionId} class={sectionClass} data-section-theme={themeAttr} style={sectionStyle}>
         <div class="container">
           <article class={`card page-block-card page-block-panel ${theme === 'graphite' ? 'page-block-card--graphite' : ''}`} style={getTextStyle(block)}>
-            {block.title && <h2>{block.title}</h2>}
+            {block.title && <h2 style={getTitleStyle(block)}>{block.title}</h2>}
             {block.intro && <p class="lead">{block.intro}</p>}
             <ul class={getColumnsClass(block.columns)}>
               {items.map((item) => <li>{item}</li>)}
@@ -263,7 +250,7 @@ const cardTypes = new Set(['cardGrid', 'exampleGrid', 'benefits', 'directionCard
         <div class={`container page-block-media-layout ${mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}`}>
           <PageBlockMedia block={block} />
           <article class={`card page-block-card page-block-panel ${theme === 'graphite' ? 'page-block-card--graphite' : ''}`} style={getTextStyle(block)}>
-            {block.title && <h2>{block.title}</h2>}
+            {block.title && <h2 style={getTitleStyle(block)}>{block.title}</h2>}
             {block.intro && <p class="lead">{block.intro}</p>}
             <ol class="page-block-steps">
               {steps.map((step) => (
@@ -285,7 +272,7 @@ const cardTypes = new Set(['cardGrid', 'exampleGrid', 'benefits', 'directionCard
         <div class={`container page-block-media-layout ${mediaPosition === 'left' ? 'page-block-media-layout--left' : ''}`}>
           <PageBlockMedia block={block} />
           <article class={`card page-block-card page-block-panel ${theme === 'graphite' ? 'page-block-card--graphite' : ''}`} style={getTextStyle(block)}>
-            {block.title && <h2>{block.title}</h2>}
+            {block.title && <h2 style={getTitleStyle(block)}>{block.title}</h2>}
             {block.intro && <p class="lead">{block.intro}</p>}
             {block.text && <p>{block.text}</p>}
             {block.buttonLabel && block.buttonHref && <a class="btn btn-primary page-block-button" href={resolveHref(block.buttonHref)}>{block.buttonLabel}</a>}
@@ -300,7 +287,7 @@ const cardTypes = new Set(['cardGrid', 'exampleGrid', 'benefits', 'directionCard
       <section id={sectionId} class={sectionClass} data-section-theme={themeAttr} style={sectionStyle}>
         <div class="container">
           <article class={`card page-block-card page-block-panel page-block-narrow ${theme === 'graphite' ? 'page-block-card--graphite' : ''}`} style={getTextStyle(block)}>
-            {block.title && <h2>{block.title}</h2>}
+            {block.title && <h2 style={getTitleStyle(block)}>{block.title}</h2>}
             {block.intro && <p class="lead">{block.intro}</p>}
             {block.text && <p>{block.text}</p>}
             {block.buttonLabel && block.buttonHref && <a class="btn btn-primary page-block-button" href={resolveHref(block.buttonHref)}>{block.buttonLabel}</a>}
@@ -359,31 +346,55 @@ const cardTypes = new Set(['cardGrid', 'exampleGrid', 'benefits', 'directionCard
     border-color: var(--color-border);
   }
 
+  .page-block-section .section-heading {
+    width: min(100%, var(--text-block-width, 100%));
+    max-width: var(--text-block-max-width, none);
+    justify-self: var(--text-block-justify, stretch);
+    margin: var(--text-block-margin, 0 0 18px);
+    color: var(--text-block-color, inherit);
+    overflow-wrap: break-word;
+  }
+
   .page-block-panel {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-width: var(--page-block-text-width, none);
-    justify-self: stretch;
+    width: min(100%, var(--text-block-width, 100%));
+    max-width: var(--text-block-max-width, none);
+    justify-self: var(--text-block-justify, stretch);
+    margin: var(--text-block-margin, 0);
+    padding: var(--text-block-padding, var(--card-padding, 22px));
+    color: var(--text-block-color, inherit);
+    overflow-wrap: break-word;
   }
 
   .page-block-panel h2,
   .page-block-narrow h2,
   .section-heading .section-title {
-    font-size: var(--page-block-title-size, var(--font-size-h2));
+    color: var(--text-block-color, inherit);
+    font-size: var(--text-block-font-size, var(--page-block-title-size, var(--font-size-h2)));
+    font-style: var(--text-block-font-style, normal);
+    font-weight: var(--text-block-font-weight, 700);
+    line-height: var(--text-block-line-height, 1.12);
   }
 
   .page-block-panel p,
   .page-block-panel li,
+  .page-block-section .section-heading p,
   .page-block-narrow p,
   .page-block-narrow li {
-    font-size: var(--page-block-text-size, var(--font-size-body));
-    font-style: var(--page-block-font-style, normal);
-    font-weight: var(--page-block-text-weight, 400);
+    color: var(--text-block-color, inherit);
+    font-size: var(--text-block-font-size, var(--page-block-text-size, var(--font-size-body)));
+    font-style: var(--text-block-font-style, normal);
+    font-weight: var(--text-block-font-weight, var(--page-block-text-weight, 400));
+    line-height: var(--text-block-line-height, 1.6);
   }
 
   .page-block-narrow {
-    max-width: var(--page-block-text-width, 860px);
+    width: min(100%, var(--text-block-width, 100%));
+    max-width: var(--text-block-max-width, var(--page-block-text-width, 860px));
+    justify-self: var(--text-block-justify, stretch);
+    margin: var(--text-block-margin, 0 auto);
   }
 
   .page-block-card__body,
@@ -500,6 +511,15 @@ const cardTypes = new Set(['cardGrid', 'exampleGrid', 'benefits', 'directionCard
   }
 
   @media (max-width: 767px) {
+    .page-block-section .section-heading,
+    .page-block-panel,
+    .page-block-narrow {
+      width: 100%;
+      max-width: 100%;
+      justify-self: stretch;
+      margin-inline: 0;
+    }
+
     .page-blocks-grid,
     .page-blocks-grid--2,
     .page-blocks-grid--3,

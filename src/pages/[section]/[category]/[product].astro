@@ -4,6 +4,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import Breadcrumbs from '../../../components/Breadcrumbs.astro';
 import DirectContactBlock from '../../../components/DirectContactBlock.astro';
 import { withBase } from '../../../utils/withBase';
+import { getTextLayoutVars, getTextStyleVars, mergeStyleStrings } from '../../../utils/textStyle';
 
 const DEFAULT_FEATURES = [
   'Изготавливаем под размеры объекта',
@@ -199,6 +200,10 @@ const deliveryText = product.deliveryText?.trim() || DEFAULT_DELIVERY_TEXT;
 const showCustomProjectBlock = product.showCustomProjectBlock !== false;
 const customProjectTitle = product.customProjectTitle?.trim() || CUSTOM_PROJECT_DEFAULT_TITLE;
 const customProjectText = product.customProjectText?.trim() || CUSTOM_PROJECT_DEFAULT_TEXT;
+const descriptionStyle = mergeStyleStrings(
+  getTextLayoutVars(product.descriptionLayout),
+  getTextStyleVars(product.descriptionTextStyle)
+);
 ---
 
 <BaseLayout title={product.seoTitle} description={product.seoDescription} ogImage={mainImage || product.image}>
@@ -217,18 +222,33 @@ const customProjectText = product.customProjectText?.trim() || CUSTOM_PROJECT_DE
 
   <section class="section product-detail-section">
     <div class="container product-detail-layout">
-      <article class="media-block product-detail-media">
+      <article class="media-block product-detail-media" data-product-gallery>
         {hasProductImage ? (
-          <img class="product-detail-image" src={withBase(mainImage)} alt={product.title} loading="eager" style={imageViewStyle(product.imageView)} />
+          <div class="product-detail-gallery-frame">
+            <img class="product-detail-image" data-product-main-image src={withBase(mainImage)} alt={product.title} loading="eager" style={imageViewStyle(product.imageView)} />
+            {galleryImages.length > 1 && (
+              <div class="product-detail-gallery-actions" aria-label="Переключение фото">
+                <button class="product-detail-gallery-arrow" type="button" data-gallery-prev aria-label="Предыдущее фото">‹</button>
+                <button class="product-detail-gallery-arrow" type="button" data-gallery-next aria-label="Следующее фото">›</button>
+              </div>
+            )}
+          </div>
         ) : (
           <div class="product-detail-image product-detail-image--empty">Фото изделия будет добавлено позже</div>
         )}
         {galleryImages.length > 1 && (
           <div class="product-detail-thumbs" aria-label="Фото изделия">
             {galleryImages.map((image, index) => (
-              <a class={`product-detail-thumb ${index === 0 ? 'is-active' : ''}`} href={withBase(image)} target="_blank" rel="noreferrer">
+              <button
+                class={`product-detail-thumb ${index === 0 ? 'is-active' : ''}`}
+                type="button"
+                data-product-thumb
+                data-product-image={withBase(image)}
+                data-product-index={index}
+                aria-pressed={index === 0 ? 'true' : 'false'}
+              >
                 <img src={withBase(image)} alt={`${product.title}: фото ${index + 1}`} loading="lazy" />
-              </a>
+              </button>
             ))}
           </div>
         )}
@@ -274,7 +294,7 @@ const customProjectText = product.customProjectText?.trim() || CUSTOM_PROJECT_DE
       </article>
 
       <div class="product-detail-description-grid">
-        <article class="card product-detail-panel product-detail-panel--description">
+        <article class="card product-detail-panel product-detail-panel--description" style={descriptionStyle}>
           <h2>Описание</h2>
           <div class="product-detail-text">
             {descriptionParagraphs.map((paragraph) => <p>{paragraph}</p>)}
@@ -406,4 +426,33 @@ const customProjectText = product.customProjectText?.trim() || CUSTOM_PROJECT_DE
     emailLabel="Написать на почту"
     phoneLabel="Позвонить"
   />
+
+  <script>
+    document.querySelectorAll('[data-product-gallery]').forEach((gallery) => {
+      const image = gallery.querySelector('[data-product-main-image]');
+      const thumbs = Array.from(gallery.querySelectorAll('[data-product-thumb]')).filter(
+        (thumb) => thumb instanceof HTMLElement
+      );
+      const prev = gallery.querySelector('[data-gallery-prev]');
+      const next = gallery.querySelector('[data-gallery-next]');
+      if (!(image instanceof HTMLImageElement) || thumbs.length < 2) return;
+
+      let current = Math.max(0, thumbs.findIndex((thumb) => thumb.classList.contains('is-active')));
+      const setCurrent = (index: number) => {
+        current = (index + thumbs.length) % thumbs.length;
+        const thumb = thumbs[current];
+        const src = thumb?.dataset.productImage;
+        if (!src) return;
+        image.src = src;
+        thumbs.forEach((item, itemIndex) => {
+          item.classList.toggle('is-active', itemIndex === current);
+          item.setAttribute('aria-pressed', itemIndex === current ? 'true' : 'false');
+        });
+      };
+
+      thumbs.forEach((thumb, index) => thumb.addEventListener('click', () => setCurrent(index)));
+      prev?.addEventListener('click', () => setCurrent(current - 1));
+      next?.addEventListener('click', () => setCurrent(current + 1));
+    });
+  </script>
 </BaseLayout>

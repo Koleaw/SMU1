@@ -60,6 +60,9 @@ const formatPrice = (item: (typeof products)[number]) => {
     title={category.heroTitle}
     description={category.heroDescription}
     className="hero--catalog hero--catalog-clean"
+    titleStyle={category.heroTitleStyle}
+    descriptionStyle={category.heroDescriptionStyle}
+    contentLayout={category.heroLayout}
   />
 
   {category.mode === 'catalog-list' && products.length > 0 ? (
@@ -72,7 +75,11 @@ const formatPrice = (item: (typeof products)[number]) => {
           {products.map((product) => (
             <a class="product-showcase-card" href={withBase(`/${section.slug}/${category.slug}/${product.slug}/`)}>
               <div class="product-showcase-card__media-wrap">
-                <img class="product-showcase-card__media" src={withBase(product.image)} alt={product.title} loading="lazy" />
+                {product.image ? (
+                  <img class="product-showcase-card__media" src={withBase(product.image)} alt={product.title} loading="lazy" />
+                ) : (
+                  <div class="product-showcase-card__media product-showcase-card__media--empty">Фото будет добавлено позже</div>
+                )}
               </div>
               <div class="product-showcase-card__body">
                 <h3>{product.title}</h3>
