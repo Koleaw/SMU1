@@ -44,5 +44,6 @@
     "positionY": 55,
     "scale": 1
   },
-  "gallery": []
+  "gallery": [],
+  "showCustomProjectBlock": false
 }
