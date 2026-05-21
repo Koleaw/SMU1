@@ -256,29 +256,38 @@ small {
 .hero-content {
   position: relative;
   z-index: 2;
-  width: min(100%, var(--text-block-width, 100%));
-  max-width: var(--text-block-max-width, none);
-  justify-self: var(--text-block-justify, start);
-  margin: var(--text-block-margin, 0 auto);
+  width: 100%;
+  max-width: 860px;
+  justify-self: start;
+  margin: 0 auto;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .hero h1 {
   margin: 0 0 18px;
   letter-spacing: -0.02em;
-  font-size: var(--text-block-font-size, var(--font-size-h1));
-  font-style: var(--text-block-font-style, normal);
-  font-weight: var(--text-block-font-weight, 600);
-  line-height: var(--text-block-line-height, var(--line-height-h1));
+  font-size: clamp(40px, 5vw, var(--font-size-h1));
+  font-style: normal;
+  font-weight: 600;
+  line-height: var(--line-height-h1);
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .hero-description {
   margin: 0 0 28px;
   color: var(--color-text-secondary);
   max-width: 64ch;
-  font-size: var(--text-block-font-size, var(--font-size-body));
-  font-style: var(--text-block-font-style, normal);
-  font-weight: var(--text-block-font-weight, 400);
-  line-height: var(--text-block-line-height, var(--line-height-body));
+  font-size: var(--font-size-body);
+  font-style: normal;
+  font-weight: 400;
+  line-height: var(--line-height-body);
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .hero-actions {
@@ -342,7 +351,7 @@ small {
 }
 
 .hero--media .hero-content {
-  max-width: var(--text-block-max-width, 860px);
+  max-width: 900px;
 }
 
 .hero--media .kicker,
@@ -356,19 +365,19 @@ small {
 }
 
 .hero--media h1 {
-  font-size: var(--text-block-font-size, var(--font-size-h1));
-  font-weight: var(--text-block-font-weight, 700);
-  font-style: var(--text-block-font-style, normal);
-  line-height: var(--text-block-line-height, var(--line-height-h1));
+  font-size: clamp(44px, 6vw, 72px);
+  font-weight: 700;
+  font-style: normal;
+  line-height: var(--line-height-h1);
   letter-spacing: -0.02em;
-  max-width: 15ch;
+  max-width: 14em;
 }
 
 .hero--media .hero-description {
-  font-size: var(--text-block-font-size, var(--font-size-body-large));
-  font-weight: var(--text-block-font-weight, 400);
-  font-style: var(--text-block-font-style, normal);
-  line-height: var(--text-block-line-height, var(--line-height-body-large));
+  font-size: var(--font-size-body-large);
+  font-weight: 400;
+  font-style: normal;
+  line-height: var(--line-height-body-large);
   max-width: 58ch;
 }
 
@@ -386,7 +395,7 @@ small {
 .site-header {
   position: sticky;
   top: 0;
-  z-index: 90;
+  z-index: 500;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
 }
@@ -1064,11 +1073,11 @@ small {
   }
 
   .hero--media h1 {
-    font-size: min(var(--text-block-font-size, 48px), 48px);
+    font-size: clamp(38px, 6vw, 48px);
   }
 
   .hero--media .hero-description {
-    font-size: min(var(--text-block-font-size, 18px), 18px);
+    font-size: 18px;
   }
 
   .quick-entry-grid {
@@ -1130,19 +1139,19 @@ small {
 
   .hero--media .hero-content {
     width: 100%;
-    max-width: 100%;
+    max-width: 760px;
     text-align: center;
     margin-inline: auto;
   }
 
   .hero--media h1 {
-    font-size: min(var(--text-block-font-size, 40px), 40px);
-    max-width: 18ch;
+    font-size: clamp(34px, 8vw, 40px);
+    max-width: 100%;
     margin-inline: auto;
   }
 
   .hero--media .hero-description {
-    font-size: min(var(--text-block-font-size, 17px), 17px);
+    font-size: 17px;
     margin-inline: auto;
   }
 
@@ -2774,8 +2783,9 @@ small {
 .site-header--home {
   position: fixed;
   inset: 0 0 auto 0;
-  background: transparent;
-  border-bottom: 1px solid transparent;
+  background: rgb(13 20 27 / 72%);
+  border-bottom: 1px solid rgb(255 255 255 / 16%);
+  backdrop-filter: blur(10px);
   transition: background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 

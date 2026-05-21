@@ -86,6 +86,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-import-list--warnings { color: #8a5b00; }
       .admin-import-result { display: flex; flex-wrap: wrap; gap: 8px; }
       .admin-import-result span { display: inline-flex; min-height: 30px; align-items: center; padding: 5px 9px; border-radius: 999px; background: #edf2f6; color: #31485d; font-weight: 800; }
+      .admin-import-file-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+      .admin-product-bulk { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 14px; padding: 12px; border: 1px solid #d0dbe4; border-radius: 10px; background: #f8fbfd; }
+      .admin-product-bulk__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      .admin-product-select { display: inline-flex; gap: 7px; align-items: center; width: fit-content; min-height: 30px; padding: 5px 8px; border: 1px solid #d0dbe4; border-radius: 8px; background: #fff; color: #31485d; font-size: 13px; font-weight: 800; }
+      .admin-product-select input { width: 16px; height: 16px; margin: 0; }
       .admin-block-settings { margin-bottom: 16px; padding: 12px; border: 1px solid #d0dbe4; border-radius: 10px; background: rgb(255 255 255 / 78%); }
       .admin-block-settings summary { cursor: pointer; font-weight: 800; color: #31485d; }
       .admin-block-settings__body { display: grid; gap: 12px; margin-top: 12px; }
@@ -187,6 +192,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       </main>
       <input id="uploadInput" class="hidden" type="file" accept="image/*,.svg" />
       <input id="uploadVideoInput" class="hidden" type="file" accept="video/mp4,video/webm,.mp4,.webm" />
+      <input id="jsonImportInput" class="hidden" type="file" accept="application/json,.json" />
     </div>
 
     <script type="module" define:vars={{ adminApiBase, baseUrl }}>
@@ -335,9 +341,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         cropDrag: null,
         uploadTarget: null,
         importText: '',
+        importFileName: '',
         importMode: 'upsert',
         importPreview: null,
-        importResult: null
+        importResult: null,
+        selectedProductRefs: new Set()
       };
 
       const $ = (id) => document.getElementById(id);
@@ -356,6 +364,46 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       const dirtyRecords = () => Object.values(state.records).filter(isDirtyRecord);
       const getRecord = (ref) => state.records[ref];
       const getMainRef = () => state.selectedSlug ? keyOf(state.collection, state.selectedSlug) : null;
+
+      const PRESENTATION_FIELD_KEYS = new Set([
+        'heroTitleStyle',
+        'heroDescriptionStyle',
+        'heroLayout',
+        'descriptionTextStyle',
+        'descriptionLayout',
+        'titleStyle',
+        'textStyle',
+        'layout',
+        'fontSize',
+        'fontWeight',
+        'italic',
+        'align',
+        'textAlign',
+        'lineHeight',
+        'color',
+        'textColor',
+        'width',
+        'widthPercent',
+        'maxWidth',
+        'position',
+        'padding',
+        'verticalPadding',
+        'sectionSpacing',
+        'textBlockWidth',
+        'textWidth',
+        'textSize',
+        'titleSize',
+        'textWeight',
+        'textItalic'
+      ]);
+
+      function stripPresentationFields(value) {
+        if (Array.isArray(value)) return value.map((item) => stripPresentationFields(item));
+        if (!value || typeof value !== 'object') return value;
+        return Object.fromEntries(Object.entries(value)
+          .filter(([key]) => !PRESENTATION_FIELD_KEYS.has(key))
+          .map(([key, item]) => [key, stripPresentationFields(item)]));
+      }
 
       function toSrc(src) {
         if (!src) return '';
@@ -431,6 +479,34 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
         return data;
+      }
+
+      function filenameFromDisposition(value) {
+        const match = String(value || '').match(/filename="?([^";]+)"?/i);
+        return match?.[1] || `smu1-catalog-export-${new Date().toISOString().slice(0, 10)}.json`;
+      }
+
+      async function downloadCatalogExport() {
+        let response;
+        try {
+          response = await fetch(`${API_BASE}/export-catalog`, { credentials: 'include' });
+        } catch {
+          throw new Error('Не удалось подключиться к backend API. Запустите npm run admin:api.');
+        }
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+        const blob = await response.blob();
+        const filename = filenameFromDisposition(response.headers.get('Content-Disposition'));
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
       }
 
       function setAlert(text = '', error = false) {
@@ -567,7 +643,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (state.collection === 'product-sections' && state.selectedSlug) {
           const categories = Object.values(state.records)
             .filter((record) => record.collection === 'product-categories' && record.draft.parentSectionSlug === state.selectedSlug)
-            .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+            .sort((a, b) => {
+              const orderA = typeof a.draft.order === 'number' ? a.draft.order : Number.MAX_SAFE_INTEGER;
+              const orderB = typeof b.draft.order === 'number' ? b.draft.order : Number.MAX_SAFE_INTEGER;
+              if (orderA !== orderB) return orderA - orderB;
+              return String(a.draft.title || a.slug).localeCompare(String(b.draft.title || b.slug), 'ru');
+            });
           if (categories.length) {
             groups.push(`<div class="sidebar-group"><h2>Подстраницы раздела</h2>${categories.map((record) => `<button class="sidebar-entry" type="button" data-action="open-related" data-collection="product-categories" data-slug="${esc(record.slug)}"><strong>${esc(record.draft.title || record.slug)}</strong><small>${esc(record.slug)}</small></button>`).join('')}</div>`);
           }
@@ -628,6 +709,22 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function renderCollectionList(collection) {
         const entries = state.entries[collection] || [];
+        if (collection === 'products') {
+          const products = Object.values(state.records)
+            .filter((record) => record.collection === 'products')
+            .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+          return `
+            ${renderCreatePanel('products')}
+            <section class="section">
+              <div class="container">
+                <div class="section-heading"><h2 class="section-title">${esc(COLLECTION_LABELS[collection])}</h2></div>
+                ${renderProductBulkToolbar(products)}
+                <div class="product-catalog-grid">
+                  ${products.map((productRecord) => renderProductCard(productRecord)).join('')}
+                </div>
+              </div>
+            </section>`;
+        }
         return `
           ${renderCreatePanel(collection)}
           <section class="section">
@@ -661,14 +758,25 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           <section class="section section--soft">
             <div class="container admin-import-page">
               <div class="admin-import-head">
-                <h1 class="section-title">Импорт данных</h1>
+                <h1 class="section-title">Импорт / экспорт данных</h1>
                 <p class="lead">Вставьте JSON с товарами каталога. Сначала проверьте файл, затем импортируйте позиции.</p>
               </div>
+              <article class="admin-panel-card">
+                <strong>Экспорт данных</strong>
+                <p class="admin-field-hint">Скачайте полный актуальный каталог: страницы каталога, типы изделий и товары. В JSON сохраняются пути к изображениям, сами файлы не включаются.</p>
+                <div class="admin-import-toolbar">
+                  <button class="admin-btn admin-btn--primary" type="button" data-action="download-catalog-export">Скачать JSON каталога</button>
+                </div>
+              </article>
               <article class="admin-panel-card">
                 <label class="admin-field">
                   <span>Режим импорта</span>
                   <select data-import-mode>${modeOptions}</select>
                 </label>
+                <div class="admin-import-file-row">
+                  <button class="admin-btn" type="button" data-action="choose-import-file">Загрузить JSON-файл</button>
+                  <span class="admin-muted">${state.importFileName ? `Файл: ${esc(state.importFileName)}` : 'Файл не выбран'}</span>
+                </div>
                 <label class="admin-field">
                   <span>Вставьте JSON сюда</span>
                   <textarea class="admin-import-textarea" data-import-json spellcheck="false" placeholder='{"type":"products_import","version":1,"items":[]}' >${esc(state.importText)}</textarea>
@@ -1108,9 +1216,6 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const video = item.heroMediaVideo || '';
         const poster = item.heroMediaPoster || item.image || '';
         const overlayStyle = heroOverlayStyle(item.heroOverlayOpacity);
-        const heroLayoutStyle = adminLayoutStyle(item.heroLayout || {});
-        const heroTitleStyle = adminTextStyle(item.heroTitleStyle || {}, {}, true);
-        const heroDescriptionStyle = adminTextStyle(item.heroDescriptionStyle || {});
         const mediaMarkup = video
           ? `<video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster="${esc(toSrc(poster))}"><source src="${esc(toSrc(video))}" type="${esc(mediaMimeType(video))}" /></video>${poster ? `<img class="hero-media__fallback" src="${esc(toSrc(poster))}" alt="${esc(item.title)}" />` : ''}`
           : item.image
@@ -1119,10 +1224,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `
           <section class="hero ${hasMedia ? 'hero--media navesy-hero' : 'hero--catalog hero--catalog-clean'}">
             ${hasMedia ? `<div class="admin-media-frame admin-media-frame--hero ${isCrop && !video ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${mediaMarkup}<div class="hero-media__overlay" style="${esc(overlayStyle)}"></div></div>` : ''}
-            <div class="container hero-content" style="${esc(heroLayoutStyle)}">
+            <div class="container hero-content">
               <p class="kicker" ${editable(ref, 'heroKicker', 'Надзаголовок', true)}>${esc(item.showBadge === false ? '' : item.heroKicker || (hasMedia ? 'Проектное направление' : 'Каталог изделий'))}</p>
-              <h1 style="${esc(heroTitleStyle)}" ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(item.heroTitle || item.title)}</h1>
-              <p class="hero-description" style="${esc(heroDescriptionStyle)}" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(item.heroDescription || item.shortDescription || '')}</p>
+              <h1 ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(item.heroTitle || item.title)}</h1>
+              <p class="hero-description" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(item.heroDescription || item.shortDescription || '')}</p>
             </div>
           </section>
           ${hasMedia && isCrop && !video ? renderCropControls() : ''}
@@ -1204,18 +1309,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function renderHeroTextSettings(ref) {
-        const item = getRecord(ref).draft;
-        return `
-          <section class="admin-panel">
-            <div class="container">
-              <div class="admin-panel-card">
-                <strong>Текст Hero-блока</strong>
-                ${renderTextStyleControls(ref, 'heroTitleStyle', item.heroTitleStyle, 'Заголовок')}
-                ${renderTextStyleControls(ref, 'heroDescriptionStyle', item.heroDescriptionStyle, 'Описание')}
-                ${renderTextLayoutControls(ref, 'heroLayout', item.heroLayout, 'Ширина и положение текста')}
-              </div>
-            </div>
-          </section>`;
+        return '';
       }
 
       const PREVIEW_TEXT_SIZE = { small: '14px', base: '16px', large: '18px', xl: '22px', '2xl': '28px' };
@@ -1317,20 +1411,25 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const item = getRecord(ref).draft;
         const categories = Object.values(state.records)
           .filter((record) => record.collection === 'product-categories' && record.draft.parentSectionSlug === item.slug)
-          .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+          .sort((a, b) => {
+            const orderA = typeof a.draft.order === 'number' ? a.draft.order : Number.MAX_SAFE_INTEGER;
+            const orderB = typeof b.draft.order === 'number' ? b.draft.order : Number.MAX_SAFE_INTEGER;
+            if (orderA !== orderB) return orderA - orderB;
+            return String(a.draft.title || a.slug).localeCompare(String(b.draft.title || b.slug), 'ru');
+          });
         return `
           ${renderCreatePanel('product-categories', { parentSectionSlug: item.slug })}
           <section id="categories" class="section section--soft">
             <div class="container">
               <div class="section-heading"><h2 class="section-title">Типы изделий</h2><p class="lead">Карточки ниже сохраняются в коллекцию типов изделий.</p></div>
               <div class="category-choice-grid">
-                ${categories.map((categoryRecord) => renderCategoryCard(categoryRecord)).join('')}
+                ${categories.map((categoryRecord, index) => renderCategoryCard(categoryRecord, index, categories.length)).join('')}
               </div>
             </div>
           </section>`;
       }
 
-      function renderCategoryCard(categoryRecord) {
+      function renderCategoryCard(categoryRecord, index = 0, total = 1) {
         const ref = keyOf(categoryRecord.collection, categoryRecord.slug);
         const item = categoryRecord.draft;
         const target = `${ref}:image`;
@@ -1349,6 +1448,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
               <h3 ${editable(ref, 'title', 'Название типа', true)}>${esc(item.title)}</h3>
               <p ${editable(ref, 'shortDescription', 'Описание типа')}>${esc(item.shortDescription || '')}</p>
               <div class="admin-item-tools">
+                <button class="admin-btn" type="button" data-action="move-category-record" data-ref="${ref}" data-dir="-1" ${index === 0 ? 'disabled' : ''}>Выше</button>
+                <button class="admin-btn" type="button" data-action="move-category-record" data-ref="${ref}" data-dir="1" ${index === total - 1 ? 'disabled' : ''}>Ниже</button>
                 <button class="admin-btn" type="button" data-action="toggle-record" data-ref="${ref}" data-field="isActive">${item.isActive === false ? 'Показать' : 'Скрыть'}</button>
                 <button class="admin-btn" type="button" data-action="open-related" data-collection="product-categories" data-slug="${esc(item.slug)}">Открыть тип</button>
                 <button class="admin-btn admin-btn--danger" type="button" data-action="delete-record" data-ref="${ref}">Удалить</button>
@@ -1357,11 +1458,29 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           </article>`;
       }
 
+      function renderProductBulkToolbar(products) {
+        const visibleRefs = products.map((record) => keyOf(record.collection, record.slug));
+        const selectedCount = visibleRefs.filter((ref) => state.selectedProductRefs.has(ref)).length;
+        return `
+          <div class="admin-product-bulk" data-product-bulk-toolbar>
+            <span><strong data-selected-products-count>${selectedCount}</strong> выбрано из ${products.length}</span>
+            <div class="admin-product-bulk__actions">
+              <button class="admin-btn admin-btn--danger" type="button" data-action="bulk-delete-products" ${selectedCount ? '' : 'disabled'}>Удалить выбранные</button>
+              <button class="admin-btn" type="button" data-action="clear-product-selection" ${selectedCount ? '' : 'disabled'}>Снять выбор</button>
+            </div>
+          </div>`;
+      }
+
       function renderCategoryPage(ref) {
         const category = getRecord(ref).draft;
         const products = Object.values(state.records)
           .filter((record) => record.collection === 'products' && record.draft.productCategorySlug === category.slug)
-          .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+          .sort((a, b) => {
+            const orderA = typeof a.draft.order === 'number' ? a.draft.order : Number.MAX_SAFE_INTEGER;
+            const orderB = typeof b.draft.order === 'number' ? b.draft.order : Number.MAX_SAFE_INTEGER;
+            if (orderA !== orderB) return orderA - orderB;
+            return String(a.draft.title || a.slug).localeCompare(String(b.draft.title || b.slug), 'ru');
+          });
         return `
           ${renderHero(ref, 'catalog')}
           ${renderHeroTextSettings(ref)}
@@ -1370,6 +1489,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           <section id="products" class="section">
             <div class="container">
               <div class="section-heading"><h2 class="section-title">Модели изделий</h2></div>
+              ${renderProductBulkToolbar(products)}
               <div class="product-catalog-grid">
                 ${products.map((productRecord) => renderProductCard(productRecord)).join('')}
               </div>
@@ -1389,14 +1509,16 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const item = productRecord.draft;
         const target = `${ref}:image`;
         const isCrop = state.crop?.target === target;
+        const isSelected = state.selectedProductRefs.has(ref);
         return `
-          <article class="product-showcase-card ${item.isActive === false || item.showInCatalog === false ? 'admin-card-hidden' : ''}">
+          <article class="product-showcase-card ${item.isActive === false || item.showInCatalog === false ? 'admin-card-hidden' : ''}" data-product-card data-ref="${esc(ref)}">
             <div class="product-showcase-card__media-wrap">
               <div class="admin-media-frame admin-media-frame--card ${isCrop ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">
                 ${item.image ? `<img class="product-showcase-card__media" data-image-img="${esc(target)}" src="${esc(toSrc(item.image))}" alt="${esc(item.title)}" style="${esc(mediaStyle(item.imageView))}" />` : '<div class="admin-media-empty">Фото не выбрано</div>'}
               </div>
             </div>
             <div class="product-showcase-card__body">
+              <label class="admin-product-select"><input type="checkbox" data-product-select data-ref="${esc(ref)}" ${isSelected ? 'checked' : ''} /> <span>Выбрать</span></label>
               <h3 ${editable(ref, 'title', 'Название модели', true)}>${esc(item.title)}</h3>
               <p class="product-showcase-card__descriptor" ${editable(ref, 'shortDescription', 'Описание модели')}>${esc(item.shortDescription || '')}</p>
               <p class="product-showcase-card__price">${esc(formatPrice(item))}</p>
@@ -1508,8 +1630,6 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
               <div class="admin-panel-card">
                 <strong>Информация на странице товара</strong>
                 <label class="admin-field"><span>Подробное описание</span><textarea data-field-ref="${ref}" data-field-path="description">${esc(item.description || '')}</textarea></label>
-                ${renderTextStyleControls(ref, 'descriptionTextStyle', item.descriptionTextStyle, 'Стиль подробного описания')}
-                ${renderTextLayoutControls(ref, 'descriptionLayout', item.descriptionLayout, 'Ширина подробного описания')}
                 ${renderImageListEditor(ref, 'gallery', 'Дополнительные фото')}
                 <p class="admin-field-hint">Для дополнительных фото укажите пути вида /assets/... или /uploads/.... Если фото одно, галерея на сайте не выводится.</p>
                 ${renderArrayEditor(ref, 'features', 'Преимущества товара')}
@@ -1652,9 +1772,6 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const image = getPath(getRecord(ref), mediaPath);
         const poster = page.heroMediaPoster || page.image || '';
         const overlayStyle = heroOverlayStyle(page.heroOverlayOpacity);
-        const heroLayoutStyle = adminLayoutStyle(page.heroLayout || {});
-        const heroTitleStyle = adminTextStyle(page.heroTitleStyle || {}, {}, true);
-        const heroDescriptionStyle = adminTextStyle(page.heroDescriptionStyle || {});
         const mediaMarkup = video
           ? `<video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster="${esc(toSrc(poster))}"><source src="${esc(toSrc(video))}" type="${esc(mediaMimeType(video))}" /></video>${poster ? `<img class="hero-media__fallback" src="${esc(toSrc(poster))}" alt="${esc(page.title)}" />` : ''}`
           : image
@@ -1663,10 +1780,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `
           <section class="hero ${hasMedia ? 'hero--media' : className}">
             ${hasMedia ? `<div class="admin-media-frame admin-media-frame--hero ${isCrop && !video ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">${mediaMarkup}<div class="hero-media__overlay" style="${esc(overlayStyle)}"></div></div>` : ''}
-            <div class="container hero-content" style="${esc(heroLayoutStyle)}">
+            <div class="container hero-content">
               ${page.showBadge === false ? '' : `<p class="kicker" ${editable(ref, 'heroKicker', 'Надзаголовок', true)}>${esc(page.heroKicker || '')}</p>`}
-              <h1 style="${esc(heroTitleStyle)}" ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(page.heroTitle || page.title)}</h1>
-              <p class="hero-description" style="${esc(heroDescriptionStyle)}" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(page.heroDescription || '')}</p>
+              <h1 ${editable(ref, 'heroTitle', 'Заголовок первого экрана', true)}>${esc(page.heroTitle || page.title)}</h1>
+              <p class="hero-description" ${editable(ref, 'heroDescription', 'Описание первого экрана')}>${esc(page.heroDescription || '')}</p>
             </div>
           </section>
           ${hasMedia && isCrop && !video ? renderCropControls() : ''}`;
@@ -1756,19 +1873,6 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       function renderBlockSettings(ref, block, index) {
         const isCards = ['cardGrid', 'exampleGrid', 'benefits', 'directionCards', 'solutions', 'gallery'].includes(block.type);
         const isList = ['listPanel', 'factorList', 'costFactors'].includes(block.type);
-        const textStyle = { ...(block.textStyle || {}) };
-        const titleStyle = { ...(block.titleStyle || {}) };
-        const layout = { ...(block.layout || {}) };
-        if (!textStyle.align && block.textAlign) textStyle.align = block.textAlign;
-        if (textStyle.italic === undefined && typeof block.textItalic === 'boolean') textStyle.italic = block.textItalic;
-        if (!textStyle.fontWeight && String(block.textWeight || '') === '500') textStyle.fontWeight = 'medium';
-        if (!textStyle.fontWeight && String(block.textWeight || '') === '600') textStyle.fontWeight = 'semibold';
-        if (!textStyle.fontWeight && String(block.textWeight || '') === '700') textStyle.fontWeight = 'bold';
-        const legacyWidth = String(block.textWidth || '').trim();
-        const legacyPercent = legacyWidth.match(/^(\d{2,3})%$/);
-        const legacyPx = legacyWidth.match(/^(\d{3,4})px$/);
-        if (layout.widthPercent === undefined && legacyPercent) layout.widthPercent = Number(legacyPercent[1]);
-        if (layout.maxWidth === undefined && legacyPx) layout.maxWidth = Number(legacyPx[1]);
         return `
           <details class="admin-block-settings">
             <summary>Настройки секции</summary>
@@ -1778,9 +1882,6 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
                 ${isCards ? `<label class="admin-field"><span>Колонки карточек</span><select data-field-ref="${ref}" data-field-path="pageBlocks.${index}.grid"><option value="auto" ${(block.grid || 'auto') === 'auto' ? 'selected' : ''}>Авто</option><option value="2" ${block.grid === '2' ? 'selected' : ''}>2</option><option value="3" ${block.grid === '3' ? 'selected' : ''}>3</option><option value="4" ${block.grid === '4' ? 'selected' : ''}>4</option></select></label>` : ''}
                 ${isList ? `<label class="admin-field"><span>Колонки списка</span><select data-field-ref="${ref}" data-field-path="pageBlocks.${index}.columns" data-field-type="number"><option value="2" ${Number(block.columns || 2) === 2 ? 'selected' : ''}>2</option><option value="3" ${Number(block.columns || 2) === 3 ? 'selected' : ''}>3</option></select></label>` : ''}
               </div>
-              ${renderTextStyleControls(ref, `pageBlocks.${index}.titleStyle`, titleStyle, 'Заголовок секции')}
-              ${renderTextStyleControls(ref, `pageBlocks.${index}.textStyle`, textStyle, 'Основной текст')}
-              ${renderTextLayoutControls(ref, `pageBlocks.${index}.layout`, layout, 'Ширина, положение и отступы блока')}
               <div class="admin-grid-2">
                 <label class="admin-field"><span>Подпись кнопки</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.buttonLabel" value="${esc(block.buttonLabel || '')}" /></label>
                 <label class="admin-field"><span>Ссылка кнопки</span><input data-field-ref="${ref}" data-field-path="pageBlocks.${index}.buttonHref" value="${esc(block.buttonHref || '')}" placeholder="/kontakty/" /></label>
@@ -1796,7 +1897,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
         if (cardTypes.includes(block.type) || block.type === 'gallery') {
           const items = Array.isArray(block.items) ? block.items : [];
-          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}<div class="${block.theme === 'dark' ? 'section-heading section-heading--light' : 'section-heading'}" style="${esc(blockTextStyle(block))}"><h2 class="section-title" style="${esc(blockTitleStyle(block))}" ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок секции', true)}>${esc(block.title || '')}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p></div><div class="page-blocks-grid page-blocks-grid--${esc(block.grid || 'auto')}">${items.map((item, itemIndex) => {
+          return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}<div class="${block.theme === 'dark' ? 'section-heading section-heading--light' : 'section-heading'}"><h2 class="section-title" ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок секции', true)}>${esc(block.title || '')}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p></div><div class="page-blocks-grid page-blocks-grid--${esc(block.grid || 'auto')}">${items.map((item, itemIndex) => {
             const itemPath = `pageBlocks.${index}.items.${itemIndex}`;
             const isObject = typeof item === 'object' && item !== null;
             const titlePath = isObject ? `${itemPath}.title` : itemPath;
@@ -1888,7 +1989,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         panel.querySelectorAll('[data-create-field]').forEach((input) => { fields[input.dataset.createField] = input.value; });
         const content = defaultContent(collection, fields);
         if (!content.slug) throw new Error('Заполните slug латиницей');
-        const data = await api(`/content/${collection}`, { method: 'POST', body: JSON.stringify({ slug: content.slug, content }) });
+        const cleanContent = stripPresentationFields(content);
+        const data = await api(`/content/${collection}`, { method: 'POST', body: JSON.stringify({ slug: cleanContent.slug, content: cleanContent }) });
         state.records[keyOf(collection, data.slug)] = { collection, slug: data.slug, original: clone(data.content), draft: clone(data.content) };
         await loadCollection(collection);
         if (state.collection === collection && collection !== 'jobs' && collection !== 'projects') state.selectedSlug = data.slug;
@@ -1899,6 +2001,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       async function deleteRecord(ref) {
         const record = getRecord(ref);
         if (!record) return;
+        if (record.collection === 'products') {
+          await deleteProductRecord(ref);
+          return;
+        }
         if (!confirm(`Удалить запись "${record.draft.title || record.slug}"?`)) return;
         await api(`/content/${record.collection}/${record.slug}`, { method: 'DELETE' });
         delete state.records[ref];
@@ -1906,6 +2012,156 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (state.selectedSlug === record.slug && state.collection === record.collection) state.selectedSlug = '';
         renderApp();
         await publishSavedChanges('Запись удалена.');
+      }
+
+      function visibleSelectedProductRefs() {
+        return Array.from(document.querySelectorAll('[data-product-select]:checked'))
+          .map((input) => input.dataset.ref)
+          .filter((ref) => getRecord(ref)?.collection === 'products');
+      }
+
+      function syncProductSelectionUi() {
+        document.querySelectorAll('[data-product-select]').forEach((input) => {
+          input.checked = state.selectedProductRefs.has(input.dataset.ref);
+        });
+        const visibleCount = visibleSelectedProductRefs().length;
+        document.querySelectorAll('[data-selected-products-count]').forEach((node) => {
+          node.textContent = String(visibleCount);
+        });
+        document.querySelectorAll('[data-action="bulk-delete-products"], [data-action="clear-product-selection"]').forEach((button) => {
+          button.disabled = visibleCount === 0;
+        });
+      }
+
+      function removeProductCardFromDom(ref) {
+        document.querySelectorAll(`[data-product-card][data-ref="${CSS.escape(ref)}"]`).forEach((card) => card.remove());
+        renderNav();
+        syncProductSelectionUi();
+        markDirty();
+      }
+
+      async function deleteProductRecord(ref, options = {}) {
+        const { confirmDelete = true, publish = true } = options;
+        const record = getRecord(ref);
+        if (!record || record.collection !== 'products') return { ok: false, error: 'Товар не найден.' };
+        if (confirmDelete && !confirm(`Удалить товар "${record.draft.title || record.slug}"?`)) return { ok: false, cancelled: true };
+
+        await api(`/content/products/${encodeURIComponent(record.slug)}`, { method: 'DELETE' });
+        delete state.records[ref];
+        state.selectedProductRefs.delete(ref);
+        await loadCollection('products');
+
+        if (state.selectedSlug === record.slug && state.collection === 'products') {
+          state.selectedSlug = '';
+          renderApp();
+        } else if (document.querySelector(`[data-product-card][data-ref="${CSS.escape(ref)}"]`)) {
+          removeProductCardFromDom(ref);
+        } else {
+          renderApp();
+        }
+
+        if (publish) await publishSavedChanges('Товар удален.');
+        return { ok: true };
+      }
+
+      async function bulkDeleteSelectedProducts() {
+        const refs = visibleSelectedProductRefs();
+        if (!refs.length) {
+          setAlert('Выберите товары для удаления.', true);
+          return;
+        }
+        if (!confirm(`Удалить ${refs.length} товаров? Это действие нельзя отменить.`)) return;
+
+        const result = { deleted: 0, errors: [], deletedRefs: [] };
+        setAlert(`Удаляем товары: ${refs.length}...`);
+        for (const ref of refs) {
+          const record = getRecord(ref);
+          if (!record || record.collection !== 'products') continue;
+          try {
+            await api(`/content/products/${encodeURIComponent(record.slug)}`, { method: 'DELETE' });
+            delete state.records[ref];
+            state.selectedProductRefs.delete(ref);
+            result.deleted += 1;
+            result.deletedRefs.push(ref);
+          } catch (error) {
+            result.errors.push(`${record.draft.title || record.slug}: ${error.message || 'ошибка удаления'}`);
+          }
+        }
+
+        await loadCollection('products');
+        result.deletedRefs.forEach((ref) => document.querySelectorAll(`[data-product-card][data-ref="${CSS.escape(ref)}"]`).forEach((card) => card.remove()));
+        renderNav();
+        syncProductSelectionUi();
+        markDirty();
+
+        const published = result.deleted
+          ? await publishSavedChanges(`Удалено товаров: ${result.deleted}. Ошибок: ${result.errors.length}.`)
+          : false;
+        if (result.errors.length) {
+          setAlert(`Удалено: ${result.deleted}, ошибок: ${result.errors.length}. ${result.errors.join('; ')}`, true);
+        } else if (published || !result.deleted) {
+          setAlert(`Удалено: ${result.deleted}, ошибок: 0.`);
+        }
+      }
+
+      function readImportFile(file) {
+        const name = file?.name || '';
+        if (!/\.json$/i.test(name) && file?.type !== 'application/json') {
+          throw new Error('Выберите файл .json.');
+        }
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            state.importText = String(reader.result || '');
+            state.importFileName = name;
+            state.importPreview = null;
+            state.importResult = null;
+            renderApp();
+            setAlert(`JSON-файл загружен: ${name}. Нажмите «Проверить».`);
+            resolve();
+          };
+          reader.onerror = () => reject(new Error('Не удалось прочитать JSON-файл.'));
+          reader.readAsText(file, 'utf-8');
+        });
+      }
+
+      async function moveCategoryRecord(ref, dir) {
+        const record = getRecord(ref);
+        if (!record || record.collection !== 'product-categories') return;
+        const parentSlug = record.draft.parentSectionSlug;
+        const siblings = Object.values(state.records)
+          .filter((item) => item.collection === 'product-categories' && item.draft.parentSectionSlug === parentSlug)
+          .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
+        const index = siblings.findIndex((item) => keyOf(item.collection, item.slug) === ref);
+        const nextIndex = index + dir;
+        if (index < 0 || nextIndex < 0 || nextIndex >= siblings.length) return;
+
+        const previousOrders = new Map(siblings.map((item) => [keyOf(item.collection, item.slug), item.draft.order]));
+        const reordered = siblings.slice();
+        [reordered[index], reordered[nextIndex]] = [reordered[nextIndex], reordered[index]];
+        reordered.forEach((item, itemIndex) => {
+          item.draft.order = (itemIndex + 1) * 10;
+        });
+
+        renderApp();
+        setAlert('Сохраняем порядок типов изделий...');
+        try {
+          for (const item of reordered) {
+          const data = await api(`/content/product-categories/${encodeURIComponent(item.slug)}`, { method: 'PUT', body: JSON.stringify(stripPresentationFields(item.draft)) });
+            item.original = clone(data.content);
+            item.draft = clone(data.content);
+          }
+          await loadCollection('product-categories');
+          renderApp();
+          await publishSavedChanges('Порядок типов изделий сохранен.');
+        } catch (error) {
+          previousOrders.forEach((order, itemRef) => {
+            const item = getRecord(itemRef);
+            if (item) item.draft.order = order;
+          });
+          renderApp();
+          throw error;
+        }
       }
 
       function createDefaultBlock(type, order) {
@@ -1939,7 +2195,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         setAlert('Сохраняем...');
         try {
           for (const record of dirty) {
-            const data = await api(`/content/${record.collection}/${record.slug}`, { method: 'PUT', body: JSON.stringify(record.draft) });
+            const data = await api(`/content/${record.collection}/${record.slug}`, { method: 'PUT', body: JSON.stringify(stripPresentationFields(record.draft)) });
             record.original = clone(data.content);
             record.draft = clone(data.content);
           }
@@ -1956,8 +2212,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         try {
           const publish = await api('/publish', { method: 'POST', body: JSON.stringify({}) });
           setAlert(publish.message || 'Изменения опубликованы. Публичный хостинг обновится после завершения автодеплоя.');
+          return true;
         } catch (publishError) {
           setAlert(`${savedMessage} Но публикация не прошла: ${publishError.message || 'ошибка Git push'}`, true);
+          return false;
         }
       }
 
@@ -2077,6 +2335,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             renderApp();
             return;
           }
+          const productSelect = event.target.closest?.('[data-product-select]');
+          if (productSelect) {
+            if (productSelect.checked) state.selectedProductRefs.add(productSelect.dataset.ref);
+            else state.selectedProductRefs.delete(productSelect.dataset.ref);
+            syncProductSelectionUi();
+            return;
+          }
           const field = event.target.closest?.('[data-field-ref]');
           if (!field) return;
           const record = getRecord(field.dataset.fieldRef);
@@ -2163,6 +2428,18 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           finally { event.target.value = ''; state.uploadTarget = null; }
         });
 
+        $('jsonImportInput').addEventListener('change', async (event) => {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          try {
+            await readImportFile(file);
+          } catch (error) {
+            setAlert(error.message || 'Ошибка чтения JSON-файла', true);
+          } finally {
+            event.target.value = '';
+          }
+        });
+
         $('saveBtn').addEventListener('click', saveAll);
         $('publishAllBtn').addEventListener('click', publishWholeSite);
         $('logoutBtn').addEventListener('click', async () => {
@@ -2189,6 +2466,28 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           await runProductsImport(state.importPreview, state.importMode);
           return;
         }
+        if (action === 'download-catalog-export') {
+          el.disabled = true;
+          setAlert('Готовим JSON каталога...');
+          try {
+            await downloadCatalogExport();
+            setAlert('JSON каталога скачан.');
+          } finally {
+            el.disabled = false;
+          }
+          return;
+        }
+        if (action === 'choose-import-file') {
+          $('jsonImportInput').click();
+          return;
+        }
+        if (action === 'bulk-delete-products') return bulkDeleteSelectedProducts();
+        if (action === 'clear-product-selection') {
+          state.selectedProductRefs.clear();
+          syncProductSelectionUi();
+          return;
+        }
+        if (action === 'move-category-record') return moveCategoryRecord(el.dataset.ref, Number(el.dataset.dir));
         if (action === 'create-record') return createRecord(el.dataset.collection, el.closest('[data-create-panel]'));
         if (action === 'delete-record') return deleteRecord(el.dataset.ref);
         if (action === 'toggle-record') {

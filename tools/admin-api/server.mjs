@@ -188,6 +188,14 @@ function sendJson(res, statusCode, payload) {
   res.end(JSON.stringify(payload));
 }
 
+function sendPrettyJson(res, statusCode, payload, filename) {
+  res.statusCode = statusCode;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+  res.end(JSON.stringify(payload, null, 2));
+}
+
 async function runGit(args) {
   try {
     const { stdout, stderr } = await execFileAsync('git', args, {
@@ -435,6 +443,106 @@ function getEntrySlug(entry) {
   return entry.fileSlug;
 }
 
+const PRESENTATION_FIELD_KEYS = new Set([
+  'heroTitleStyle',
+  'heroDescriptionStyle',
+  'heroLayout',
+  'descriptionTextStyle',
+  'descriptionLayout',
+  'titleStyle',
+  'textStyle',
+  'layout',
+  'fontSize',
+  'fontWeight',
+  'italic',
+  'align',
+  'textAlign',
+  'lineHeight',
+  'color',
+  'textColor',
+  'width',
+  'widthPercent',
+  'maxWidth',
+  'position',
+  'padding',
+  'verticalPadding',
+  'sectionSpacing',
+  'textBlockWidth',
+  'textWidth',
+  'textSize',
+  'titleSize',
+  'textWeight',
+  'textItalic'
+]);
+
+function stripPresentationFields(value, options = {}) {
+  const { removeEmpty = false } = options;
+  if (Array.isArray(value)) {
+    const items = value
+      .map((item) => stripPresentationFields(item, options))
+      .filter((item) => item !== undefined);
+    return removeEmpty && !items.length ? undefined : items;
+  }
+  if (!value || typeof value !== 'object') {
+    if (removeEmpty && (value === undefined || value === null || value === '')) return undefined;
+    return value;
+  }
+
+  const result = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (PRESENTATION_FIELD_KEYS.has(key)) continue;
+    const nextValue = stripPresentationFields(item, options);
+    if (nextValue === undefined) continue;
+    if (removeEmpty && Array.isArray(nextValue) && !nextValue.length) continue;
+    if (removeEmpty && nextValue && typeof nextValue === 'object' && !Array.isArray(nextValue) && !Object.keys(nextValue).length) continue;
+    result[key] = nextValue;
+  }
+  return removeEmpty && !Object.keys(result).length ? undefined : result;
+}
+
+function catalogSortValue(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
+}
+
+function sortCatalogItems(left, right) {
+  const leftSection = String(left.parentSectionSlug ?? left.productCategorySlug ?? left.section ?? '');
+  const rightSection = String(right.parentSectionSlug ?? right.productCategorySlug ?? right.section ?? '');
+  if (leftSection !== rightSection) return leftSection.localeCompare(rightSection, 'ru');
+
+  const orderDiff = catalogSortValue(left.order) - catalogSortValue(right.order);
+  if (orderDiff !== 0) return orderDiff;
+  return String(left.title ?? left.slug ?? '').localeCompare(String(right.title ?? right.slug ?? ''), 'ru');
+}
+
+async function exportCollection(collection) {
+  const entries = await listJsonEntries(collection);
+  return entries
+    .map((entry) => stripPresentationFields({ ...entry.json, slug: getEntrySlug(entry) }, { removeEmpty: true }))
+    .filter(Boolean)
+    .sort(sortCatalogItems);
+}
+
+async function buildCatalogExport() {
+  const [productCategories, products, catalogPages] = await Promise.all([
+    exportCollection('product-categories'),
+    exportCollection('products'),
+    exportCollection('product-sections')
+  ]);
+
+  return {
+    type: 'catalog_export',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    source: {
+      site: 'SMU-1',
+      content: 'src/content'
+    },
+    productCategories,
+    products,
+    catalogPages
+  };
+}
+
 async function assertSlugIsUnique(collection, slug, currentPath = null) {
   const entries = await listJsonEntries(collection);
   for (const entry of entries) {
@@ -665,6 +773,14 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/api/admin/export-catalog' && req.method === 'GET') {
+      const exportedAt = new Date();
+      const payload = await buildCatalogExport();
+      const filename = `smu1-catalog-export-${exportedAt.toISOString().slice(0, 10)}.json`;
+      sendPrettyJson(res, 200, payload, filename);
+      return;
+    }
+
     if (pathname === '/api/admin/publish' && req.method === 'POST') {
       const result = await publishContentChanges();
       sendJson(res, 200, { ok: true, ...result });
@@ -739,9 +855,11 @@ const server = http.createServer(async (req, res) => {
       }
 
       const body = await readBody(req);
-      const content = body?.content && typeof body.content === 'object' && !Array.isArray(body.content)
-        ? body.content
-        : body;
+      const content = stripPresentationFields(
+        body?.content && typeof body.content === 'object' && !Array.isArray(body.content)
+          ? body.content
+          : body
+      );
 
       if (!content || typeof content !== 'object' || Array.isArray(content)) {
         sendJson(res, 400, { error: 'Ожидается JSON-объект' });
@@ -783,7 +901,7 @@ const server = http.createServer(async (req, res) => {
       const config = getCollectionConfig(collection);
       const filePath = await resolveJsonPath(collection, slug);
       const previousContent = await readJsonFile(filePath);
-      const body = await readBody(req);
+      const body = stripPresentationFields(await readBody(req));
 
       if (!body || typeof body !== 'object' || Array.isArray(body)) {
         sendJson(res, 400, { error: 'Ожидается JSON-объект' });
