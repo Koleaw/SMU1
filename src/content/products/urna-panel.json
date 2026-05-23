@@ -54,6 +54,14 @@
   "showInCatalog": true,
   "seoTitle": "Урна Панель с деревянной облицовкой на заказ",
   "seoDescription": "Уличная урна с закрытым металлическим корпусом и деревянной лицевой панелью. Изготовление под размеры объекта, цвет металла по RAL, расчет стоимости по запросу.",
-  "image": "",
-  "gallery": []
+  "image": "/uploads/chatgpt-image-17-2026-15-35-05-1779536627868.png",
+  "gallery": [
+    "/uploads/chatgpt-image-23-2026-11-42-56-7-1779536643533.png"
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
