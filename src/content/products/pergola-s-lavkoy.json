@@ -50,7 +50,7 @@
   "priceMode": "on_request",
   "priceFrom": null,
   "currency": "RUB",
-  "placeholderLabel": "Фото изделия будут добавлены позже.",
+  "placeholderLabel": "",
   "order": 2,
   "isActive": true,
   "showInCatalog": true,
@@ -58,7 +58,7 @@
   "seoDescription": "Пергола с деревянными ламелями, металлическим каркасом, навесом и встроенной лавкой. Изготовление под размеры объекта, цвет металла по RAL, расчет стоимости по запросу.",
   "image": "/uploads/chatgpt-image-23-2026-18-52-55-1779551647317.png",
   "gallery": [
-    "/uploads/chatgpt-image-23-2026-11-42-53-2-1779550917605.png"
+    "/uploads/chatgpt-image-23-2026-18-59-08-1779551979435.png"
   ],
   "imageView": {
     "fit": "cover",
