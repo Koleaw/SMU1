@@ -8,9 +8,15 @@
   "order": 29,
   "showInSectionGrid": true,
   "isActive": true,
-  "image": "/assets/images/placeholders/street-furniture.svg",
+  "image": "/uploads/chatgpt-image-17-2026-15-37-11-9-1779554402933.png",
   "placeholderLabel": "Фото будут добавлены позже.",
   "mode": "catalog-list",
   "seoTitle": "Малые элементы",
-  "seoDescription": "Описание страницы."
+  "seoDescription": "Описание страницы.",
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
