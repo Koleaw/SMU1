@@ -52,6 +52,14 @@
   "showInCatalog": true,
   "seoTitle": "Скамья Контур со спинкой на заказ",
   "seoDescription": "Уличная скамья со спинкой, деревянными ламелями и металлическими боковыми опорами. Изготовление под размеры объекта, цвет металла по RAL, расчет стоимости по запросу.",
-  "image": "",
-  "gallery": []
+  "image": "/uploads/chatgpt-image-17-2026-15-34-54-1779534163037.png",
+  "gallery": [
+    "/uploads/chatgpt-image-23-2026-11-42-57-9-1779534181452.png"
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
