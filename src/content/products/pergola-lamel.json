@@ -55,6 +55,14 @@
   "showInCatalog": true,
   "seoTitle": "Пергола Ламель со скамьей на заказ",
   "seoDescription": "Пергола с металлическим каркасом, деревянными ламелями и встроенной скамьей. Изготовление под размеры объекта, цвет металла по RAL, расчет стоимости по запросу.",
-  "image": "",
-  "gallery": []
+  "image": "/uploads/chatgpt-image-17-2026-15-34-35-1779550849187.png",
+  "gallery": [
+    "/uploads/chatgpt-image-23-2026-11-43-15-1-1779550878598.png"
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
