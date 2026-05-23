@@ -54,6 +54,14 @@
   "showInCatalog": true,
   "seoTitle": "Фонарь Призма уличный на заказ",
   "seoDescription": "Уличный фонарь-столбик с квадратным корпусом и верхним световым модулем. Изготовление под размеры объекта, цвет металла по RAL, расчет стоимости по запросу.",
-  "image": "",
-  "gallery": []
+  "image": "/uploads/chatgpt-image-17-2026-15-50-00-4-1779553693499.png",
+  "gallery": [
+    "/uploads/chatgpt-image-23-2026-11-40-51-6-1779553709023.png"
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
