@@ -55,6 +55,14 @@
   "showInCatalog": true,
   "seoTitle": "Стол со скамьями Орбита на заказ",
   "seoDescription": "Круглый уличный стол с деревянной столешницей и секционными скамьями по окружности. Изготовление под размеры объекта, цвет металла по RAL, расчет стоимости по запросу.",
-  "image": "",
-  "gallery": []
+  "image": "/uploads/chatgpt-image-23-2026-11-05-09-1779535920248.png",
+  "gallery": [
+    "/uploads/chatgpt-image-23-2026-12-30-28-1779535939641.png"
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 59,
+    "scale": 1
+  }
 }
