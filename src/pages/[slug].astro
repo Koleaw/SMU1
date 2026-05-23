@@ -620,7 +620,6 @@ const heroClassName = hasMediaHero
               <a class="category-choice-card" href={withBase(`/${item.slug}/${category.slug}/`)}>
                 <div class="media-block placeholder placeholder--card">
                   {category.image ? <img class="media-thumb" src={withBase(category.image)} alt={category.title} loading="lazy" /> : null}
-                  {category.placeholderLabel?.trim() && <p class="media-caption">{category.placeholderLabel.trim()}</p>}
                 </div>
                 <div class="category-choice-card__body">
                   <h3>{category.title}</h3>

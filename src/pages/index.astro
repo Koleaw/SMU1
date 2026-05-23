@@ -152,12 +152,12 @@ const homeHeroPoster = homePage.heroMediaPoster ?? homePage.image ?? '/assets/im
       </div>
     </section>
 
-    <section id="home-trust" class="section section--dark">
+    <section id="home-trust" class="section section--dark home-trust-section">
       <div class="container trust-media-grid">
         <article class="trust-media trust-media--objects">
           <div class="media-block placeholder placeholder--card">
             <img class="media-thumb" src={withBase(homePage.trustImage ?? '/assets/images/objects/object-2.svg')} alt="Выполненные объекты СМУ-1" loading="lazy" />
-            <p class="media-caption">{homePage.trustCaption}</p>
+            {homePage.trustCaption?.trim() && <p class="media-caption">{homePage.trustCaption.trim()}</p>}
           </div>
           <h2>{homePage.trustTitle}</h2>
           <p>{homePage.trustText}</p>

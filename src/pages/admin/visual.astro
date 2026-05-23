@@ -1496,14 +1496,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const item = categoryRecord.draft;
         const target = `${ref}:image`;
         const isCrop = state.crop?.target === target;
-        const caption = String(item.placeholderLabel || '').trim();
         return `
           <article class="category-choice-card ${item.isActive === false ? 'admin-card-hidden' : ''}">
             <div class="media-block placeholder placeholder--card">
               <div class="admin-media-frame admin-media-frame--card ${isCrop ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">
                 ${item.image ? `<img class="media-thumb" data-image-img="${esc(target)}" src="${esc(toSrc(item.image))}" alt="${esc(item.title)}" style="${esc(mediaStyle(item.imageView))}" />` : '<div class="admin-media-empty">Фото не выбрано</div>'}
               </div>
-              ${caption ? `<p class="media-caption" ${editable(ref, 'placeholderLabel', 'Подпись изображения')}>${esc(caption)}</p>` : ''}
               ${renderMediaButtons(ref, 'image', 'imageView', target)}
               ${isCrop ? renderCropControls() : ''}
             </div>
@@ -1896,10 +1894,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
               <div class="home-services-grid">${serviceDirections.map((record) => renderHomeServiceCard(record)).join('')}</div>
             </div>
           </section>
-          <section class="section section--dark">
+          <section class="section section--dark home-trust-section">
             <div class="container trust-media-grid">
               <article class="trust-media trust-media--objects">
-                <div class="media-block placeholder placeholder--card">${renderImageOnly(ref, 'trustImage', null, 'card')}<p class="media-caption" ${editable(ref, 'trustCaption', 'Подпись изображения')}>${esc(page.trustCaption || '')}</p></div>
+                <div class="media-block placeholder placeholder--card">${renderImageOnly(ref, 'trustImage', null, 'card')}${String(page.trustCaption || '').trim() ? `<p class="media-caption" ${editable(ref, 'trustCaption', 'Подпись изображения')}>${esc(String(page.trustCaption || '').trim())}</p>` : ''}</div>
                 <h2 ${editable(ref, 'trustTitle', 'Заголовок блока', true)}>${esc(page.trustTitle || '')}</h2>
                 <p ${editable(ref, 'trustText', 'Текст блока')}>${esc(page.trustText || '')}</p>
               </article>

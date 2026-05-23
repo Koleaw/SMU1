@@ -44,7 +44,6 @@ const categoryDescriptionFallback = 'Типовые решения и адапт
           <a class="category-choice-card" href={withBase(`/ulichnaya-mebel/${category.slug}/`)}>
               <div class="media-block placeholder placeholder--card">
                 <img class="media-thumb" src={withBase(category.image)} alt={category.title} loading="lazy" />
-                {category.placeholderLabel?.trim() && <p class="media-caption">{category.placeholderLabel.trim()}</p>}
               </div>
               <div class="category-choice-card__body">
                 <h3>{category.title}</h3>
