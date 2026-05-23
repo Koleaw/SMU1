@@ -57,6 +57,14 @@
   "showInCatalog": true,
   "seoTitle": "Навес Галерея на заказ",
   "seoDescription": "Протяженный уличный навес с металлическим каркасом, деревянной отделкой и V-образными опорами. Изготовление под размеры объекта, цвет металла по RAL, расчет стоимости по запросу.",
-  "image": "",
-  "gallery": []
+  "image": "/uploads/chatgpt-image-17-2026-15-37-11-8-1779555049228.png",
+  "gallery": [
+    "/uploads/chatgpt-image-23-2026-11-42-10-1779555059048.png"
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
