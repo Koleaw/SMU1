@@ -8,9 +8,15 @@
   "order": 6,
   "showInSectionGrid": true,
   "isActive": true,
-  "image": "/assets/images/placeholders/street-furniture.svg",
+  "image": "/uploads/chatgpt-image-17-2026-15-37-11-6-1779549205502.png",
   "placeholderLabel": "Фото будут добавлены позже.",
   "mode": "catalog-list",
   "seoTitle": "Шезлонги",
-  "seoDescription": "Описание страницы."
+  "seoDescription": "Описание страницы.",
+  "imageView": {
+    "fit": "cover",
+    "positionX": 29.33960523888582,
+    "positionY": 33.7797984762841,
+    "scale": 1
+  }
 }
