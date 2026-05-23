@@ -46,7 +46,9 @@
     "positionY": 55,
     "scale": 1
   },
-  "gallery": [],
+  "gallery": [
+    "/uploads/chatgpt-image-23-2026-11-44-15-4-1779528754678.png"
+  ],
   "showCustomProjectBlock": true,
   "customizationItems": [
     "Размеры",
