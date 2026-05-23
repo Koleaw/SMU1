@@ -53,6 +53,14 @@
   "showInCatalog": true,
   "seoTitle": "Сиденье Пилон уличное на заказ",
   "seoDescription": "Высокое городское сиденье с металлическим основанием и деревянной верхней площадкой. Изготовление под размеры объекта, цвет металла по RAL, расчет стоимости по запросу.",
-  "image": "",
-  "gallery": []
+  "image": "/uploads/chatgpt-image-17-2026-15-37-11-10-1779554331734.png",
+  "gallery": [
+    "/uploads/chatgpt-image-23-2026-11-42-20-1-1779554364102.png"
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
