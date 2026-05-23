@@ -8,9 +8,15 @@
   "order": 5,
   "showInSectionGrid": true,
   "isActive": true,
-  "image": "/assets/images/placeholders/street-furniture.svg",
+  "image": "/uploads/chatgpt-image-17-2026-15-36-29-2-1779543022697.png",
   "placeholderLabel": "Фото будут обновлены в мае: материалы по категории.",
   "mode": "catalog-list",
   "seoTitle": "Велопарковки — СМУ-1",
-  "seoDescription": "Велопарковки для жилых, коммерческих и общественных объектов."
+  "seoDescription": "Велопарковки для жилых, коммерческих и общественных объектов.",
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
