@@ -8,8 +8,14 @@
   "showOnHome": true,
   "isActive": true,
   "mode": "catalog-hub",
-  "image": "/assets/images/products/benches-2.svg",
+  "image": "/uploads/chatgpt-image-17-2026-15-34-46-1779555132517.png",
   "placeholderLabel": "Фото категории будут обновлены в мае.",
   "seoTitle": "Уличная мебель — СМУ-1",
-  "seoDescription": "Уличная мебель для общественных и коммерческих пространств: лавочки, урны, вазоны, велопарковки и другие решения."
+  "seoDescription": "Уличная мебель для общественных и коммерческих пространств: лавочки, урны, вазоны, велопарковки и другие решения.",
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
