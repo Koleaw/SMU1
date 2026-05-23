@@ -54,6 +54,14 @@
   "showInCatalog": true,
   "seoTitle": "Фонарь Сектор уличный на заказ",
   "seoDescription": "Уличный фонарь-столбик с цилиндрическим корпусом и боковым световым окном. Изготовление под размеры объекта, цвет металла по RAL, расчет стоимости по запросу.",
-  "image": "",
-  "gallery": []
+  "image": "/uploads/chatgpt-image-17-2026-15-49-59-3-1779552598018.png",
+  "gallery": [
+    "/uploads/chatgpt-image-23-2026-11-40-51-9-1779552615674.png"
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
