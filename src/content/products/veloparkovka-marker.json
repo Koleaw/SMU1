@@ -53,14 +53,14 @@
   "showInCatalog": true,
   "seoTitle": "Велопарковка Маркер из металлических стоек на заказ",
   "seoDescription": "Велопарковка из отдельных металлических стоек с пиктограммой велосипеда. Изготовление под размеры объекта, количество мест, цвет по RAL, расчет стоимости по запросу.",
-  "image": "/uploads/3bcbcba7-7088-42fc-9126-5187df892906-1779541278551.png",
+  "image": "/uploads/chatgpt-image-23-2026-16-08-01-1779541707429.png",
   "gallery": [
     "/uploads/chatgpt-image-23-2026-16-00-17-1779541289294.png"
   ],
   "imageView": {
     "fit": "cover",
     "positionX": 50,
-    "positionY": 19,
-    "scale": 1.33
+    "positionY": 50,
+    "scale": 1
   }
 }
