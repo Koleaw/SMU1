@@ -17,6 +17,8 @@ const categories = (await getCollection('product-categories'))
   .map(({ data }) => data)
   .filter((item) => item.parentSectionSlug === section.data.slug && item.isActive && item.showInSectionGrid)
   .sort((a, b) => (a.order - b.order) || a.title.localeCompare(b.title, 'ru'));
+
+const categoryDescriptionFallback = 'Типовые решения и адаптация под задачу объекта.';
 ---
 <BaseLayout title={section.data.seoTitle} description={section.data.seoDescription}>
   <div class="breadcrumbs-bar">
@@ -40,13 +42,13 @@ const categories = (await getCollection('product-categories'))
       <div class="category-choice-grid">
         {categories.map((category) => (
           <a class="category-choice-card" href={withBase(`/ulichnaya-mebel/${category.slug}/`)}>
-            <div class="media-block placeholder placeholder--card">
-              <img class="media-thumb" src={withBase(category.image)} alt={category.title} loading="lazy" />
-              <p class="media-caption">{category.placeholderLabel}</p>
-            </div>
-            <div class="category-choice-card__body">
-              <h3>{category.title}</h3>
-              <p>Типовые решения и адаптация под задачу объекта.</p>
+              <div class="media-block placeholder placeholder--card">
+                <img class="media-thumb" src={withBase(category.image)} alt={category.title} loading="lazy" />
+                {category.placeholderLabel?.trim() && <p class="media-caption">{category.placeholderLabel.trim()}</p>}
+              </div>
+              <div class="category-choice-card__body">
+                <h3>{category.title}</h3>
+                <p>{category.shortDescription?.trim() || categoryDescriptionFallback}</p>
               <span class="btn btn-secondary">Открыть подкатегорию</span>
             </div>
           </a>

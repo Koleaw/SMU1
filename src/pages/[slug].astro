@@ -521,6 +521,7 @@ const categories = isCatalogHub
       .filter((category) => category.parentSectionSlug === item.slug && category.isActive && category.showInSectionGrid)
       .sort((a, b) => a.order - b.order)
   : [];
+const categoryDescriptionFallback = 'Типовые решения и адаптация под задачу объекта.';
 
 const pageContact = item as {
   contactTitle?: string;
@@ -619,11 +620,11 @@ const heroClassName = hasMediaHero
               <a class="category-choice-card" href={withBase(`/${item.slug}/${category.slug}/`)}>
                 <div class="media-block placeholder placeholder--card">
                   {category.image ? <img class="media-thumb" src={withBase(category.image)} alt={category.title} loading="lazy" /> : null}
-                  <p class="media-caption">{category.placeholderLabel}</p>
+                  {category.placeholderLabel?.trim() && <p class="media-caption">{category.placeholderLabel.trim()}</p>}
                 </div>
                 <div class="category-choice-card__body">
                   <h3>{category.title}</h3>
-                  <p>{category.shortDescription}</p>
+                  <p>{category.shortDescription?.trim() || categoryDescriptionFallback}</p>
                   <span class="btn btn-secondary">Открыть подтип</span>
                 </div>
               </a>

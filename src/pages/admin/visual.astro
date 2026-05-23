@@ -52,6 +52,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-alert.is-error { background: #fff0ef; color: #a53532; }
       .admin-status { color: #587085; font-size: 13px; font-weight: 800; }
       .admin-status.is-dirty { color: #9a4f00; }
+      .admin-breadcrumbs { align-items: center; background: #ffffff; border-bottom: 1px solid rgb(16 22 27 / 8%); color: #5d7185; display: flex; flex-wrap: wrap; font-size: 13px; gap: 6px; line-height: 1.35; min-height: 40px; padding: 8px 16px; }
+      .admin-breadcrumbs:empty { display: none; }
+      .admin-breadcrumbs__link { background: transparent; border: 0; color: #24465f; cursor: pointer; font: inherit; font-weight: 800; padding: 2px 0; text-decoration: none; }
+      .admin-breadcrumbs__link:hover, .admin-breadcrumbs__link:focus-visible { color: #167a50; text-decoration: underline; }
+      .admin-breadcrumbs__separator { color: #9badbd; }
+      .admin-breadcrumbs__current { color: #17212b; font-weight: 800; }
       [data-editable] { min-width: 1ch; border-radius: 6px; outline: 1px dashed transparent; outline-offset: 4px; cursor: text; white-space: pre-wrap; }
       [data-editable]:hover { outline-color: rgb(22 122 80 / 38%); background: rgb(22 122 80 / 5%); }
       [data-editable]:focus { outline: 2px solid #18b663; background: rgb(255 255 255 / 94%); color: #17212b !important; }
@@ -101,6 +107,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-gallery-thumb { aspect-ratio: 4 / 3; overflow: hidden; border-radius: 8px; border: 1px solid #d0dbe4; background: #edf2f6; }
       .admin-gallery-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
       .admin-gallery-thumb span { display: grid; width: 100%; height: 100%; place-items: center; padding: 10px; color: #687b8d; font-size: 12px; font-weight: 800; text-align: center; }
+      .admin-gallery-meta { display: grid; gap: 3px; }
+      .admin-gallery-meta strong { color: #17212b; font-size: 14px; }
+      .admin-gallery-meta small { color: #6a7f91; font-size: 12px; overflow-wrap: anywhere; }
+      .admin-gallery-technical { margin-top: 2px; }
+      .admin-gallery-technical summary { color: #587085; cursor: pointer; font-size: 12px; font-weight: 800; }
       .admin-product-details { display: grid; gap: 18px; }
       .admin-product-panel-grid { display: grid; gap: 14px; }
       .admin-product-media-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: 14px; align-items: start; }
@@ -187,6 +198,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             <button id="logoutBtn" class="admin-btn" type="button">Выйти</button>
           </div>
         </header>
+        <nav id="adminBreadcrumbs" class="admin-breadcrumbs" aria-label="Хлебные крошки"></nav>
         <div id="alertBox" class="admin-alert"></div>
         <div id="workspace" class="visual-canvas"></div>
       </main>
@@ -195,7 +207,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       <input id="jsonImportInput" class="hidden" type="file" accept="application/json,.json" />
     </div>
 
-    <script type="module" define:vars={{ adminApiBase, baseUrl }}>
+    <script type="module" define:vars={{ adminApiBase, baseUrl, adminHome }}>
       const API_BASE = adminApiBase;
       const DEFAULT_MEDIA_VIEW = { fit: 'cover', positionX: 50, positionY: 50, scale: 1 };
       const COLLECTIONS = [
@@ -413,6 +425,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `${normBase}${clean}`;
       }
 
+      function fileNameFromPath(src) {
+        const clean = String(src || '').split(/[?#]/)[0].replace(/\/+$/, '');
+        return clean.split('/').pop() || clean || '';
+      }
+
       function mediaMimeType(src) {
         return String(src || '').toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
       }
@@ -621,11 +638,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         renderApp();
       }
 
-      function renderApp() {
+      function renderApp(options = {}) {
+        const scrollY = options.preserveScroll ? window.scrollY : null;
         renderNav();
         renderWorkspace();
+        renderBreadcrumbs();
         renderAlert();
         markDirty();
+        if (scrollY !== null) requestAnimationFrame(() => window.scrollTo(0, scrollY));
       }
 
       function renderNav() {
@@ -701,6 +721,48 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         else if (collection === 'jobs') $('workspace').innerHTML = renderJobCard(ref, true);
         else if (collection === 'static-pages') $('workspace').innerHTML = renderStaticPage(ref);
         else $('workspace').innerHTML = renderSettingsPage(ref);
+      }
+
+      function breadcrumbButton(label, collection, slug) {
+        return `<button class="admin-breadcrumbs__link" type="button" data-action="open-related" data-collection="${esc(collection)}" data-slug="${esc(slug || '')}">${esc(label)}</button>`;
+      }
+
+      function breadcrumbCurrent(label) {
+        return `<span class="admin-breadcrumbs__current" aria-current="page">${esc(label)}</span>`;
+      }
+
+      function renderBreadcrumbs() {
+        const breadcrumbs = $('adminBreadcrumbs');
+        if (!breadcrumbs) return;
+
+        const mainRef = getMainRef();
+        const record = mainRef ? getRecord(mainRef) : null;
+        const parts = [`<a class="admin-breadcrumbs__link" href="${esc(adminHome)}">Админка</a>`];
+
+        if (!state.collection) {
+          breadcrumbs.innerHTML = parts.join('');
+          return;
+        }
+
+        if (state.collection === 'products' && record) {
+          const category = findRecordByField('product-categories', 'slug', record.draft.productCategorySlug);
+          const section = category ? findRecordByField('product-sections', 'slug', category.draft.parentSectionSlug) : null;
+          if (section) parts.push(breadcrumbButton(section.draft.title || section.slug, 'product-sections', section.slug));
+          if (category) parts.push(breadcrumbButton(category.draft.title || category.slug, 'product-categories', category.slug));
+          parts.push(breadcrumbCurrent(record.draft.title || record.slug));
+        } else if (state.collection === 'product-categories' && record) {
+          const section = findRecordByField('product-sections', 'slug', record.draft.parentSectionSlug);
+          if (section) parts.push(breadcrumbButton(section.draft.title || section.slug, 'product-sections', section.slug));
+          parts.push(breadcrumbCurrent(record.draft.title || record.slug));
+        } else if (state.collection === 'product-sections' && record) {
+          parts.push(breadcrumbCurrent(record.draft.title || record.slug));
+        } else if (record) {
+          parts.push(breadcrumbCurrent(record.draft.title || record.draft.companyName || record.slug));
+        } else {
+          parts.push(breadcrumbCurrent(COLLECTION_LABELS[state.collection] || state.collection));
+        }
+
+        breadcrumbs.innerHTML = parts.join('<span class="admin-breadcrumbs__separator">/</span>');
       }
 
       function renderWelcome() {
@@ -1434,13 +1496,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const item = categoryRecord.draft;
         const target = `${ref}:image`;
         const isCrop = state.crop?.target === target;
+        const caption = String(item.placeholderLabel || '').trim();
         return `
           <article class="category-choice-card ${item.isActive === false ? 'admin-card-hidden' : ''}">
             <div class="media-block placeholder placeholder--card">
               <div class="admin-media-frame admin-media-frame--card ${isCrop ? 'is-active-crop' : ''}" data-image-frame="${esc(target)}">
                 ${item.image ? `<img class="media-thumb" data-image-img="${esc(target)}" src="${esc(toSrc(item.image))}" alt="${esc(item.title)}" style="${esc(mediaStyle(item.imageView))}" />` : '<div class="admin-media-empty">Фото не выбрано</div>'}
               </div>
-              <p class="media-caption" ${editable(ref, 'placeholderLabel', 'Подпись изображения')}>${esc(item.placeholderLabel || '')}</p>
+              ${caption ? `<p class="media-caption" ${editable(ref, 'placeholderLabel', 'Подпись изображения')}>${esc(caption)}</p>` : ''}
               ${renderMediaButtons(ref, 'image', 'imageView', target)}
               ${isCrop ? renderCropControls() : ''}
             </div>
@@ -1484,7 +1547,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return `
           ${renderHero(ref, 'catalog')}
           ${renderHeroTextSettings(ref)}
-          ${renderRecordSettings(ref, ['title', 'slug', 'parentSectionSlug', 'shortDescription', 'order', 'showInSectionGrid', 'isActive', 'mode', 'seoTitle', 'seoDescription'])}
+          ${renderRecordSettings(ref, ['title', 'slug', 'parentSectionSlug', 'shortDescription', 'placeholderLabel', 'order', 'showInSectionGrid', 'isActive', 'mode', 'seoTitle', 'seoDescription'])}
           ${renderCreatePanel('products', { productCategorySlug: category.slug })}
           <section id="products" class="section">
             <div class="container">
@@ -1704,10 +1767,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const items = getPath(record, path) || [];
         return `<div class="admin-product-details"><strong>${esc(title)}</strong><div class="admin-gallery-list">${items.map((image, index) => {
           const imagePath = `${path}.${index}`;
+          const displayName = fileNameFromPath(image) || `Фото ${index + 1}`;
+          const displayPath = image || 'Файл не выбран';
           return `<div class="admin-gallery-row">
             <div class="admin-gallery-thumb">${image ? `<img src="${esc(toSrc(image))}" alt="" />` : '<span>Фото не выбрано</span>'}</div>
             <div class="admin-product-panel-grid">
-              <label class="admin-field"><span>Путь к фото</span><input data-field-ref="${ref}" data-field-path="${imagePath}" value="${esc(image || '')}" placeholder="/uploads/photo.jpg" /></label>
+              <div class="admin-gallery-meta"><strong>${esc(displayName)}</strong><small>${esc(displayPath)}</small></div>
               <div class="admin-item-tools">
                 <button class="admin-btn" type="button" data-action="upload-image" data-ref="${ref}" data-path="${esc(imagePath)}" data-target="${esc(`${ref}:${imagePath}`)}">Загрузить/заменить</button>
                 <button class="admin-btn" type="button" data-action="move-array-item" data-ref="${ref}" data-path="${path}" data-index="${index}" data-dir="-1">Выше</button>
@@ -1715,6 +1780,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
                 <button class="admin-btn" type="button" data-action="promote-gallery-image" data-ref="${ref}" data-path="${path}" data-index="${index}">Сделать основным</button>
                 <button class="admin-btn admin-btn--danger" type="button" data-action="delete-array-item" data-ref="${ref}" data-path="${path}" data-index="${index}">Удалить</button>
               </div>
+              <details class="admin-gallery-technical">
+                <summary>Технический путь</summary>
+                <label class="admin-field"><span>Путь к фото</span><input data-field-ref="${ref}" data-field-path="${imagePath}" value="${esc(image || '')}" placeholder="/uploads/photo.jpg" /></label>
+              </details>
             </div>
           </div>`;
         }).join('')}</div><button class="admin-btn admin-btn--primary" type="button" data-action="add-gallery-image" data-ref="${ref}" data-path="${path}">Добавить фото</button></div>`;
@@ -2199,7 +2268,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             record.original = clone(data.content);
             record.draft = clone(data.content);
           }
-          renderApp();
+          renderApp({ preserveScroll: true });
           await publishSavedChanges('Изменения сохранены.');
         } catch (error) {
           setAlert(error.message || 'Ошибка сохранения', true);
@@ -2242,12 +2311,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const formData = new FormData();
         formData.append('file', file);
         const data = await api('/upload', { method: 'POST', body: formData });
+        const uploadedPath = typeof data.path === 'string' ? data.path.trim() : '';
+        if (!uploadedPath) throw new Error('Backend загрузил файл, но не вернул путь к нему.');
         const record = getRecord(state.uploadTarget.ref);
-        setPath(record, state.uploadTarget.path, data.path);
+        setPath(record, state.uploadTarget.path, uploadedPath);
         if (state.uploadTarget.viewPath && !getPath(record, state.uploadTarget.viewPath)) setPath(record, state.uploadTarget.viewPath, clone(DEFAULT_MEDIA_VIEW));
         state.crop = state.uploadTarget.viewPath ? { ...state.uploadTarget } : null;
-        renderApp();
-        setAlert('Фото загружено.');
+        renderApp({ preserveScroll: true });
+        setAlert(`Фото загружено: ${fileNameFromPath(uploadedPath)}.`);
       }
 
       async function uploadVideo(file) {
@@ -2255,11 +2326,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const formData = new FormData();
         formData.append('file', file);
         const data = await api('/upload', { method: 'POST', body: formData });
+        const uploadedPath = typeof data.path === 'string' ? data.path.trim() : '';
+        if (!uploadedPath) throw new Error('Backend загрузил файл, но не вернул путь к нему.');
         const record = getRecord(state.uploadTarget.ref);
-        setPath(record, state.uploadTarget.path, data.path);
+        setPath(record, state.uploadTarget.path, uploadedPath);
         state.crop = null;
-        renderApp();
-        setAlert('Видео загружено.');
+        renderApp({ preserveScroll: true });
+        setAlert(`Видео загружено: ${fileNameFromPath(uploadedPath)}.`);
       }
 
       function applyCropPreview() {
@@ -2508,12 +2581,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         }
         if (action === 'clear-image') {
           setPath(getRecord(el.dataset.ref), el.dataset.path, '');
-          renderApp();
+          renderApp({ preserveScroll: true });
           return;
         }
         if (action === 'clear-video') {
           setPath(getRecord(el.dataset.ref), el.dataset.path, '');
-          renderApp();
+          renderApp({ preserveScroll: true });
           return;
         }
         if (action === 'open-crop') {
@@ -2550,21 +2623,21 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (action === 'delete-array-item') {
           const arr = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
           arr.splice(Number(el.dataset.index), 1);
-          renderApp();
+          renderApp({ preserveScroll: true });
           return;
         }
         if (action === 'move-array-item') {
           const arr = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
           moveItem(arr, Number(el.dataset.index), Number(el.dataset.dir));
           setPath(getRecord(el.dataset.ref), el.dataset.path, arr);
-          renderApp();
+          renderApp({ preserveScroll: true });
           return;
         }
         if (action === 'add-gallery-image') {
           const arr = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
           arr.push('');
           setPath(getRecord(el.dataset.ref), el.dataset.path, arr);
-          renderApp();
+          renderApp({ preserveScroll: true });
           return;
         }
         if (action === 'promote-gallery-image') {
@@ -2578,7 +2651,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           if (currentMain) arr[index] = currentMain;
           else arr.splice(index, 1);
           setPath(record, el.dataset.path, arr);
-          renderApp();
+          renderApp({ preserveScroll: true });
           return;
         }
         if (action === 'add-block') {

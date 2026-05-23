@@ -64,10 +64,10 @@ const resolvedPoster = mediaPoster || mediaImage;
 ---
 <section class={heroClass}>
   {(mediaImage || mediaPoster || mediaVideo) && (
-    <div class="hero-media" aria-hidden="true" data-hero-media>
+    <div class="hero-media" aria-hidden="true" data-hero-media data-has-video-fallback={resolvedPoster ? 'true' : undefined}>
       {mediaType === 'video' && mediaVideo ? (
         <>
-          <video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster={resolvedPoster} data-hero-video>
+          <video class="hero-media__video" autoplay muted loop playsinline preload="auto" poster={resolvedPoster} data-hero-video>
             {mediaVideoMobile && <source src={mediaVideoMobile} type={mediaVideoMobileType} media="(max-width: 900px)" />}
             <source src={mediaVideo} type={mediaVideoType} />
           </video>
@@ -103,15 +103,57 @@ const resolvedPoster = mediaPoster || mediaImage;
       if (!(heroVideo instanceof HTMLVideoElement)) return;
       if (heroMedia.dataset.heroVideoReady === 'true') return;
 
-      heroVideo.addEventListener('error', () => {
+      const markPlaying = () => {
+        heroMedia.dataset.videoPlaying = 'true';
+        delete heroMedia.dataset.videoFailed;
+      };
+
+      const markFailed = () => {
         heroMedia.dataset.videoFailed = 'true';
+        delete heroMedia.dataset.videoPlaying;
+      };
+
+      heroVideo.muted = true;
+      heroVideo.defaultMuted = true;
+      heroVideo.setAttribute('muted', '');
+      heroVideo.setAttribute('playsinline', '');
+      heroVideo.setAttribute('webkit-playsinline', '');
+
+      heroVideo.addEventListener('playing', markPlaying);
+
+      heroVideo.addEventListener('error', () => {
+        markFailed();
       });
 
       heroVideo.addEventListener('stalled', () => {
-        if (!heroVideo.currentSrc) heroMedia.dataset.videoFailed = 'true';
+        if (!heroVideo.currentSrc) markFailed();
       });
 
       heroMedia.dataset.heroVideoReady = 'true';
+
+      const attemptPlay = () => {
+        if (heroVideo.dataset.playAttempted === 'true') return;
+        heroVideo.dataset.playAttempted = 'true';
+
+        const playPromise = heroVideo.play();
+        if (playPromise && typeof playPromise.then === 'function') {
+          playPromise
+            .then(() => {
+              if (!heroVideo.paused) markPlaying();
+            })
+            .catch(() => {
+              markFailed();
+            });
+        } else if (!heroVideo.paused) {
+          markPlaying();
+        }
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attemptPlay, { once: true });
+      } else {
+        requestAnimationFrame(attemptPlay);
+      }
     });
   };
 

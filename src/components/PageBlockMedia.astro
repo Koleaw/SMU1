@@ -20,7 +20,7 @@ const { block, ratio = 'wide' } = Astro.props;
 const image = block.image || block.media || block.poster || '';
 const video = block.video || '';
 const poster = block.poster || image || '';
-const label = block.placeholderLabel || '';
+const label = (block.placeholderLabel || '').trim();
 const view = { fit: 'cover', positionX: 50, positionY: 50, scale: 1, ...(block.mediaView || {}) };
 const imageStyle = `object-fit:${view.fit};object-position:${view.positionX}% ${view.positionY}%;transform:scale(${view.scale});transform-origin:center;`;
 const videoType = String(video || '').toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';

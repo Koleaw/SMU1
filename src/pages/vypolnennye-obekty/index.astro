@@ -17,8 +17,8 @@ const objects = (await getCollection('projects'))
     </div>
   </div>
 
-  <Hero kicker="Доверительный контур" className="hero--trust hero--catalog-clean" title="Выполненные объекты" />
-  <section class="section">
+  <Hero kicker="Доверительный контур" className="hero--trust hero--catalog-clean objects-hero" title="Выполненные объекты" />
+  <section class="section objects-list-section">
     <div class="container object-list-grid">
       {objects.map((obj) => (
         <a class="object-list-card" href={withBase(`/vypolnennye-obekty/${obj.slug}/`)}>
