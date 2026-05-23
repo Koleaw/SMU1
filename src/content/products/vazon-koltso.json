@@ -56,6 +56,14 @@
   "showInCatalog": true,
   "seoTitle": "Вазон Кольцо с деревянной обшивкой на заказ",
   "seoDescription": "Круглый уличный вазон с деревянной обшивкой и металлическим верхним ободом. Изготовление под размеры объекта, цвет металла по RAL, расчет стоимости по запросу.",
-  "image": "",
-  "gallery": []
+  "image": "/uploads/chatgpt-image-17-2026-15-36-29-7-1779538849633.png",
+  "gallery": [
+    "/uploads/chatgpt-image-23-2026-11-42-45-8-1779538856813.png"
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
