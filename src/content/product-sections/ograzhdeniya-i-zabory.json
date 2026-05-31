@@ -45,38 +45,62 @@
         {
           "title": "Заборы",
           "text": "Ограждения периметра для частных, коммерческих и производственных территорий.",
-          "image": "/assets/images/placeholders/landscaping.svg",
+          "image": "/uploads/03ba6b83-ca31-468f-8c76-189dc4080572-1780248471243.jpeg",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/zabory/",
           "order": 10,
-          "isActive": true
+          "isActive": true,
+          "imageView": {
+            "fit": "cover",
+            "positionX": 50,
+            "positionY": 50,
+            "scale": 1
+          }
         },
         {
           "title": "Ворота",
           "text": "Распашные и откатные решения под проем, тип открывания и условия эксплуатации.",
-          "image": "/assets/images/placeholders/metal-business.svg",
+          "image": "/uploads/chatgpt-image-31-2026-18-07-49-1780248482346.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/vorota/",
           "order": 20,
-          "isActive": true
+          "isActive": true,
+          "imageView": {
+            "fit": "cover",
+            "positionX": 50,
+            "positionY": 50,
+            "scale": 1
+          }
         },
         {
           "title": "Калитки",
           "text": "Калитки под линию ограждения, проходную зону, фурнитуру и внешний вид территории.",
-          "image": "/assets/images/placeholders/street-furniture.svg",
+          "image": "/uploads/chatgpt-image-31-2026-18-17-16-1780248503511.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/kalitki/",
           "order": 30,
-          "isActive": true
+          "isActive": true,
+          "imageView": {
+            "fit": "cover",
+            "positionX": 50,
+            "positionY": 50,
+            "scale": 1
+          }
         },
         {
           "title": "Секционные ограждения",
           "text": "Модульные секции для территорий, где важны повторяемость, монтаж и аккуратный внешний вид.",
-          "image": "/assets/images/placeholders/landscaping.svg",
+          "image": "/uploads/chatgpt-image-31-2026-19-45-02-1780248513639.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/sekcionnye-ograzhdeniya/",
           "order": 40,
-          "isActive": true
+          "isActive": true,
+          "imageView": {
+            "fit": "cover",
+            "positionX": 50,
+            "positionY": 50,
+            "scale": 1
+          }
         },
         {
           "title": "Декоративные ограждения",
@@ -85,25 +109,37 @@
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/dekorativnye-ograzhdeniya/",
           "order": 50,
-          "isActive": true
+          "isActive": false
         },
         {
           "title": "Газонные ограждения",
           "text": "Низкие ограждения для зонирования газонов, дорожек, дворов и благоустроенных территорий.",
-          "image": "/assets/images/placeholders/landscaping.svg",
+          "image": "/uploads/chatgpt-image-may-28-2026-02-49-39-pm-1-6-1780248534908.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/gazonnye-ograzhdeniya/",
           "order": 60,
-          "isActive": true
+          "isActive": true,
+          "imageView": {
+            "fit": "cover",
+            "positionX": 50,
+            "positionY": 50,
+            "scale": 1
+          }
         },
         {
           "title": "Перила и поручни",
           "text": "Ограждения лестниц, пандусов, входных групп и зон с перепадами высоты.",
-          "image": "/assets/images/placeholders/metal-business.svg",
+          "image": "/uploads/chatgpt-image-31-2026-18-03-29-1780248547259.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/perila-i-poruchni/",
           "order": 70,
-          "isActive": true
+          "isActive": true,
+          "imageView": {
+            "fit": "cover",
+            "positionX": 50,
+            "positionY": 50,
+            "scale": 1
+          }
         },
         {
           "title": "Столбики и болларды",
@@ -117,11 +153,17 @@
         {
           "title": "Ограждения контейнерных площадок",
           "text": "Конструкции для ТКО и хозяйственных зон с учетом доступа, обслуживания и внешнего вида.",
-          "image": "/assets/images/placeholders/construction.svg",
+          "image": "/uploads/chatgpt-image-31-2026-18-03-46-1780248556068.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/ograzhdeniya-kontejnernyh-ploshchadok/",
           "order": 90,
-          "isActive": true
+          "isActive": true,
+          "imageView": {
+            "fit": "cover",
+            "positionX": 50,
+            "positionY": 50,
+            "scale": 1
+          }
         }
       ]
     },
