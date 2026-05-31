@@ -11,7 +11,7 @@
   "menuTitle": "Ограждения",
   "showBadge": true,
   "mode": "custom-direction",
-  "image": "/assets/images/placeholders/landscaping.svg",
+  "image": "/uploads/hero-1780248334850.png",
   "heroMediaPoster": "/assets/images/placeholders/landscaping.svg",
   "heroMediaVideo": "",
   "heroMediaVideoMobile": "",
@@ -29,7 +29,6 @@
       "intro": "",
       "text": "Ограждение подбирается не как отдельная модель, а как часть объекта: учитываем протяженность, высоту, основание, ветровую нагрузку, заполнение, цвет, фурнитуру, проходы, въезды и монтаж.",
       "theme": "light",
-      "textWidth": "820px",
       "isActive": true,
       "order": 10
     },
@@ -136,7 +135,6 @@
       "media": "/assets/images/placeholders/metal-business.svg",
       "placeholderLabel": "Фото или рендер ограждения под объект будет добавлен позже.",
       "mediaPosition": "right",
-      "textWidth": "780px",
       "isActive": true,
       "order": 30
     },
@@ -193,5 +191,11 @@
       "isActive": true,
       "order": 50
     }
-  ]
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 51.827347195967235,
+    "positionY": 100,
+    "scale": 1
+  }
 }
