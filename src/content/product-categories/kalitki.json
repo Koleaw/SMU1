@@ -8,7 +8,13 @@
   "order": 3,
   "showInSectionGrid": true,
   "isActive": true,
-  "image": "",
+  "image": "/uploads/chatgpt-image-31-2026-18-17-16-1780248503511.png",
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  },
   "placeholderLabel": "Рендер будет добавлен позже",
   "mode": "custom-list",
   "seoTitle": "Калитки под заказ",

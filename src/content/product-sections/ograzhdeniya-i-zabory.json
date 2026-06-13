@@ -48,6 +48,7 @@
           "image": "/uploads/03ba6b83-ca31-468f-8c76-189dc4080572-1780248471243.jpeg",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/zabory/",
+          "categorySlug": "zabory",
           "order": 10,
           "isActive": true,
           "imageView": {
@@ -63,6 +64,7 @@
           "image": "/uploads/chatgpt-image-31-2026-18-07-49-1780248482346.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/vorota/",
+          "categorySlug": "vorota",
           "order": 20,
           "isActive": true,
           "imageView": {
@@ -78,6 +80,7 @@
           "image": "/uploads/chatgpt-image-31-2026-18-17-16-1780248503511.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/kalitki/",
+          "categorySlug": "kalitki",
           "order": 30,
           "isActive": true,
           "imageView": {
@@ -93,6 +96,7 @@
           "image": "/uploads/chatgpt-image-31-2026-19-45-02-1780248513639.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/sekcionnye-ograzhdeniya/",
+          "categorySlug": "sekcionnye-ograzhdeniya",
           "order": 40,
           "isActive": true,
           "imageView": {
@@ -108,6 +112,7 @@
           "image": "/assets/images/placeholders/street-furniture.svg",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/dekorativnye-ograzhdeniya/",
+          "categorySlug": "dekorativnye-ograzhdeniya",
           "order": 50,
           "isActive": false
         },
@@ -117,6 +122,7 @@
           "image": "/uploads/chatgpt-image-may-28-2026-02-49-39-pm-1-6-1780248534908.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/gazonnye-ograzhdeniya/",
+          "categorySlug": "gazonnye-ograzhdeniya",
           "order": 60,
           "isActive": true,
           "imageView": {
@@ -132,6 +138,7 @@
           "image": "/uploads/chatgpt-image-31-2026-18-03-29-1780248547259.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/perila-i-poruchni/",
+          "categorySlug": "perila-i-poruchni",
           "order": 70,
           "isActive": true,
           "imageView": {
@@ -147,6 +154,7 @@
           "image": "/assets/images/placeholders/street-furniture.svg",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/stolbiki-i-bollardy/",
+          "categorySlug": "stolbiki-i-bollardy",
           "order": 80,
           "isActive": true
         },
@@ -156,6 +164,7 @@
           "image": "/uploads/chatgpt-image-31-2026-18-03-46-1780248556068.png",
           "buttonLabel": "Открыть направление",
           "buttonHref": "/ograzhdeniya-i-zabory/ograzhdeniya-kontejnernyh-ploshchadok/",
+          "categorySlug": "ograzhdeniya-kontejnernyh-ploshchadok",
           "order": 90,
           "isActive": true,
           "imageView": {

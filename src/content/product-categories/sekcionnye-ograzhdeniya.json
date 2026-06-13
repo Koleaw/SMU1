@@ -8,7 +8,13 @@
   "order": 4,
   "showInSectionGrid": true,
   "isActive": true,
-  "image": "",
+  "image": "/uploads/chatgpt-image-31-2026-19-45-02-1780248513639.png",
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  },
   "placeholderLabel": "Рендер будет добавлен позже",
   "mode": "custom-list",
   "seoTitle": "Секционные ограждения под заказ",

@@ -8,9 +8,72 @@
   "order": 1,
   "showInSectionGrid": true,
   "isActive": true,
-  "image": "",
+  "image": "/uploads/03ba6b83-ca31-468f-8c76-189dc4080572-1780248471243.jpeg",
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  },
   "placeholderLabel": "Рендер будет добавлен позже",
   "mode": "custom-list",
   "seoTitle": "Заборы под заказ",
-  "seoDescription": "Заборы для частных, коммерческих и производственных территорий под размеры объекта."
+  "seoDescription": "Заборы для частных, коммерческих и производственных территорий под размеры объекта.",
+  "gallery": [
+    {
+      "src": "/uploads/4dc2baa2-d583-49ba-ac1c-4b70719007af-1781365555918.jpeg",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/0142e701-ebe0-4fce-bc9c-2277d0763728-1781365555923.jpeg",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/3676a46d-93f5-4ca2-8c78-7b75ab668957-1781365555929.jpeg",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-23-2026-11-08-28-1781365555939.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/fd484b1e-256c-4106-808f-4edd073729b6-1-1781365556043.jpeg",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-23-2026-11-38-23-1781365555952.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-23-2026-11-38-32-1781365555967.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-23-2026-11-38-46-1781365555982.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-23-2026-11-38-58-1781365555997.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-23-2026-11-39-09-1781365556015.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-23-2026-11-39-52-1781365556036.png",
+      "alt": "",
+      "caption": ""
+    }
+  ]
 }
