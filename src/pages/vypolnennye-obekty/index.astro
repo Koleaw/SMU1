@@ -3,12 +3,29 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Hero from '../../components/Hero.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import ObjectCardCarousel from '../../components/ObjectCardCarousel.astro';
+import { getProjectImages } from '../../utils/projectImages';
 import { withBase } from '../../utils/withBase';
 
 const objects = (await getCollection('projects'))
   .map(({ data }) => data)
   .filter((item) => item.isActive)
   .sort((a, b) => a.order - b.order);
+
+const displayObjects = objects.map((obj) => {
+  const meta = [obj.city, obj.year].filter(Boolean).join(', ');
+  const workType = obj.workType || obj.category || obj.shortCategory || obj.shortDescription || '';
+  const description = obj.summary || obj.task || obj.whatWasDone || obj.shortDescription || '';
+
+  return {
+    ...obj,
+    href: withBase(`/vypolnennye-obekty/${obj.slug}/`),
+    images: getProjectImages(obj),
+    meta,
+    workType,
+    description
+  };
+});
 ---
 <BaseLayout title="Выполненные объекты — СМУ-1" description="Подтверждаем опыт через реальные объекты: задача, выполненные работы, результат.">
   <div class="breadcrumbs-bar">
@@ -20,18 +37,15 @@ const objects = (await getCollection('projects'))
   <Hero kicker="Доверительный контур" className="hero--trust hero--catalog-clean objects-hero" title="Выполненные объекты" />
   <section class="section objects-list-section">
     <div class="container object-list-grid">
-      {objects.map((obj) => (
-        <a class="object-list-card" href={withBase(`/vypolnennye-obekty/${obj.slug}/`)}>
-          <div class="media-block placeholder placeholder--card">
-            <img class="media-thumb" src={withBase(obj.image)} alt={obj.title} loading="lazy" />
-            <p class="media-caption">Фото кейса будут обновлены в мае.</p>
-          </div>
-          <div class="object-list-card__body">
-            <h2>{obj.title}</h2>
-            <p>{obj.city}, {obj.year}</p>
-            <p><strong>Тип работ:</strong> {obj.shortDescription}</p>
-          </div>
-        </a>
+      {displayObjects.map((obj) => (
+        <ObjectCardCarousel
+          title={obj.title}
+          href={obj.href}
+          images={obj.images}
+          meta={obj.meta}
+          workType={obj.workType}
+          description={obj.description}
+        />
       ))}
     </div>
   </section>

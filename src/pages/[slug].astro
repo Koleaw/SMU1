@@ -473,8 +473,12 @@ const itemAny = item as {
   heroMediaVideo?: string;
   heroMediaVideoMobile?: string;
   heroMediaPoster?: string;
+  heroMediaPosterMobile?: string;
   heroMediaCaption?: string;
   heroOverlayOpacity?: number;
+  heroTitleStyle?: unknown;
+  heroDescriptionStyle?: unknown;
+  heroLayout?: unknown;
   placeholderLabel?: string;
   mode?: string;
 };
@@ -486,15 +490,62 @@ const isMetalPage = itemType === 'product-section' && item.slug === 'metallokons
 const isTopiaryPage = itemType === 'product-section' && item.slug === 'topiarii';
 const isLandscapingPage = itemType === 'service' && item.slug === 'blagoustroystvo-territoriy';
 const isConstructionPage = itemType === 'service' && item.slug === 'stroitelstvo-i-remonty';
+const sectionCategories = itemType === 'product-section'
+  ? (await getCollection('product-categories'))
+      .map(({ data }) => data)
+      .filter((category) => category.parentSectionSlug === item.slug)
+  : [];
+const sectionCategoryBySlug = new Map(sectionCategories.map((category) => [category.slug, category]));
+const normalizeLookupText = (value: unknown) => String(value ?? '').trim().toLowerCase();
+const isPlaceholderImage = (value: unknown) => String(value ?? '').includes('/assets/images/placeholders/');
+const getCategorySlugFromHref = (href: unknown) => {
+  const raw = typeof href === 'string' ? href.trim() : '';
+  if (!raw) return '';
+
+  const pathOnly = raw.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]+/i, '').split(/[?#]/)[0];
+  const segments = pathOnly.split('/').filter(Boolean);
+  const sectionIndex = segments.lastIndexOf(item.slug);
+  if (sectionIndex >= 0 && segments[sectionIndex + 1]) return segments[sectionIndex + 1];
+  return segments.length ? segments[segments.length - 1] : '';
+};
+const findDirectionCategory = (card: unknown) => {
+  if (!card || typeof card !== 'object') return undefined;
+  const blockItem = card as { buttonHref?: string; categorySlug?: string; title?: string };
+  const slug = String(blockItem.categorySlug ?? '').trim() || getCategorySlugFromHref(blockItem.buttonHref);
+  const categoryBySlug = slug ? sectionCategoryBySlug.get(slug) : undefined;
+  if (categoryBySlug) return categoryBySlug;
+
+  const title = normalizeLookupText(blockItem.title);
+  return title ? sectionCategories.find((category) => normalizeLookupText(category.title) === title) : undefined;
+};
+const enrichDirectionCard = (card: unknown) => {
+  if (!card || typeof card !== 'object') return card;
+  const category = findDirectionCategory(card);
+  if (!category?.image || isPlaceholderImage(category.image)) return card;
+  return {
+    ...(card as Record<string, unknown>),
+    image: category.image,
+    imageView: category.imageView ?? (card as { imageView?: unknown }).imageView
+  };
+};
 const editablePageBlocks = Array.isArray(item.pageBlocks)
   ? item.pageBlocks
       .filter((block) => block?.isActive !== false)
       .slice()
       .sort((a, b) => a.order - b.order)
-      .map((block, index) => ({
-        ...block,
-        sectionId: block.sectionId ?? `${item.slug}-block-${index + 1}`
-      }))
+      .map((block, index) => {
+        const nextBlock = {
+          ...block,
+          sectionId: block.sectionId ?? `${item.slug}-block-${index + 1}`
+        };
+        if (isProjectDirection && nextBlock.type === 'directionCards' && Array.isArray(nextBlock.items)) {
+          return {
+            ...nextBlock,
+            items: nextBlock.items.map(enrichDirectionCard)
+          };
+        }
+        return nextBlock;
+      })
   : [];
 const hasEditablePageBlocks = editablePageBlocks.length > 0;
 
@@ -516,9 +567,9 @@ const sectionNavItems = hasEditablePageBlocks
         : defaultProjectNavItems;
 
 const categories = isCatalogHub
-  ? (await getCollection('product-categories'))
-      .map(({ data }) => data)
-      .filter((category) => category.parentSectionSlug === item.slug && category.isActive && category.showInSectionGrid)
+  ? sectionCategories
+      .filter((category) => category.isActive && category.showInSectionGrid)
+      .slice()
       .sort((a, b) => a.order - b.order)
   : [];
 const categoryDescriptionFallback = 'Типовые решения и адаптация под задачу объекта.';
@@ -569,9 +620,14 @@ const contactTelegramLabel = pageContact.contactTelegramLabel?.trim() || default
 const contactEmailLabel = pageContact.contactEmailLabel?.trim() || defaultEmailLabel;
 const contactPhoneLabel = pageContact.contactPhoneLabel?.trim() || defaultPhoneLabel;
 const shouldShowSectionNavigator = isProjectDirection || itemType === 'service' || isStaticPage;
-const heroVideo = itemAny.heroMediaVideo;
-const heroPoster = itemAny.heroMediaPoster || itemAny.image;
-const hasMediaHero = !isCatalogHub && Boolean(heroVideo || heroPoster);
+const cleanMediaPath = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+const heroVideo = cleanMediaPath(itemAny.heroMediaVideo);
+const heroVideoMobile = cleanMediaPath(itemAny.heroMediaVideoMobile);
+const heroImage = cleanMediaPath(itemAny.image);
+const heroPoster = cleanMediaPath(itemAny.heroMediaPoster);
+const heroVideoPoster = heroPoster || heroImage;
+const heroPosterMobile = itemAny.heroMediaPosterMobile || heroPoster;
+const hasMediaHero = !isCatalogHub && Boolean(heroVideo || heroImage || heroPoster);
 const heroKicker = itemAny.showBadge === false
   ? undefined
   : itemAny.heroKicker || (isCatalogHub ? 'Каталог направлений' : isStaticPage ? 'СМУ-1' : 'Проектное направление');
@@ -599,9 +655,10 @@ const heroClassName = hasMediaHero
     description={item.heroDescription}
     mediaType={heroVideo ? 'video' : 'image'}
     mediaVideo={heroVideo ? withBase(heroVideo) : undefined}
-    mediaVideoMobile={itemAny.heroMediaVideoMobile ? withBase(itemAny.heroMediaVideoMobile) : undefined}
-    mediaImage={hasMediaHero && heroPoster ? withBase(heroPoster) : undefined}
-    mediaPoster={hasMediaHero && heroPoster ? withBase(heroPoster) : undefined}
+    mediaVideoMobile={heroVideoMobile ? withBase(heroVideoMobile) : undefined}
+    mediaImage={hasMediaHero && heroImage ? withBase(heroImage) : undefined}
+    mediaPoster={hasMediaHero && heroVideoPoster ? withBase(heroVideoPoster) : undefined}
+    mediaPosterMobile={hasMediaHero && heroPosterMobile ? withBase(heroPosterMobile) : undefined}
     mediaAlt={isCatalogHub ? undefined : item.title}
     mediaCaption={isCatalogHub || heroVideo ? itemAny.heroMediaCaption : itemAny.heroMediaCaption || itemAny.placeholderLabel}
     overlayOpacity={itemAny.heroOverlayOpacity}

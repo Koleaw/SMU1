@@ -55,6 +55,23 @@ const productSpecItemSchema = z.object({
   isActive: z.boolean().optional()
 }).strict();
 
+const projectImageItemSchema = z.union([
+  z.string(),
+  z.object({
+    src: z.string().optional(),
+    image: z.string().optional(),
+    url: z.string().optional(),
+    alt: z.string().optional(),
+    caption: z.string().optional()
+  }).passthrough()
+]);
+
+const categoryGalleryItemSchema = z.object({
+  src: z.string(),
+  alt: z.string().optional(),
+  caption: z.string().optional()
+}).strict();
+
 const pageBlockSchema = z.object({
   type: z.string(),
   title: z.string().optional(),
@@ -111,12 +128,15 @@ const productSections = defineCollection({
     heroMediaVideo: z.string().optional(),
     heroMediaVideoMobile: z.string().optional(),
     heroMediaPoster: z.string().optional(),
+    heroMediaPosterMobile: z.string().optional(),
     heroOverlayOpacity: z.number().min(0).max(100).optional(),
     heroTitleStyle: textStyleSchema.optional(),
     heroDescriptionStyle: textStyleSchema.optional(),
     heroLayout: textLayoutSchema.optional(),
     image: z.string(),
     imageView: imageViewSchema.optional(),
+    gallery: z.array(z.union([z.string(), categoryGalleryItemSchema])).optional(),
+    galleryIntro: z.string().optional(),
     placeholderLabel: z.string(),
     contactTitle: z.string().optional(),
     contactDescription: z.string().optional(),
@@ -146,6 +166,8 @@ const productCategories = defineCollection({
     isActive: z.boolean(),
     image: z.string(),
     imageView: imageViewSchema.optional(),
+    gallery: z.array(z.union([z.string(), categoryGalleryItemSchema])).optional(),
+    galleryIntro: z.string().optional(),
     placeholderLabel: z.string(),
     mode: z.enum(['catalog-list', 'custom-list']),
     seoTitle: z.string(),
@@ -209,6 +231,7 @@ const services = defineCollection({
     heroMediaVideo: z.string().optional(),
     heroMediaVideoMobile: z.string().optional(),
     heroMediaPoster: z.string().optional(),
+    heroMediaPosterMobile: z.string().optional(),
     heroOverlayOpacity: z.number().min(0).max(100).optional(),
     heroTitleStyle: textStyleSchema.optional(),
     heroDescriptionStyle: textStyleSchema.optional(),
@@ -233,13 +256,26 @@ const projects = defineCollection({
     title: z.string(),
     slug: z.string(),
     city: z.string(),
+    region: z.string().optional(),
+    workType: z.string().optional(),
+    category: z.string().optional(),
+    shortCategory: z.string().optional(),
+    summary: z.string().optional(),
+    task: z.string().optional(),
+    result: z.string().optional(),
+    materials: z.array(z.string()).optional(),
+    features: z.array(z.string()).optional(),
     shortDescription: z.string(),
     whatWasDone: z.string(),
-    image: z.string(),
-    gallery: z.array(z.string()),
+    image: z.string().optional(),
+    coverImage: z.string().optional(),
+    gallery: z.array(projectImageItemSchema).optional(),
+    images: z.array(projectImageItemSchema).optional(),
+    captions: z.array(z.string()).optional(),
+    placeholderLabel: z.string().optional(),
     order: z.number(),
     isActive: z.boolean(),
-    year: z.number(),
+    year: z.number().optional(),
     seoTitle: z.string(),
     seoDescription: z.string()
   }).strict()
@@ -305,6 +341,7 @@ const staticPages = defineCollection({
     heroMediaVideo: z.string().optional(),
     heroMediaVideoMobile: z.string().optional(),
     heroMediaPoster: z.string().optional(),
+    heroMediaPosterMobile: z.string().optional(),
     heroMediaCaption: z.string().optional(),
     heroOverlayOpacity: z.number().min(0).max(100).optional(),
     heroTitleStyle: textStyleSchema.optional(),

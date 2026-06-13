@@ -25,8 +25,9 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          SITE_URL: https://${{ github.repository_owner }}.github.io
-          BASE_PATH: /${{ github.event.repository.name }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          BASE_PATH: ${{ vars.BASE_PATH || '/' }}
+          ALLOW_TEMPORARY_SITE_URL: ${{ vars.ALLOW_TEMPORARY_SITE_URL || 'false' }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

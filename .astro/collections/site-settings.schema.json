@@ -34,6 +34,9 @@
         "telegram": {
           "type": "string"
         },
+        "telegramLabel": {
+          "type": "string"
+        },
         "email": {
           "type": "string"
         },
@@ -42,6 +45,12 @@
         },
         "address": {
           "type": "string"
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "vacanciesEmptyTitle": {
           "type": "string"

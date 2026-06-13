@@ -1,0 +1,66 @@
+# Отчет по весу медиа перед запуском СМУ-1
+
+Дата проверки: 2026-05-24
+
+Проверены файлы в `public/uploads` и `public/assets`. Автоматическое сжатие не выполнялось: это отдельная задача, потому что может повлиять на качество и исходники.
+
+Краткий вывод:
+- всего найдено 201 медиа-файл;
+- файлов тяжелее 1 MB: 161;
+- самые критичные файлы - видео 65.36 MB, 24.87 MB и 5.37 MB;
+- много PNG в `public/uploads` весом 2-3 MB используются как изображения товаров;
+- перед запуском нужно сжать hero video и ключевые товарные изображения.
+
+Рекомендации по порогам:
+- больше 5 MB: критично проверить и сжать до запуска;
+- 2-5 MB: желательно сжать/перевести в WebP до запуска для изображений, которые видны в карточках и галереях;
+- 1-2 MB: допустимо временно, но лучше оптимизировать при массовом наполнении.
+
+| Файл | Размер | Где примерно используется | Рекомендация |
+|---|---:|---|---|
+| `public/uploads/media-1779031688602.mp4` | 65.36 MB | Не найдено прямых ссылок в `src`; вероятно неиспользуемый upload | Проверить вручную. Если не нужен - удалить отдельной задачей; если нужен - сильно сжать |
+| `public/uploads/media-1779034941013.mp4` | 24.87 MB | `src/content/static-pages/home.json`, hero video главной | Критично сжать до запуска; подготовить короткий H.264 mp4 |
+| `public/uploads/hero-home-mobile.mp4` | 5.37 MB | `src/content/static-pages/home.json`, mobile hero video | Сжать; проверить на iOS Safari и Android Chrome |
+| `public/uploads/chatgpt-image-23-2026-12-30-28-1779535939641.png` | 3.01 MB | `src/content/products/stol-so-skamyami-orbita.json` | Сжать или заменить WebP |
+| `public/uploads/chatgpt-image-23-2026-12-30-28-1779535963367.png` | 3.01 MB | Прямых ссылок в `src` не найдено | Проверить, нужен ли файл; возможный дубль |
+| `public/uploads/chatgpt-image-23-2026-11-43-16-3-1779534023047.png` | 2.88 MB | `src/content/products/skamya-radius-so-spinkami.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-13-07-54-1779530912367.png` | 2.82 MB | `src/content/products/skamya-volna.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-24-7-1779534498605.png` | 2.79 MB | `src/content/products/skamya-skoba.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-44-14-3-1779528834968.png` | 2.77 MB | Прямых ссылок в `src` не найдено | Проверить, нужен ли файл |
+| `public/uploads/chatgpt-image-23-2026-11-44-14-3-1779529322898.png` | 2.77 MB | Прямых ссылок в `src` не найдено | Проверить, нужен ли файл |
+| `public/uploads/chatgpt-image-23-2026-11-41-39-6-1779534871606.png` | 2.76 MB | `src/content/products/skamya-bulvar.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-19-49-16-1779554979494.png` | 2.75 MB | `src/content/products/ekran-s-navesom.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-43-21-9-1779549486626.png` | 2.74 MB | `src/content/products/kachel-portal.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-44-15-5-1779535385788.png` | 2.73 MB | `src/content/products/bolshaya-skameyka-amplituda.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-20-1-1779554364102.png` | 2.73 MB | `src/content/products/sidenie-pilon.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-45-1-1779550206590.png` | 2.73 MB | `src/content/products/kachel-patio.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-44-12-1-1779533937272.png` | 2.71 MB | `src/content/products/skamya-radius.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-16-00-17-1779541289294.png` | 2.70 MB | `src/content/products/veloparkovka-marker.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-43-15-1-1779550878598.png` | 2.70 MB | `src/content/products/pergola-lamel.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-41-43-1779549011685.png` | 2.69 MB | `src/content/products/shezlong-volna.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-40-51-4-1779535314326.png` | 2.69 MB | `src/content/products/skamya-park.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-53-2-1779550917605.png` | 2.68 MB | Прямых ссылок в `src` не найдено | Проверить, нужен ли файл |
+| `public/uploads/chatgpt-image-23-2026-11-43-06-1779555009138.png` | 2.65 MB | `src/content/products/naves-terra.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-45-3-1779541756793.png` | 2.63 MB | `src/content/products/veloparkovka-duga.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-57-10-1779549890104.png` | 2.62 MB | `src/content/products/kacheli-pergola.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-23-3-1779539021331.png` | 2.62 MB | `src/content/products/vazon-oval.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-54-3-1779549680564.png` | 2.60 MB | Прямых ссылок в `src` не найдено | Проверить, нужен ли файл |
+| `public/uploads/chatgpt-image-23-2026-11-41-06-1779552027681.png` | 2.59 MB | `src/content/products/besedka-kofe.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-56-7-1779536643533.png` | 2.58 MB | `src/content/products/urna-panel.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-44-13-2-1779528921343.png` | 2.58 MB | `src/content/products/skamya-liniya.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-41-38-3-1779538324497.png` | 2.58 MB | `src/content/products/stantsiya-razdelnogo-sbora.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-55-5-1779549752195.png` | 2.58 MB | `src/content/products/kachel-s-navesom.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-40-52-10-1779549154436.png` | 2.55 MB | `src/content/products/shezlong-siluet.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-43-21-8-1779536583602.png` | 2.54 MB | `src/content/products/urna-monolit.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-43-43-1779549491228.png` | 2.53 MB | `src/content/products/kachel-portal.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-43-19-6-1779549554732.png` | 2.53 MB | `src/content/products/kachel-duga.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-19-20-18-1779553286909.png` | 2.52 MB | `src/content/products/fonar-mayak.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-45-6-1779539161549.png` | 2.52 MB | `src/content/products/parkovka-dlya-samokatov-arka.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-42-10-1779555059048.png` | 2.51 MB | `src/content/products/naves-galereya.json` | Сжать/WebP |
+| `public/uploads/chatgpt-image-23-2026-11-43-22-10-1779536455902.png` | 2.50 MB | `src/content/products/urna-vertikal.json` | Сжать/WebP |
+
+Дополнительные наблюдения:
+- В `public/uploads` много файлов с именами `chatgpt-image-...png`; часть не найдена в ссылках `src`. Перед запуском стоит проверить, нет ли неиспользуемых дублей.
+- PNG весом 2-3 MB, используемые в карточках товаров, лучше заменить на WebP/JPEG 1600px или меньше, если это не hero-изображение.
+- Для карточек товаров обычно достаточно 200-500 KB на изображение после WebP/JPEG-сжатия.
+- Видео главной желательно держать коротким и существенно легче текущих 24.87 MB; мобильная версия 5.37 MB тоже требует проверки на реальном телефоне.

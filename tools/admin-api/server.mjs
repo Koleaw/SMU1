@@ -69,6 +69,7 @@ const COLLECTIONS = {
 };
 
 const sessions = new Map();
+const NAVIGATION_PATH = path.join(repoRoot, 'src', 'data', 'navigation.json');
 const UPLOADS_DIR = path.join(repoRoot, 'public', 'uploads');
 const MAX_IMAGE_UPLOAD_SIZE = 10 * 1024 * 1024;
 const MAX_VIDEO_UPLOAD_SIZE = 90 * 1024 * 1024;
@@ -76,7 +77,7 @@ const MAX_UPLOAD_SIZE = MAX_VIDEO_UPLOAD_SIZE;
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg']);
 const ALLOWED_VIDEO_EXTENSIONS = new Set(['.mp4', '.webm']);
 const ALLOWED_EXTENSIONS = new Set([...ALLOWED_IMAGE_EXTENSIONS, ...ALLOWED_VIDEO_EXTENSIONS]);
-const PUBLISH_PATHS = ['src/content', 'public/uploads'];
+const PUBLISH_PATHS = ['src/content', 'src/data/navigation.json', 'public/uploads'];
 const FULL_PUBLISH_PATHS = [
   '.gitignore',
   '.github',
@@ -395,6 +396,42 @@ function getCollectionConfig(collection) {
 async function readJsonFile(fullPath) {
   const content = await fs.readFile(fullPath, 'utf8');
   return JSON.parse(content);
+}
+
+function normalizeNavigationHref(href) {
+  const value = String(href ?? '').trim();
+  if (!value) {
+    throw new Error('URL пункта меню не может быть пустым');
+  }
+  if (/^\s*javascript:/i.test(value)) {
+    throw new Error('URL пункта меню не может использовать javascript:');
+  }
+  return value;
+}
+
+function normalizeNavigationItems(items) {
+  if (!Array.isArray(items)) {
+    throw new Error('Ожидается массив пунктов меню');
+  }
+
+  return items.map((item, index) => {
+    const title = String(item?.title ?? '').trim();
+    if (!title) {
+      throw new Error(`Пункт меню ${index + 1}: заполните название`);
+    }
+
+    return {
+      title,
+      href: normalizeNavigationHref(item?.href),
+      isActive: item?.isActive !== false,
+      order: Number.isFinite(Number(item?.order)) ? Number(item.order) : (index + 1) * 10
+    };
+  });
+}
+
+async function readNavigationItems() {
+  const json = await readJsonFile(NAVIGATION_PATH);
+  return normalizeNavigationItems(json);
 }
 
 function isSamePath(left, right) {
@@ -770,6 +807,22 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (!requireAuth(req, res)) {
+      return;
+    }
+
+    if (pathname === '/api/admin/navigation' && req.method === 'GET') {
+      const items = await readNavigationItems();
+      sendJson(res, 200, { items });
+      return;
+    }
+
+    if (pathname === '/api/admin/navigation' && req.method === 'PUT') {
+      const body = await readBody(req);
+      const items = normalizeNavigationItems(body?.items ?? body);
+      await fs.mkdir(path.dirname(NAVIGATION_PATH), { recursive: true });
+      await fs.writeFile(NAVIGATION_PATH, `${JSON.stringify(items, null, 2)}\n`, 'utf8');
+      const saved = await readNavigationItems();
+      sendJson(res, 200, { ok: true, items: saved });
       return;
     }
 

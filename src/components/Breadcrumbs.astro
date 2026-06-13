@@ -1,7 +1,31 @@
 ---
+import { withBase } from '../utils/withBase';
+
 interface Item { title: string; href?: string }
 interface Props { items: Item[] }
 const { items } = Astro.props;
+const basePath = import.meta.env.BASE_URL || '/';
+const normalizedBasePath = basePath.endsWith('/') ? basePath : `${basePath}/`;
+const toAbsoluteUrl = (href?: string) => {
+  const target = href || Astro.url.pathname;
+  if (/^https?:\/\//i.test(target)) return target;
+  if (normalizedBasePath !== '/' && target.startsWith(normalizedBasePath)) {
+    return new URL(target, Astro.site).toString();
+  }
+  return new URL(withBase(target), Astro.site).toString();
+};
+const breadcrumbSchema = items.length > 1
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: items.map((item, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: item.title,
+        item: toAbsoluteUrl(item.href)
+      }))
+    }
+  : null;
 ---
 <nav class="breadcrumbs" aria-label="Хлебные крошки">
   {items.map((item, idx) => (
@@ -11,3 +35,4 @@ const { items } = Astro.props;
     </>
   ))}
 </nav>
+{breadcrumbSchema && <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />}

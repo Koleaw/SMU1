@@ -52,6 +52,7 @@ const sectionNavItems = [
 
 const homeHeroVideo = homePage.heroMediaVideo;
 const homeHeroPoster = homePage.heroMediaPoster ?? homePage.image ?? '/assets/images/placeholders/construction.svg';
+const homeHeroPosterMobile = homePage.heroMediaPosterMobile ?? homeHeroPoster;
 ---
 <BaseLayout title={homePage.seoTitle} description={homePage.seoDescription}>
   <div class="home-page">
@@ -71,6 +72,7 @@ const homeHeroPoster = homePage.heroMediaPoster ?? homePage.image ?? '/assets/im
       mediaVideoMobile={homePage.heroMediaVideoMobile ? withBase(homePage.heroMediaVideoMobile) : undefined}
       mediaImage={withBase(homeHeroPoster)}
       mediaPoster={withBase(homeHeroPoster)}
+      mediaPosterMobile={withBase(homeHeroPosterMobile)}
       mediaAlt="Производственно-строительные работы СМУ-1"
       mediaCaption={homePage.heroMediaCaption}
       overlayOpacity={homePage.heroOverlayOpacity}
@@ -172,7 +174,7 @@ const homeHeroPoster = homePage.heroMediaPoster ?? homePage.image ?? '/assets/im
           <h2 class="section-title">{homePage.contactTitle}</h2>
           <p class="lead">{homePage.contactDescription}</p>
           <div class="home-contact-actions">
-            <a class="btn btn-primary" href="https://t.me/smu1build" target="_blank" rel="noreferrer">Написать в Telegram</a>
+              <a class="btn btn-primary" href="https://t.me/smu1build" target="_blank" rel="noopener noreferrer">Написать в Telegram</a>
             <a class="btn btn-secondary" href="mailto:smu1.kurgan@yandex.ru">Написать на почту</a>
             <a class="btn btn-secondary" href="tel:+79129735006">Позвонить +7 (912) 973-50-06</a>
           </div>

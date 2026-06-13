@@ -11,6 +11,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive" />
     <title>Визуальный редактор — Админка СМУ-1</title>
     <style is:global>
       * { box-sizing: border-box; }
@@ -112,6 +114,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-gallery-meta small { color: #6a7f91; font-size: 12px; overflow-wrap: anywhere; }
       .admin-gallery-technical { margin-top: 2px; }
       .admin-gallery-technical summary { color: #587085; cursor: pointer; font-size: 12px; font-weight: 800; }
+      .admin-navigation-page { display: grid; gap: 18px; }
+      .admin-navigation-list { display: grid; gap: 12px; }
+      .admin-navigation-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: start; padding: 14px; border: 1px solid #d0dbe4; border-radius: 12px; background: #fff; }
+      .admin-navigation-row.is-hidden { opacity: .62; outline: 1px dashed #b94a48; outline-offset: -4px; }
+      .admin-navigation-row__index { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; background: #edf2f6; color: #405468; font-size: 13px; font-weight: 900; }
+      .admin-navigation-row .admin-item-tools { grid-column: 2; margin-top: 0; }
       .admin-product-details { display: grid; gap: 18px; }
       .admin-product-panel-grid { display: grid; gap: 14px; }
       .admin-product-media-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: 14px; align-items: start; }
@@ -160,7 +168,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-row-hidden, .admin-card-hidden { opacity: .55; outline: 1px dashed #b94a48; outline-offset: -3px; }
       .home-contact-card .admin-item-tools { margin-top: 12px; }
       @media (min-width: 920px) { .page-block-media-layout { grid-template-columns: 1fr 1fr; } }
-      @media (max-width: 1100px) { .visual-shell { grid-template-columns: 1fr; } .visual-sidebar { position: relative; height: auto; } .admin-create-grid, .admin-grid-2, .admin-grid-3, .admin-product-media-grid { grid-template-columns: 1fr; } }
+      @media (max-width: 1100px) { .visual-shell { grid-template-columns: 1fr; } .visual-sidebar { position: relative; height: auto; } .admin-create-grid, .admin-grid-2, .admin-grid-3, .admin-product-media-grid { grid-template-columns: 1fr; } .admin-navigation-row { grid-template-columns: 1fr; } .admin-navigation-row .admin-item-tools { grid-column: auto; } }
       @media (max-width: 767px) { .page-blocks-grid, .page-blocks-grid--2, .page-blocks-grid--3, .page-blocks-grid--4, .page-blocks-grid--auto { grid-template-columns: 1fr; } .page-blocks-columns { columns: 1; } }
     </style>
   </head>
@@ -202,7 +210,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         <div id="alertBox" class="admin-alert"></div>
         <div id="workspace" class="visual-canvas"></div>
       </main>
-      <input id="uploadInput" class="hidden" type="file" accept="image/*,.svg" />
+      <input id="uploadInput" class="hidden" type="file" accept="image/*,.svg" multiple />
+      <input id="uploadGalleryInput" class="hidden" type="file" accept="image/*,.svg" multiple />
       <input id="uploadVideoInput" class="hidden" type="file" accept="video/mp4,video/webm,.mp4,.webm" />
       <input id="jsonImportInput" class="hidden" type="file" accept="application/json,.json" />
     </div>
@@ -220,7 +229,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         ['jobs', 'Вакансии'],
         ['site-settings', 'Контакты и настройки']
       ];
-      const COLLECTION_LABELS = { ...Object.fromEntries(COLLECTIONS), 'data-import': 'Импорт данных' };
+      const COLLECTION_LABELS = { ...Object.fromEntries(COLLECTIONS), navigation: 'Навигация / Шапка сайта', 'data-import': 'Импорт данных' };
       const IMPORT_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
       const IMPORT_MODES = [
         ['upsert', 'Создать новые и обновить существующие по slug'],
@@ -229,6 +238,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         ['skip-existing', 'Пропустить существующие']
       ];
       const SITE_NAV_ITEMS = [
+        { label: 'Навигация / Шапка сайта', collection: 'navigation', slug: '' },
         { label: 'Главная страница', collection: 'static-pages', slug: 'home' },
         { label: 'Уличная мебель', collection: 'product-sections', slug: 'ulichnaya-mebel' },
         { label: 'Ограждения', collection: 'product-sections', slug: 'ograzhdeniya-i-zabory' },
@@ -352,11 +362,15 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         crop: null,
         cropDrag: null,
         uploadTarget: null,
+        galleryUploadTarget: null,
         importText: '',
         importFileName: '',
         importMode: 'upsert',
         importPreview: null,
         importResult: null,
+        navigationItems: [],
+        navigationOriginal: [],
+        navigationLoaded: false,
         selectedProductRefs: new Set()
       };
 
@@ -374,6 +388,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       const slugify = (value) => String(value || '').toLowerCase().trim().replace(/ё/g, 'e').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
       const isDirtyRecord = (record) => record && JSON.stringify(record.original) !== JSON.stringify(record.draft);
       const dirtyRecords = () => Object.values(state.records).filter(isDirtyRecord);
+      const isNavigationDirty = () => JSON.stringify(state.navigationItems) !== JSON.stringify(state.navigationOriginal);
+      const dirtyCount = () => dirtyRecords().length + (isNavigationDirty() ? 1 : 0);
       const getRecord = (ref) => state.records[ref];
       const getMainRef = () => state.selectedSlug ? keyOf(state.collection, state.selectedSlug) : null;
 
@@ -432,6 +448,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function mediaMimeType(src) {
         return String(src || '').toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
+      }
+
+      function cleanMediaPath(value) {
+        return typeof value === 'string' ? value.trim() : '';
       }
 
       function getPath(record, path) {
@@ -539,8 +559,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function markDirty() {
-        const dirty = dirtyRecords().length > 0;
-        $('dirtyStatus').textContent = dirty ? `Есть изменения: ${dirtyRecords().length}` : 'Нет изменений';
+        const count = dirtyCount();
+        const dirty = count > 0;
+        $('dirtyStatus').textContent = dirty ? `Есть изменения: ${count}` : 'Нет изменений';
         $('dirtyStatus').classList.toggle('is-dirty', dirty);
         $('saveBtn').disabled = !dirty;
       }
@@ -570,6 +591,52 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return Object.values(state.records).find((record) => record.collection === collection && record.draft?.[field] === value);
       }
 
+      function normalizeLookupText(value) {
+        return String(value || '').trim().toLowerCase();
+      }
+
+      function categorySlugFromHref(href, parentSlug = '') {
+        const raw = typeof href === 'string' ? href.trim() : '';
+        if (!raw) return '';
+        const pathOnly = raw.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]+/i, '').split(/[?#]/)[0];
+        const segments = pathOnly.split('/').filter(Boolean);
+        const sectionIndex = parentSlug ? segments.lastIndexOf(parentSlug) : -1;
+        if (sectionIndex >= 0 && segments[sectionIndex + 1]) return segments[sectionIndex + 1];
+        return segments.length ? segments[segments.length - 1] : '';
+      }
+
+      function findCategoryForDirectionCard(parentRecord, item) {
+        if (!parentRecord || !item || typeof item !== 'object') return null;
+        const parentSlug = parentRecord.draft?.slug || parentRecord.slug || '';
+        const categorySlug = String(item.categorySlug || '').trim() || categorySlugFromHref(item.buttonHref, parentSlug);
+        const bySlug = categorySlug
+          ? Object.values(state.records).find((record) =>
+              record.collection === 'product-categories'
+              && record.draft.parentSectionSlug === parentSlug
+              && record.draft.slug === categorySlug
+            )
+          : null;
+        if (bySlug) return bySlug;
+
+        const title = normalizeLookupText(item.title);
+        return title
+          ? Object.values(state.records).find((record) =>
+              record.collection === 'product-categories'
+              && record.draft.parentSectionSlug === parentSlug
+              && normalizeLookupText(record.draft.title) === title
+            ) || null
+          : null;
+      }
+
+      function renderDirectionCategoryEditButton(parentRecord, item) {
+        const categoryRecord = findCategoryForDirectionCard(parentRecord, item);
+        if (!categoryRecord) {
+          return '<button class="admin-btn" type="button" disabled title="Связанная внутренняя страница направления не найдена">Нет страницы направления</button>';
+        }
+
+        return `<button class="admin-btn admin-btn--primary" type="button" data-action="open-related" data-collection="product-categories" data-slug="${esc(categoryRecord.draft.slug || categoryRecord.slug)}">Редактировать направление</button>`;
+      }
+
       async function loadCollection(collection) {
         const data = await api(`/content/${collection}`);
         state.entries[collection] = data.entries || [];
@@ -589,8 +656,30 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         await Promise.all(entries.map((entry) => loadRecord(collection, entry.slug)));
       }
 
+      function normalizeNavigationItems(items = []) {
+        return items
+          .map((item, index) => ({
+            title: String(item?.title ?? '').trim(),
+            href: String(item?.href ?? '').trim(),
+            isActive: item?.isActive !== false,
+            order: Number.isFinite(Number(item?.order)) ? Number(item.order) : (index + 1) * 10
+          }))
+          .filter((item) => item.title || item.href)
+          .sort((a, b) => a.order - b.order)
+          .map((item, index) => ({ ...item, order: (index + 1) * 10 }));
+      }
+
+      async function loadNavigation() {
+        const data = await api('/navigation');
+        const items = normalizeNavigationItems(data.items || []);
+        state.navigationItems = clone(items);
+        state.navigationOriginal = clone(items);
+        state.navigationLoaded = true;
+        return items;
+      }
+
       async function openEditor(collection, slug = '') {
-        if (dirtyRecords().length && !confirm('Есть несохраненные изменения. Перейти без сохранения?')) return;
+        if (dirtyCount() && !confirm('Есть несохраненные изменения. Перейти без сохранения?')) return;
         state.collection = collection;
         state.selectedSlug = slug;
         state.records = {};
@@ -605,6 +694,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           state.entries[collection] = [];
           await loadRecordsForCollection('product-categories');
           await loadRecordsForCollection('products');
+          renderApp();
+          return;
+        }
+
+        if (collection === 'navigation') {
+          state.selectedSlug = '';
+          state.entries[collection] = [];
+          await loadNavigation();
           renderApp();
           return;
         }
@@ -683,7 +780,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           }
         }
 
-        if (state.collection && state.collection !== 'data-import' && (!state.selectedSlug || state.collection === 'products' || state.collection === 'static-pages')) {
+        if (state.collection && state.collection !== 'data-import' && state.collection !== 'navigation' && (!state.selectedSlug || state.collection === 'products' || state.collection === 'static-pages')) {
           groups.push(`<div class="sidebar-group"><h2>Записи</h2>${entries.map((entry) => `<button class="sidebar-entry ${state.selectedSlug === entry.slug ? 'is-active' : ''}" type="button" data-open-entry="${entry.slug}"><strong>${esc(entry.title || entry.slug)}</strong><small>${esc(entry.slug)}</small></button>`).join('')}</div>`);
         }
 
@@ -696,10 +793,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const record = ref ? getRecord(ref) : null;
         const collectionLabel = COLLECTION_LABELS[collection] || collection;
         $('editorTitle').textContent = collection ? `${collectionLabel}${record ? ` · ${record.draft.title || record.draft.companyName || record.slug}` : ''}` : 'Визуальный редактор';
-        $('publicLink').href = record ? publicUrl(collection, record.draft) : collection === 'jobs' ? withBasePath('/vakansii/') : collection === 'projects' ? withBasePath('/vypolnennye-obekty/') : '#';
+        $('publicLink').href = record ? publicUrl(collection, record.draft) : collection === 'jobs' ? withBasePath('/vakansii/') : collection === 'projects' ? withBasePath('/vypolnennye-obekty/') : collection === 'navigation' ? withBasePath('/') : '#';
 
         if (!collection) {
           $('workspace').innerHTML = renderWelcome();
+          return;
+        }
+        if (collection === 'navigation') {
+          $('workspace').innerHTML = renderNavigationPage();
           return;
         }
         if (collection === 'data-import') {
@@ -744,7 +845,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           return;
         }
 
-        if (state.collection === 'products' && record) {
+        if (state.collection === 'navigation') {
+          parts.push(breadcrumbCurrent('Навигация / Шапка сайта'));
+        } else if (state.collection === 'products' && record) {
           const category = findRecordByField('product-categories', 'slug', record.draft.productCategorySlug);
           const section = category ? findRecordByField('product-sections', 'slug', category.draft.parentSectionSlug) : null;
           if (section) parts.push(breadcrumbButton(section.draft.title || section.slug, 'product-sections', section.slug));
@@ -755,6 +858,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           if (section) parts.push(breadcrumbButton(section.draft.title || section.slug, 'product-sections', section.slug));
           parts.push(breadcrumbCurrent(record.draft.title || record.slug));
         } else if (state.collection === 'product-sections' && record) {
+          parts.push(breadcrumbCurrent(record.draft.title || record.slug));
+        } else if (state.collection === 'projects' && record) {
+          parts.push(breadcrumbButton('Выполненные объекты', 'projects', ''));
           parts.push(breadcrumbCurrent(record.draft.title || record.slug));
         } else if (record) {
           parts.push(breadcrumbCurrent(record.draft.title || record.draft.companyName || record.slug));
@@ -767,6 +873,48 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function renderWelcome() {
         return `<section class="section section--soft"><div class="container"><article class="card"><h2>Выберите раздел слева</h2><p class="lead">Откроется визуальный редактор страницы или коллекции.</p></article></div></section>`;
+      }
+
+      function renderNavigationPage() {
+        const items = state.navigationItems;
+        return `
+          <section class="section section--soft">
+            <div class="container admin-navigation-page">
+              <div class="section-heading">
+                <p class="kicker">Настройки сайта</p>
+                <h1 class="section-title">Навигация / Шапка сайта</h1>
+                <p class="lead">Эти пункты выводятся в верхней шапке и в мобильном меню. Скрытие пункта не удаляет страницу и не меняет ее URL.</p>
+              </div>
+              <div class="admin-navigation-list">
+                ${items.map((item, index) => `
+                  <article class="admin-navigation-row ${item.isActive === false ? 'is-hidden' : ''}">
+                    <div class="admin-navigation-row__index">${String(index + 1).padStart(2, '0')}</div>
+                    <div class="admin-grid-3">
+                      <label class="admin-field">
+                        <span>Название</span>
+                        <input data-nav-field="title" data-nav-index="${index}" value="${esc(item.title)}" />
+                      </label>
+                      <label class="admin-field">
+                        <span>URL</span>
+                        <input data-nav-field="href" data-nav-index="${index}" value="${esc(item.href)}" inputmode="url" />
+                      </label>
+                      <label class="admin-field">
+                        <span>Показывать в шапке</span>
+                        <select data-nav-field="isActive" data-nav-index="${index}">
+                          <option value="true" ${item.isActive !== false ? 'selected' : ''}>Да</option>
+                          <option value="false" ${item.isActive === false ? 'selected' : ''}>Нет</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div class="admin-item-tools">
+                      <button class="admin-btn" type="button" data-action="move-nav-item" data-index="${index}" data-dir="-1" ${index === 0 ? 'disabled' : ''}>Выше</button>
+                      <button class="admin-btn" type="button" data-action="move-nav-item" data-index="${index}" data-dir="1" ${index === items.length - 1 ? 'disabled' : ''}>Ниже</button>
+                    </div>
+                  </article>
+                `).join('')}
+              </div>
+            </div>
+          </section>`;
       }
 
       function renderCollectionList(collection) {
@@ -1275,13 +1423,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const hasMedia = mode === 'media';
         const target = `${ref}:image`;
         const isCrop = state.crop?.target === target;
-        const video = item.heroMediaVideo || '';
-        const poster = item.heroMediaPoster || item.image || '';
+        const video = cleanMediaPath(item.heroMediaVideo);
+        const image = cleanMediaPath(item.image);
+        const poster = cleanMediaPath(item.heroMediaPoster) || image;
         const overlayStyle = heroOverlayStyle(item.heroOverlayOpacity);
         const mediaMarkup = video
           ? `<video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster="${esc(toSrc(poster))}"><source src="${esc(toSrc(video))}" type="${esc(mediaMimeType(video))}" /></video>${poster ? `<img class="hero-media__fallback" src="${esc(toSrc(poster))}" alt="${esc(item.title)}" />` : ''}`
-          : item.image
-            ? `<img class="hero-media__image" data-image-img="${esc(target)}" src="${esc(toSrc(item.image))}" alt="${esc(item.title)}" style="${esc(mediaStyle(item.imageView))}" />`
+          : image
+            ? `<img class="hero-media__image" data-image-img="${esc(target)}" src="${esc(toSrc(image))}" alt="${esc(item.title)}" style="${esc(mediaStyle(item.imageView))}" />`
             : '<div class="admin-media-empty">Фото не выбрано</div>';
         return `
           <section class="hero ${hasMedia ? 'hero--media navesy-hero' : 'hero--catalog hero--catalog-clean'}">
@@ -1448,14 +1597,16 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             <div class="container">
               <div class="admin-panel-card">
                 <strong>Hero-медиа</strong>
-                <p class="admin-muted">Видео работает как фоновое: muted, autoplay, loop, playsinline. Poster показывается до загрузки видео и при ошибке. Если poster не задан, используется hero-фото.</p>
+                <p class="admin-muted">Если загружено Hero-видео, оно используется как фон. Poster показывается до загрузки видео и при ошибке. Если видео не задано, используется Hero-фото.</p>
                 <div class="admin-grid-2">
                   <div>
                     <strong>Hero-фото</strong>
+                    <p class="admin-field-hint">Основная картинка первого экрана, если Hero-видео не задано.</p>
                     ${renderMediaButtons(ref, 'image', 'imageView', imageTarget)}
                   </div>
                   <div>
                     <strong>Poster / превью видео</strong>
+                    <p class="admin-field-hint">Показывается до загрузки Hero-видео и остается fallback при ошибке видео.</p>
                     ${renderMediaButtons(ref, 'heroMediaPoster', '', posterTarget)}
                   </div>
                 </div>
@@ -1512,7 +1663,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
                 <button class="admin-btn" type="button" data-action="move-category-record" data-ref="${ref}" data-dir="-1" ${index === 0 ? 'disabled' : ''}>Выше</button>
                 <button class="admin-btn" type="button" data-action="move-category-record" data-ref="${ref}" data-dir="1" ${index === total - 1 ? 'disabled' : ''}>Ниже</button>
                 <button class="admin-btn" type="button" data-action="toggle-record" data-ref="${ref}" data-field="isActive">${item.isActive === false ? 'Показать' : 'Скрыть'}</button>
-                <button class="admin-btn" type="button" data-action="open-related" data-collection="product-categories" data-slug="${esc(item.slug)}">Открыть тип</button>
+                <button class="admin-btn admin-btn--primary" type="button" data-action="open-related" data-collection="product-categories" data-slug="${esc(item.slug)}">Редактировать направление</button>
                 <button class="admin-btn admin-btn--danger" type="button" data-action="delete-record" data-ref="${ref}">Удалить</button>
               </div>
             </div>
@@ -1532,6 +1683,92 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           </div>`;
       }
 
+      function normalizeStructuredGalleryItem(item) {
+        if (typeof item === 'string') return { src: item, alt: '', caption: '' };
+        if (item && typeof item === 'object') {
+          return {
+            src: cleanMediaPath(item.src),
+            alt: typeof item.alt === 'string' ? item.alt : '',
+            caption: typeof item.caption === 'string' ? item.caption : ''
+          };
+        }
+        return { src: '', alt: '', caption: '' };
+      }
+
+      function renderStructuredGalleryEditor(ref, path, title) {
+        const record = getRecord(ref);
+        const sourceItems = Array.isArray(getPath(record, path)) ? getPath(record, path) : [];
+        const items = sourceItems.map(normalizeStructuredGalleryItem);
+        if (items !== sourceItems) setPath(record, path, items);
+        return `<div class="admin-product-details"><strong>${esc(title)}</strong><p class="admin-field-hint">Изображения из этого списка выводятся на внутренней странице направления в блоке «Примеры решений». Основная картинка карточки на странице категории хранится отдельно.</p><div class="admin-gallery-list">${items.map((item, index) => {
+          const itemPath = `${path}.${index}`;
+          const imagePath = `${itemPath}.src`;
+          const displayName = item.caption || item.alt || fileNameFromPath(item.src) || `Фото ${index + 1}`;
+          const displayPath = item.src || 'Файл не выбран';
+          return `<div class="admin-gallery-row">
+            <div class="admin-gallery-thumb">${item.src ? `<img src="${esc(toSrc(item.src))}" alt="" />` : '<span>Фото не выбрано</span>'}</div>
+            <div class="admin-product-panel-grid">
+              <div class="admin-gallery-meta"><strong>${esc(displayName)}</strong><small>${esc(displayPath)}</small></div>
+              <div class="admin-grid-2">
+                <label class="admin-field"><span>Alt</span><input data-field-ref="${ref}" data-field-path="${itemPath}.alt" value="${esc(item.alt || '')}" placeholder="Краткое описание изображения" /></label>
+                <label class="admin-field"><span>Caption</span><input data-field-ref="${ref}" data-field-path="${itemPath}.caption" value="${esc(item.caption || '')}" placeholder="Подпись под фото, если нужна" /></label>
+              </div>
+              <div class="admin-item-tools">
+                <button class="admin-btn" type="button" data-action="upload-image" data-ref="${ref}" data-path="${esc(imagePath)}" data-target="${esc(`${ref}:${imagePath}`)}">Загрузить/заменить</button>
+                <button class="admin-btn" type="button" data-action="move-array-item" data-ref="${ref}" data-path="${path}" data-index="${index}" data-dir="-1" ${index === 0 ? 'disabled' : ''}>Выше</button>
+                <button class="admin-btn" type="button" data-action="move-array-item" data-ref="${ref}" data-path="${path}" data-index="${index}" data-dir="1" ${index === items.length - 1 ? 'disabled' : ''}>Ниже</button>
+                <button class="admin-btn" type="button" data-action="promote-gallery-image" data-ref="${ref}" data-path="${path}" data-index="${index}">Сделать основным</button>
+                <button class="admin-btn admin-btn--danger" type="button" data-action="delete-array-item" data-ref="${ref}" data-path="${path}" data-index="${index}">Удалить</button>
+              </div>
+              <details class="admin-gallery-technical">
+                <summary>Технический путь</summary>
+                <label class="admin-field"><span>Путь к фото</span><input data-field-ref="${ref}" data-field-path="${imagePath}" value="${esc(item.src || '')}" placeholder="/uploads/photo.jpg" /></label>
+              </details>
+            </div>
+          </div>`;
+        }).join('')}</div><div class="admin-item-tools"><button class="admin-btn admin-btn--primary" type="button" data-action="upload-gallery-images" data-ref="${ref}" data-path="${path}">Загрузить несколько фото</button><button class="admin-btn" type="button" data-action="add-structured-gallery-image" data-ref="${ref}" data-path="${path}">Добавить фото по пути</button></div></div>`;
+      }
+
+      function renderCategoryMediaPanel(ref) {
+        const category = getRecord(ref).draft;
+        return `
+          <section class="admin-panel">
+            <div class="container">
+              <div class="admin-panel-card admin-product-panel-grid">
+                <strong>Медиа направления</strong>
+                <div class="admin-product-media-grid">
+                  <div>
+                    <strong>Основное фото направления</strong>
+                    <p class="admin-field-hint">Используется в карточке на странице родительской категории. Если галерея направления пустая, это фото также показывается в блоке «Примеры решений» на внутренней странице.</p>
+                    ${renderImageOnly(ref, 'image', 'imageView', 'wide')}
+                  </div>
+                  <div class="admin-product-panel-grid">
+                    ${renderField(ref, 'placeholderLabel', category.placeholderLabel)}
+                    <p class="admin-field-hint">Подпись относится к основному фото направления и не заменяет подписи в галерее.</p>
+                    <label class="admin-field"><span>Текст перед галереей</span><textarea data-field-ref="${ref}" data-field-path="galleryIntro">${esc(category.galleryIntro || '')}</textarea><p class="admin-field-hint">Опционально. Если поле пустое, на сайте используется общий текст блока.</p></label>
+                  </div>
+                </div>
+                ${renderStructuredGalleryEditor(ref, 'gallery', 'Галерея направления')}
+              </div>
+            </div>
+          </section>`;
+      }
+
+      function renderCategoryParentNav(ref) {
+        const category = getRecord(ref).draft;
+        const section = findRecordByField('product-sections', 'slug', category.parentSectionSlug);
+        if (!section) return '';
+
+        return `
+          <section class="admin-panel">
+            <div class="container">
+              <div class="admin-panel-card">
+                <button class="admin-btn" type="button" data-action="open-related" data-collection="product-sections" data-slug="${esc(section.draft.slug || section.slug)}">Назад к разделу: ${esc(section.draft.title || section.slug)}</button>
+              </div>
+            </div>
+          </section>`;
+      }
+
       function renderCategoryPage(ref) {
         const category = getRecord(ref).draft;
         const products = Object.values(state.records)
@@ -1543,8 +1780,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             return String(a.draft.title || a.slug).localeCompare(String(b.draft.title || b.slug), 'ru');
           });
         return `
+          ${renderCategoryParentNav(ref)}
           ${renderHero(ref, 'catalog')}
           ${renderHeroTextSettings(ref)}
+          ${renderCategoryMediaPanel(ref)}
           ${renderRecordSettings(ref, ['title', 'slug', 'parentSectionSlug', 'shortDescription', 'placeholderLabel', 'order', 'showInSectionGrid', 'isActive', 'mode', 'seoTitle', 'seoDescription'])}
           ${renderCreatePanel('products', { productCategorySlug: category.slug })}
           <section id="products" class="section">
@@ -1763,6 +2002,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       function renderImageListEditor(ref, path, title) {
         const record = getRecord(ref);
         const items = getPath(record, path) || [];
+        const batchUploadButton = record.collection === 'projects'
+          ? `<button class="admin-btn" type="button" data-action="upload-gallery-images" data-ref="${ref}" data-path="${path}">Загрузить несколько фото</button>`
+          : '';
         return `<div class="admin-product-details"><strong>${esc(title)}</strong><div class="admin-gallery-list">${items.map((image, index) => {
           const imagePath = `${path}.${index}`;
           const displayName = fileNameFromPath(image) || `Фото ${index + 1}`;
@@ -1784,7 +2026,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
               </details>
             </div>
           </div>`;
-        }).join('')}</div><button class="admin-btn admin-btn--primary" type="button" data-action="add-gallery-image" data-ref="${ref}" data-path="${path}">Добавить фото</button></div>`;
+        }).join('')}</div><div class="admin-item-tools"><button class="admin-btn admin-btn--primary" type="button" data-action="add-gallery-image" data-ref="${ref}" data-path="${path}">Добавить фото по пути</button>${batchUploadButton}</div></div>`;
       }
 
       function renderProjectsPage() {
@@ -1797,12 +2039,58 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function renderProjectListCard(ref) {
         const item = getRecord(ref).draft;
-        return `<article class="object-list-card ${item.isActive === false ? 'admin-card-hidden' : ''}"><div class="media-block placeholder placeholder--card">${renderImageOnly(ref, 'image', null, 'card')}<p class="media-caption">Фото кейса.</p></div><div class="object-list-card__body"><h2 ${editable(ref, 'title', 'Название объекта', true)}>${esc(item.title)}</h2><p><span ${editable(ref, 'city', 'Город', true)}>${esc(item.city)}</span>, <span ${editable(ref, 'year', 'Год', true, 'number')}>${esc(item.year)}</span></p><p ${editable(ref, 'shortDescription', 'Краткое описание')}>${esc(item.shortDescription)}</p><div class="admin-item-tools"><button class="admin-btn" type="button" data-action="open-related" data-collection="projects" data-slug="${esc(item.slug)}">Открыть объект</button><button class="admin-btn" type="button" data-action="toggle-record" data-ref="${ref}" data-field="isActive">${item.isActive === false ? 'Показать' : 'Скрыть'}</button><button class="admin-btn admin-btn--danger" type="button" data-action="delete-record" data-ref="${ref}">Удалить</button></div></div></article>`;
+        const meta = [item.city, item.year].filter(Boolean).join(', ');
+        const workType = item.workType || item.category || item.shortCategory || item.shortDescription || '';
+        return `<article class="object-list-card ${item.isActive === false ? 'admin-card-hidden' : ''}">
+          <div class="media-block placeholder placeholder--card">${renderImageOnly(ref, 'image', null, 'card')}</div>
+          <div class="object-list-card__body">
+            ${meta ? `<p class="object-list-card__meta">${esc(meta)}</p>` : ''}
+            <h2 ${editable(ref, 'title', 'Название объекта', true)}>${esc(item.title)}</h2>
+            ${workType ? `<p class="object-list-card__type">${esc(workType)}</p>` : ''}
+            <p class="object-list-card__description" ${editable(ref, 'whatWasDone', 'Краткое описание')}>${esc(item.whatWasDone || item.shortDescription || '')}</p>
+            <div class="admin-item-tools">
+              <button class="admin-btn" type="button" data-action="open-related" data-collection="projects" data-slug="${esc(item.slug)}">Открыть объект</button>
+              <button class="admin-btn" type="button" data-action="toggle-record" data-ref="${ref}" data-field="isActive">${item.isActive === false ? 'Показать' : 'Скрыть'}</button>
+              <button class="admin-btn admin-btn--danger" type="button" data-action="delete-record" data-ref="${ref}">Удалить</button>
+            </div>
+          </div>
+        </article>`;
       }
 
       function renderProjectPage(ref) {
         const item = getRecord(ref).draft;
-        return `${renderHeroLike('Кейс объекта', ref, 'title', `${esc(item.shortDescription)} · ${esc(item.city)}, ${esc(item.year)}`)}<section class="section"><div class="container object-hero-media"><article class="media-block placeholder placeholder--card">${renderImageOnly(ref, 'image', null, 'card')}<p class="media-caption">Ключевой кадр объекта.</p></article></div></section><section class="section section--soft"><div class="container object-story-grid"><article class="card"><h2>Кратко</h2><p class="lead" ${editable(ref, 'shortDescription', 'Кратко')}>${esc(item.shortDescription)}</p></article><article class="card"><h2>Что сделали</h2><p class="lead" ${editable(ref, 'whatWasDone', 'Что сделали')}>${esc(item.whatWasDone)}</p></article><article class="card"><h2>Город</h2><p class="lead" ${editable(ref, 'city', 'Город', true)}>${esc(item.city)}</p></article></div></section>${renderRecordSettings(ref, ['title', 'slug', 'city', 'year', 'order', 'isActive', 'seoTitle', 'seoDescription'])}`;
+        const yearText = item.year ? `, ${esc(item.year)}` : '';
+        const workType = item.workType || item.category || item.shortCategory || item.shortDescription || '';
+        return `
+          ${renderHeroLike('Кейс объекта', ref, 'title', `${esc(item.shortDescription || '')} · ${esc(item.city || '')}${yearText}`)}
+          <section class="admin-panel">
+            <div class="container">
+              <div class="admin-panel-card admin-product-panel-grid">
+                <strong>Фото объекта</strong>
+                <p class="admin-field-hint">Главное фото хранится в поле image и используется как обложка. Галерея хранится в gallery; публичная страница показывает обложку первой и убирает дубли.</p>
+                <div class="admin-product-media-grid">
+                  <div>
+                    <strong>Обложка объекта</strong>
+                    ${renderImageOnly(ref, 'image', null, 'wide')}
+                  </div>
+                  <div class="admin-product-panel-grid">
+                    <label class="admin-field"><span>Тип работ / короткая категория</span><input data-field-ref="${ref}" data-field-path="workType" value="${esc(item.workType || '')}" placeholder="${esc(item.shortDescription || 'Например: благоустройство территории')}" /></label>
+                    <label class="admin-field"><span>Подпись к фото-заглушке</span><input data-field-ref="${ref}" data-field-path="placeholderLabel" value="${esc(item.placeholderLabel || '')}" placeholder="Фото объекта будет добавлено позже" /></label>
+                    <button class="admin-btn" type="button" data-action="upload-gallery-images" data-ref="${ref}" data-path="gallery">Загрузить несколько фото в галерею</button>
+                  </div>
+                </div>
+                ${renderImageListEditor(ref, 'gallery', 'Галерея объекта')}
+              </div>
+            </div>
+          </section>
+          <section class="section section--soft">
+            <div class="container object-story-grid">
+              <article class="card"><h2>Кратко</h2><p class="lead" ${editable(ref, 'shortDescription', 'Кратко')}>${esc(item.shortDescription || '')}</p></article>
+              <article class="card"><h2>Что сделали</h2><p class="lead" ${editable(ref, 'whatWasDone', 'Что сделали')}>${esc(item.whatWasDone || '')}</p></article>
+              <article class="card"><h2>Город</h2><p class="lead" ${editable(ref, 'city', 'Город', true)}>${esc(item.city || '')}</p></article>
+            </div>
+          </section>
+          ${renderRecordSettings(ref, ['title', 'slug', 'city', 'year', 'workType', 'order', 'isActive', 'seoTitle', 'seoDescription'])}`;
       }
 
       function renderHeroLike(kicker, ref, titlePath, description) {
@@ -1831,13 +2119,15 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       function renderStaticHero(ref, className = 'hero--catalog-clean') {
         const page = getRecord(ref).draft;
         const isHomePage = page.slug === 'home';
-        const video = page.heroMediaVideo || '';
-        const hasMedia = Boolean(video || page.heroMediaPoster || page.image);
-        const mediaPath = (page.heroMediaPoster || isHomePage) ? 'heroMediaPoster' : 'image';
+        const video = cleanMediaPath(page.heroMediaVideo);
+        const imagePath = cleanMediaPath(page.image);
+        const posterPath = cleanMediaPath(page.heroMediaPoster);
+        const hasMedia = Boolean(video || imagePath || posterPath);
+        const mediaPath = video && posterPath ? 'heroMediaPoster' : isHomePage && posterPath ? 'heroMediaPoster' : !imagePath && posterPath ? 'heroMediaPoster' : 'image';
         const target = `${ref}:${mediaPath}`;
         const isCrop = state.crop?.target === target;
         const image = getPath(getRecord(ref), mediaPath);
-        const poster = page.heroMediaPoster || page.image || '';
+        const poster = posterPath || imagePath;
         const overlayStyle = heroOverlayStyle(page.heroOverlayOpacity);
         const mediaMarkup = video
           ? `<video class="hero-media__video" autoplay muted loop playsinline preload="metadata" poster="${esc(toSrc(poster))}"><source src="${esc(toSrc(video))}" type="${esc(mediaMimeType(video))}" /></video>${poster ? `<img class="hero-media__fallback" src="${esc(toSrc(poster))}" alt="${esc(page.title)}" />` : ''}`
@@ -1964,6 +2254,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
         if (cardTypes.includes(block.type) || block.type === 'gallery') {
           const items = Array.isArray(block.items) ? block.items : [];
+          const parentRecord = getRecord(ref);
           return `<section class="${sectionClass(block.theme)}" ${block.theme === 'dark' ? 'data-section-theme="dark"' : ''}><div class="container">${renderBlockToolbar(ref, block, index)}<div class="${block.theme === 'dark' ? 'section-heading section-heading--light' : 'section-heading'}"><h2 class="section-title" ${editable(ref, `pageBlocks.${index}.title`, 'Заголовок секции', true)}>${esc(block.title || '')}</h2><p class="lead" ${editable(ref, `pageBlocks.${index}.intro`, 'Вступление')}>${esc(block.intro || '')}</p></div><div class="page-blocks-grid page-blocks-grid--${esc(block.grid || 'auto')}">${items.map((item, itemIndex) => {
             const itemPath = `pageBlocks.${index}.items.${itemIndex}`;
             const isObject = typeof item === 'object' && item !== null;
@@ -1971,7 +2262,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             const textPath = isObject ? `${itemPath}.text` : itemPath;
             const itemTitle = isObject ? item.title : item;
             const itemText = isObject ? item.text : '';
-            return `<article class="card page-block-card ${isObject && item.isActive === false ? 'admin-card-hidden' : ''}">${isObject ? renderImageOnly(ref, `${itemPath}.image`, `${itemPath}.imageView`, 'card') : ''}<h3 ${editable(ref, titlePath, 'Заголовок карточки', true)}>${esc(itemTitle || '')}</h3><p ${editable(ref, textPath, 'Текст карточки')}>${esc(itemText || '')}</p>${isObject ? `<div class="admin-grid-2"><label class="admin-field"><span>Подпись кнопки</span><input data-field-ref="${ref}" data-field-path="${itemPath}.buttonLabel" value="${esc(item.buttonLabel || '')}" /></label><label class="admin-field"><span>Ссылка кнопки</span><input data-field-ref="${ref}" data-field-path="${itemPath}.buttonHref" value="${esc(item.buttonHref || '')}" /></label></div>` : ''}<div class="admin-item-tools"><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="-1">Выше</button><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="1">Ниже</button>${isObject ? `<button class="admin-btn" type="button" data-action="toggle-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">${item.isActive === false ? 'Показать' : 'Скрыть'}</button>` : ''}<button class="admin-btn admin-btn--danger" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">Удалить</button></div></article>`;
+            const directionCategoryRecord = block.type === 'directionCards' && isObject ? findCategoryForDirectionCard(parentRecord, item) : null;
+            const mediaRef = directionCategoryRecord ? keyOf(directionCategoryRecord.collection, directionCategoryRecord.slug) : ref;
+            const mediaPath = directionCategoryRecord ? 'image' : `${itemPath}.image`;
+            const mediaViewPath = directionCategoryRecord ? 'imageView' : `${itemPath}.imageView`;
+            const directionEditButton = block.type === 'directionCards' && isObject ? renderDirectionCategoryEditButton(parentRecord, item) : '';
+            return `<article class="card page-block-card ${isObject && item.isActive === false ? 'admin-card-hidden' : ''}">${isObject ? renderImageOnly(mediaRef, mediaPath, mediaViewPath, 'card') : ''}<h3 ${editable(ref, titlePath, 'Заголовок карточки', true)}>${esc(itemTitle || '')}</h3><p ${editable(ref, textPath, 'Текст карточки')}>${esc(itemText || '')}</p>${isObject ? `<div class="admin-grid-2"><label class="admin-field"><span>Подпись кнопки</span><input data-field-ref="${ref}" data-field-path="${itemPath}.buttonLabel" value="${esc(item.buttonLabel || '')}" /></label><label class="admin-field"><span>Ссылка кнопки</span><input data-field-ref="${ref}" data-field-path="${itemPath}.buttonHref" value="${esc(item.buttonHref || '')}" /></label></div>` : ''}<div class="admin-item-tools"><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="-1">Выше</button><button class="admin-btn" type="button" data-action="move-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}" data-dir="1">Ниже</button>${isObject ? `<button class="admin-btn" type="button" data-action="toggle-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">${item.isActive === false ? 'Показать' : 'Скрыть'}</button>` : ''}${directionEditButton}<button class="admin-btn admin-btn--danger" type="button" data-action="delete-block-item" data-ref="${ref}" data-block="${index}" data-list="items" data-index="${itemIndex}">Удалить</button></div></article>`;
           }).join('')}</div><div class="admin-item-tools"><button class="admin-btn admin-btn--primary" type="button" data-action="add-block-card" data-ref="${ref}" data-index="${index}">Добавить карточку</button></div></div></section>`;
         }
         if (listTypes.includes(block.type)) {
@@ -2012,7 +2308,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function renderHeroOverlayControl(ref) {
         const value = heroOverlayPercent(getPath(getRecord(ref), 'heroOverlayOpacity'));
-        return `<div class="admin-media-actions admin-media-actions--settings"><label class="admin-percent-field"><span>Затемнение видео, %</span><input type="number" min="0" max="100" step="1" data-field-ref="${ref}" data-field-path="heroOverlayOpacity" data-field-min="0" data-field-max="100" data-field-empty="undefined" value="${esc(value)}" /></label></div>`;
+        return `<div class="admin-media-actions admin-media-actions--settings"><label class="admin-percent-field"><span>Затемнение Hero, %</span><input type="number" min="0" max="100" step="1" data-field-ref="${ref}" data-field-path="heroOverlayOpacity" data-field-min="0" data-field-max="100" data-field-empty="undefined" value="${esc(value)}" /></label></div>`;
       }
 
       function renderCropControls() {
@@ -2038,9 +2334,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const slug = slugify(fields.slug || title) || 'novaya-zapis';
         if (collection === 'product-sections') return { title, slug, shortDescription: 'Краткое описание раздела.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, showInMenu: true, menuTitle: title, showBadge: true, mode: 'custom-direction', image: '/assets/images/placeholders/street-furniture.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.', pageBlocks: [] };
         if (collection === 'services') return { title, slug, shortDescription: 'Краткое описание услуги.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, showInMenu: true, menuTitle: title, showBadge: true, image: '/assets/images/placeholders/construction.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.', pageBlocks: [] };
-        if (collection === 'product-categories') return { title, slug, parentSectionSlug: fields.parentSectionSlug || 'ulichnaya-mebel', shortDescription: 'Краткое описание типа изделий.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showInSectionGrid: true, isActive: true, image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото будут добавлены позже.', mode: 'catalog-list', seoTitle: title, seoDescription: 'Описание страницы.' };
+        if (collection === 'product-categories') return { title, slug, parentSectionSlug: fields.parentSectionSlug || 'ulichnaya-mebel', shortDescription: 'Краткое описание типа изделий.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showInSectionGrid: true, isActive: true, image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото будут добавлены позже.', mode: 'catalog-list', gallery: [], galleryIntro: '', seoTitle: title, seoDescription: 'Описание страницы.' };
         if (collection === 'products') return { title, slug, productCategorySlug: fields.productCategorySlug || 'lavochki-i-skameyki', sku: '', shortDescription: 'Краткое описание модели.', leadText: 'Описание изделия.', description: 'Подробное описание изделия, назначения и вариантов исполнения.', materials: ['Стальной каркас', 'Покрытие по согласованию'], colors: ['По палитре RAL'], dimensions: [{ label: 'Размер', value: 'Уточняется при расчете', order: 10, isActive: true }], features: ['Изготавливаем под размеры объекта', 'Цвет металла по RAL', 'Доставка по России'], customizationItems: ['Размеры под объект', 'Цвет металла по RAL', 'Крепление и установка по задаче', 'Изготовим по фото, эскизу, ТЗ или чертежу'], gallery: [], showDeliveryBlock: true, deliveryText: '', relatedProductSlugs: [], showCustomProjectBlock: true, customProjectTitle: 'Не нашли подходящее изделие?', customProjectText: 'Изготовим решение под ваш объект: по фото, эскизу, размерам или техническому заданию.', priceMode: 'on_request', priceFrom: null, currency: 'RUB', image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото изделия будут добавлены позже.', order: nextOrder(collection), isActive: true, showInCatalog: true, seoTitle: title, seoDescription: 'Описание изделия.' };
-        if (collection === 'projects') return { title, slug, city: 'Курган', shortDescription: 'Краткое описание объекта.', whatWasDone: 'Описание выполненных работ.', image: '/assets/images/objects/object-1.svg', gallery: ['/assets/images/objects/object-1.svg'], order: nextOrder(collection), isActive: true, year: new Date().getFullYear(), seoTitle: title, seoDescription: 'Описание объекта.' };
+        if (collection === 'projects') return { title, slug, city: 'Курган', shortDescription: 'Краткое описание объекта.', whatWasDone: 'Описание выполненных работ.', workType: '', image: '', gallery: [], placeholderLabel: 'Фото объекта будет добавлено позже', order: nextOrder(collection), isActive: true, year: new Date().getFullYear(), seoTitle: title, seoDescription: 'Описание объекта.' };
         if (collection === 'jobs') return { title, slug, city: 'Курган', employmentType: 'Полная занятость', salary: 'По договоренности', shortDescription: 'Краткое описание вакансии.', responsibilities: ['Новая обязанность'], requirements: ['Новое требование'], conditions: ['Новое условие'], order: nextOrder(collection), isActive: true };
         if (collection === 'static-pages') return { title, slug, seoTitle: title, seoDescription: 'Описание страницы.', order: nextOrder(collection), isActive: true, showInMenu: true, menuTitle: title, showBadge: true, heroKicker: '', heroTitle: title, heroDescription: 'Описание первого экрана.', image: '/assets/images/placeholders/construction.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, contactTitle: 'Не нашли, что искали?', contactDescription: 'Напишите нам, и мы подберем решение под задачу.', pageBlocks: [] };
         return { title, slug };
@@ -2257,7 +2553,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       async function saveAll() {
         const dirty = dirtyRecords();
-        if (!dirty.length) return;
+        const navigationDirty = isNavigationDirty();
+        if (!dirty.length && !navigationDirty) return;
         $('saveBtn').disabled = true;
         setAlert('Сохраняем...');
         try {
@@ -2265,6 +2562,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             const data = await api(`/content/${record.collection}/${record.slug}`, { method: 'PUT', body: JSON.stringify(stripPresentationFields(record.draft)) });
             record.original = clone(data.content);
             record.draft = clone(data.content);
+          }
+          if (navigationDirty) {
+            const data = await api('/navigation', { method: 'PUT', body: JSON.stringify({ items: state.navigationItems }) });
+            const items = normalizeNavigationItems(data.items || []);
+            state.navigationItems = clone(items);
+            state.navigationOriginal = clone(items);
           }
           renderApp({ preserveScroll: true });
           await publishSavedChanges('Изменения сохранены.');
@@ -2287,7 +2590,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       async function publishWholeSite() {
-        if (dirtyRecords().length) {
+        if (dirtyCount()) {
           setAlert('Сначала нажмите «Сохранить», чтобы записать текущие правки страницы.', true);
           return;
         }
@@ -2312,11 +2615,53 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const uploadedPath = typeof data.path === 'string' ? data.path.trim() : '';
         if (!uploadedPath) throw new Error('Backend загрузил файл, но не вернул путь к нему.');
         const record = getRecord(state.uploadTarget.ref);
+        if (state.uploadTarget.mode === 'append-structured-gallery') {
+          const arr = getPath(record, state.uploadTarget.path) || [];
+          arr.push({ src: uploadedPath, alt: '', caption: '' });
+          setPath(record, state.uploadTarget.path, arr);
+          state.crop = null;
+          renderApp({ preserveScroll: true });
+          setAlert(`Фото добавлено в галерею: ${fileNameFromPath(uploadedPath)}.`);
+          return;
+        }
         setPath(record, state.uploadTarget.path, uploadedPath);
         if (state.uploadTarget.viewPath && !getPath(record, state.uploadTarget.viewPath)) setPath(record, state.uploadTarget.viewPath, clone(DEFAULT_MEDIA_VIEW));
         state.crop = state.uploadTarget.viewPath ? { ...state.uploadTarget } : null;
         renderApp({ preserveScroll: true });
         setAlert(`Фото загружено: ${fileNameFromPath(uploadedPath)}.`);
+      }
+
+      async function uploadGalleryImages(files) {
+        if (!state.galleryUploadTarget) return;
+        const record = getRecord(state.galleryUploadTarget.ref);
+        const path = state.galleryUploadTarget.path || 'gallery';
+        const sourceList = Array.isArray(getPath(record, path)) ? getPath(record, path) : [];
+        const list = sourceList
+          .map(normalizeStructuredGalleryItem)
+          .filter((item) => item.src || item.alt || item.caption);
+        const uploaded = [];
+
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append('file', file);
+          const data = await api('/upload', { method: 'POST', body: formData });
+          const uploadedPath = typeof data.path === 'string' ? data.path.trim() : '';
+          if (!uploadedPath) throw new Error('Backend загрузил файл, но не вернул путь к нему.');
+          uploaded.push(uploadedPath);
+        }
+
+        const existing = new Set(list.map((item) => item.src).filter(Boolean));
+        uploaded.forEach((uploadedPath) => {
+          if (!existing.has(uploadedPath)) {
+            list.push({ src: uploadedPath, alt: '', caption: '' });
+            existing.add(uploadedPath);
+          }
+        });
+
+        if (!record.draft.image && uploaded[0]) record.draft.image = uploaded[0];
+        setPath(record, path, list);
+        renderApp({ preserveScroll: true });
+        setAlert(`Фото загружены: ${uploaded.length}.`);
       }
 
       async function uploadVideo(file) {
@@ -2375,6 +2720,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             state.importResult = null;
             return;
           }
+          const navInput = event.target.closest?.('[data-nav-field]');
+          if (navInput && navInput.dataset.navField !== 'isActive') {
+            const item = state.navigationItems[Number(navInput.dataset.navIndex)];
+            if (!item) return;
+            item[navInput.dataset.navField] = navInput.value;
+            markDirty();
+            return;
+          }
           const editable = event.target.closest?.('[data-editable]');
           if (editable) {
             const record = getRecord(editable.dataset.ref);
@@ -2411,6 +2764,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             if (productSelect.checked) state.selectedProductRefs.add(productSelect.dataset.ref);
             else state.selectedProductRefs.delete(productSelect.dataset.ref);
             syncProductSelectionUi();
+            return;
+          }
+          const navField = event.target.closest?.('[data-nav-field]');
+          if (navField) {
+            const item = state.navigationItems[Number(navField.dataset.navIndex)];
+            if (!item) return;
+            item[navField.dataset.navField] = navField.dataset.navField === 'isActive' ? navField.value === 'true' : navField.value;
+            renderApp({ preserveScroll: true });
             return;
           }
           const field = event.target.closest?.('[data-field-ref]');
@@ -2486,10 +2847,23 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         }, { passive: false });
 
         $('uploadInput').addEventListener('change', async (event) => {
-          const file = event.target.files?.[0];
-          if (!file) return;
-          try { await uploadImage(file); } catch (error) { setAlert(error.message || 'Ошибка загрузки фото', true); }
+          const files = Array.from(event.target.files || []);
+          if (!files.length) return;
+          try {
+            if (state.uploadTarget?.mode === 'append-structured-gallery') {
+              for (const file of files) await uploadImage(file);
+            } else {
+              await uploadImage(files[0]);
+            }
+          } catch (error) { setAlert(error.message || 'Ошибка загрузки фото', true); }
           finally { event.target.value = ''; state.uploadTarget = null; }
+        });
+
+        $('uploadGalleryInput').addEventListener('change', async (event) => {
+          const files = Array.from(event.target.files || []);
+          if (!files.length) return;
+          try { await uploadGalleryImages(files); } catch (error) { setAlert(error.message || 'Ошибка загрузки фото', true); }
+          finally { event.target.value = ''; state.galleryUploadTarget = null; }
         });
 
         $('uploadVideoInput').addEventListener('change', async (event) => {
@@ -2518,7 +2892,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           showLogin('Вы вышли из админки.');
         });
         window.addEventListener('beforeunload', (event) => {
-          if (!dirtyRecords().length) return;
+          if (!dirtyCount()) return;
           event.preventDefault();
           event.returnValue = '';
         });
@@ -2552,6 +2926,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           $('jsonImportInput').click();
           return;
         }
+        if (action === 'move-nav-item') {
+          moveItem(state.navigationItems, Number(el.dataset.index), Number(el.dataset.dir));
+          renderApp({ preserveScroll: true });
+          return;
+        }
         if (action === 'bulk-delete-products') return bulkDeleteSelectedProducts();
         if (action === 'clear-product-selection') {
           state.selectedProductRefs.clear();
@@ -2570,6 +2949,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (action === 'upload-image') {
           state.uploadTarget = { ref: el.dataset.ref, path: el.dataset.path, viewPath: el.dataset.viewPath || '', target: el.dataset.target };
           $('uploadInput').click();
+          return;
+        }
+        if (action === 'upload-gallery-images') {
+          state.galleryUploadTarget = { ref: el.dataset.ref, path: el.dataset.path || 'gallery' };
+          $('uploadGalleryInput').click();
           return;
         }
         if (action === 'upload-video') {
@@ -2638,16 +3022,35 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           renderApp({ preserveScroll: true });
           return;
         }
+        if (action === 'add-structured-gallery-image') {
+          const arr = getPath(getRecord(el.dataset.ref), el.dataset.path) || [];
+          arr.push({ src: '', alt: '', caption: '' });
+          setPath(getRecord(el.dataset.ref), el.dataset.path, arr);
+          renderApp({ preserveScroll: true });
+          return;
+        }
         if (action === 'promote-gallery-image') {
           const record = getRecord(el.dataset.ref);
           const arr = getPath(record, el.dataset.path) || [];
           const index = Number(el.dataset.index);
           const image = arr[index];
-          if (!image) return;
+          const imagePath = typeof image === 'string' ? cleanMediaPath(image) : cleanMediaPath(image?.src);
+          if (!imagePath) return;
+          if (record.collection === 'projects') {
+            const currentMain = record.draft.image || '';
+            record.draft.image = image;
+            arr.splice(index, 1);
+            if (currentMain && currentMain !== image && !arr.includes(currentMain)) arr.unshift(currentMain);
+            setPath(record, el.dataset.path, arr.filter(Boolean));
+            renderApp({ preserveScroll: true });
+            return;
+          }
           const currentMain = record.draft.image || '';
-          record.draft.image = image;
-          if (currentMain) arr[index] = currentMain;
-          else arr.splice(index, 1);
+          record.draft.image = imagePath;
+          if (typeof image === 'string') {
+            if (currentMain) arr[index] = currentMain;
+            else arr.splice(index, 1);
+          }
           setPath(record, el.dataset.path, arr);
           renderApp({ preserveScroll: true });
           return;

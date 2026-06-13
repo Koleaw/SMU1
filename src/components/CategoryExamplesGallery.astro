@@ -1,0 +1,157 @@
+---
+import { withBase } from '../utils/withBase';
+
+type GalleryEntry = string | {
+  src?: string;
+  image?: string;
+  url?: string;
+  alt?: string;
+  caption?: string;
+};
+
+interface Props {
+  gallery?: GalleryEntry[];
+  fallbackImage?: string;
+  fallbackAlt?: string;
+  intro?: string;
+}
+
+const {
+  gallery = [],
+  fallbackImage = '',
+  fallbackAlt = 'Пример решения',
+  intro = ''
+} = Astro.props as Props;
+
+const cleanText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+const normalizeEntry = (entry: GalleryEntry) => {
+  if (typeof entry === 'string') {
+    const src = cleanText(entry);
+    return src ? { src, alt: fallbackAlt, caption: '' } : null;
+  }
+
+  const src = cleanText(entry?.src) || cleanText(entry?.image) || cleanText(entry?.url);
+  if (!src) return null;
+
+  return {
+    src,
+    alt: cleanText(entry?.alt) || fallbackAlt,
+    caption: cleanText(entry?.caption)
+  };
+};
+
+const isPlaceholderImage = (src: string) => src.includes('/assets/images/placeholders/');
+const galleryItems = Array.isArray(gallery)
+  ? gallery.map(normalizeEntry).filter((item): item is NonNullable<ReturnType<typeof normalizeEntry>> => Boolean(item))
+      .filter((item) => !isPlaceholderImage(item.src))
+  : [];
+const fallbackSrc = cleanText(fallbackImage);
+const items = galleryItems.length
+  ? galleryItems
+  : fallbackSrc && !isPlaceholderImage(fallbackSrc)
+    ? [{ src: fallbackSrc, alt: fallbackAlt, caption: '' }]
+    : [];
+const gridClass = `category-examples__grid category-examples__grid--count-${Math.min(items.length, 4)}${items.length === 1 ? ' category-examples__grid--single' : ''}`;
+const lead = cleanText(intro) || 'Показываем варианты исполнения и установку в окружении. Размеры, цвет, заполнение и монтаж адаптируем под объект.';
+---
+
+{items.length > 0 && (
+  <section class="section category-examples">
+    <div class="container">
+      <div class="category-examples__head">
+        <h2 class="section-title">Примеры решений</h2>
+        <p class="lead">{lead}</p>
+      </div>
+      <div class={gridClass}>
+        {items.map((item, index) => (
+          <figure class={`category-examples__item ${index === 0 ? 'category-examples__item--featured' : ''}`}>
+            <img class="category-examples__image" src={withBase(item.src)} alt={item.alt} loading="lazy" />
+            {item.caption && <figcaption>{item.caption}</figcaption>}
+          </figure>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .category-examples {
+    background: #f7fafb;
+  }
+
+  .category-examples__head {
+    max-width: 780px;
+    margin-bottom: 24px;
+  }
+
+  .category-examples__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(260px, .85fr);
+    gap: 16px;
+  }
+
+  .category-examples__grid--single {
+    max-width: 980px;
+    grid-template-columns: 1fr;
+  }
+
+  .category-examples__item {
+    display: grid;
+    overflow: hidden;
+    margin: 0;
+    border: 1px solid rgb(16 22 27 / 10%);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 14px 36px rgb(16 22 27 / 8%);
+  }
+
+  .category-examples__item--featured {
+    grid-row: span 2;
+  }
+
+  .category-examples__image {
+    display: block;
+    width: 100%;
+    min-height: 220px;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  .category-examples__item--featured .category-examples__image {
+    min-height: 380px;
+    aspect-ratio: 16 / 10;
+  }
+
+  .category-examples__grid--single .category-examples__item--featured {
+    grid-row: auto;
+  }
+
+  .category-examples__grid--single .category-examples__item--featured .category-examples__image {
+    min-height: 420px;
+    aspect-ratio: 16 / 9;
+  }
+
+  .category-examples__item figcaption {
+    padding: 10px 12px;
+    color: var(--color-muted);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  @media (max-width: 900px) {
+    .category-examples__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .category-examples__item--featured {
+      grid-row: auto;
+    }
+
+    .category-examples__image,
+    .category-examples__item--featured .category-examples__image,
+    .category-examples__grid--single .category-examples__item--featured .category-examples__image {
+      min-height: 220px;
+      aspect-ratio: 4 / 3;
+    }
+  }
+</style>

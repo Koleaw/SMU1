@@ -3,6 +3,8 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Hero from '../../components/Hero.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import ObjectProjectGallery from '../../components/ObjectProjectGallery.astro';
+import { getProjectImages } from '../../utils/projectImages';
 import { withBase } from '../../utils/withBase';
 
 export async function getStaticPaths() {
@@ -14,6 +16,21 @@ export async function getStaticPaths() {
 }
 
 const { item } = Astro.props;
+const images = getProjectImages(item);
+const workType = item.workType || item.category || item.shortCategory || '';
+const heroDescription = [item.shortDescription, [item.city, item.year].filter(Boolean).join(', ')]
+  .filter(Boolean)
+  .join(' · ');
+const factCards = [
+  { title: 'Кратко', text: item.shortDescription },
+  { title: 'Что сделали', text: item.whatWasDone },
+  { title: 'Город', text: item.city },
+  workType && workType !== item.shortDescription ? { title: 'Тип работ', text: workType } : null,
+  Array.isArray(item.materials) && item.materials.length ? { title: 'Материалы', text: item.materials.join(', ') } : null,
+  item.task ? { title: 'Задача', text: item.task } : null,
+  item.result ? { title: 'Результат', text: item.result } : null,
+  Array.isArray(item.features) && item.features.length ? { title: 'Особенности', text: item.features.join(', ') } : null
+].filter((card): card is { title: string; text: string } => Boolean(card && card.text));
 ---
 <BaseLayout title={item.seoTitle} description={item.seoDescription}>
   <div class="breadcrumbs-bar">
@@ -26,31 +43,27 @@ const { item } = Astro.props;
     kicker="Кейс объекта"
     className="hero--trust"
     title={item.title}
-    description={`${item.shortDescription} · ${item.city}, ${item.year}`}
+    description={heroDescription}
     primaryLabel="Обсудить похожую задачу"
     primaryHref={withBase('/kontakty/')}
     secondaryLabel="Все объекты"
     secondaryHref={withBase('/vypolnennye-obekty/')}
   />
 
-  <section class="section">
-    <div class="container object-hero-media">
-      <article class="media-block placeholder placeholder--card">
-        <img class="media-thumb" src={withBase(item.image)} alt={item.title} />
-        <p class="media-caption">Ключевой кадр объекта будет заменен на фактическое фото в мае.</p>
-      </article>
-      <article class="media-block placeholder placeholder--card">
-        <img class="media-thumb" src={withBase(item.gallery[1] ?? item.gallery[0] ?? item.image)} alt={item.title} />
-        <p class="media-caption">Второй кадр: детали реализации и результат на площадке.</p>
-      </article>
+  <section class="section object-gallery-section">
+    <div class="container">
+      <ObjectProjectGallery title={item.title} images={images} />
     </div>
   </section>
 
   <section class="section section--soft">
     <div class="container object-story-grid">
-      <article class="card"><h2>Кратко</h2><p class="lead">{item.shortDescription}</p></article>
-      <article class="card"><h2>Что сделали</h2><p class="lead">{item.whatWasDone}</p></article>
-      <article class="card"><h2>Город</h2><p class="lead">{item.city}</p></article>
+      {factCards.map((card) => (
+        <article class="card object-fact-card">
+          <h2>{card.title}</h2>
+          <p class="lead">{card.text}</p>
+        </article>
+      ))}
     </div>
   </section>
 </BaseLayout>

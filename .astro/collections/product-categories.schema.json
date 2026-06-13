@@ -22,6 +22,111 @@
         "heroDescription": {
           "type": "string"
         },
+        "heroTitleStyle": {
+          "type": "object",
+          "properties": {
+            "fontSize": {
+              "type": "string",
+              "enum": [
+                "small",
+                "base",
+                "large",
+                "xl",
+                "2xl"
+              ]
+            },
+            "fontWeight": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "medium",
+                "semibold",
+                "bold"
+              ]
+            },
+            "italic": {
+              "type": "boolean"
+            },
+            "align": {
+              "type": "string",
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ]
+            },
+            "lineHeight": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "normal",
+                "relaxed"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "enum": [
+                "primary",
+                "secondary",
+                "white",
+                "accent"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "heroDescriptionStyle": {
+          "$ref": "#/definitions/product-categories/properties/heroTitleStyle"
+        },
+        "heroLayout": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "type": "string",
+              "enum": [
+                "narrow",
+                "medium",
+                "wide",
+                "full"
+              ]
+            },
+            "widthPercent": {
+              "type": "number",
+              "minimum": 30,
+              "maximum": 100
+            },
+            "maxWidth": {
+              "type": "number",
+              "minimum": 280,
+              "maximum": 1200
+            },
+            "position": {
+              "type": "string",
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ]
+            },
+            "padding": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "normal",
+                "large"
+              ]
+            },
+            "verticalPadding": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "normal",
+                "large"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
         "order": {
           "type": "number"
         },
@@ -67,6 +172,37 @@
             "scale"
           ],
           "additionalProperties": false
+        },
+        "gallery": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "src": {
+                    "type": "string"
+                  },
+                  "alt": {
+                    "type": "string"
+                  },
+                  "caption": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "src"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "galleryIntro": {
+          "type": "string"
         },
         "placeholderLabel": {
           "type": "string"

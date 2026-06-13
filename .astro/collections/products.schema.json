@@ -13,11 +13,60 @@
         "productCategorySlug": {
           "type": "string"
         },
+        "sku": {
+          "type": "string"
+        },
         "shortDescription": {
           "type": "string"
         },
         "leadText": {
           "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "colors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "order": {
+                "type": "number"
+              },
+              "isActive": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "label",
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "priceMode": {
           "type": "string",
@@ -73,8 +122,143 @@
           ],
           "additionalProperties": false
         },
+        "gallery": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "placeholderLabel": {
           "type": "string"
+        },
+        "customizationItems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "showDeliveryBlock": {
+          "type": "boolean"
+        },
+        "deliveryText": {
+          "type": "string"
+        },
+        "relatedProductSlugs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "showCustomProjectBlock": {
+          "type": "boolean"
+        },
+        "customProjectTitle": {
+          "type": "string"
+        },
+        "customProjectText": {
+          "type": "string"
+        },
+        "descriptionTextStyle": {
+          "type": "object",
+          "properties": {
+            "fontSize": {
+              "type": "string",
+              "enum": [
+                "small",
+                "base",
+                "large",
+                "xl",
+                "2xl"
+              ]
+            },
+            "fontWeight": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "medium",
+                "semibold",
+                "bold"
+              ]
+            },
+            "italic": {
+              "type": "boolean"
+            },
+            "align": {
+              "type": "string",
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ]
+            },
+            "lineHeight": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "normal",
+                "relaxed"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "enum": [
+                "primary",
+                "secondary",
+                "white",
+                "accent"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "descriptionLayout": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "type": "string",
+              "enum": [
+                "narrow",
+                "medium",
+                "wide",
+                "full"
+              ]
+            },
+            "widthPercent": {
+              "type": "number",
+              "minimum": 30,
+              "maximum": 100
+            },
+            "maxWidth": {
+              "type": "number",
+              "minimum": 280,
+              "maximum": 1200
+            },
+            "position": {
+              "type": "string",
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ]
+            },
+            "padding": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "normal",
+                "large"
+              ]
+            },
+            "verticalPadding": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "normal",
+                "large"
+              ]
+            }
+          },
+          "additionalProperties": false
         },
         "order": {
           "type": "number"

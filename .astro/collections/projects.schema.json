@@ -13,6 +13,39 @@
         "city": {
           "type": "string"
         },
+        "region": {
+          "type": "string"
+        },
+        "workType": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "shortCategory": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string"
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "shortDescription": {
           "type": "string"
         },
@@ -22,11 +55,54 @@
         "image": {
           "type": "string"
         },
+        "coverImage": {
+          "type": "string"
+        },
         "gallery": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "src": {
+                    "type": "string"
+                  },
+                  "image": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "alt": {
+                    "type": "string"
+                  },
+                  "caption": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            ]
+          }
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/projects/properties/gallery/items"
+          }
+        },
+        "captions": {
           "type": "array",
           "items": {
             "type": "string"
           }
+        },
+        "placeholderLabel": {
+          "type": "string"
         },
         "order": {
           "type": "number"
@@ -53,11 +129,8 @@
         "city",
         "shortDescription",
         "whatWasDone",
-        "image",
-        "gallery",
         "order",
         "isActive",
-        "year",
         "seoTitle",
         "seoDescription"
       ],

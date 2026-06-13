@@ -1,0 +1,90 @@
+---
+import { withBase } from '../utils/withBase';
+import type { ProjectImage } from '../utils/projectImages';
+
+type Props = {
+  title: string;
+  images: ProjectImage[];
+};
+
+const { title, images } = Astro.props;
+const hasImages = images.length > 0;
+const hasMultipleImages = images.length > 1;
+---
+
+<div class="object-gallery" data-object-gallery aria-label={`Галерея объекта: ${title}`}>
+  <div class="object-gallery__stage">
+    {hasImages ? (
+      images.map((image, index) => (
+        <figure class={`object-gallery__slide ${index === 0 ? 'is-active' : ''}`} data-gallery-slide>
+          <img class="object-media-bg" src={withBase(image.src)} alt="" loading={index === 0 ? 'eager' : 'lazy'} aria-hidden="true" />
+          <img class="object-media-fg" src={withBase(image.src)} alt={image.alt || title} loading={index === 0 ? 'eager' : 'lazy'} />
+          {image.caption && <figcaption>{image.caption}</figcaption>}
+        </figure>
+      ))
+    ) : (
+      <div class="object-placeholder object-placeholder--gallery">
+        <span>Фото объекта будет добавлено позже</span>
+      </div>
+    )}
+
+    {hasMultipleImages && (
+      <>
+        <button class="object-gallery-arrow object-gallery-arrow--prev" type="button" data-gallery-prev aria-label="Предыдущее фото">
+          <span aria-hidden="true">‹</span>
+        </button>
+        <button class="object-gallery-arrow object-gallery-arrow--next" type="button" data-gallery-next aria-label="Следующее фото">
+          <span aria-hidden="true">›</span>
+        </button>
+      </>
+    )}
+  </div>
+
+  {hasMultipleImages && (
+    <div class="object-gallery__thumbs" aria-label="Миниатюры галереи">
+      {images.map((image, index) => (
+        <button class={`object-gallery__thumb ${index === 0 ? 'is-active' : ''}`} type="button" data-gallery-thumb={index} aria-label={`Показать фото ${index + 1}`}>
+          <span class="object-gallery__thumb-bg" aria-hidden="true">
+            <img src={withBase(image.src)} alt="" loading="lazy" />
+          </span>
+          <img class="object-gallery__thumb-img" src={withBase(image.src)} alt="" loading="lazy" />
+        </button>
+      ))}
+    </div>
+  )}
+</div>
+
+<script>
+  (() => {
+    const initGallery = (gallery: Element) => {
+      if (!(gallery instanceof HTMLElement) || gallery.dataset.objectGalleryReady === 'true') return;
+      gallery.dataset.objectGalleryReady = 'true';
+
+      const slides = Array.from(gallery.querySelectorAll<HTMLElement>('[data-gallery-slide]'));
+      const thumbs = Array.from(gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-thumb]'));
+      const prev = gallery.querySelector<HTMLButtonElement>('[data-gallery-prev]');
+      const next = gallery.querySelector<HTMLButtonElement>('[data-gallery-next]');
+      let index = 0;
+
+      const show = (nextIndex: number) => {
+        if (!slides.length) return;
+        index = (nextIndex + slides.length) % slides.length;
+        slides.forEach((slide, slideIndex) => slide.classList.toggle('is-active', slideIndex === index));
+        thumbs.forEach((thumb, thumbIndex) => {
+          thumb.classList.toggle('is-active', thumbIndex === index);
+          thumb.setAttribute('aria-current', thumbIndex === index ? 'true' : 'false');
+        });
+      };
+
+      prev?.addEventListener('click', () => show(index - 1));
+      next?.addEventListener('click', () => show(index + 1));
+      thumbs.forEach((thumb, thumbIndex) => thumb.addEventListener('click', () => show(thumbIndex)));
+      show(0);
+    };
+
+    const initGalleries = () => document.querySelectorAll('[data-object-gallery]').forEach(initGallery);
+
+    initGalleries();
+    document.addEventListener('astro:page-load', initGalleries);
+  })();
+</script>

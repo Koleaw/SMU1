@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://example.github.io/SMU1/sitemap-index.xml
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: http://localhost:4321/sitemap-index.xml

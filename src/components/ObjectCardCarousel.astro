@@ -1,0 +1,154 @@
+---
+import { withBase } from '../utils/withBase';
+import type { ProjectImage } from '../utils/projectImages';
+
+type Props = {
+  title: string;
+  href: string;
+  images: ProjectImage[];
+  meta?: string;
+  workType?: string;
+  description?: string;
+};
+
+const { title, href, images, meta = '', workType = '', description = '' } = Astro.props;
+const hasImages = images.length > 0;
+const hasMultipleImages = images.length > 1;
+---
+
+<article class="object-list-card object-case-card" data-object-card data-href={href} tabindex="0">
+  <div class="object-card-carousel" data-object-carousel data-autoplay="5200" aria-label={`Фото объекта: ${title}`}>
+    <div class="object-card-carousel__track">
+      {hasImages ? (
+        images.map((image, index) => (
+          <figure class={`object-card-carousel__slide ${index === 0 ? 'is-active' : ''}`} data-carousel-slide>
+            <img class="object-media-bg" src={withBase(image.src)} alt="" loading="lazy" aria-hidden="true" />
+            <img class="object-media-fg" src={withBase(image.src)} alt={image.alt || title} loading="lazy" />
+          </figure>
+        ))
+      ) : (
+        <div class="object-placeholder object-placeholder--card">
+          <span>Фото объекта будет добавлено позже</span>
+        </div>
+      )}
+    </div>
+
+    {hasMultipleImages && (
+      <>
+        <button class="object-carousel-arrow object-carousel-arrow--prev" type="button" data-carousel-prev aria-label="Предыдущее фото">
+          <span aria-hidden="true">‹</span>
+        </button>
+        <button class="object-carousel-arrow object-carousel-arrow--next" type="button" data-carousel-next aria-label="Следующее фото">
+          <span aria-hidden="true">›</span>
+        </button>
+        <div class="object-carousel-dots" aria-label="Фото объекта">
+          {images.map((_, index) => (
+            <button
+              class={`object-carousel-dot ${index === 0 ? 'is-active' : ''}`}
+              type="button"
+              data-carousel-dot={index}
+              aria-label={`Показать фото ${index + 1}`}
+            />
+          ))}
+        </div>
+      </>
+    )}
+  </div>
+
+  <div class="object-list-card__body">
+    {meta && <p class="object-list-card__meta">{meta}</p>}
+    <h2><a href={href}>{title}</a></h2>
+    {workType && <p class="object-list-card__type">{workType}</p>}
+    {description && <p class="object-list-card__description">{description}</p>}
+    <a class="btn btn-secondary object-list-card__button" href={href}>
+      Смотреть объект
+    </a>
+  </div>
+</article>
+
+<script>
+  (() => {
+    const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const initCarousel = (carousel: Element) => {
+      if (!(carousel instanceof HTMLElement) || carousel.dataset.objectCarouselReady === 'true') return;
+      carousel.dataset.objectCarouselReady = 'true';
+
+      const slides = Array.from(carousel.querySelectorAll<HTMLElement>('[data-carousel-slide]'));
+      const dots = Array.from(carousel.querySelectorAll<HTMLButtonElement>('[data-carousel-dot]'));
+      const prev = carousel.querySelector<HTMLButtonElement>('[data-carousel-prev]');
+      const next = carousel.querySelector<HTMLButtonElement>('[data-carousel-next]');
+      const interval = Number(carousel.dataset.autoplay || 5200);
+      let index = 0;
+      let timer = 0;
+
+      const show = (nextIndex: number) => {
+        if (!slides.length) return;
+        index = (nextIndex + slides.length) % slides.length;
+        slides.forEach((slide, slideIndex) => slide.classList.toggle('is-active', slideIndex === index));
+        dots.forEach((dot, dotIndex) => {
+          dot.classList.toggle('is-active', dotIndex === index);
+          dot.setAttribute('aria-current', dotIndex === index ? 'true' : 'false');
+        });
+      };
+
+      const stop = () => {
+        if (timer) window.clearInterval(timer);
+        timer = 0;
+      };
+
+      const start = () => {
+        stop();
+        if (slides.length < 2 || prefersReducedMotion() || document.hidden) return;
+        timer = window.setInterval(() => show(index + 1), interval);
+      };
+
+      const manual = (nextIndex: number, event?: Event) => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        show(nextIndex);
+        start();
+      };
+
+      prev?.addEventListener('click', (event) => manual(index - 1, event));
+      next?.addEventListener('click', (event) => manual(index + 1, event));
+      dots.forEach((dot, dotIndex) => dot.addEventListener('click', (event) => manual(dotIndex, event)));
+
+      carousel.addEventListener('mouseenter', stop);
+      carousel.addEventListener('mouseleave', start);
+      carousel.addEventListener('focusin', stop);
+      carousel.addEventListener('focusout', start);
+      document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+
+      show(0);
+      start();
+    };
+
+    const initCards = () => {
+      document.querySelectorAll('[data-object-carousel]').forEach(initCarousel);
+
+      document.querySelectorAll('[data-object-card][data-href]').forEach((card) => {
+        if (!(card instanceof HTMLElement) || card.dataset.objectCardReady === 'true') return;
+        card.dataset.objectCardReady = 'true';
+        const href = card.dataset.href || '';
+
+        card.addEventListener('click', (event) => {
+          if (event.defaultPrevented) return;
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          if (target.closest('a, button, input, select, textarea')) return;
+          window.location.href = href;
+        });
+
+        card.addEventListener('keydown', (event) => {
+          if ((event.key !== 'Enter' && event.key !== ' ') || event.target !== card) return;
+          event.preventDefault();
+          window.location.href = href;
+        });
+      });
+    };
+
+    initCards();
+    document.addEventListener('astro:page-load', initCards);
+  })();
+</script>

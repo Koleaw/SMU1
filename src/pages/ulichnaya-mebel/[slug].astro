@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Hero from '../../components/Hero.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import CategoryExamplesGallery from '../../components/CategoryExamplesGallery.astro';
 import DirectContactBlock from '../../components/DirectContactBlock.astro';
 import { withBase } from '../../utils/withBase';
 
@@ -85,6 +86,13 @@ const formatPrice = (item: (typeof products)[number]) => {
       </div>
     </section>
   )}
+
+  <CategoryExamplesGallery
+    gallery={category.gallery}
+    fallbackImage={category.image}
+    fallbackAlt={category.title}
+    intro={category.galleryIntro}
+  />
 
   <DirectContactBlock />
 </BaseLayout>

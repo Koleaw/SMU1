@@ -15,6 +15,7 @@ interface Props {
   mediaVideo?: string;
   mediaVideoMobile?: string;
   mediaPoster?: string;
+  mediaPosterMobile?: string;
   mediaAlt?: string;
   mediaCaption?: string;
   overlayOpacity?: number;
@@ -39,10 +40,11 @@ const {
   secondaryLabel,
   secondaryHref = withBase('/kontakty/'),
   mediaType,
-  mediaImage,
-  mediaVideo,
-  mediaVideoMobile,
-  mediaPoster,
+  mediaImage: rawMediaImage,
+  mediaVideo: rawMediaVideo,
+  mediaVideoMobile: rawMediaVideoMobile,
+  mediaPoster: rawMediaPoster,
+  mediaPosterMobile,
   mediaAlt = 'Фоновое изображение первого экрана',
   mediaCaption,
   overlayOpacity,
@@ -50,28 +52,41 @@ const {
 } = Astro.props as Props;
 
 const heroClass = ['hero', className].filter(Boolean).join(' ');
+const cleanMediaPath = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+const mediaImage = cleanMediaPath(rawMediaImage) || undefined;
+const mediaVideo = cleanMediaPath(rawMediaVideo) || undefined;
+const mediaVideoMobile = cleanMediaPath(rawMediaVideoMobile) || undefined;
+const mediaPoster = cleanMediaPath(rawMediaPoster) || (cleanMediaPath(rawMediaVideo) && !cleanMediaPath(rawMediaImage) ? withBase('/assets/images/placeholders/construction.svg') : undefined);
 const normalizePercent = (value: unknown, fallback = 100) => {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
   return Math.min(100, Math.max(0, number));
 };
+const safeMediaImage = cleanMediaPath(rawMediaImage);
+const safeMediaVideo = cleanMediaPath(rawMediaVideo);
+const safeMediaVideoMobile = cleanMediaPath(rawMediaVideoMobile);
+const safeMediaPoster = cleanMediaPath(rawMediaPoster);
+const shouldRenderVideo = Boolean(safeMediaVideo);
+const placeholderPoster = withBase('/assets/images/placeholders/construction.svg');
 const safeMediaView = { fit: 'cover', positionX: 50, positionY: 50, scale: 1, ...(mediaView || {}) };
 const heroImageStyle = `object-fit:${safeMediaView.fit};object-position:${safeMediaView.positionX}% ${safeMediaView.positionY}%;transform:scale(${safeMediaView.scale});transform-origin:center;`;
-const mediaVideoType = mediaVideo?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
-const mediaVideoMobileType = mediaVideoMobile?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
+const mediaVideoType = safeMediaVideo.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
+const mediaVideoMobileType = safeMediaVideoMobile.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
 const overlayStyle = `--hero-overlay-strength:${normalizePercent(overlayOpacity) / 100};`;
-const resolvedPoster = mediaPoster || mediaImage;
+const resolvedDesktopPoster = mediaPoster || mediaImage;
+const resolvedMobilePoster = mediaPosterMobile || resolvedDesktopPoster;
+const resolvedPoster = resolvedDesktopPoster || resolvedMobilePoster;
 ---
 <section class={heroClass}>
-  {(mediaImage || mediaPoster || mediaVideo) && (
+  {(mediaImage || mediaPoster || mediaPosterMobile || mediaVideo) && (
     <div class="hero-media" aria-hidden="true" data-hero-media data-has-video-fallback={resolvedPoster ? 'true' : undefined}>
       {mediaType === 'video' && mediaVideo ? (
         <>
-          <video class="hero-media__video" autoplay muted loop playsinline preload="auto" poster={resolvedPoster} data-hero-video>
+          <video class="hero-media__video" autoplay muted loop playsinline webkit-playsinline preload="auto" poster={resolvedPoster} data-hero-video data-hero-poster-desktop={resolvedDesktopPoster} data-hero-poster-mobile={resolvedMobilePoster}>
             {mediaVideoMobile && <source src={mediaVideoMobile} type={mediaVideoMobileType} media="(max-width: 900px)" />}
             <source src={mediaVideo} type={mediaVideoType} />
           </video>
-          {resolvedPoster && <img class="hero-media__fallback" src={resolvedPoster} alt={mediaAlt} loading="eager" style={heroImageStyle} />}
+          {resolvedPoster && <img class="hero-media__fallback" src={resolvedPoster} alt={mediaAlt} loading="eager" style={heroImageStyle} data-hero-fallback data-hero-poster-desktop={resolvedDesktopPoster} data-hero-poster-mobile={resolvedMobilePoster} />}
         </>
       ) : (
         <img class="hero-media__image" src={mediaImage ?? mediaPoster} alt={mediaAlt} loading="eager" style={heroImageStyle} />
@@ -102,10 +117,34 @@ const resolvedPoster = mediaPoster || mediaImage;
       const heroVideo = heroMedia.querySelector('[data-hero-video]');
       if (!(heroVideo instanceof HTMLVideoElement)) return;
       if (heroMedia.dataset.heroVideoReady === 'true') return;
+      const heroFallback = heroMedia.querySelector('[data-hero-fallback]');
+      const desktopPoster = heroVideo.dataset.heroPosterDesktop || heroVideo.getAttribute('poster') || '';
+      const mobilePoster = heroVideo.dataset.heroPosterMobile || desktopPoster;
+      const mobilePosterMedia = window.matchMedia('(max-width: 900px)');
+      type PlayOptions = { force?: boolean };
+
+      let playPending = false;
+      let autoplayRejected = false;
+      let interactionAttempted = false;
+      const attemptedReasons = new Set();
+
+      const activePoster = () => (mobilePosterMedia.matches && mobilePoster ? mobilePoster : desktopPoster);
+
+      const syncPoster = () => {
+        const poster = activePoster();
+        if (!poster) return;
+        if (heroVideo.getAttribute('poster') !== poster) {
+          heroVideo.setAttribute('poster', poster);
+        }
+        if (heroFallback instanceof HTMLImageElement && heroFallback.getAttribute('src') !== poster) {
+          heroFallback.setAttribute('src', poster);
+        }
+      };
 
       const markPlaying = () => {
         heroMedia.dataset.videoPlaying = 'true';
         delete heroMedia.dataset.videoFailed;
+        autoplayRejected = false;
       };
 
       const markFailed = () => {
@@ -118,8 +157,12 @@ const resolvedPoster = mediaPoster || mediaImage;
       heroVideo.setAttribute('muted', '');
       heroVideo.setAttribute('playsinline', '');
       heroVideo.setAttribute('webkit-playsinline', '');
+      syncPoster();
 
       heroVideo.addEventListener('playing', markPlaying);
+      heroVideo.addEventListener('canplay', () => {
+        if (!heroVideo.paused) markPlaying();
+      });
 
       heroVideo.addEventListener('error', () => {
         markFailed();
@@ -131,28 +174,73 @@ const resolvedPoster = mediaPoster || mediaImage;
 
       heroMedia.dataset.heroVideoReady = 'true';
 
-      const attemptPlay = () => {
-        if (heroVideo.dataset.playAttempted === 'true') return;
-        heroVideo.dataset.playAttempted = 'true';
+      const prepareVideo = () => {
+        heroVideo.muted = true;
+        heroVideo.defaultMuted = true;
+        heroVideo.setAttribute('muted', '');
+        heroVideo.setAttribute('playsinline', '');
+        heroVideo.setAttribute('webkit-playsinline', '');
+        syncPoster();
+      };
 
+      const attemptPlay = (reason: string, options: PlayOptions = {}) => {
+        const force = options.force === true;
+        if (playPending || heroMedia.dataset.videoPlaying === 'true' || !heroVideo.paused) return;
+        if (force) {
+          if (interactionAttempted) return;
+          interactionAttempted = true;
+        } else {
+          if (autoplayRejected || attemptedReasons.has(reason)) return;
+          attemptedReasons.add(reason);
+        }
+
+        prepareVideo();
+        playPending = true;
         const playPromise = heroVideo.play();
         if (playPromise && typeof playPromise.then === 'function') {
           playPromise
             .then(() => {
+              playPending = false;
               if (!heroVideo.paused) markPlaying();
             })
             .catch(() => {
+              playPending = false;
+              if (!force) autoplayRejected = true;
               markFailed();
             });
         } else if (!heroVideo.paused) {
+          playPending = false;
           markPlaying();
+        } else {
+          playPending = false;
         }
       };
 
+      const attemptWhenVisible = (reason: string) => {
+        if (document.visibilityState && document.visibilityState !== 'visible') return;
+        attemptPlay(reason);
+      };
+
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', attemptPlay, { once: true });
+        document.addEventListener('DOMContentLoaded', () => attemptWhenVisible('dom-ready'), { once: true });
       } else {
-        requestAnimationFrame(attemptPlay);
+        requestAnimationFrame(() => attemptWhenVisible('init'));
+      }
+
+      window.addEventListener('pageshow', () => attemptWhenVisible('pageshow'));
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') attemptWhenVisible('visibilitychange');
+      });
+
+      const attemptAfterInteraction = () => attemptPlay('interaction', { force: true });
+      ['touchstart', 'pointerdown', 'click'].forEach((eventName) => {
+        window.addEventListener(eventName, attemptAfterInteraction, { once: true, passive: true });
+      });
+
+      if (typeof mobilePosterMedia.addEventListener === 'function') {
+        mobilePosterMedia.addEventListener('change', syncPoster);
+      } else if (typeof mobilePosterMedia.addListener === 'function') {
+        mobilePosterMedia.addListener(syncPoster);
       }
     });
   };

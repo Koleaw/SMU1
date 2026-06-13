@@ -6,15 +6,74 @@ import MobileMenu from '../components/MobileMenu.astro';
 import CookieBanner from '../components/CookieBanner.astro';
 import { withBase } from '../utils/withBase';
 import yandex from '../data/yandex.json';
+import siteSettings from '../content/site-settings/global.json';
 
 interface Props {
   title: string;
   description: string;
   ogImage?: string;
+  robots?: string;
+  noindex?: boolean;
+  structuredData?: Record<string, unknown> | Record<string, unknown>[];
 }
 
-const { title, description, ogImage = '/assets/images/placeholders/og-default.svg' } = Astro.props;
+const {
+  title,
+  description,
+  ogImage = '/assets/images/placeholders/og-default.svg',
+  robots,
+  noindex = false,
+  structuredData
+} = Astro.props;
+
+const pageTitle = title?.trim() || 'СМУ-1';
+const pageDescription =
+  description?.trim() ||
+  'СМУ-1: производство металлоконструкций, уличной мебели, ограждений и изделий для благоустройства.';
 const canonical = new URL(Astro.url.pathname, Astro.site);
+const canonicalUrl = canonical.toString();
+const robotsContent = robots || (noindex ? 'noindex, nofollow' : undefined);
+const toAbsoluteUrl = (path: string) => {
+  if (/^https?:\/\//i.test(path)) return path;
+  return new URL(withBase(path), Astro.site).toString();
+};
+const ogImageUrl = toAbsoluteUrl(ogImage);
+
+const settings = siteSettings;
+const siteRoot = new URL(withBase('/'), Astro.site).toString();
+const isHomePage = Astro.url.pathname === withBase('/');
+const organizationData = {
+  '@type': 'LocalBusiness',
+  '@id': `${siteRoot}#organization`,
+  name: settings.companyName || 'СМУ-1',
+  url: siteRoot,
+  telephone: settings.phonePrimary,
+  email: settings.email,
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: settings.address || settings.legalAddress,
+    addressLocality: settings.city || 'Курган',
+    addressCountry: 'RU'
+  },
+  sameAs: [settings.telegram].filter(Boolean)
+};
+const websiteData = isHomePage
+  ? {
+      '@type': 'WebSite',
+      '@id': `${siteRoot}#website`,
+      name: settings.companyName || 'СМУ-1',
+      url: siteRoot,
+      publisher: {
+        '@id': `${siteRoot}#organization`
+      }
+    }
+  : null;
+const extraStructuredData = Array.isArray(structuredData)
+  ? structuredData
+  : structuredData
+    ? [structuredData]
+    : [];
+const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filter(Boolean);
 ---
 
 <!doctype html>
@@ -28,30 +87,38 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       href="https://fonts.googleapis.com/css2?family=Raleway:wght@600&family=Manrope:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <title>{title}</title>
-    <meta name="description" content={description} />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    {robotsContent && <meta name="robots" content={robotsContent} />}
     <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
-    <link rel="canonical" href={canonical.toString()} />
+    <link rel="canonical" href={canonicalUrl} />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonical.toString()} />
-    <meta property="og:image" content={new URL(withBase(ogImage), Astro.site).toString()} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <script type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', '@graph': jsonLdGraph })} />
     <script
       is:inline
       define:vars={{
         metrikaCounterId: yandex.metrika.counterId,
         metrikaScriptSrc: yandex.metrika.scriptSrc,
-        metrikaInit: yandex.metrika.init
+        metrikaInit: yandex.metrika.init,
+        metrikaDelayMs: 7000
       }}
     >
       (() => {
-        const consentKey = 'smu1_cookie_consent';
-        let metrikaLoaded = false;
+        const stateKey = '__smu1MetrikaState';
+        window[stateKey] = window[stateKey] || { loaded: false, timer: null };
+        const state = window[stateKey];
 
         const loadMetrika = () => {
-          if (metrikaLoaded) return;
-          metrikaLoaded = true;
+          if (state.loaded || !metrikaCounterId || !metrikaScriptSrc) return;
+          state.loaded = true;
 
           (function(m, e, t, r, i, k, a) {
             m[i] = m[i] || function() {
@@ -77,24 +144,21 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
           });
         };
 
-        const readConsent = () => {
-          try {
-            return localStorage.getItem(consentKey);
-          } catch {
-            return null;
-          }
+        const scheduleMetrika = () => {
+          if (state.loaded || state.timer) return;
+          state.timer = window.setTimeout(() => {
+            state.timer = null;
+            loadMetrika();
+          }, metrikaDelayMs);
         };
 
-        const savedConsent = readConsent();
-        if (savedConsent === 'accepted') {
-          loadMetrika();
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', scheduleMetrika, { once: true });
+        } else {
+          scheduleMetrika();
         }
 
-        document.addEventListener('smu1:cookie-consent-changed', (event) => {
-          if (event.detail === 'accepted') {
-            loadMetrika();
-          }
-        });
+        document.addEventListener('astro:page-load', scheduleMetrika);
       })();
     </script>
   </head>

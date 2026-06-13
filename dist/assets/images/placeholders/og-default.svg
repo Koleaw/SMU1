@@ -1,6 +1,14 @@
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 700'>
-<rect width='1200' height='700' fill='#e9edf2'/><rect x='35' y='35' width='1130' height='630' rx='18' fill='#f8fafc' stroke='#c9d3de'/>
-<text x='80' y='180' font-size='52' fill='#334759' font-family='Arial'>СМУ-1</text>
-<text x='80' y='250' font-size='34' fill='#5f6c79' font-family='Arial'>Фото будет заменено в мае</text>
-<text x='80' y='310' font-size='28' fill='#5f6c79' font-family='Arial'>og-default</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">СМУ-1</title>
+  <desc id="desc">Производство металлоконструкций, уличной мебели и изделий для благоустройства.</desc>
+  <rect width="1200" height="630" fill="#10161b"/>
+  <rect x="54" y="54" width="1092" height="522" rx="24" fill="#f7faf9"/>
+  <rect x="96" y="96" width="1008" height="438" rx="18" fill="#ffffff" stroke="#dbe4e0" stroke-width="2"/>
+  <path d="M96 426h1008v108H96z" fill="#eef5f1"/>
+  <circle cx="1024" cy="172" r="42" fill="#18b663" opacity=".16"/>
+  <path d="M990 172h68M1024 138v68" stroke="#18b663" stroke-width="10" stroke-linecap="round"/>
+  <text x="144" y="214" fill="#10161b" font-family="Arial, sans-serif" font-size="68" font-weight="700">СМУ-1</text>
+  <text x="144" y="286" fill="#31404a" font-family="Arial, sans-serif" font-size="34">Металлоконструкции, уличная мебель</text>
+  <text x="144" y="334" fill="#31404a" font-family="Arial, sans-serif" font-size="34">и благоустройство территорий</text>
+  <text x="144" y="486" fill="#52616b" font-family="Arial, sans-serif" font-size="27">Производство, поставка и монтаж для городских и коммерческих объектов</text>
 </svg>
