@@ -18,5 +18,27 @@
   "placeholderLabel": "Рендер будет добавлен позже",
   "mode": "custom-list",
   "seoTitle": "Калитки под заказ",
-  "seoDescription": "Калитки в едином стиле с забором, воротами и входными группами."
+  "seoDescription": "Калитки в едином стиле с забором, воротами и входными группами.",
+  "gallery": [
+    {
+      "src": "/uploads/chatgpt-image-31-2026-18-17-16-1781365674685.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-31-2026-18-17-20-1781365674696.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-31-2026-18-17-25-1781365674705.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-31-2026-18-17-31-1781365674718.png",
+      "alt": "",
+      "caption": ""
+    }
+  ]
 }
