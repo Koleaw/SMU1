@@ -18,5 +18,47 @@
   "placeholderLabel": "Рендер будет добавлен позже",
   "mode": "custom-list",
   "seoTitle": "Газонные ограждения под заказ",
-  "seoDescription": "Газонные ограждения для клумб, дворов, пешеходных зон и благоустройства территорий."
+  "seoDescription": "Газонные ограждения для клумб, дворов, пешеходных зон и благоустройства территорий.",
+  "gallery": [
+    {
+      "src": "/uploads/chatgpt-image-may-28-2026-02-49-39-pm-3-4-1781365709642.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-may-28-2026-02-49-39-pm-7-5-1781365709659.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-may-28-2026-02-49-39-pm-9-5-1781365709666.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-may-28-2026-02-49-39-pm-5-4-1781365709651.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-31-2026-18-02-34-1781365709607.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-31-2026-18-02-20-1781365709569.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-31-2026-18-02-27-1781365709586.png",
+      "alt": "",
+      "caption": ""
+    },
+    {
+      "src": "/uploads/chatgpt-image-31-2026-18-02-38-1781365709624.png",
+      "alt": "",
+      "caption": ""
+    }
+  ]
 }
