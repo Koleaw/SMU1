@@ -266,7 +266,7 @@ async function existingGitPathspecs(paths) {
 }
 
 function normalizeDeployTarget(value) {
-  const target = String(value || config?.ADMIN_DEFAULT_DEPLOY_TARGET || 'test').trim().toLowerCase();
+  const target = String(value || 'test').trim().toLowerCase();
   return DEPLOY_TARGETS.has(target) ? target : 'test';
 }
 
@@ -311,7 +311,8 @@ function assertProductionReady() {
 
 function buildPublishMessage(scope = 'content', target = 'test') {
   const timestamp = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
-  return `${scope}: ${target} publish from local admin (${timestamp})`;
+  const prefix = target === 'production' ? 'production' : 'preview';
+  return `${prefix}: update from local admin (${scope}, ${timestamp})`;
 }
 
 async function getCurrentBranch() {
@@ -325,16 +326,21 @@ async function publishPaths(paths, scope, options = {}) {
 
   const sourceBranch = await getCurrentBranch();
   const branch = getPublishBranch(target);
+  const ref = `refs/heads/${branch}`;
+  const requestedTarget = options.target === undefined || options.target === null || String(options.target).trim() === ''
+    ? 'test'
+    : String(options.target).trim();
+  const publishSource = String(options.source || '').trim();
   const pathspecs = await existingGitPathspecs(paths);
   if (!pathspecs.length) {
-    return { published: false, target, mode: target, branch, sourceBranch, message: 'Нет путей для публикации.' };
+    return { published: false, target, mode: target, requestedTarget, publishSource, branch, ref, sourceBranch, message: 'Нет путей для публикации.' };
   }
 
   await runGit(['add', '-A', '--', ...pathspecs]);
 
   try {
     await runGit(['diff', '--cached', '--quiet', '--', ...pathspecs]);
-    return { published: false, target, mode: target, branch, sourceBranch, message: 'Нет изменений для публикации.' };
+    return { published: false, target, mode: target, requestedTarget, publishSource, branch, ref, sourceBranch, message: 'Нет изменений для публикации.' };
   } catch {
     // git diff --quiet exits with 1 when there are staged changes.
   }
@@ -344,7 +350,7 @@ async function publishPaths(paths, scope, options = {}) {
   const commit = (await runGit(['rev-parse', '--short', 'HEAD'])).stdout;
   const commitSha = (await runGit(['rev-parse', 'HEAD'])).stdout;
   const remote = safeBranchName(config.ADMIN_GIT_REMOTE, 'origin');
-  await runGit(['push', remote, `HEAD:refs/heads/${branch}`]);
+  await runGit(['push', remote, `HEAD:${ref}`]);
   const githubInfo = await buildGitHubPublicationInfo(branch, commitSha, target).catch((error) => ({
     statusError: error instanceof Error ? error.message : 'Не удалось получить статус GitHub Actions.'
   }));
@@ -353,7 +359,10 @@ async function publishPaths(paths, scope, options = {}) {
     published: true,
     target,
     mode: target,
+    requestedTarget,
+    publishSource,
     branch,
+    ref,
     sourceBranch,
     commit,
     commitSha,
@@ -558,7 +567,10 @@ async function getPublishStatus(params = {}) {
     return {
       target,
       mode: target,
+      requestedTarget: params.requestedTarget || target,
+      publishSource: params.publishSource || '',
       branch,
+      ref: params.ref || `refs/heads/${branch}`,
       commitSha,
       runId: runId || null,
       commitUrl: resolvedCommitUrl,
@@ -582,7 +594,10 @@ async function getPublishStatus(params = {}) {
   return {
     target,
     mode: target,
+    requestedTarget: params.requestedTarget || target,
+    publishSource: params.publishSource || '',
     branch,
+    ref: params.ref || `refs/heads/${branch}`,
     commitSha: run.head_sha || commitSha,
     commit: (run.head_sha || commitSha).slice(0, 7),
     commitUrl: repository && (run.head_sha || commitSha)
@@ -611,8 +626,11 @@ function buildPublishReport(status, params = {}) {
     'SMU-1 publish/build error report',
     '',
     `Дата и время: ${now}`,
+    `Кнопка/источник в админке: ${params.publishSource || status.publishSource || ''}`,
+    `Target, отправленный админкой: ${params.requestedTarget || status.requestedTarget || target}`,
     `Режим публикации: ${target}`,
     `Branch: ${params.branch || status.branch || ''}`,
+    `Ref: ${params.ref || status.ref || ''}`,
     `Commit hash: ${params.commitSha || status.commitSha || params.commit || ''}`,
     `Commit message: ${params.commitMessage || status.commitMessage || ''}`,
     `Workflow event: ${status.workflowEvent || params.workflowEvent || ''}`,
@@ -1191,14 +1209,14 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/admin/publish' && req.method === 'POST') {
       const body = await readBody(req);
-      const result = await publishContentChanges({ target: body?.target });
+      const result = await publishContentChanges({ target: body?.target, source: body?.source });
       sendJson(res, 200, { ok: true, ...result });
       return;
     }
 
     if (pathname === '/api/admin/publish-all' && req.method === 'POST') {
       const body = await readBody(req);
-      const result = await publishWholeSiteChanges({ target: body?.target });
+      const result = await publishWholeSiteChanges({ target: body?.target, source: body?.source });
       sendJson(res, 200, { ok: true, ...result });
       return;
     }
@@ -1220,7 +1238,10 @@ const server = http.createServer(async (req, res) => {
         branch: url.searchParams.get('branch'),
         commitSha: url.searchParams.get('commitSha') || url.searchParams.get('commit'),
         commitMessage: url.searchParams.get('commitMessage'),
-        runId: url.searchParams.get('runId')
+        runId: url.searchParams.get('runId'),
+        requestedTarget: url.searchParams.get('requestedTarget'),
+        publishSource: url.searchParams.get('publishSource'),
+        ref: url.searchParams.get('ref')
       };
       const status = await getPublishStatus(params).catch((error) => ({
         target: normalizeDeployTarget(params.target),

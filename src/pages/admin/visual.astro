@@ -624,7 +624,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           <div class="publish-status__grid">
             <div class="publish-status__item"><span>Режим</span><strong>${esc(deployModeLabel(mode))}</strong></div>
             <div class="publish-status__item"><span>Branch</span><strong>${esc(status.branch || '')}</strong></div>
+            <div class="publish-status__item"><span>Ref</span><strong>${esc(status.ref || (status.branch ? `refs/heads/${status.branch}` : ''))}</strong></div>
             <div class="publish-status__item"><span>Commit</span>${status.commitUrl ? `<a href="${esc(status.commitUrl)}" target="_blank" rel="noreferrer">${esc(commitLabel)}</a>` : `<strong>${esc(commitLabel || '-')}</strong>`}</div>
+            <div class="publish-status__item"><span>Commit message</span><strong>${esc(status.commitMessage || '-')}</strong></div>
             <div class="publish-status__item"><span>GitHub Actions</span>${status.workflowRunUrl ? `<a href="${esc(status.workflowRunUrl)}" target="_blank" rel="noreferrer">${runLabel}</a>` : `<strong>${runLabel}</strong>`}</div>
             <div class="publish-status__item"><span>Статус</span><strong>${esc(publishStatusLabel(status.status))}</strong></div>
             <div class="publish-status__item"><span>Event</span><strong>${esc(status.workflowEvent || '-')}</strong></div>
@@ -692,8 +694,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           'SMU-1 publish/build error report',
           '',
           `Дата и время: ${new Date().toISOString()}`,
+          `Кнопка/источник в админке: ${status.publishSource || ''}`,
+          `Target, отправленный админкой: ${status.requestedTarget || status.mode || status.target || 'test'}`,
           `Режим публикации: ${status.mode || status.target || 'test'}`,
           `Branch: ${status.branch || ''}`,
+          `Ref: ${status.ref || (status.branch ? `refs/heads/${status.branch}` : '')}`,
           `Commit hash: ${status.commitSha || ''}`,
           `Commit message: ${status.commitMessage || ''}`,
           `Workflow event: ${status.workflowEvent || ''}`,
@@ -738,6 +743,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           if (status.commitSha) params.set('commitSha', status.commitSha);
           if (status.commitMessage) params.set('commitMessage', status.commitMessage);
           if (status.workflowRunId) params.set('runId', status.workflowRunId);
+          if (status.requestedTarget) params.set('requestedTarget', status.requestedTarget);
+          if (status.publishSource) params.set('publishSource', status.publishSource);
+          if (status.ref) params.set('ref', status.ref);
           try {
             const response = await fetch(`${API_BASE}/publish-report?${params.toString()}`, { credentials: 'include' });
             if (response.ok) {
@@ -2782,7 +2790,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       async function publishSavedChanges(savedMessage) {
         setAlert(`${savedMessage} Публикуем тестовую версию на GitHub...`);
         try {
-          const publish = await api('/publish', { method: 'POST', body: JSON.stringify({ target: 'test' }) });
+          const publish = await api('/publish', { method: 'POST', body: JSON.stringify({ target: 'test', source: 'visual-auto-save-test' }) });
           setPublishStatus({ ...publish, status: publish.status || 'queued', reportAvailable: false });
           startPublishPolling(publish);
           setAlert(publish.message || 'Изменения опубликованы в тестовую версию.');
@@ -2791,6 +2799,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           const status = {
             mode: 'test',
             target: 'test',
+            requestedTarget: 'test',
+            publishSource: 'visual-auto-save-test',
             status: 'failure',
             error: publishError.message || 'ошибка Git push',
             code: publishError.data?.code || '',
@@ -2817,7 +2827,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         $('publishProductionBtn').disabled = true;
         setAlert(isProduction ? 'Проверяем production-настройки и публикуем на сайт...' : 'Публикуем тестовую версию на GitHub...');
         try {
-          const publish = await api('/publish-all', { method: 'POST', body: JSON.stringify({ target }) });
+          const publish = await api('/publish-all', { method: 'POST', body: JSON.stringify({ target, source: isProduction ? 'visual-production-button' : 'visual-test-button' }) });
           setPublishStatus({ ...publish, status: publish.status || 'queued', reportAvailable: false });
           startPublishPolling(publish);
           setAlert(publish.message || (isProduction ? 'Публикация на сайт запущена.' : 'Тестовая публикация запущена.'));
@@ -2825,6 +2835,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           const status = {
             mode: target,
             target,
+            requestedTarget: target,
+            publishSource: isProduction ? 'visual-production-button' : 'visual-test-button',
             status: 'failure',
             error: error.message || (isProduction ? 'Ошибка публикации на сайт' : 'Ошибка тестовой публикации'),
             code: error.data?.code || '',

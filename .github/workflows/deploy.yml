@@ -56,6 +56,8 @@ jobs:
             base_path="${BASE_PATH_VAR:-/}"
             test_site_url="${TEST_SITE_URL_VAR:-https://${GITHUB_REPOSITORY_OWNER}.github.io}"
             effective_site_url="${SITE_URL_VAR}"
+            effective_site_url_source="SITE_URL"
+            production_check_ran="yes"
           else
             if [ "$repo_name" = "${GITHUB_REPOSITORY_OWNER}.github.io" ]; then
               fallback_base_path="/"
@@ -63,23 +65,36 @@ jobs:
               fallback_base_path="/${repo_name}"
             fi
             base_path="${TEST_BASE_PATH_VAR:-$fallback_base_path}"
-            test_site_url="${TEST_SITE_URL_VAR:-https://${GITHUB_REPOSITORY_OWNER}.github.io}"
+            if [ -n "$TEST_SITE_URL_VAR" ]; then
+              test_site_url="$TEST_SITE_URL_VAR"
+              effective_site_url_source="TEST_SITE_URL"
+            else
+              test_site_url="https://${GITHUB_REPOSITORY_OWNER}.github.io"
+              effective_site_url_source="github-pages-fallback"
+            fi
             effective_site_url="${test_site_url}"
+            production_check_ran="no"
           fi
 
           echo "deploy_target=${target}" >> "$GITHUB_OUTPUT"
           echo "base_path=${base_path}" >> "$GITHUB_OUTPUT"
           echo "test_site_url=${test_site_url}" >> "$GITHUB_OUTPUT"
           echo "effective_site_url=${effective_site_url}" >> "$GITHUB_OUTPUT"
+          echo "effective_site_url_source=${effective_site_url_source}" >> "$GITHUB_OUTPUT"
+          echo "production_check_ran=${production_check_ran}" >> "$GITHUB_OUTPUT"
           echo "GitHub event: ${EVENT_NAME}"
           echo "GitHub ref: ${GITHUB_REF_NAME}"
           echo "Deploy target: ${target}"
           echo "Base path: ${base_path}"
+          echo "Production check ran: ${production_check_ran}"
+          echo "Effective SITE_URL source: ${effective_site_url_source}"
           {
             echo "### Deploy metadata"
             echo "- Event: ${EVENT_NAME}"
             echo "- Ref: ${GITHUB_REF_NAME}"
             echo "- Deploy target: ${target}"
+            echo "- Production check ran: ${production_check_ran}"
+            echo "- Effective SITE_URL source: ${effective_site_url_source}"
             echo "- Base path: ${base_path}"
           } >> "$GITHUB_STEP_SUMMARY"
 
