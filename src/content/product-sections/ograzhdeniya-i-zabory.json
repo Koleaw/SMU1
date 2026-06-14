@@ -177,27 +177,62 @@
       ]
     },
     {
-      "type": "customOrder",
+      "type": "mediaText",
       "sectionId": "ograzhdeniya-custom",
       "title": "Изготавливаем под объект",
       "intro": "",
       "text": "Адаптируем решение под размеры, основание, цвет, заполнение, фурнитуру, режим эксплуатации и условия монтажа. Можно обратиться с чертежом, референсом, фото места установки или описанием задачи.",
       "theme": "light",
-      "media": "/assets/images/placeholders/metal-business.svg",
-      "placeholderLabel": "Фото или рендер ограждения под объект будет добавлен позже.",
-      "mediaPosition": "right",
+      "media": "/uploads/hero-1780248334850.png",
+      "placeholderLabel": "Визуализация ограждений под объект.",
+      "mediaPosition": "left",
       "isActive": true,
       "order": 30
+    },
+    {
+      "type": "process",
+      "sectionId": "ograzhdeniya-process",
+      "title": "Как работаем с ограждением",
+      "intro": "Сначала фиксируем ограничения площадки, затем собираем конструктив, внешний вид и состав узлов для расчета.",
+      "theme": "light",
+      "isActive": true,
+      "order": 40,
+      "steps": [
+        {
+          "title": "Уточняем исходные данные",
+          "text": "Размеры, высоту, основание, проходы, въезды, назначение территории и условия монтажа.",
+          "order": 10,
+          "isActive": true
+        },
+        {
+          "title": "Собираем конструктив",
+          "text": "Подбираем профиль, заполнение, опоры, крепления, фурнитуру и дополнительные узлы.",
+          "order": 20,
+          "isActive": true
+        },
+        {
+          "title": "Согласуем внешний вид",
+          "text": "Фиксируем цвет, покрытие, декоративные элементы и привязку к архитектуре объекта.",
+          "order": 30,
+          "isActive": true
+        },
+        {
+          "title": "Готовим расчет и производство",
+          "text": "Собираем объем материалов, сроки, этапность изготовления и условия вывода на объект.",
+          "order": 40,
+          "isActive": true
+        }
+      ]
     },
     {
       "type": "costFactors",
       "sectionId": "ograzhdeniya-cost",
       "title": "Что влияет на стоимость",
       "intro": "Для расчета важен не только тип ограждения, но и условия конкретной площадки.",
-      "theme": "graphite",
+      "theme": "light",
       "columns": 2,
       "isActive": true,
-      "order": 40,
+      "order": 50,
       "items": [
         {
           "text": "протяженность, высота и конфигурация линии ограждения",
@@ -239,8 +274,8 @@
       "theme": "light",
       "buttonLabel": "Получить расчет",
       "buttonHref": "/kontakty/",
-      "isActive": true,
-      "order": 50
+      "isActive": false,
+      "order": 60
     }
   ],
   "imageView": {

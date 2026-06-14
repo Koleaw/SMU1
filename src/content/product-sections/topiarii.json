@@ -21,8 +21,8 @@
     {
       "type": "cardGrid",
       "title": "Что изготавливаем",
-      "theme": "dark",
-      "grid": "2",
+      "theme": "light",
+      "grid": "3",
       "isActive": true,
       "order": 10,
       "items": [
@@ -97,7 +97,7 @@
     {
       "type": "process",
       "title": "Как подбираем решение",
-      "theme": "graphite",
+      "theme": "light",
       "media": "/assets/images/placeholders/landscaping.svg",
       "placeholderLabel": "Фото или рендер топиарной композиции будет добавлен позже",
       "mediaPosition": "left",
@@ -139,7 +139,7 @@
     {
       "type": "factorList",
       "title": "Что влияет на стоимость",
-      "theme": "dark",
+      "theme": "light",
       "columns": 2,
       "isActive": true,
       "order": 40,

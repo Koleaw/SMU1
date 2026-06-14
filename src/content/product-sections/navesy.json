@@ -16,8 +16,8 @@
     {
       "type": "cardGrid",
       "title": "Какие навесы делаем",
-      "theme": "dark",
-      "grid": "2",
+      "theme": "light",
+      "grid": "3",
       "isActive": true,
       "order": 10,
       "items": [
@@ -91,7 +91,7 @@
     {
       "type": "process",
       "title": "Как работаем",
-      "theme": "graphite",
+      "theme": "light",
       "mediaPosition": "right",
       "placeholderLabel": "Фото или рендер навеса будет добавлен позже",
       "isActive": true,
@@ -134,7 +134,7 @@
     {
       "type": "factorList",
       "title": "Что влияет на стоимость",
-      "theme": "dark",
+      "theme": "light",
       "columns": 2,
       "isActive": true,
       "order": 40,

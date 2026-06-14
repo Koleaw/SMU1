@@ -488,6 +488,7 @@ const isStaticPage = itemType === 'static-page';
 const isNavesyPage = itemType === 'product-section' && item.slug === 'navesy-i-kozyrki';
 const isMetalPage = itemType === 'product-section' && item.slug === 'metallokonstruktsii-dlya-biznesa';
 const isTopiaryPage = itemType === 'product-section' && item.slug === 'topiarii';
+const isFencesPage = itemType === 'product-section' && item.slug === 'ograzhdeniya-i-zabory';
 const isLandscapingPage = itemType === 'service' && item.slug === 'blagoustroystvo-territoriy';
 const isConstructionPage = itemType === 'service' && item.slug === 'stroitelstvo-i-remonty';
 const sectionCategories = itemType === 'product-section'
@@ -634,6 +635,8 @@ const heroKicker = itemAny.showBadge === false
 const heroClassName = hasMediaHero
   ? isTopiaryPage
     ? 'hero--media navesy-hero topiary-hero'
+    : isFencesPage
+      ? 'hero--media navesy-hero ograzhdeniya-hero'
     : 'hero--media navesy-hero'
   : isCatalogHub
     ? 'hero--catalog hero--catalog-clean'
@@ -711,7 +714,7 @@ const heroClassName = hasMediaHero
       </section>
     </>
   ) : hasEditablePageBlocks ? (
-    <PageBlocksRenderer pageBlocks={editablePageBlocks} />
+    <PageBlocksRenderer pageBlocks={editablePageBlocks} variant={isProjectDirection || itemType === 'service' ? 'projectDirection' : undefined} />
   ) : isStaticPage ? (
     <section class="section section--soft">
       <div class="container">
@@ -1179,6 +1182,7 @@ const heroClassName = hasMediaHero
     telegramLabel={contactTelegramLabel}
     emailLabel={contactEmailLabel}
     phoneLabel={contactPhoneLabel}
+    className={isFencesPage ? 'direct-contact--industrial' : undefined}
   />
 </BaseLayout>
 

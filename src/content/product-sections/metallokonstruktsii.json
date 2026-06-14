@@ -21,8 +21,8 @@
     {
       "type": "cardGrid",
       "title": "Что изготавливаем",
-      "theme": "dark",
-      "grid": "2",
+      "theme": "light",
+      "grid": "3",
       "isActive": true,
       "order": 10,
       "items": [
@@ -96,7 +96,7 @@
     {
       "type": "process",
       "title": "С чем можно обратиться",
-      "theme": "graphite",
+      "theme": "light",
       "media": "/assets/images/placeholders/metal-business.svg",
       "placeholderLabel": "Фото или рендер выполненного объекта будет добавлен позже",
       "mediaPosition": "right",
@@ -153,7 +153,7 @@
     {
       "type": "factorList",
       "title": "Что влияет на стоимость",
-      "theme": "dark",
+      "theme": "light",
       "columns": 2,
       "isActive": true,
       "order": 50,
