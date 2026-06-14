@@ -459,6 +459,7 @@ async function buildGitHubPublicationInfo(branch, commitSha, target = 'test') {
     workflowEvent,
     workflowBranch,
     workflowDeployTarget: inferWorkflowDeployTarget(workflowEvent, workflowBranch, target),
+    productionCheckRan: inferWorkflowDeployTarget(workflowEvent, workflowBranch, target) === 'production',
     status: normalizeRunStatus(run)
   };
 }
@@ -564,6 +565,7 @@ async function getPublishStatus(params = {}) {
       workflowEvent: '',
       workflowBranch: branch,
       workflowDeployTarget: inferWorkflowDeployTarget('', branch, target),
+      productionCheckRan: inferWorkflowDeployTarget('', branch, target) === 'production',
       status: 'queued',
       statusError: run?.statusLookupError || 'GitHub Actions run еще не найден. Повторите проверку через несколько секунд.'
     };
@@ -591,6 +593,7 @@ async function getPublishStatus(params = {}) {
     workflowEvent,
     workflowBranch,
     workflowDeployTarget,
+    productionCheckRan: workflowDeployTarget === 'production',
     status,
     runConclusion: run.conclusion || '',
     runName: run.name || '',
@@ -615,6 +618,7 @@ function buildPublishReport(status, params = {}) {
     `Workflow event: ${status.workflowEvent || params.workflowEvent || ''}`,
     `Workflow branch: ${status.workflowBranch || params.workflowBranch || params.branch || status.branch || ''}`,
     `Deploy target from workflow: ${status.workflowDeployTarget || params.workflowDeployTarget || target}`,
+    `Check production settings ran: ${status.productionCheckRan ? 'yes' : 'no'}`,
     `Workflow run URL: ${status.workflowRunUrl || params.workflowRunUrl || ''}`,
     `Run status: ${status.status || ''}${status.runConclusion ? ` (${status.runConclusion})` : ''}`,
     `Failed job: ${status.failedJob || ''}`,

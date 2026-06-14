@@ -629,6 +629,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             <div class="publish-status__item"><span>Статус</span><strong>${esc(publishStatusLabel(status.status))}</strong></div>
             <div class="publish-status__item"><span>Event</span><strong>${esc(status.workflowEvent || '-')}</strong></div>
             <div class="publish-status__item"><span>Workflow target</span><strong>${esc(status.workflowDeployTarget || mode)}</strong></div>
+            <div class="publish-status__item"><span>Production check</span><strong>${status.productionCheckRan ? 'yes' : 'no'}</strong></div>
           </div>
           ${status.failedJob || status.failedStep ? `<p class="publish-status__message is-error">Failed job: ${esc(status.failedJob || '-')}. Failed step: ${esc(status.failedStep || '-')}.</p>` : ''}
           ${errorText ? `<p class="publish-status__message is-error">${esc(errorText)}</p>` : ''}
@@ -698,6 +699,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           `Workflow event: ${status.workflowEvent || ''}`,
           `Workflow branch: ${status.workflowBranch || status.branch || ''}`,
           `Deploy target from workflow: ${status.workflowDeployTarget || status.mode || status.target || 'test'}`,
+          `Check production settings ran: ${status.productionCheckRan ? 'yes' : 'no'}`,
           `Workflow run URL: ${status.workflowRunUrl || ''}`,
           `Run status: ${status.status || 'failure'}`,
           `Failed job: ${status.failedJob || ''}`,

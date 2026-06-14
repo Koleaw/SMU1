@@ -55,6 +55,7 @@ jobs:
           if [ "$target" = "production" ]; then
             base_path="${BASE_PATH_VAR:-/}"
             test_site_url="${TEST_SITE_URL_VAR:-https://${GITHUB_REPOSITORY_OWNER}.github.io}"
+            effective_site_url="${SITE_URL_VAR}"
           else
             if [ "$repo_name" = "${GITHUB_REPOSITORY_OWNER}.github.io" ]; then
               fallback_base_path="/"
@@ -63,11 +64,13 @@ jobs:
             fi
             base_path="${TEST_BASE_PATH_VAR:-$fallback_base_path}"
             test_site_url="${TEST_SITE_URL_VAR:-https://${GITHUB_REPOSITORY_OWNER}.github.io}"
+            effective_site_url="${test_site_url}"
           fi
 
           echo "deploy_target=${target}" >> "$GITHUB_OUTPUT"
           echo "base_path=${base_path}" >> "$GITHUB_OUTPUT"
           echo "test_site_url=${test_site_url}" >> "$GITHUB_OUTPUT"
+          echo "effective_site_url=${effective_site_url}" >> "$GITHUB_OUTPUT"
           echo "GitHub event: ${EVENT_NAME}"
           echo "GitHub ref: ${GITHUB_REF_NAME}"
           echo "Deploy target: ${target}"
@@ -100,7 +103,7 @@ jobs:
       - run: npm run check
         env:
           DEPLOY_TARGET: ${{ steps.deploy-meta.outputs.deploy_target }}
-          SITE_URL: ${{ vars.SITE_URL }}
+          SITE_URL: ${{ steps.deploy-meta.outputs.effective_site_url }}
           TEST_SITE_URL: ${{ steps.deploy-meta.outputs.test_site_url }}
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
           ALLOW_TEMPORARY_SITE_URL: ${{ vars.ALLOW_TEMPORARY_SITE_URL || 'false' }}
@@ -108,7 +111,7 @@ jobs:
       - run: npm run build
         env:
           DEPLOY_TARGET: ${{ steps.deploy-meta.outputs.deploy_target }}
-          SITE_URL: ${{ vars.SITE_URL }}
+          SITE_URL: ${{ steps.deploy-meta.outputs.effective_site_url }}
           TEST_SITE_URL: ${{ steps.deploy-meta.outputs.test_site_url }}
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
           ALLOW_TEMPORARY_SITE_URL: ${{ vars.ALLOW_TEMPORARY_SITE_URL || 'false' }}
