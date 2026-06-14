@@ -106,6 +106,8 @@ const FULL_PUBLISH_PATHS = [
 const DEPLOY_TARGETS = new Set(['test', 'production']);
 const PRODUCTION_NOT_READY_MESSAGE = 'Боевой домен пока не настроен. Используйте тестовую публикацию.';
 const REPORT_LOG_LINES = 200;
+const DEFAULT_PREVIEW_BRANCH = 'preview';
+const DEFAULT_PRODUCTION_BRANCH = 'main';
 
 function formatUploadLimit(bytes) {
   return Math.round(bytes / (1024 * 1024));
@@ -269,17 +271,34 @@ function normalizeDeployTarget(value) {
 }
 
 function safeBranchName(value, fallback) {
-  const branch = String(value || fallback || '').trim();
+  const branch = String(value || fallback || '').trim().replace(/^refs\/heads\//, '');
   if (!branch || branch.includes('..') || !/^[A-Za-z0-9._/-]+$/.test(branch)) {
     throw new Error(`Некорректное имя ветки публикации: ${branch || '(пусто)'}`);
   }
   return branch;
 }
 
+function branchKey(value) {
+  return String(value || '').trim().replace(/^refs\/heads\//, '').toLowerCase();
+}
+
+function isProductionBranch(branch, productionBranch = config?.ADMIN_PRODUCTION_BRANCH) {
+  const key = branchKey(branch);
+  const productionKey = branchKey(productionBranch || DEFAULT_PRODUCTION_BRANCH);
+  return key === productionKey || key === 'main' || key === 'master';
+}
+
+function inferWorkflowDeployTarget(event, branch, requestedTarget = 'test') {
+  if (event === 'workflow_dispatch') return normalizeDeployTarget(requestedTarget);
+  return isProductionBranch(branch) ? 'production' : 'test';
+}
+
 function getPublishBranch(target) {
-  return target === 'production'
-    ? safeBranchName(config.ADMIN_PRODUCTION_BRANCH, 'main')
-    : safeBranchName(config.ADMIN_PREVIEW_BRANCH, 'preview');
+  const productionBranch = safeBranchName(config.ADMIN_PRODUCTION_BRANCH, DEFAULT_PRODUCTION_BRANCH);
+  if (target === 'production') return productionBranch;
+
+  const previewBranch = safeBranchName(config.ADMIN_PREVIEW_BRANCH, DEFAULT_PREVIEW_BRANCH);
+  return isProductionBranch(previewBranch, productionBranch) ? DEFAULT_PREVIEW_BRANCH : previewBranch;
 }
 
 function assertProductionReady() {
@@ -325,8 +344,8 @@ async function publishPaths(paths, scope, options = {}) {
   const commit = (await runGit(['rev-parse', '--short', 'HEAD'])).stdout;
   const commitSha = (await runGit(['rev-parse', 'HEAD'])).stdout;
   const remote = safeBranchName(config.ADMIN_GIT_REMOTE, 'origin');
-  await runGit(['push', remote, `HEAD:${branch}`]);
-  const githubInfo = await buildGitHubPublicationInfo(branch, commitSha).catch((error) => ({
+  await runGit(['push', remote, `HEAD:refs/heads/${branch}`]);
+  const githubInfo = await buildGitHubPublicationInfo(branch, commitSha, target).catch((error) => ({
     statusError: error instanceof Error ? error.message : 'Не удалось получить статус GitHub Actions.'
   }));
 
@@ -425,16 +444,21 @@ async function githubRequest(pathname, options = {}) {
   return response.text();
 }
 
-async function buildGitHubPublicationInfo(branch, commitSha) {
+async function buildGitHubPublicationInfo(branch, commitSha, target = 'test') {
   const repository = await getGitHubRepository();
   const commitUrl = repository
     ? `https://github.com/${repository.owner}/${repository.repo}/commit/${commitSha}`
     : '';
   const run = await findWorkflowRun({ branch, commitSha }).catch(() => null);
+  const workflowEvent = run?.event || '';
+  const workflowBranch = run?.head_branch || branch;
   return {
     commitUrl,
     workflowRunId: run?.id ?? null,
     workflowRunUrl: run?.html_url ?? '',
+    workflowEvent,
+    workflowBranch,
+    workflowDeployTarget: inferWorkflowDeployTarget(workflowEvent, workflowBranch, target),
     status: normalizeRunStatus(run)
   };
 }
@@ -486,13 +510,18 @@ async function fetchRunFailureDetails(runId) {
   };
 }
 
-function explainFailure(logTail = '', statusError = '') {
+function explainFailure(logTail = '', statusError = '', context = {}) {
   const haystack = `${logTail}\n${statusError}`;
-  if (/SITE_URL must be set|Production build requires SITE_URL/i.test(haystack)) {
+  if (/SITE_URL must be set|Production build requires SITE_URL|Боевой домен пока не настроен/i.test(haystack)) {
+    const workflowTarget = context.workflowDeployTarget || context.target || '';
+    const workflowEvent = context.workflowEvent || '';
+    const workflowBranch = context.workflowBranch || context.branch || '';
     return {
       explanation: 'Build упал, потому что SITE_URL обязателен для production build, но не был задан.',
-      probableCause: 'Production-сборка была запущена до настройки боевого домена или repository variable SITE_URL.',
-      nextStep: 'Для текущей стадии используйте тестовую публикацию. Для боевой публикации задайте SITE_URL после подключения домена/хостинга.'
+      probableCause: workflowTarget === 'production'
+        ? `Workflow определил deploy target как production${workflowBranch ? ` для ветки ${workflowBranch}` : ''}${workflowEvent ? ` при событии ${workflowEvent}` : ''} и поэтому выполнил production settings check.`
+        : 'Workflow потребовал SITE_URL, хотя публикация была выбрана как тестовая. Проверьте ветку публикации и deploy target в workflow.',
+      nextStep: 'Для текущей стадии используйте тестовую публикацию в ветку preview. Для боевой публикации задайте SITE_URL после подключения домена/хостинга.'
     };
   }
 
@@ -532,6 +561,9 @@ async function getPublishStatus(params = {}) {
       commitSha,
       runId: runId || null,
       commitUrl: resolvedCommitUrl,
+      workflowEvent: '',
+      workflowBranch: branch,
+      workflowDeployTarget: inferWorkflowDeployTarget('', branch, target),
       status: 'queued',
       statusError: run?.statusLookupError || 'GitHub Actions run еще не найден. Повторите проверку через несколько секунд.'
     };
@@ -539,7 +571,12 @@ async function getPublishStatus(params = {}) {
 
   const status = normalizeRunStatus(run);
   const failureDetails = status === 'failure' ? await fetchRunFailureDetails(run.id) : {};
-  const failureInfo = status === 'failure' ? explainFailure(failureDetails.logTail, '') : {};
+  const workflowEvent = run.event || '';
+  const workflowBranch = run.head_branch || branch;
+  const workflowDeployTarget = inferWorkflowDeployTarget(workflowEvent, workflowBranch, target);
+  const failureInfo = status === 'failure'
+    ? explainFailure(failureDetails.logTail, '', { target, branch, workflowEvent, workflowBranch, workflowDeployTarget })
+    : {};
   return {
     target,
     mode: target,
@@ -551,6 +588,9 @@ async function getPublishStatus(params = {}) {
       : resolvedCommitUrl,
     workflowRunId: run.id,
     workflowRunUrl: run.html_url || '',
+    workflowEvent,
+    workflowBranch,
+    workflowDeployTarget,
     status,
     runConclusion: run.conclusion || '',
     runName: run.name || '',
@@ -572,6 +612,9 @@ function buildPublishReport(status, params = {}) {
     `Branch: ${params.branch || status.branch || ''}`,
     `Commit hash: ${params.commitSha || status.commitSha || params.commit || ''}`,
     `Commit message: ${params.commitMessage || status.commitMessage || ''}`,
+    `Workflow event: ${status.workflowEvent || params.workflowEvent || ''}`,
+    `Workflow branch: ${status.workflowBranch || params.workflowBranch || params.branch || status.branch || ''}`,
+    `Deploy target from workflow: ${status.workflowDeployTarget || params.workflowDeployTarget || target}`,
     `Workflow run URL: ${status.workflowRunUrl || params.workflowRunUrl || ''}`,
     `Run status: ${status.status || ''}${status.runConclusion ? ` (${status.runConclusion})` : ''}`,
     `Failed job: ${status.failedJob || ''}`,

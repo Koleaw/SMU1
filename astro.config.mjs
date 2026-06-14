@@ -2,7 +2,21 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
 const DEV_SITE_URL = 'http://localhost:4321';
-const DEPLOY_TARGET = String(process.env.DEPLOY_TARGET || process.env.DEPLOY_ENV || (process.env.CI === 'true' ? 'production' : 'development')).toLowerCase();
+const inferDeployTarget = () => {
+  const explicitTarget = process.env.DEPLOY_TARGET || process.env.DEPLOY_ENV;
+  if (explicitTarget) return explicitTarget;
+
+  if (process.env.CI === 'true') {
+    const refName = String(process.env.GITHUB_REF_NAME || '').toLowerCase();
+    if (['main', 'master'].includes(refName)) return 'production';
+    if (['preview', 'develop'].includes(refName)) return 'test';
+    return 'test';
+  }
+
+  return 'development';
+};
+
+const DEPLOY_TARGET = String(inferDeployTarget()).toLowerCase();
 const IS_PRODUCTION_DEPLOY = DEPLOY_TARGET === 'production';
 const STRICT_SITE_URL_REQUIRED = IS_PRODUCTION_DEPLOY || process.env.REQUIRE_SITE_URL === 'true';
 const TEMPORARY_SITE_URL_PATTERNS = [/example\./i, /localhost/i, /127\.0\.0\.1/i, /\.github\.io/i];

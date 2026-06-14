@@ -34,13 +34,17 @@ jobs:
       - id: deploy-meta
         shell: bash
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_TARGET: ${{ github.event.inputs.deploy_target }}
           SITE_URL_VAR: ${{ vars.SITE_URL }}
           TEST_SITE_URL_VAR: ${{ vars.TEST_SITE_URL }}
           BASE_PATH_VAR: ${{ vars.BASE_PATH }}
           TEST_BASE_PATH_VAR: ${{ vars.TEST_BASE_PATH }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            target="${{ inputs.deploy_target }}"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            target="${DISPATCH_TARGET:-test}"
+          elif [ "${GITHUB_REF_NAME}" = "preview" ] || [ "${GITHUB_REF_NAME}" = "develop" ]; then
+            target="test"
           elif [ "${GITHUB_REF_NAME}" = "main" ] || [ "${GITHUB_REF_NAME}" = "master" ]; then
             target="production"
           else
@@ -64,8 +68,17 @@ jobs:
           echo "deploy_target=${target}" >> "$GITHUB_OUTPUT"
           echo "base_path=${base_path}" >> "$GITHUB_OUTPUT"
           echo "test_site_url=${test_site_url}" >> "$GITHUB_OUTPUT"
+          echo "GitHub event: ${EVENT_NAME}"
+          echo "GitHub ref: ${GITHUB_REF_NAME}"
           echo "Deploy target: ${target}"
           echo "Base path: ${base_path}"
+          {
+            echo "### Deploy metadata"
+            echo "- Event: ${EVENT_NAME}"
+            echo "- Ref: ${GITHUB_REF_NAME}"
+            echo "- Deploy target: ${target}"
+            echo "- Base path: ${base_path}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-node@v4
         with:
@@ -85,6 +98,12 @@ jobs:
           fi
 
       - run: npm run check
+        env:
+          DEPLOY_TARGET: ${{ steps.deploy-meta.outputs.deploy_target }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          TEST_SITE_URL: ${{ steps.deploy-meta.outputs.test_site_url }}
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+          ALLOW_TEMPORARY_SITE_URL: ${{ vars.ALLOW_TEMPORARY_SITE_URL || 'false' }}
 
       - run: npm run build
         env:
