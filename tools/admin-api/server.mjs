@@ -21,7 +21,17 @@ const DEV_DEFAULTS = {
   SESSION_SECRET: 'dev-session-secret-change-me',
   ADMIN_API_PORT: '8787',
   ADMIN_ALLOWED_ORIGIN: '',
-  CONTENT_WRITE_MODE: 'local'
+  CONTENT_WRITE_MODE: 'local',
+  ADMIN_PREVIEW_BRANCH: 'preview',
+  ADMIN_PRODUCTION_BRANCH: 'main',
+  ADMIN_DEFAULT_DEPLOY_TARGET: 'test',
+  ADMIN_GIT_REMOTE: 'origin',
+  ADMIN_ALLOW_PRODUCTION_PUBLISH: 'false',
+  SITE_URL: '',
+  TEST_SITE_URL: '',
+  GITHUB_REPOSITORY: '',
+  GITHUB_TOKEN: '',
+  GITHUB_DEPLOY_TOKEN: ''
 };
 
 const COLLECTIONS = {
@@ -93,7 +103,9 @@ const FULL_PUBLISH_PATHS = [
   'tools',
   'tsconfig.json'
 ];
-const DEFAULT_PUBLISH_BRANCHES = ['main', 'master'];
+const DEPLOY_TARGETS = new Set(['test', 'production']);
+const PRODUCTION_NOT_READY_MESSAGE = 'Боевой домен пока не настроен. Используйте тестовую публикацию.';
+const REPORT_LOG_LINES = 200;
 
 function formatUploadLimit(bytes) {
   return Math.round(bytes / (1024 * 1024));
@@ -138,7 +150,17 @@ async function loadEnvConfig() {
     SESSION_SECRET: merged.SESSION_SECRET ?? DEV_DEFAULTS.SESSION_SECRET,
     ADMIN_API_PORT: Number(merged.ADMIN_API_PORT ?? DEV_DEFAULTS.ADMIN_API_PORT),
     ADMIN_ALLOWED_ORIGIN: merged.ADMIN_ALLOWED_ORIGIN ?? DEV_DEFAULTS.ADMIN_ALLOWED_ORIGIN,
-    CONTENT_WRITE_MODE: merged.CONTENT_WRITE_MODE ?? DEV_DEFAULTS.CONTENT_WRITE_MODE
+    CONTENT_WRITE_MODE: merged.CONTENT_WRITE_MODE ?? DEV_DEFAULTS.CONTENT_WRITE_MODE,
+    ADMIN_PREVIEW_BRANCH: merged.ADMIN_PREVIEW_BRANCH ?? DEV_DEFAULTS.ADMIN_PREVIEW_BRANCH,
+    ADMIN_PRODUCTION_BRANCH: merged.ADMIN_PRODUCTION_BRANCH ?? DEV_DEFAULTS.ADMIN_PRODUCTION_BRANCH,
+    ADMIN_DEFAULT_DEPLOY_TARGET: merged.ADMIN_DEFAULT_DEPLOY_TARGET ?? DEV_DEFAULTS.ADMIN_DEFAULT_DEPLOY_TARGET,
+    ADMIN_GIT_REMOTE: merged.ADMIN_GIT_REMOTE ?? DEV_DEFAULTS.ADMIN_GIT_REMOTE,
+    ADMIN_ALLOW_PRODUCTION_PUBLISH: merged.ADMIN_ALLOW_PRODUCTION_PUBLISH ?? DEV_DEFAULTS.ADMIN_ALLOW_PRODUCTION_PUBLISH,
+    SITE_URL: merged.SITE_URL ?? DEV_DEFAULTS.SITE_URL,
+    TEST_SITE_URL: merged.TEST_SITE_URL ?? DEV_DEFAULTS.TEST_SITE_URL,
+    GITHUB_REPOSITORY: merged.GITHUB_REPOSITORY ?? DEV_DEFAULTS.GITHUB_REPOSITORY,
+    GITHUB_TOKEN: merged.GITHUB_TOKEN ?? DEV_DEFAULTS.GITHUB_TOKEN,
+    GITHUB_DEPLOY_TOKEN: merged.GITHUB_DEPLOY_TOKEN ?? DEV_DEFAULTS.GITHUB_DEPLOY_TOKEN
   };
 
   if (!merged.ADMIN_USERNAME || !merged.ADMIN_PASSWORD || !merged.SESSION_SECRET) {
@@ -197,6 +219,14 @@ function sendPrettyJson(res, statusCode, payload, filename) {
   res.end(JSON.stringify(payload, null, 2));
 }
 
+function sendTextAttachment(res, statusCode, text, filename) {
+  res.statusCode = statusCode;
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+  res.end(text);
+}
+
 async function runGit(args) {
   try {
     const { stdout, stderr } = await execFileAsync('git', args, {
@@ -233,59 +263,337 @@ async function existingGitPathspecs(paths) {
   return result;
 }
 
-function buildPublishMessage(scope = 'content') {
-  const timestamp = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
-  return `${scope}: update from local admin (${timestamp})`;
+function normalizeDeployTarget(value) {
+  const target = String(value || config?.ADMIN_DEFAULT_DEPLOY_TARGET || 'test').trim().toLowerCase();
+  return DEPLOY_TARGETS.has(target) ? target : 'test';
 }
 
-async function ensurePublishBranch() {
-  await runGit(['rev-parse', '--is-inside-work-tree']);
-  const branch = (await runGit(['branch', '--show-current'])).stdout || 'HEAD';
-  const publishBranches = String(process.env.ADMIN_PUBLISH_BRANCHES || DEFAULT_PUBLISH_BRANCHES.join(','))
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-  if (publishBranches.length && !publishBranches.includes(branch)) {
-    throw new Error(`Текущая ветка "${branch}". Публичный хостинг должен быть подключен к ветке ${publishBranches.join('/')} или настройте ADMIN_PUBLISH_BRANCHES.`);
+function safeBranchName(value, fallback) {
+  const branch = String(value || fallback || '').trim();
+  if (!branch || branch.includes('..') || !/^[A-Za-z0-9._/-]+$/.test(branch)) {
+    throw new Error(`Некорректное имя ветки публикации: ${branch || '(пусто)'}`);
   }
   return branch;
 }
 
-async function publishPaths(paths, scope) {
-  const branch = await ensurePublishBranch();
+function getPublishBranch(target) {
+  return target === 'production'
+    ? safeBranchName(config.ADMIN_PRODUCTION_BRANCH, 'main')
+    : safeBranchName(config.ADMIN_PREVIEW_BRANCH, 'preview');
+}
+
+function assertProductionReady() {
+  if (config.ADMIN_ALLOW_PRODUCTION_PUBLISH === 'true') return;
+  if (String(config.SITE_URL || '').trim()) return;
+  const error = new Error(PRODUCTION_NOT_READY_MESSAGE);
+  error.code = 'PRODUCTION_NOT_READY';
+  throw error;
+}
+
+function buildPublishMessage(scope = 'content', target = 'test') {
+  const timestamp = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
+  return `${scope}: ${target} publish from local admin (${timestamp})`;
+}
+
+async function getCurrentBranch() {
+  await runGit(['rev-parse', '--is-inside-work-tree']);
+  return (await runGit(['branch', '--show-current'])).stdout || 'HEAD';
+}
+
+async function publishPaths(paths, scope, options = {}) {
+  const target = normalizeDeployTarget(options.target);
+  if (target === 'production') assertProductionReady();
+
+  const sourceBranch = await getCurrentBranch();
+  const branch = getPublishBranch(target);
   const pathspecs = await existingGitPathspecs(paths);
   if (!pathspecs.length) {
-    return { published: false, branch, message: 'Нет путей для публикации.' };
+    return { published: false, target, mode: target, branch, sourceBranch, message: 'Нет путей для публикации.' };
   }
 
   await runGit(['add', '-A', '--', ...pathspecs]);
 
   try {
     await runGit(['diff', '--cached', '--quiet', '--', ...pathspecs]);
-    return { published: false, branch, message: 'Нет изменений для публикации.' };
+    return { published: false, target, mode: target, branch, sourceBranch, message: 'Нет изменений для публикации.' };
   } catch {
     // git diff --quiet exits with 1 when there are staged changes.
   }
 
-  const commitMessage = buildPublishMessage(scope);
+  const commitMessage = buildPublishMessage(scope, target);
   await runGit(['commit', '-m', commitMessage, '--', ...pathspecs]);
   const commit = (await runGit(['rev-parse', '--short', 'HEAD'])).stdout;
-  await runGit(['push']);
+  const commitSha = (await runGit(['rev-parse', 'HEAD'])).stdout;
+  const remote = safeBranchName(config.ADMIN_GIT_REMOTE, 'origin');
+  await runGit(['push', remote, `HEAD:${branch}`]);
+  const githubInfo = await buildGitHubPublicationInfo(branch, commitSha).catch((error) => ({
+    statusError: error instanceof Error ? error.message : 'Не удалось получить статус GitHub Actions.'
+  }));
 
   return {
     published: true,
+    target,
+    mode: target,
     branch,
+    sourceBranch,
     commit,
-    message: `Опубликовано в GitHub: ${commit}. Публичный хостинг обновится после завершения автодеплоя.`
+    commitSha,
+    commitMessage,
+    ...githubInfo,
+    message: target === 'production'
+      ? `Опубликовано в GitHub: ${commit}. Production build запущен для ветки ${branch}.`
+      : `Опубликовано в GitHub: ${commit}. Тестовая сборка запущена для ветки ${branch}.`
   };
 }
 
-async function publishContentChanges() {
-  return publishPaths(PUBLISH_PATHS, 'content');
+async function publishContentChanges(options = {}) {
+  return publishPaths(PUBLISH_PATHS, 'content', options);
 }
 
-async function publishWholeSiteChanges() {
-  return publishPaths(FULL_PUBLISH_PATHS, 'site');
+async function publishWholeSiteChanges(options = {}) {
+  return publishPaths(FULL_PUBLISH_PATHS, 'site', options);
+}
+
+function parseGitHubRemote(value = '') {
+  const remote = String(value).trim();
+  const httpsMatch = remote.match(/^https:\/\/github\.com\/([^/]+)\/(.+?)(?:\.git)?$/i);
+  if (httpsMatch) return { owner: httpsMatch[1], repo: httpsMatch[2] };
+  const sshMatch = remote.match(/^git@github\.com:([^/]+)\/(.+?)(?:\.git)?$/i);
+  if (sshMatch) return { owner: sshMatch[1], repo: sshMatch[2] };
+  return null;
+}
+
+async function getGitHubRepository() {
+  const configured = String(config.GITHUB_REPOSITORY || '').trim();
+  if (configured.includes('/')) {
+    const [owner, repo] = configured.split('/');
+    if (owner && repo) return { owner, repo: repo.replace(/\.git$/i, '') };
+  }
+
+  const remoteName = safeBranchName(config.ADMIN_GIT_REMOTE, 'origin');
+  const remote = (await runGit(['config', '--get', `remote.${remoteName}.url`]).catch(() => ({ stdout: '' }))).stdout;
+  return parseGitHubRemote(remote);
+}
+
+function getGitHubToken() {
+  return String(config.GITHUB_DEPLOY_TOKEN || config.GITHUB_TOKEN || '').trim();
+}
+
+function maskSecrets(text = '') {
+  let safe = String(text || '');
+  const secretValues = Object.entries(config)
+    .filter(([key, value]) => /(TOKEN|SECRET|PASSWORD|KEY)/i.test(key) && typeof value === 'string' && value.length >= 8)
+    .map(([, value]) => value)
+    .filter(Boolean);
+
+  for (const secret of secretValues) {
+    safe = safe.split(secret).join('[secret]');
+  }
+
+  return safe
+    .replace(/github_pat_[A-Za-z0-9_]+/g, '[github-token]')
+    .replace(/gh[pousr]_[A-Za-z0-9_]+/g, '[github-token]')
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [secret]');
+}
+
+async function githubRequest(pathname, options = {}) {
+  const repository = await getGitHubRepository();
+  if (!repository) {
+    throw new Error('Не удалось определить GitHub repository. Укажите GITHUB_REPOSITORY=owner/repo.');
+  }
+
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    ...(options.headers || {})
+  };
+  const token = getGitHubToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(`https://api.github.com/repos/${repository.owner}/${repository.repo}${pathname}`, {
+    ...options,
+    headers
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(maskSecrets(`GitHub API ${response.status}: ${text || response.statusText}`));
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) return response.json();
+  return response.text();
+}
+
+async function buildGitHubPublicationInfo(branch, commitSha) {
+  const repository = await getGitHubRepository();
+  const commitUrl = repository
+    ? `https://github.com/${repository.owner}/${repository.repo}/commit/${commitSha}`
+    : '';
+  const run = await findWorkflowRun({ branch, commitSha }).catch(() => null);
+  return {
+    commitUrl,
+    workflowRunId: run?.id ?? null,
+    workflowRunUrl: run?.html_url ?? '',
+    status: normalizeRunStatus(run)
+  };
+}
+
+async function findWorkflowRun({ branch, commitSha, runId }) {
+  if (runId) {
+    return githubRequest(`/actions/runs/${encodeURIComponent(runId)}`);
+  }
+
+  const params = new URLSearchParams({ per_page: '20' });
+  if (branch) params.set('branch', branch);
+  if (commitSha) params.set('head_sha', commitSha);
+  const data = await githubRequest(`/actions/runs?${params.toString()}`);
+  return Array.isArray(data?.workflow_runs) ? data.workflow_runs[0] || null : null;
+}
+
+function normalizeRunStatus(run) {
+  if (!run) return 'queued';
+  if (run.status === 'completed') return run.conclusion === 'success' ? 'success' : 'failure';
+  if (run.status === 'in_progress') return 'in_progress';
+  return run.status || 'queued';
+}
+
+function lastLogLines(text = '', limit = REPORT_LOG_LINES) {
+  return maskSecrets(String(text || '').split(/\r?\n/).slice(-limit).join('\n'));
+}
+
+async function fetchRunFailureDetails(runId) {
+  if (!runId) return {};
+  const jobsData = await githubRequest(`/actions/runs/${encodeURIComponent(runId)}/jobs?per_page=100`).catch(() => null);
+  const jobs = Array.isArray(jobsData?.jobs) ? jobsData.jobs : [];
+  const failedJob = jobs.find((job) => job.conclusion && !['success', 'skipped'].includes(job.conclusion))
+    || jobs.find((job) => job.status && job.status !== 'completed')
+    || null;
+  const failedStep = failedJob?.steps?.find((step) => step.conclusion && !['success', 'skipped'].includes(step.conclusion)) || null;
+
+  let logTail = '';
+  if (failedJob?.id) {
+    const logs = await githubRequest(`/actions/jobs/${encodeURIComponent(failedJob.id)}/logs`, {
+      headers: { Accept: 'text/plain' }
+    }).catch(() => '');
+    logTail = lastLogLines(logs, REPORT_LOG_LINES);
+  }
+
+  return {
+    failedJob: failedJob?.name || '',
+    failedStep: failedStep?.name || '',
+    logTail
+  };
+}
+
+function explainFailure(logTail = '', statusError = '') {
+  const haystack = `${logTail}\n${statusError}`;
+  if (/SITE_URL must be set|Production build requires SITE_URL/i.test(haystack)) {
+    return {
+      explanation: 'Build упал, потому что SITE_URL обязателен для production build, но не был задан.',
+      probableCause: 'Production-сборка была запущена до настройки боевого домена или repository variable SITE_URL.',
+      nextStep: 'Для текущей стадии используйте тестовую публикацию. Для боевой публикации задайте SITE_URL после подключения домена/хостинга.'
+    };
+  }
+
+  if (/npm run check|astro check/i.test(haystack)) {
+    return {
+      explanation: 'Сборка остановилась на проверке проекта.',
+      probableCause: 'В коде или данных есть ошибка, которую поймал astro check.',
+      nextStep: 'Запустите локально npm run check, исправьте ошибку и повторите публикацию.'
+    };
+  }
+
+  return {
+    explanation: 'GitHub Actions завершился с ошибкой.',
+    probableCause: 'Точная причина указана в failed job/step и хвосте лога.',
+    nextStep: 'Откройте workflow run, проверьте failed step, затем локально выполните npm run check и npm run build.'
+  };
+}
+
+async function getPublishStatus(params = {}) {
+  const target = normalizeDeployTarget(params.target);
+  const branch = safeBranchName(params.branch, getPublishBranch(target));
+  const commitSha = String(params.commitSha || params.commit || '').trim();
+  const runId = String(params.runId || '').trim();
+  const repository = await getGitHubRepository().catch(() => null);
+  const resolvedCommitUrl = repository && commitSha
+    ? `https://github.com/${repository.owner}/${repository.repo}/commit/${commitSha}`
+    : '';
+  const run = await findWorkflowRun({ branch, commitSha, runId }).catch((error) => ({
+    statusLookupError: error instanceof Error ? error.message : 'Не удалось получить статус GitHub Actions.'
+  }));
+
+  if (!run || run.statusLookupError) {
+    return {
+      target,
+      mode: target,
+      branch,
+      commitSha,
+      runId: runId || null,
+      commitUrl: resolvedCommitUrl,
+      status: 'queued',
+      statusError: run?.statusLookupError || 'GitHub Actions run еще не найден. Повторите проверку через несколько секунд.'
+    };
+  }
+
+  const status = normalizeRunStatus(run);
+  const failureDetails = status === 'failure' ? await fetchRunFailureDetails(run.id) : {};
+  const failureInfo = status === 'failure' ? explainFailure(failureDetails.logTail, '') : {};
+  return {
+    target,
+    mode: target,
+    branch,
+    commitSha: run.head_sha || commitSha,
+    commit: (run.head_sha || commitSha).slice(0, 7),
+    commitUrl: repository && (run.head_sha || commitSha)
+      ? `https://github.com/${repository.owner}/${repository.repo}/commit/${run.head_sha || commitSha}`
+      : resolvedCommitUrl,
+    workflowRunId: run.id,
+    workflowRunUrl: run.html_url || '',
+    status,
+    runConclusion: run.conclusion || '',
+    runName: run.name || '',
+    createdAt: run.created_at || '',
+    updatedAt: run.updated_at || '',
+    ...failureDetails,
+    ...failureInfo
+  };
+}
+
+function buildPublishReport(status, params = {}) {
+  const now = new Date().toISOString();
+  const target = normalizeDeployTarget(params.target || status.target);
+  const lines = [
+    'SMU-1 publish/build error report',
+    '',
+    `Дата и время: ${now}`,
+    `Режим публикации: ${target}`,
+    `Branch: ${params.branch || status.branch || ''}`,
+    `Commit hash: ${params.commitSha || status.commitSha || params.commit || ''}`,
+    `Commit message: ${params.commitMessage || status.commitMessage || ''}`,
+    `Workflow run URL: ${status.workflowRunUrl || params.workflowRunUrl || ''}`,
+    `Run status: ${status.status || ''}${status.runConclusion ? ` (${status.runConclusion})` : ''}`,
+    `Failed job: ${status.failedJob || ''}`,
+    `Failed step: ${status.failedStep || ''}`,
+    '',
+    'Короткое объяснение ошибки:',
+    status.explanation || (status.statusError ? maskSecrets(status.statusError) : 'Публикация или сборка завершилась с ошибкой.'),
+    '',
+    'Вероятная причина:',
+    status.probableCause || 'Смотрите failed job/step и последние строки лога.',
+    '',
+    'Что сделать дальше:',
+    status.nextStep || 'Запустите локальные проверки, исправьте ошибку и повторите публикацию.',
+    '',
+    'Команды для локальной проверки:',
+    'npm run check',
+    'npm run build',
+    '',
+    `Последние ${REPORT_LOG_LINES} строк лога failed step/job:`,
+    status.logTail ? maskSecrets(status.logTail) : '(лог недоступен)'
+  ];
+  return lines.join('\n');
 }
 
 function readBody(req) {
@@ -835,14 +1143,47 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === '/api/admin/publish' && req.method === 'POST') {
-      const result = await publishContentChanges();
+      const body = await readBody(req);
+      const result = await publishContentChanges({ target: body?.target });
       sendJson(res, 200, { ok: true, ...result });
       return;
     }
 
     if (pathname === '/api/admin/publish-all' && req.method === 'POST') {
-      const result = await publishWholeSiteChanges();
+      const body = await readBody(req);
+      const result = await publishWholeSiteChanges({ target: body?.target });
       sendJson(res, 200, { ok: true, ...result });
+      return;
+    }
+
+    if (pathname === '/api/admin/publish-status' && req.method === 'GET') {
+      const status = await getPublishStatus({
+        target: url.searchParams.get('target'),
+        branch: url.searchParams.get('branch'),
+        commitSha: url.searchParams.get('commitSha') || url.searchParams.get('commit'),
+        runId: url.searchParams.get('runId')
+      });
+      sendJson(res, 200, { ok: true, ...status });
+      return;
+    }
+
+    if (pathname === '/api/admin/publish-report' && req.method === 'GET') {
+      const params = {
+        target: url.searchParams.get('target'),
+        branch: url.searchParams.get('branch'),
+        commitSha: url.searchParams.get('commitSha') || url.searchParams.get('commit'),
+        commitMessage: url.searchParams.get('commitMessage'),
+        runId: url.searchParams.get('runId')
+      };
+      const status = await getPublishStatus(params).catch((error) => ({
+        target: normalizeDeployTarget(params.target),
+        branch: params.branch || '',
+        commitSha: params.commitSha || '',
+        status: 'failure',
+        statusError: error instanceof Error ? error.message : 'Не удалось получить статус GitHub Actions.'
+      }));
+      const filename = `smu1-publish-report-${new Date().toISOString().slice(0, 10)}.txt`;
+      sendTextAttachment(res, 200, buildPublishReport(status, params), filename);
       return;
     }
 
@@ -1011,7 +1352,11 @@ const server = http.createServer(async (req, res) => {
 
     sendJson(res, 404, { error: 'Маршрут не найден' });
   } catch (error) {
-    sendJson(res, 400, { error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+    const message = error instanceof Error ? maskSecrets(error.message) : 'Неизвестная ошибка';
+    sendJson(res, error?.code === 'PRODUCTION_NOT_READY' ? 409 : 400, {
+      error: message,
+      code: error?.code || 'ADMIN_API_ERROR'
+    });
   }
 });
 

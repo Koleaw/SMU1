@@ -30,6 +30,9 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .visual-topbar { position: sticky; top: 0; z-index: 100; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid rgb(16 22 27 / 11%); background: rgb(255 255 255 / 94%); box-shadow: 0 12px 34px rgb(16 22 27 / 8%); backdrop-filter: blur(14px); }
       .visual-topbar h2 { margin: 0; font-size: 19px; }
       .visual-topbar__left, .visual-topbar__right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      .publish-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+      .publish-action { display: grid; gap: 4px; max-width: 230px; }
+      .publish-action .admin-field-hint { max-width: 210px; }
       .visual-canvas { background: #fff; min-height: calc(100vh - 58px); }
       .admin-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 7px 10px; border: 1px solid #c4d0da; border-radius: 8px; background: #fff; color: #233445; font-size: 13px; font-weight: 700; line-height: 1; text-decoration: none; cursor: pointer; }
       .admin-btn:hover, .admin-btn:focus-visible { border-color: #95a8b8; background: #f5f8fb; }
@@ -52,6 +55,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-alert { display: none; padding: 10px 16px; border-bottom: 1px solid rgb(16 22 27 / 9%); background: #edf7f1; color: #1f6a44; font-weight: 800; }
       .admin-alert.is-visible { display: block; }
       .admin-alert.is-error { background: #fff0ef; color: #a53532; }
+      .publish-status { display: none; padding: 12px 16px; border-bottom: 1px solid rgb(16 22 27 / 9%); background: #f7fafb; }
+      .publish-status.is-visible { display: grid; gap: 10px; }
+      .publish-status__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+      .publish-status__item { display: grid; gap: 3px; min-width: 0; padding: 10px; border: 1px solid #d7e0e7; border-radius: 10px; background: #fff; }
+      .publish-status__item span { color: #607386; font-size: 12px; font-weight: 800; }
+      .publish-status__item strong, .publish-status__item a { overflow-wrap: anywhere; color: #17212b; font-size: 13px; font-weight: 800; }
+      .publish-status__message { margin: 0; color: #516273; font-size: 13px; line-height: 1.45; }
+      .publish-status__message.is-error { color: #a53532; font-weight: 800; }
       .admin-status { color: #587085; font-size: 13px; font-weight: 800; }
       .admin-status.is-dirty { color: #9a4f00; }
       .admin-breadcrumbs { align-items: center; background: #ffffff; border-bottom: 1px solid rgb(16 22 27 / 8%); color: #5d7185; display: flex; flex-wrap: wrap; font-size: 13px; gap: 6px; line-height: 1.35; min-height: 40px; padding: 8px 16px; }
@@ -168,7 +179,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       .admin-row-hidden, .admin-card-hidden { opacity: .55; outline: 1px dashed #b94a48; outline-offset: -3px; }
       .home-contact-card .admin-item-tools { margin-top: 12px; }
       @media (min-width: 920px) { .page-block-media-layout { grid-template-columns: 1fr 1fr; } }
-      @media (max-width: 1100px) { .visual-shell { grid-template-columns: 1fr; } .visual-sidebar { position: relative; height: auto; } .admin-create-grid, .admin-grid-2, .admin-grid-3, .admin-product-media-grid { grid-template-columns: 1fr; } .admin-navigation-row { grid-template-columns: 1fr; } .admin-navigation-row .admin-item-tools { grid-column: auto; } }
+      @media (max-width: 1100px) { .visual-shell { grid-template-columns: 1fr; } .visual-sidebar { position: relative; height: auto; } .admin-create-grid, .admin-grid-2, .admin-grid-3, .admin-product-media-grid, .publish-status__grid { grid-template-columns: 1fr; } .admin-navigation-row { grid-template-columns: 1fr; } .admin-navigation-row .admin-item-tools { grid-column: auto; } }
       @media (max-width: 767px) { .page-blocks-grid, .page-blocks-grid--2, .page-blocks-grid--3, .page-blocks-grid--4, .page-blocks-grid--auto { grid-template-columns: 1fr; } .page-blocks-columns { columns: 1; } }
     </style>
   </head>
@@ -201,13 +212,23 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           </div>
           <div class="visual-topbar__right">
             <button id="saveBtn" class="admin-btn admin-btn--primary" type="button" disabled>Сохранить</button>
-            <button id="publishAllBtn" class="admin-btn" type="button">Опубликовать весь сайт</button>
+            <div class="publish-actions" aria-label="Публикация сайта">
+              <div class="publish-action">
+                <button id="publishTestBtn" class="admin-btn" type="button">Опубликовать тестовую версию</button>
+                <span class="admin-field-hint">Для проверки изменений. Не требует боевого домена.</span>
+              </div>
+              <div class="publish-action">
+                <button id="publishProductionBtn" class="admin-btn" type="button">Опубликовать на сайт</button>
+                <span class="admin-field-hint">Для публикации на основной сайт. Будет доступно после настройки домена и хостинга.</span>
+              </div>
+            </div>
             <a id="publicLink" class="admin-btn" href="#" target="_blank" rel="noreferrer">Открыть страницу</a>
             <button id="logoutBtn" class="admin-btn" type="button">Выйти</button>
           </div>
         </header>
         <nav id="adminBreadcrumbs" class="admin-breadcrumbs" aria-label="Хлебные крошки"></nav>
         <div id="alertBox" class="admin-alert"></div>
+        <div id="publishStatusBox" class="publish-status"></div>
         <div id="workspace" class="visual-canvas"></div>
       </main>
       <input id="uploadInput" class="hidden" type="file" accept="image/*,.svg" multiple />
@@ -371,7 +392,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         navigationItems: [],
         navigationOriginal: [],
         navigationLoaded: false,
-        selectedProductRefs: new Set()
+        selectedProductRefs: new Set(),
+        publishStatus: null,
+        publishPollTimer: null,
+        publishPollAttempts: 0
       };
 
       const $ = (id) => document.getElementById(id);
@@ -514,7 +538,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           throw new Error('Не удалось подключиться к backend API. Запустите npm run admin:api.');
         }
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        if (!response.ok) {
+          const error = new Error(data.error || `HTTP ${response.status}`);
+          error.data = data;
+          throw error;
+        }
         return data;
       }
 
@@ -556,6 +584,172 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const box = $('alertBox');
         box.textContent = state.alert;
         box.className = `admin-alert ${state.alert ? 'is-visible' : ''} ${state.alertError ? 'is-error' : ''}`;
+      }
+
+      function deployModeLabel(mode) {
+        return mode === 'production' ? 'Сайт' : 'Тестовая версия';
+      }
+
+      function publishStatusLabel(status) {
+        const labels = {
+          queued: 'queued',
+          in_progress: 'in_progress',
+          success: 'success',
+          failure: 'failure'
+        };
+        return labels[status] || status || 'queued';
+      }
+
+      function setPublishStatus(status) {
+        state.publishStatus = status;
+        renderPublishStatus();
+      }
+
+      function renderPublishStatus() {
+        const box = $('publishStatusBox');
+        const status = state.publishStatus;
+        if (!status) {
+          box.className = 'publish-status';
+          box.innerHTML = '';
+          return;
+        }
+
+        const mode = status.mode || status.target || 'test';
+        const commitLabel = status.commit || (status.commitSha ? status.commitSha.slice(0, 7) : '');
+        const runLabel = status.workflowRunUrl ? 'Открыть run' : 'run еще не найден';
+        const errorText = status.error || status.statusError || '';
+        const canDownloadReport = status.status === 'failure' || status.reportAvailable || Boolean(errorText);
+        box.className = 'publish-status is-visible';
+        box.innerHTML = `
+          <div class="publish-status__grid">
+            <div class="publish-status__item"><span>Режим</span><strong>${esc(deployModeLabel(mode))}</strong></div>
+            <div class="publish-status__item"><span>Branch</span><strong>${esc(status.branch || '')}</strong></div>
+            <div class="publish-status__item"><span>Commit</span>${status.commitUrl ? `<a href="${esc(status.commitUrl)}" target="_blank" rel="noreferrer">${esc(commitLabel)}</a>` : `<strong>${esc(commitLabel || '-')}</strong>`}</div>
+            <div class="publish-status__item"><span>GitHub Actions</span>${status.workflowRunUrl ? `<a href="${esc(status.workflowRunUrl)}" target="_blank" rel="noreferrer">${runLabel}</a>` : `<strong>${runLabel}</strong>`}</div>
+            <div class="publish-status__item"><span>Статус</span><strong>${esc(publishStatusLabel(status.status))}</strong></div>
+          </div>
+          ${status.failedJob || status.failedStep ? `<p class="publish-status__message is-error">Failed job: ${esc(status.failedJob || '-')}. Failed step: ${esc(status.failedStep || '-')}.</p>` : ''}
+          ${errorText ? `<p class="publish-status__message is-error">${esc(errorText)}</p>` : ''}
+          ${status.message ? `<p class="publish-status__message">${esc(status.message)}</p>` : ''}
+          ${canDownloadReport ? `<button class="admin-btn" type="button" data-action="download-publish-report">Скачать отчет об ошибке</button>` : ''}
+        `;
+      }
+
+      function stopPublishPolling() {
+        if (state.publishPollTimer) window.clearInterval(state.publishPollTimer);
+        state.publishPollTimer = null;
+      }
+
+      async function pollPublishStatus() {
+        const current = state.publishStatus;
+        if (!current?.branch || !current?.commitSha) return;
+        const params = new URLSearchParams();
+        params.set('target', current.mode || current.target || 'test');
+        params.set('branch', current.branch);
+        params.set('commitSha', current.commitSha);
+        if (current.workflowRunId) params.set('runId', current.workflowRunId);
+        const next = await api(`/publish-status?${params.toString()}`);
+        setPublishStatus({ ...current, ...next, message: current.message });
+        if (next.status === 'success' || next.status === 'failure') stopPublishPolling();
+      }
+
+      function startPublishPolling(publish) {
+        stopPublishPolling();
+        if (!publish?.published || !publish.commitSha) return;
+        state.publishPollAttempts = 0;
+        state.publishPollTimer = window.setInterval(async () => {
+          state.publishPollAttempts += 1;
+          try {
+            await pollPublishStatus();
+          } catch (error) {
+            setPublishStatus({ ...state.publishStatus, statusError: error.message || 'Не удалось получить статус GitHub Actions. Откройте run вручную.' });
+          }
+          if (state.publishPollAttempts >= 45) {
+            stopPublishPolling();
+            setPublishStatus({ ...state.publishStatus, statusError: 'Не удалось получить финальный статус GitHub Actions. Откройте run вручную.' });
+          }
+        }, 7000);
+        window.setTimeout(() => pollPublishStatus().catch(() => {}), 2000);
+      }
+
+      function downloadTextFile(filename, content) {
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function buildLocalPublishReport(status) {
+        const lines = [
+          'SMU-1 publish/build error report',
+          '',
+          `Дата и время: ${new Date().toISOString()}`,
+          `Режим публикации: ${status.mode || status.target || 'test'}`,
+          `Branch: ${status.branch || ''}`,
+          `Commit hash: ${status.commitSha || ''}`,
+          `Commit message: ${status.commitMessage || ''}`,
+          `Workflow run URL: ${status.workflowRunUrl || ''}`,
+          `Run status: ${status.status || 'failure'}`,
+          `Failed job: ${status.failedJob || ''}`,
+          `Failed step: ${status.failedStep || ''}`,
+          '',
+          'Короткое объяснение ошибки:',
+          status.error || status.statusError || 'Публикация или сборка завершилась с ошибкой.',
+          '',
+          'Вероятная причина:',
+          status.probableCause || (status.code === 'PRODUCTION_NOT_READY'
+            ? 'SITE_URL для боевого сайта еще не настроен.'
+            : 'Причина указана в сообщении ошибки или GitHub Actions run.'),
+          '',
+          'Что сделать дальше:',
+          status.nextStep || (status.code === 'PRODUCTION_NOT_READY'
+            ? 'Используйте тестовую публикацию. После подключения домена и хостинга задайте SITE_URL и повторите публикацию на сайт.'
+            : 'Запустите локальные проверки, исправьте ошибку и повторите публикацию.'),
+          '',
+          'Команды для локальной проверки:',
+          'npm run check',
+          'npm run build',
+          '',
+          'Последние строки лога failed step/job:',
+          status.logTail || '(лог недоступен)'
+        ];
+        return lines.join('\n');
+      }
+
+      async function downloadPublishReport() {
+        const status = state.publishStatus;
+        if (!status) return;
+        if (status.branch && (status.commitSha || status.workflowRunId)) {
+          const params = new URLSearchParams();
+          params.set('target', status.mode || status.target || 'test');
+          params.set('branch', status.branch);
+          if (status.commitSha) params.set('commitSha', status.commitSha);
+          if (status.commitMessage) params.set('commitMessage', status.commitMessage);
+          if (status.workflowRunId) params.set('runId', status.workflowRunId);
+          try {
+            const response = await fetch(`${API_BASE}/publish-report?${params.toString()}`, { credentials: 'include' });
+            if (response.ok) {
+              const blob = await response.blob();
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = filenameFromDisposition(response.headers.get('Content-Disposition'));
+              document.body.append(link);
+              link.click();
+              link.remove();
+              URL.revokeObjectURL(url);
+              return;
+            }
+          } catch {
+            // Fall back to a local report below.
+          }
+        }
+        downloadTextFile(`smu1-publish-report-${new Date().toISOString().slice(0, 10)}.txt`, buildLocalPublishReport(status));
       }
 
       function markDirty() {
@@ -741,6 +935,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         renderWorkspace();
         renderBreadcrumbs();
         renderAlert();
+        renderPublishStatus();
         markDirty();
         if (scrollY !== null) requestAnimationFrame(() => window.scrollTo(0, scrollY));
       }
@@ -2578,32 +2773,63 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       async function publishSavedChanges(savedMessage) {
-        setAlert(`${savedMessage} Публикуем на GitHub...`);
+        setAlert(`${savedMessage} Публикуем тестовую версию на GitHub...`);
         try {
-          const publish = await api('/publish', { method: 'POST', body: JSON.stringify({}) });
-          setAlert(publish.message || 'Изменения опубликованы. Публичный хостинг обновится после завершения автодеплоя.');
+          const publish = await api('/publish', { method: 'POST', body: JSON.stringify({ target: 'test' }) });
+          setPublishStatus({ ...publish, status: publish.status || 'queued', reportAvailable: false });
+          startPublishPolling(publish);
+          setAlert(publish.message || 'Изменения опубликованы в тестовую версию.');
           return true;
         } catch (publishError) {
-          setAlert(`${savedMessage} Но публикация не прошла: ${publishError.message || 'ошибка Git push'}`, true);
+          const status = {
+            mode: 'test',
+            target: 'test',
+            status: 'failure',
+            error: publishError.message || 'ошибка Git push',
+            code: publishError.data?.code || '',
+            reportAvailable: true
+          };
+          setPublishStatus(status);
+          setAlert(`${savedMessage} Но тестовая публикация не прошла: ${status.error}`, true);
           return false;
         }
       }
 
-      async function publishWholeSite() {
+      async function publishWholeSite(target = 'test') {
         if (dirtyCount()) {
           setAlert('Сначала нажмите «Сохранить», чтобы записать текущие правки страницы.', true);
           return;
         }
-        if (!confirm('Опубликовать весь сайт в GitHub? Будут отправлены исходники, настройки, public и docs.')) return;
-        $('publishAllBtn').disabled = true;
-        setAlert('Публикуем весь сайт на GitHub...');
+        const isProduction = target === 'production';
+        const confirmText = isProduction
+          ? 'Опубликовать на основной сайт? Будет использована production-ветка. Продолжить?'
+          : 'Опубликовать тестовую версию? Будут отправлены исходники, настройки, public и docs в тестовую ветку.';
+        if (!confirm(confirmText)) return;
+
+        $('publishTestBtn').disabled = true;
+        $('publishProductionBtn').disabled = true;
+        setAlert(isProduction ? 'Проверяем production-настройки и публикуем на сайт...' : 'Публикуем тестовую версию на GitHub...');
         try {
-          const publish = await api('/publish-all', { method: 'POST', body: JSON.stringify({}) });
-          setAlert(publish.message || 'Весь сайт опубликован. Публичный хостинг обновится после завершения автодеплоя.');
+          const publish = await api('/publish-all', { method: 'POST', body: JSON.stringify({ target }) });
+          setPublishStatus({ ...publish, status: publish.status || 'queued', reportAvailable: false });
+          startPublishPolling(publish);
+          setAlert(publish.message || (isProduction ? 'Публикация на сайт запущена.' : 'Тестовая публикация запущена.'));
         } catch (error) {
-          setAlert(error.message || 'Ошибка публикации всего сайта', true);
+          const status = {
+            mode: target,
+            target,
+            status: 'failure',
+            error: error.message || (isProduction ? 'Ошибка публикации на сайт' : 'Ошибка тестовой публикации'),
+            code: error.data?.code || '',
+            reportAvailable: true,
+            probableCause: error.data?.code === 'PRODUCTION_NOT_READY' ? 'SITE_URL для боевого сайта еще не настроен.' : '',
+            nextStep: error.data?.code === 'PRODUCTION_NOT_READY' ? 'Используйте тестовую публикацию. После подключения домена и хостинга задайте SITE_URL.' : ''
+          };
+          setPublishStatus(status);
+          setAlert(status.error, true);
         } finally {
-          $('publishAllBtn').disabled = false;
+          $('publishTestBtn').disabled = false;
+          $('publishProductionBtn').disabled = false;
         }
       }
 
@@ -2886,7 +3112,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         });
 
         $('saveBtn').addEventListener('click', saveAll);
-        $('publishAllBtn').addEventListener('click', publishWholeSite);
+        $('publishTestBtn').addEventListener('click', () => publishWholeSite('test'));
+        $('publishProductionBtn').addEventListener('click', () => publishWholeSite('production'));
         $('logoutBtn').addEventListener('click', async () => {
           await api('/logout', { method: 'POST' }).catch(() => {});
           showLogin('Вы вышли из админки.');
@@ -2920,6 +3147,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           } finally {
             el.disabled = false;
           }
+          return;
+        }
+        if (action === 'download-publish-report') {
+          await downloadPublishReport();
           return;
         }
         if (action === 'choose-import-file') {

@@ -1,9 +1,18 @@
-name: Deploy Astro to GitHub Pages
+name: Build and Deploy Astro
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, preview, develop]
   workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: 'Куда публиковать сборку'
+        required: true
+        default: test
+        type: choice
+        options:
+          - test
+          - production
 
 permissions:
   contents: read
@@ -11,28 +20,87 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      deploy_target: ${{ steps.deploy-meta.outputs.deploy_target }}
     steps:
       - uses: actions/checkout@v4
+
+      - id: deploy-meta
+        shell: bash
+        env:
+          SITE_URL_VAR: ${{ vars.SITE_URL }}
+          TEST_SITE_URL_VAR: ${{ vars.TEST_SITE_URL }}
+          BASE_PATH_VAR: ${{ vars.BASE_PATH }}
+          TEST_BASE_PATH_VAR: ${{ vars.TEST_BASE_PATH }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            target="${{ inputs.deploy_target }}"
+          elif [ "${GITHUB_REF_NAME}" = "main" ] || [ "${GITHUB_REF_NAME}" = "master" ]; then
+            target="production"
+          else
+            target="test"
+          fi
+
+          repo_name="${GITHUB_REPOSITORY#*/}"
+          if [ "$target" = "production" ]; then
+            base_path="${BASE_PATH_VAR:-/}"
+            test_site_url="${TEST_SITE_URL_VAR:-https://${GITHUB_REPOSITORY_OWNER}.github.io}"
+          else
+            if [ "$repo_name" = "${GITHUB_REPOSITORY_OWNER}.github.io" ]; then
+              fallback_base_path="/"
+            else
+              fallback_base_path="/${repo_name}"
+            fi
+            base_path="${TEST_BASE_PATH_VAR:-$fallback_base_path}"
+            test_site_url="${TEST_SITE_URL_VAR:-https://${GITHUB_REPOSITORY_OWNER}.github.io}"
+          fi
+
+          echo "deploy_target=${target}" >> "$GITHUB_OUTPUT"
+          echo "base_path=${base_path}" >> "$GITHUB_OUTPUT"
+          echo "test_site_url=${test_site_url}" >> "$GITHUB_OUTPUT"
+          echo "Deploy target: ${target}"
+          echo "Base path: ${base_path}"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - run: npm ci
-      - run: npm run build
+
+      - name: Check production settings
+        if: steps.deploy-meta.outputs.deploy_target == 'production'
+        shell: bash
         env:
           SITE_URL: ${{ vars.SITE_URL }}
-          BASE_PATH: ${{ vars.BASE_PATH || '/' }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "::error::Боевой домен пока не настроен. Задайте repository variable SITE_URL или используйте тестовую публикацию."
+            exit 1
+          fi
+
+      - run: npm run check
+
+      - run: npm run build
+        env:
+          DEPLOY_TARGET: ${{ steps.deploy-meta.outputs.deploy_target }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          TEST_SITE_URL: ${{ steps.deploy-meta.outputs.test_site_url }}
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
           ALLOW_TEMPORARY_SITE_URL: ${{ vars.ALLOW_TEMPORARY_SITE_URL || 'false' }}
+
       - uses: actions/upload-pages-artifact@v3
+        if: steps.deploy-meta.outputs.deploy_target == 'test'
         with:
           path: dist
 
-  deploy:
+  deploy-test:
+    if: needs.build.outputs.deploy_target == 'test'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
