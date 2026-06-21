@@ -27,6 +27,7 @@ const DEV_DEFAULTS = {
   ADMIN_DEFAULT_DEPLOY_TARGET: 'test',
   ADMIN_GIT_REMOTE: 'origin',
   ADMIN_ALLOW_PRODUCTION_PUBLISH: 'false',
+  PRODUCTION_DEPLOY_ENABLED: 'false',
   SITE_URL: '',
   TEST_SITE_URL: '',
   GITHUB_REPOSITORY: '',
@@ -158,6 +159,7 @@ async function loadEnvConfig() {
     ADMIN_DEFAULT_DEPLOY_TARGET: merged.ADMIN_DEFAULT_DEPLOY_TARGET ?? DEV_DEFAULTS.ADMIN_DEFAULT_DEPLOY_TARGET,
     ADMIN_GIT_REMOTE: merged.ADMIN_GIT_REMOTE ?? DEV_DEFAULTS.ADMIN_GIT_REMOTE,
     ADMIN_ALLOW_PRODUCTION_PUBLISH: merged.ADMIN_ALLOW_PRODUCTION_PUBLISH ?? DEV_DEFAULTS.ADMIN_ALLOW_PRODUCTION_PUBLISH,
+    PRODUCTION_DEPLOY_ENABLED: merged.PRODUCTION_DEPLOY_ENABLED ?? DEV_DEFAULTS.PRODUCTION_DEPLOY_ENABLED,
     SITE_URL: merged.SITE_URL ?? DEV_DEFAULTS.SITE_URL,
     TEST_SITE_URL: merged.TEST_SITE_URL ?? DEV_DEFAULTS.TEST_SITE_URL,
     GITHUB_REPOSITORY: merged.GITHUB_REPOSITORY ?? DEV_DEFAULTS.GITHUB_REPOSITORY,
@@ -282,15 +284,111 @@ function branchKey(value) {
   return String(value || '').trim().replace(/^refs\/heads\//, '').toLowerCase();
 }
 
+function isProductionDeployEnabled() {
+  return String(config?.PRODUCTION_DEPLOY_ENABLED || '').trim().toLowerCase() === 'true';
+}
+
+function isSiteUrlConfigured() {
+  return Boolean(String(config?.SITE_URL || '').trim());
+}
+
+function getPublishConfigPayload() {
+  const productionBranch = safeBranchName(config.ADMIN_PRODUCTION_BRANCH, DEFAULT_PRODUCTION_BRANCH);
+  const previewCandidate = safeBranchName(config.ADMIN_PREVIEW_BRANCH, DEFAULT_PREVIEW_BRANCH);
+  const previewBranch = isProductionBranch(previewCandidate, productionBranch) ? DEFAULT_PREVIEW_BRANCH : previewCandidate;
+  const productionDeployEnabled = isProductionDeployEnabled();
+  const siteUrlConfigured = isSiteUrlConfigured();
+  return {
+    productionDeployEnabled,
+    siteUrlConfigured,
+    productionReady: productionDeployEnabled && siteUrlConfigured,
+    previewBranch,
+    productionBranch
+  };
+}
+
 function isProductionBranch(branch, productionBranch = config?.ADMIN_PRODUCTION_BRANCH) {
   const key = branchKey(branch);
   const productionKey = branchKey(productionBranch || DEFAULT_PRODUCTION_BRANCH);
   return key === productionKey || key === 'main' || key === 'master';
 }
 
-function inferWorkflowDeployTarget(event, branch, requestedTarget = 'test') {
-  if (event === 'workflow_dispatch') return normalizeDeployTarget(requestedTarget);
-  return isProductionBranch(branch) ? 'production' : 'test';
+function isTestBranch(branch) {
+  const key = branchKey(branch);
+  const previewKey = branchKey(config?.ADMIN_PREVIEW_BRANCH || DEFAULT_PREVIEW_BRANCH);
+  return key === previewKey || key === 'preview' || key === 'develop';
+}
+
+function inferWorkflowDeployMeta(event, branch, requestedTarget = 'test') {
+  const workflowEvent = String(event || '').trim();
+  const target = normalizeDeployTarget(requestedTarget);
+  const productionDeployEnabled = isProductionDeployEnabled();
+  const siteUrlConfigured = isSiteUrlConfigured();
+
+  if (workflowEvent === 'workflow_dispatch') {
+    if (target === 'production') {
+      if (productionDeployEnabled) {
+        return {
+          workflowDeployTarget: 'production',
+          productionCheckRan: true,
+          workflowDeployReason: 'workflow_dispatch requested production and PRODUCTION_DEPLOY_ENABLED=true.',
+          productionDeployEnabled,
+          siteUrlConfigured
+        };
+      }
+      return {
+        workflowDeployTarget: 'test',
+        productionCheckRan: false,
+        workflowDeployReason: 'workflow_dispatch requested production, but production deploy is disabled.',
+        productionDeployEnabled,
+        siteUrlConfigured
+      };
+    }
+    return {
+      workflowDeployTarget: 'test',
+      productionCheckRan: false,
+      workflowDeployReason: 'workflow_dispatch requested test.',
+      productionDeployEnabled,
+      siteUrlConfigured
+    };
+  }
+
+  if (isTestBranch(branch)) {
+    return {
+      workflowDeployTarget: 'test',
+      productionCheckRan: false,
+      workflowDeployReason: 'preview/develop branches always use test deployment.',
+      productionDeployEnabled,
+      siteUrlConfigured
+    };
+  }
+
+  if (isProductionBranch(branch)) {
+    if (productionDeployEnabled) {
+      return {
+        workflowDeployTarget: 'production',
+        productionCheckRan: true,
+        workflowDeployReason: 'main/master with PRODUCTION_DEPLOY_ENABLED=true.',
+        productionDeployEnabled,
+        siteUrlConfigured
+      };
+    }
+    return {
+      workflowDeployTarget: 'test',
+      productionCheckRan: false,
+      workflowDeployReason: 'main/master with production deploy disabled; running test build only.',
+      productionDeployEnabled,
+      siteUrlConfigured
+    };
+  }
+
+  return {
+    workflowDeployTarget: 'test',
+    productionCheckRan: false,
+    workflowDeployReason: 'Non-deploy branch; running test build only.',
+    productionDeployEnabled,
+    siteUrlConfigured
+  };
 }
 
 function getPublishBranch(target) {
@@ -302,10 +400,11 @@ function getPublishBranch(target) {
 }
 
 function assertProductionReady() {
-  if (config.ADMIN_ALLOW_PRODUCTION_PUBLISH === 'true') return;
-  if (String(config.SITE_URL || '').trim()) return;
+  if (isProductionDeployEnabled() && isSiteUrlConfigured()) return;
   const error = new Error(PRODUCTION_NOT_READY_MESSAGE);
   error.code = 'PRODUCTION_NOT_READY';
+  error.productionDeployEnabled = isProductionDeployEnabled();
+  error.siteUrlConfigured = isSiteUrlConfigured();
   throw error;
 }
 
@@ -327,20 +426,21 @@ async function publishPaths(paths, scope, options = {}) {
   const sourceBranch = await getCurrentBranch();
   const branch = getPublishBranch(target);
   const ref = `refs/heads/${branch}`;
+  const publishConfig = getPublishConfigPayload();
   const requestedTarget = options.target === undefined || options.target === null || String(options.target).trim() === ''
     ? 'test'
     : String(options.target).trim();
   const publishSource = String(options.source || '').trim();
   const pathspecs = await existingGitPathspecs(paths);
   if (!pathspecs.length) {
-    return { published: false, target, mode: target, requestedTarget, publishSource, branch, ref, sourceBranch, message: 'Нет путей для публикации.' };
+    return { published: false, target, mode: target, requestedTarget, publishSource, branch, ref, sourceBranch, ...publishConfig, message: 'Нет путей для публикации.' };
   }
 
   await runGit(['add', '-A', '--', ...pathspecs]);
 
   try {
     await runGit(['diff', '--cached', '--quiet', '--', ...pathspecs]);
-    return { published: false, target, mode: target, requestedTarget, publishSource, branch, ref, sourceBranch, message: 'Нет изменений для публикации.' };
+    return { published: false, target, mode: target, requestedTarget, publishSource, branch, ref, sourceBranch, ...publishConfig, message: 'Нет изменений для публикации.' };
   } catch {
     // git diff --quiet exits with 1 when there are staged changes.
   }
@@ -367,6 +467,7 @@ async function publishPaths(paths, scope, options = {}) {
     commit,
     commitSha,
     commitMessage,
+    ...publishConfig,
     ...githubInfo,
     message: target === 'production'
       ? `Опубликовано в GitHub: ${commit}. Production build запущен для ветки ${branch}.`
@@ -461,14 +562,14 @@ async function buildGitHubPublicationInfo(branch, commitSha, target = 'test') {
   const run = await findWorkflowRun({ branch, commitSha }).catch(() => null);
   const workflowEvent = run?.event || '';
   const workflowBranch = run?.head_branch || branch;
+  const workflowMeta = inferWorkflowDeployMeta(workflowEvent, workflowBranch, target);
   return {
     commitUrl,
     workflowRunId: run?.id ?? null,
     workflowRunUrl: run?.html_url ?? '',
     workflowEvent,
     workflowBranch,
-    workflowDeployTarget: inferWorkflowDeployTarget(workflowEvent, workflowBranch, target),
-    productionCheckRan: inferWorkflowDeployTarget(workflowEvent, workflowBranch, target) === 'production',
+    ...workflowMeta,
     status: normalizeRunStatus(run)
   };
 }
@@ -531,7 +632,7 @@ function explainFailure(logTail = '', statusError = '', context = {}) {
       probableCause: workflowTarget === 'production'
         ? `Workflow определил deploy target как production${workflowBranch ? ` для ветки ${workflowBranch}` : ''}${workflowEvent ? ` при событии ${workflowEvent}` : ''} и поэтому выполнил production settings check.`
         : 'Workflow потребовал SITE_URL, хотя публикация была выбрана как тестовая. Проверьте ветку публикации и deploy target в workflow.',
-      nextStep: 'Для текущей стадии используйте тестовую публикацию в ветку preview. Для боевой публикации задайте SITE_URL после подключения домена/хостинга.'
+      nextStep: 'Для текущей стадии используйте тестовую публикацию в ветку preview. Для боевой публикации задайте PRODUCTION_DEPLOY_ENABLED=true и SITE_URL после подключения домена/хостинга.'
     };
   }
 
@@ -564,6 +665,7 @@ async function getPublishStatus(params = {}) {
   }));
 
   if (!run || run.statusLookupError) {
+    const workflowMeta = inferWorkflowDeployMeta('', branch, target);
     return {
       target,
       mode: target,
@@ -576,8 +678,7 @@ async function getPublishStatus(params = {}) {
       commitUrl: resolvedCommitUrl,
       workflowEvent: '',
       workflowBranch: branch,
-      workflowDeployTarget: inferWorkflowDeployTarget('', branch, target),
-      productionCheckRan: inferWorkflowDeployTarget('', branch, target) === 'production',
+      ...workflowMeta,
       status: 'queued',
       statusError: run?.statusLookupError || 'GitHub Actions run еще не найден. Повторите проверку через несколько секунд.'
     };
@@ -587,9 +688,9 @@ async function getPublishStatus(params = {}) {
   const failureDetails = status === 'failure' ? await fetchRunFailureDetails(run.id) : {};
   const workflowEvent = run.event || '';
   const workflowBranch = run.head_branch || branch;
-  const workflowDeployTarget = inferWorkflowDeployTarget(workflowEvent, workflowBranch, target);
+  const workflowMeta = inferWorkflowDeployMeta(workflowEvent, workflowBranch, target);
   const failureInfo = status === 'failure'
-    ? explainFailure(failureDetails.logTail, '', { target, branch, workflowEvent, workflowBranch, workflowDeployTarget })
+    ? explainFailure(failureDetails.logTail, '', { target, branch, workflowEvent, workflowBranch, workflowDeployTarget: workflowMeta.workflowDeployTarget })
     : {};
   return {
     target,
@@ -607,8 +708,7 @@ async function getPublishStatus(params = {}) {
     workflowRunUrl: run.html_url || '',
     workflowEvent,
     workflowBranch,
-    workflowDeployTarget,
-    productionCheckRan: workflowDeployTarget === 'production',
+    ...workflowMeta,
     status,
     runConclusion: run.conclusion || '',
     runName: run.name || '',
@@ -622,21 +722,42 @@ async function getPublishStatus(params = {}) {
 function buildPublishReport(status, params = {}) {
   const now = new Date().toISOString();
   const target = normalizeDeployTarget(params.target || status.target);
+  const workflowEvent = status.workflowEvent || params.workflowEvent || '';
+  const workflowBranch = status.workflowBranch || params.workflowBranch || params.branch || status.branch || '';
+  const workflowMeta = inferWorkflowDeployMeta(workflowEvent, workflowBranch, target);
+  const detectedDeployTarget = status.workflowDeployTarget || params.workflowDeployTarget || workflowMeta.workflowDeployTarget;
+  const productionCheckRan = typeof status.productionCheckRan === 'boolean'
+    ? status.productionCheckRan
+    : workflowMeta.productionCheckRan;
+  const productionDeployEnabled = typeof status.productionDeployEnabled === 'boolean'
+    ? status.productionDeployEnabled
+    : workflowMeta.productionDeployEnabled;
+  const siteUrlConfigured = typeof status.siteUrlConfigured === 'boolean'
+    ? status.siteUrlConfigured
+    : workflowMeta.siteUrlConfigured;
+  const workflowDeployReason = status.workflowDeployReason || params.workflowDeployReason || workflowMeta.workflowDeployReason;
   const lines = [
     'SMU-1 publish/build error report',
     '',
     `Дата и время: ${now}`,
     `Кнопка/источник в админке: ${params.publishSource || status.publishSource || ''}`,
     `Target, отправленный админкой: ${params.requestedTarget || status.requestedTarget || target}`,
+    `Selected target: ${params.requestedTarget || status.requestedTarget || target}`,
     `Режим публикации: ${target}`,
     `Branch: ${params.branch || status.branch || ''}`,
+    `Event: ${workflowEvent}`,
     `Ref: ${params.ref || status.ref || ''}`,
     `Commit hash: ${params.commitSha || status.commitSha || params.commit || ''}`,
     `Commit message: ${params.commitMessage || status.commitMessage || ''}`,
-    `Workflow event: ${status.workflowEvent || params.workflowEvent || ''}`,
-    `Workflow branch: ${status.workflowBranch || params.workflowBranch || params.branch || status.branch || ''}`,
-    `Deploy target from workflow: ${status.workflowDeployTarget || params.workflowDeployTarget || target}`,
-    `Check production settings ran: ${status.productionCheckRan ? 'yes' : 'no'}`,
+    `Workflow event: ${workflowEvent}`,
+    `Workflow branch: ${workflowBranch}`,
+    `Deploy target from workflow: ${detectedDeployTarget}`,
+    `Detected DEPLOY_TARGET: ${detectedDeployTarget}`,
+    `PRODUCTION_DEPLOY_ENABLED: ${productionDeployEnabled ? 'true' : 'false'}`,
+    `SITE_URL configured: ${siteUrlConfigured ? 'yes' : 'no'}`,
+    `Check production settings ran: ${productionCheckRan ? 'yes' : 'no'}`,
+    `productionCheckRan: ${productionCheckRan ? 'true' : 'false'}`,
+    `Workflow decision: ${workflowDeployReason}`,
     `Workflow run URL: ${status.workflowRunUrl || params.workflowRunUrl || ''}`,
     `Run status: ${status.status || ''}${status.runConclusion ? ` (${status.runConclusion})` : ''}`,
     `Failed job: ${status.failedJob || ''}`,
@@ -1156,7 +1277,7 @@ const server = http.createServer(async (req, res) => {
       const token = buildSessionToken(config.SESSION_SECRET, username);
       sessions.set(token, { username, createdAt: Date.now() });
       writeSessionCookie(res, token);
-      sendJson(res, 200, { ok: true, username });
+      sendJson(res, 200, { ok: true, username, publishConfig: getPublishConfigPayload() });
       return;
     }
 
@@ -1175,7 +1296,7 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 200, { authenticated: false });
         return;
       }
-      sendJson(res, 200, { authenticated: true, username });
+      sendJson(res, 200, { authenticated: true, username, publishConfig: getPublishConfigPayload() });
       return;
     }
 
@@ -1421,9 +1542,11 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 404, { error: 'Маршрут не найден' });
   } catch (error) {
     const message = error instanceof Error ? maskSecrets(error.message) : 'Неизвестная ошибка';
+    const isProductionNotReady = error?.code === 'PRODUCTION_NOT_READY';
     sendJson(res, error?.code === 'PRODUCTION_NOT_READY' ? 409 : 400, {
       error: message,
-      code: error?.code || 'ADMIN_API_ERROR'
+      code: error?.code || 'ADMIN_API_ERROR',
+      ...(isProductionNotReady ? getPublishConfigPayload() : {})
     });
   }
 });

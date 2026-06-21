@@ -8,7 +8,9 @@ const inferDeployTarget = () => {
 
   if (process.env.CI === 'true') {
     const refName = String(process.env.GITHUB_REF_NAME || '').toLowerCase();
-    if (['main', 'master'].includes(refName)) return 'production';
+    if (['main', 'master'].includes(refName)) {
+      return process.env.PRODUCTION_DEPLOY_ENABLED === 'true' ? 'production' : 'test';
+    }
     if (['preview', 'develop'].includes(refName)) return 'test';
     return 'test';
   }

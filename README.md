@@ -19,9 +19,9 @@ npm run preview
 
 ## Деплой из админки и GitHub
 
-Сейчас используется тестовая публикация: админка пушит изменения в ветку `preview`, GitHub Actions собирает сайт с `DEPLOY_TARGET=test` и не требует боевой `SITE_URL`.
+Сейчас используется тестовая публикация: админка пушит изменения в ветку `preview`, GitHub Actions собирает сайт с `DEPLOY_TARGET=test` и не требует боевой `SITE_URL`. Обычный push в `main`/`master` без `PRODUCTION_DEPLOY_ENABLED=true` выполняет только тестовую/check-only сборку и не считается production deployment.
 
-Будущий боевой режим будет пушить в `main` и требовать `SITE_URL` после подключения домена и хостинга. Подробности: [docs/deploy.md](docs/deploy.md).
+Будущий боевой режим будет пушить в `main` и требовать `PRODUCTION_DEPLOY_ENABLED=true` вместе с `SITE_URL` после подключения домена и хостинга. Подробности: [docs/deploy.md](docs/deploy.md).
 
 ## Где менять контент
 

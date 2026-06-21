@@ -215,11 +215,11 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             <div class="publish-actions" aria-label="Публикация сайта">
               <div class="publish-action">
                 <button id="publishTestBtn" class="admin-btn" type="button">Опубликовать тестовую версию</button>
-                <span class="admin-field-hint">Для проверки изменений. Не требует боевого домена.</span>
+                <span id="publishTestHint" class="admin-field-hint">Работает сейчас: публикует тестовую версию. Не требует SITE_URL.</span>
               </div>
               <div class="publish-action">
                 <button id="publishProductionBtn" class="admin-btn" type="button">Опубликовать на сайт</button>
-                <span class="admin-field-hint">Для публикации на основной сайт. Будет доступно после настройки домена и хостинга.</span>
+                <span id="publishProductionHint" class="admin-field-hint">Недоступно, пока не заданы PRODUCTION_DEPLOY_ENABLED=true и SITE_URL.</span>
               </div>
             </div>
             <a id="publicLink" class="admin-btn" href="#" target="_blank" rel="noreferrer">Открыть страницу</a>
@@ -239,6 +239,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
     <script type="module" define:vars={{ adminApiBase, baseUrl, adminHome }}>
       const API_BASE = adminApiBase;
+      const PRODUCTION_NOT_READY_MESSAGE = 'Боевой сайт пока не настроен. Используйте тестовую публикацию.';
       const DEFAULT_MEDIA_VIEW = { fit: 'cover', positionX: 50, positionY: 50, scale: 1 };
       const COLLECTIONS = [
         ['static-pages', 'Страницы сайта'],
@@ -395,7 +396,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         selectedProductRefs: new Set(),
         publishStatus: null,
         publishPollTimer: null,
-        publishPollAttempts: 0
+        publishPollAttempts: 0,
+        publishConfig: {
+          productionDeployEnabled: false,
+          siteUrlConfigured: false,
+          productionReady: false,
+          previewBranch: 'preview',
+          productionBranch: 'main'
+        }
       };
 
       const $ = (id) => document.getElementById(id);
@@ -590,6 +598,69 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         return mode === 'production' ? 'Сайт' : 'Тестовая версия';
       }
 
+      function isProductionPublishReady() {
+        return state.publishConfig?.productionDeployEnabled === true && state.publishConfig?.siteUrlConfigured === true;
+      }
+
+      function setPublishConfig(config = {}) {
+        state.publishConfig = {
+          productionDeployEnabled: config.productionDeployEnabled === true,
+          siteUrlConfigured: config.siteUrlConfigured === true,
+          productionReady: config.productionReady === true,
+          previewBranch: config.previewBranch || state.publishConfig?.previewBranch || 'preview',
+          productionBranch: config.productionBranch || state.publishConfig?.productionBranch || 'main'
+        };
+        updatePublishControls();
+      }
+
+      function updatePublishControls(isBusy = false) {
+        const testButton = $('publishTestBtn');
+        const productionButton = $('publishProductionBtn');
+        const testHint = $('publishTestHint');
+        const productionHint = $('publishProductionHint');
+        const previewBranch = state.publishConfig?.previewBranch || 'preview';
+        const productionReady = isProductionPublishReady();
+
+        if (testButton) testButton.disabled = isBusy;
+        if (productionButton) {
+          productionButton.disabled = isBusy || !productionReady;
+          productionButton.title = productionReady ? '' : PRODUCTION_NOT_READY_MESSAGE;
+        }
+        if (testHint) {
+          testHint.textContent = `Работает сейчас: пушит в ${previewBranch}. Не требует SITE_URL.`;
+        }
+        if (productionHint) {
+          productionHint.textContent = productionReady
+            ? `Доступно: пушит в ${state.publishConfig.productionBranch || 'main'} и запускает production deployment.`
+            : 'Недоступно, пока не заданы PRODUCTION_DEPLOY_ENABLED=true и SITE_URL.';
+        }
+      }
+
+      function buildProductionBlockedStatus() {
+        const branch = state.publishConfig?.productionBranch || 'main';
+        return {
+          mode: 'production',
+          target: 'production',
+          requestedTarget: 'production',
+          publishSource: 'visual-production-button',
+          branch,
+          ref: `refs/heads/${branch}`,
+          workflowEvent: '',
+          workflowBranch: branch,
+          workflowDeployTarget: 'test',
+          workflowDeployReason: 'Production publish is blocked in admin because PRODUCTION_DEPLOY_ENABLED and SITE_URL are not configured.',
+          productionDeployEnabled: state.publishConfig?.productionDeployEnabled === true,
+          siteUrlConfigured: state.publishConfig?.siteUrlConfigured === true,
+          productionCheckRan: false,
+          status: 'failure',
+          error: PRODUCTION_NOT_READY_MESSAGE,
+          code: 'PRODUCTION_NOT_READY',
+          reportAvailable: true,
+          probableCause: 'Боевой режим не включен или SITE_URL для боевого сайта еще не задан.',
+          nextStep: 'Используйте тестовую публикацию. После подключения домена и хостинга задайте PRODUCTION_DEPLOY_ENABLED=true и SITE_URL.'
+        };
+      }
+
       function publishStatusLabel(status) {
         const labels = {
           queued: 'queued',
@@ -619,6 +690,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const runLabel = status.workflowRunUrl ? 'Открыть run' : 'run еще не найден';
         const errorText = status.error || status.statusError || '';
         const canDownloadReport = status.status === 'failure' || status.reportAvailable || Boolean(errorText);
+        const productionDeployEnabled = typeof status.productionDeployEnabled === 'boolean'
+          ? status.productionDeployEnabled
+          : state.publishConfig?.productionDeployEnabled === true;
+        const siteUrlConfigured = typeof status.siteUrlConfigured === 'boolean'
+          ? status.siteUrlConfigured
+          : state.publishConfig?.siteUrlConfigured === true;
         box.className = 'publish-status is-visible';
         box.innerHTML = `
           <div class="publish-status__grid">
@@ -632,10 +709,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             <div class="publish-status__item"><span>Event</span><strong>${esc(status.workflowEvent || '-')}</strong></div>
             <div class="publish-status__item"><span>Workflow target</span><strong>${esc(status.workflowDeployTarget || mode)}</strong></div>
             <div class="publish-status__item"><span>Production check</span><strong>${status.productionCheckRan ? 'yes' : 'no'}</strong></div>
+            <div class="publish-status__item"><span>PRODUCTION_DEPLOY_ENABLED</span><strong>${productionDeployEnabled ? 'true' : 'false'}</strong></div>
+            <div class="publish-status__item"><span>SITE_URL</span><strong>${siteUrlConfigured ? 'configured' : 'not set'}</strong></div>
           </div>
           ${status.failedJob || status.failedStep ? `<p class="publish-status__message is-error">Failed job: ${esc(status.failedJob || '-')}. Failed step: ${esc(status.failedStep || '-')}.</p>` : ''}
           ${errorText ? `<p class="publish-status__message is-error">${esc(errorText)}</p>` : ''}
           ${status.message ? `<p class="publish-status__message">${esc(status.message)}</p>` : ''}
+          ${status.workflowDeployReason ? `<p class="publish-status__message">${esc(status.workflowDeployReason)}</p>` : ''}
           ${canDownloadReport ? `<button class="admin-btn" type="button" data-action="download-publish-report">Скачать отчет об ошибке</button>` : ''}
         `;
       }
@@ -690,21 +770,34 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       function buildLocalPublishReport(status) {
+        const productionDeployEnabled = typeof status.productionDeployEnabled === 'boolean'
+          ? status.productionDeployEnabled
+          : state.publishConfig?.productionDeployEnabled === true;
+        const siteUrlConfigured = typeof status.siteUrlConfigured === 'boolean'
+          ? status.siteUrlConfigured
+          : state.publishConfig?.siteUrlConfigured === true;
         const lines = [
           'SMU-1 publish/build error report',
           '',
           `Дата и время: ${new Date().toISOString()}`,
           `Кнопка/источник в админке: ${status.publishSource || ''}`,
           `Target, отправленный админкой: ${status.requestedTarget || status.mode || status.target || 'test'}`,
+          `Selected target: ${status.requestedTarget || status.mode || status.target || 'test'}`,
           `Режим публикации: ${status.mode || status.target || 'test'}`,
           `Branch: ${status.branch || ''}`,
+          `Event: ${status.workflowEvent || ''}`,
           `Ref: ${status.ref || (status.branch ? `refs/heads/${status.branch}` : '')}`,
           `Commit hash: ${status.commitSha || ''}`,
           `Commit message: ${status.commitMessage || ''}`,
           `Workflow event: ${status.workflowEvent || ''}`,
           `Workflow branch: ${status.workflowBranch || status.branch || ''}`,
           `Deploy target from workflow: ${status.workflowDeployTarget || status.mode || status.target || 'test'}`,
+          `Detected DEPLOY_TARGET: ${status.workflowDeployTarget || status.mode || status.target || 'test'}`,
+          `PRODUCTION_DEPLOY_ENABLED: ${productionDeployEnabled ? 'true' : 'false'}`,
+          `SITE_URL configured: ${siteUrlConfigured ? 'yes' : 'no'}`,
           `Check production settings ran: ${status.productionCheckRan ? 'yes' : 'no'}`,
+          `productionCheckRan: ${status.productionCheckRan ? 'true' : 'false'}`,
+          `Workflow decision: ${status.workflowDeployReason || ''}`,
           `Workflow run URL: ${status.workflowRunUrl || ''}`,
           `Run status: ${status.status || 'failure'}`,
           `Failed job: ${status.failedJob || ''}`,
@@ -2818,13 +2911,18 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           return;
         }
         const isProduction = target === 'production';
+        if (isProduction && !isProductionPublishReady()) {
+          const status = buildProductionBlockedStatus();
+          setPublishStatus(status);
+          setAlert(PRODUCTION_NOT_READY_MESSAGE, true);
+          return;
+        }
         const confirmText = isProduction
           ? 'Опубликовать на основной сайт? Будет использована production-ветка. Продолжить?'
           : 'Опубликовать тестовую версию? Будут отправлены исходники, настройки, public и docs в тестовую ветку.';
         if (!confirm(confirmText)) return;
 
-        $('publishTestBtn').disabled = true;
-        $('publishProductionBtn').disabled = true;
+        updatePublishControls(true);
         setAlert(isProduction ? 'Проверяем production-настройки и публикуем на сайт...' : 'Публикуем тестовую версию на GitHub...');
         try {
           const publish = await api('/publish-all', { method: 'POST', body: JSON.stringify({ target, source: isProduction ? 'visual-production-button' : 'visual-test-button' }) });
@@ -2841,14 +2939,18 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
             error: error.message || (isProduction ? 'Ошибка публикации на сайт' : 'Ошибка тестовой публикации'),
             code: error.data?.code || '',
             reportAvailable: true,
-            probableCause: error.data?.code === 'PRODUCTION_NOT_READY' ? 'SITE_URL для боевого сайта еще не настроен.' : '',
-            nextStep: error.data?.code === 'PRODUCTION_NOT_READY' ? 'Используйте тестовую публикацию. После подключения домена и хостинга задайте SITE_URL.' : ''
+            productionDeployEnabled: error.data?.productionDeployEnabled === true,
+            siteUrlConfigured: error.data?.siteUrlConfigured === true,
+            productionCheckRan: false,
+            workflowDeployTarget: 'test',
+            workflowDeployReason: error.data?.code === 'PRODUCTION_NOT_READY' ? 'Production publish is blocked because PRODUCTION_DEPLOY_ENABLED and SITE_URL are not configured.' : '',
+            probableCause: error.data?.code === 'PRODUCTION_NOT_READY' ? 'Боевой режим не включен или SITE_URL для боевого сайта еще не задан.' : '',
+            nextStep: error.data?.code === 'PRODUCTION_NOT_READY' ? 'Используйте тестовую публикацию. После подключения домена и хостинга задайте PRODUCTION_DEPLOY_ENABLED=true и SITE_URL.' : ''
           };
           setPublishStatus(status);
           setAlert(status.error, true);
         } finally {
-          $('publishTestBtn').disabled = false;
-          $('publishProductionBtn').disabled = false;
+          updatePublishControls(false);
         }
       }
 
@@ -3357,6 +3459,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       function showApp() {
         $('loginView').classList.add('hidden');
         $('appView').classList.remove('hidden');
+        updatePublishControls();
       }
 
       async function boot() {
@@ -3365,7 +3468,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           event.preventDefault();
           const formData = new FormData(event.currentTarget);
           try {
-            await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
+            const session = await api('/login', { method: 'POST', body: JSON.stringify({ login: formData.get('login'), password: formData.get('password') }) });
+            setPublishConfig(session.publishConfig);
             showApp();
             await initFromUrl();
           } catch (error) {
@@ -3375,6 +3479,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         try {
           const me = await api('/me');
           if (!me.authenticated) { showLogin('Введите логин и пароль.'); return; }
+          setPublishConfig(me.publishConfig);
           showApp();
           await initFromUrl();
         } catch (error) {
