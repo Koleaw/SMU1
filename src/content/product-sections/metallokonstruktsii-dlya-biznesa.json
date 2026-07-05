@@ -8,7 +8,7 @@
   "showOnHome": true,
   "isActive": true,
   "mode": "custom-direction",
-  "image": "/assets/images/placeholders/metal-business.svg",
+  "image": "/uploads/chatgpt-image-5-2026-22-01-29-1783278108067.png",
   "placeholderLabel": "Рендер металлоконструкции будет добавлен позже",
   "seoTitle": "Металлоконструкции под заказ",
   "seoDescription": "Металлоконструкции под заказ для хозяйственных, коммерческих, производственных и частных объектов: каркасы, рамы, площадки, лестницы и конструкции по чертежам.",
@@ -184,5 +184,11 @@
         "нестандартная конструкция по чертежам"
       ]
     }
-  ]
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 50,
+    "positionY": 50,
+    "scale": 1
+  }
 }
