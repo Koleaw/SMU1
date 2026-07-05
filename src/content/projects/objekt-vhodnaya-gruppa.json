@@ -2,16 +2,16 @@
   "title": "Объект: входная группа (контент уточняется)",
   "slug": "objekt-vhodnaya-gruppa",
   "city": "Курган",
-  "shortDescription": "Металлоконструкции для входной группы.",
-  "whatWasDone": "Собрана конструкция с учетом эксплуатационных требований. Технические детали и итоговые метрики будут добавлены позже.",
+  "shortDescription": "Служебная заглушка. Отключена после добавления реальных объектов.",
+  "whatWasDone": "Служебная заглушка. Не показывать на сайте.",
   "image": "/assets/images/objects/object-3.svg",
   "gallery": [
     "/assets/images/objects/object-3.svg",
     "/assets/images/objects/object-4.svg"
   ],
-  "order": 2,
-  "isActive": true,
+  "order": 901,
+  "isActive": false,
   "year": 2025,
-  "seoTitle": "Выполненный объект: входная группа — СМУ-1",
-  "seoDescription": "Кейс: входная группа в Кургане, металлоконструкции под эксплуатационные требования."
+  "seoTitle": "Служебная заглушка — СМУ-1",
+  "seoDescription": "Служебная заглушка выполненного объекта."
 }

@@ -1,0 +1,17 @@
+{
+  "title": "Частичный ремонт сквера на улице Гоголя",
+  "slug": "remont-skvera-na-ulitse-gogolya",
+  "city": "Курган",
+  "shortDescription": "Работы по обновлению городского сквера и установка урн.",
+  "whatWasDone": "Выполнен частичный ремонт элементов сквера на улице Гоголя. В рамках работ установлены 10 урн с металлическими и деревянными элементами.",
+  "image": "/assets/images/placeholders/landscaping.svg",
+  "gallery": [
+    "/assets/images/placeholders/landscaping.svg",
+    "/assets/images/placeholders/street-furniture.svg"
+  ],
+  "order": 2,
+  "isActive": true,
+  "year": 2024,
+  "seoTitle": "Частичный ремонт сквера на улице Гоголя — СМУ-1",
+  "seoDescription": "Кейс СМУ-1: частичный ремонт сквера на улице Гоголя в Кургане и установка 10 урн для городской территории."
+}
