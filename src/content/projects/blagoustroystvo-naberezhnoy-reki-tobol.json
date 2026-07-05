@@ -4,9 +4,10 @@
   "city": "Курган",
   "shortDescription": "Комплексное благоустройство участка набережной в районе Энергетики.",
   "whatWasDone": "Выполнены работы по благоустройству участка набережной протяженностью около 300 метров: асфальтирование, устройство ограждений, лестницы и ограждения лестничного участка. Также установлены лавочки и урны для пешеходной зоны.",
-  "image": "/assets/images/placeholders/landscaping.svg",
+  "image": "/uploads/project-248f17177df30b29ab9b231a.jpg",
   "gallery": [
-    "/assets/images/placeholders/landscaping.svg"
+    "/uploads/project-da0872c68d9a09f0a7d2f995.jpg",
+    "/uploads/project-13f617982c8070a1abe2c203.jpg"
   ],
   "order": 1,
   "isActive": true,
