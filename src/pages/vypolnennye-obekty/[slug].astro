@@ -5,6 +5,7 @@ import Hero from '../../components/Hero.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import ObjectProjectGallery from '../../components/ObjectProjectGallery.astro';
 import { getProjectImages } from '../../utils/projectImages';
+import { projectCategory, projectLocation, projectText, projectWorkTypes } from '../../utils/projectContent';
 import { withBase } from '../../utils/withBase';
 
 export async function getStaticPaths() {
@@ -17,20 +18,22 @@ export async function getStaticPaths() {
 
 const { item } = Astro.props;
 const images = getProjectImages(item);
-const workType = item.workType || item.category || item.shortCategory || '';
-const heroDescription = [item.shortDescription, [item.city, item.year].filter(Boolean).join(', ')]
-  .filter(Boolean)
-  .join(' · ');
+const category = projectCategory(item);
+const location = projectLocation(item);
+const locationAndYear = [location, item.year].filter(Boolean).join(', ');
+const workTypes = projectWorkTypes(item);
+const materials = projectText(item.materials);
+const features = projectText(item.features);
 const factCards = [
   { title: 'Кратко', text: item.shortDescription },
-  { title: 'Что сделали', text: item.whatWasDone },
-  { title: 'Город', text: item.city },
-  workType && workType !== item.shortDescription ? { title: 'Тип работ', text: workType } : null,
-  Array.isArray(item.materials) && item.materials.length ? { title: 'Материалы', text: item.materials.join(', ') } : null,
   item.task ? { title: 'Задача', text: item.task } : null,
-  item.result ? { title: 'Результат', text: item.result } : null,
-  Array.isArray(item.features) && item.features.length ? { title: 'Особенности', text: item.features.join(', ') } : null
-].filter((card): card is { title: string; text: string } => Boolean(card && card.text));
+  { title: 'Что сделали', text: item.whatWasDone },
+  workTypes ? { title: 'Виды работ', text: workTypes } : null,
+  item.scope ? { title: 'Объем работ', text: item.scope } : null,
+  materials ? { title: 'Материалы', text: materials } : null,
+  features ? { title: 'Особенности объекта', text: features } : null,
+  item.result ? { title: 'Результат', text: item.result } : null
+].filter((card): card is { title: string; text: string } => Boolean(card?.text));
 ---
 <BaseLayout title={item.seoTitle} description={item.seoDescription}>
   <div class="breadcrumbs-bar">
@@ -40,21 +43,23 @@ const factCards = [
   </div>
 
   <Hero
-    kicker="Кейс объекта"
+    kicker={category || 'Кейс объекта'}
     className="hero--trust"
     title={item.title}
-    description={heroDescription}
+    description={locationAndYear}
     primaryLabel="Обсудить похожую задачу"
     primaryHref={withBase('/kontakty/')}
     secondaryLabel="Все объекты"
     secondaryHref={withBase('/vypolnennye-obekty/')}
   />
 
-  <section class="section object-gallery-section">
-    <div class="container">
-      <ObjectProjectGallery title={item.title} images={images} />
-    </div>
-  </section>
+  {images.length > 0 && (
+    <section class="section object-gallery-section">
+      <div class="container">
+        <ObjectProjectGallery title={item.title} images={images} />
+      </div>
+    </section>
+  )}
 
   <section class="section section--soft">
     <div class="container object-story-grid">

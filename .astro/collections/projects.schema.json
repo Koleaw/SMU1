@@ -31,20 +31,39 @@
         "task": {
           "type": "string"
         },
+        "locationLabel": {
+          "type": "string"
+        },
+        "workTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scope": {
+          "type": "string"
+        },
         "result": {
           "type": "string"
         },
         "materials": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
         },
         "features": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/projects/properties/materials"
+        },
+        "clientVisibility": {
+          "type": "string"
         },
         "shortDescription": {
           "type": "string"

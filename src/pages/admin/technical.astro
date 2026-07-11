@@ -310,7 +310,10 @@ const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE ?? 'http://127.0.0.1:
         } else if (state.selectedCollection === 'products') {
           root.innerHTML = renderGenericEditor(['title','slug','productCategorySlug','shortDescription','priceMode','priceFrom','showInCatalog','isActive','order','image','placeholderLabel','seoTitle','seoDescription']);
         } else if (state.selectedCollection === 'projects') {
-          root.innerHTML = renderGenericEditor(['title','slug','shortDescription','isActive','order','image','placeholderLabel','seoTitle','seoDescription'], ['city','whatWasDone','gallery','year']);
+          root.innerHTML = renderGenericEditor(
+            ['title','slug','category','locationLabel','city','year','shortDescription','whatWasDone','scope','result','clientVisibility','isActive','order','image','placeholderLabel','seoTitle','seoDescription'],
+            ['workTypes','materials','features','gallery']
+          );
         } else if (state.selectedCollection === 'jobs') {
           root.innerHTML = renderGenericEditor(['title','slug','city','employmentType','shortDescription','responsibilities','requirements','conditions','order','isActive']);
         } else {

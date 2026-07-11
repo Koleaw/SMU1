@@ -5,6 +5,12 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createContentJsonService } from './content-json.mjs';
+import {
+  MAX_PROJECT_MEDIA_REQUEST_SIZE,
+  parseMultipartFiles,
+  saveProjectMediaFiles
+} from './project-media.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,7 +19,7 @@ const execFileAsync = promisify(execFile);
 
 const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ROUTE_SLUG_COLLECTIONS = new Set(['static-pages', 'product-sections', 'services']);
-const LOCKED_STATIC_PAGE_SLUGS = new Set(['home', 'custom-order']);
+const LOCKED_STATIC_PAGE_SLUGS = new Set(['home', 'custom-order', 'vypolnennye-obekty']);
 const RESERVED_TOP_LEVEL_SLUGS = new Set(['admin', 'izgotovlenie-na-zakaz', '404']);
 const DEV_DEFAULTS = {
   ADMIN_USERNAME: 'admin',
@@ -79,6 +85,11 @@ const COLLECTIONS = {
   }
 };
 
+const DATA_SINGLETONS = {
+  navigation: { path: path.join(repoRoot, 'src/data/navigation.json') },
+  yandex: { path: path.join(repoRoot, 'src/data/yandex.json') }
+};
+
 const sessions = new Map();
 const NAVIGATION_PATH = path.join(repoRoot, 'src', 'data', 'navigation.json');
 const UPLOADS_DIR = path.join(repoRoot, 'public', 'uploads');
@@ -105,6 +116,8 @@ const FULL_PUBLISH_PATHS = [
   'tsconfig.json'
 ];
 const DEPLOY_TARGETS = new Set(['test', 'production']);
+const MAX_JSON_IMPORT_BODY_SIZE = 12 * 1024 * 1024;
+const API_CAPABILITIES = { contentJson: 1, contentBundles: 1 };
 const PRODUCTION_NOT_READY_MESSAGE = 'Боевой домен пока не настроен. Используйте тестовую публикацию.';
 const REPORT_LOG_LINES = 200;
 const DEFAULT_PREVIEW_BRANCH = 'preview';
@@ -782,16 +795,20 @@ function buildPublishReport(status, params = {}) {
   return lines.join('\n');
 }
 
-function readBody(req) {
+function readBody(req, maxBytes = 1_000_000) {
   return new Promise((resolve, reject) => {
-    let raw = '';
+    const chunks = [];
+    let size = 0;
     req.on('data', (chunk) => {
-      raw += chunk;
-      if (raw.length > 1_000_000) {
+      chunks.push(chunk);
+      size += chunk.length;
+      if (size > maxBytes) {
         reject(new Error('Payload too large'));
+        req.destroy();
       }
     });
     req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString('utf8');
       if (!raw) {
         resolve({});
         return;
@@ -823,7 +840,7 @@ function readRawBody(req, maxBytes = MAX_UPLOAD_SIZE + 1024) {
     req.on('data', (chunk) => {
       size += chunk.length;
       if (size > maxBytes) {
-        reject(new Error(`Файл слишком большой. Максимум ${formatUploadLimit(MAX_UPLOAD_SIZE)} MB.`));
+        reject(new Error(`Запрос слишком большой. Максимум ${formatUploadLimit(maxBytes)} MB.`));
         return;
       }
       chunks.push(chunk);
@@ -1237,6 +1254,7 @@ function clearSessionCookie(res) {
 
 const { config, usingDevCredentials } = await loadEnvConfig();
 const allowedOrigins = buildAllowedOrigins(config.ADMIN_ALLOWED_ORIGIN);
+const contentJson = createContentJsonService({ repoRoot, collections: COLLECTIONS, singletons: DATA_SINGLETONS });
 
 if (usingDevCredentials) {
   console.warn('[admin-api] WARNING: используются dev credentials (admin/admin). Добавьте .env.local или .env.admin.local');
@@ -1277,7 +1295,7 @@ const server = http.createServer(async (req, res) => {
       const token = buildSessionToken(config.SESSION_SECRET, username);
       sessions.set(token, { username, createdAt: Date.now() });
       writeSessionCookie(res, token);
-      sendJson(res, 200, { ok: true, username, publishConfig: getPublishConfigPayload() });
+      sendJson(res, 200, { ok: true, username, publishConfig: getPublishConfigPayload(), capabilities: API_CAPABILITIES });
       return;
     }
 
@@ -1293,14 +1311,15 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/admin/me' && req.method === 'GET') {
       const username = getAuthUser(req);
       if (!username) {
-        sendJson(res, 200, { authenticated: false });
+        sendJson(res, 200, { authenticated: false, capabilities: API_CAPABILITIES });
         return;
       }
-      sendJson(res, 200, { authenticated: true, username, publishConfig: getPublishConfigPayload() });
+      sendJson(res, 200, { authenticated: true, username, publishConfig: getPublishConfigPayload(), capabilities: API_CAPABILITIES });
       return;
     }
 
-    if (!requireAuth(req, res)) {
+    const authUser = requireAuth(req, res);
+    if (!authUser) {
       return;
     }
 
@@ -1325,6 +1344,55 @@ const server = http.createServer(async (req, res) => {
       const payload = await buildCatalogExport();
       const filename = `smu1-catalog-export-${exportedAt.toISOString().slice(0, 10)}.json`;
       sendPrettyJson(res, 200, payload, filename);
+      return;
+    }
+
+    if (pathname === '/api/admin/json-export/full-site' && req.method === 'GET') {
+      const exported = await contentJson.exportFullSite();
+      sendPrettyJson(res, 200, exported.payload, exported.filename);
+      return;
+    }
+
+    const pageJsonExportMatch = pathname.match(/^\/api\/admin\/json-export\/page\/([a-z0-9-]+)\/([a-z0-9-]+)$/i);
+    if (pageJsonExportMatch && req.method === 'GET') {
+      const [, collection, slug] = pageJsonExportMatch;
+      const exported = await contentJson.exportPage(collection, slug);
+      sendPrettyJson(res, 200, exported.payload, exported.filename);
+      return;
+    }
+
+    const jsonExportMatch = pathname.match(/^\/api\/admin\/json-export\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?$/i);
+    if (jsonExportMatch && req.method === 'GET') {
+      const [, collection, slug] = jsonExportMatch;
+      const exported = slug
+        ? await contentJson.exportSingle(collection, slug)
+        : await contentJson.exportCollection(collection);
+      sendPrettyJson(res, 200, exported.payload, exported.filename);
+      return;
+    }
+
+    if (pathname === '/api/admin/json-import/preview' && req.method === 'POST') {
+      const body = await readBody(req, MAX_JSON_IMPORT_BODY_SIZE);
+      const preview = await contentJson.preview({
+        owner: authUser,
+        collection: body?.collection,
+        scope: body?.scope,
+        currentSlug: body?.currentSlug,
+        writeMode: body?.writeMode,
+        rawJson: body?.rawJson
+      });
+      sendJson(res, 200, preview);
+      return;
+    }
+
+    if (pathname === '/api/admin/json-import/apply' && req.method === 'POST') {
+      const body = await readBody(req);
+      const result = await contentJson.apply({
+        owner: authUser,
+        operationId: body?.operationId,
+        replaceConfirmed: body?.replaceConfirmed === true
+      });
+      sendJson(res, result.result === 'success' ? 200 : 409, result);
       return;
     }
 
@@ -1373,6 +1441,24 @@ const server = http.createServer(async (req, res) => {
       }));
       const filename = `smu1-publish-report-${new Date().toISOString().slice(0, 10)}.txt`;
       sendTextAttachment(res, 200, buildPublishReport(status, params), filename);
+      return;
+    }
+
+    if (pathname === '/api/admin/project-media-upload' && req.method === 'POST') {
+      const contentType = req.headers['content-type'] || '';
+      if (!String(contentType).includes('multipart/form-data')) {
+        sendJson(res, 400, { error: 'Ожидается multipart/form-data' });
+        return;
+      }
+      const raw = await readRawBody(req, MAX_PROJECT_MEDIA_REQUEST_SIZE + 1024 * 1024);
+      const parts = parseMultipartFiles(raw, contentType);
+      const result = await saveProjectMediaFiles(parts, { uploadsDir: UPLOADS_DIR });
+      sendJson(res, result.files.length ? 200 : 400, {
+        ok: result.files.length > 0,
+        files: result.files,
+        errors: result.errors,
+        ...(result.files.length ? {} : { error: result.errors.map((item) => `${item.name}: ${item.error}`).join('; ') || 'Файлы не загружены' })
+      });
       return;
     }
 

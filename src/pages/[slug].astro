@@ -456,7 +456,7 @@ export async function getStaticPaths() {
   ]);
 
   const staticPagePaths = staticPages
-    .filter(({ data }) => !['home', 'custom-order'].includes(data.slug))
+    .filter(({ data }) => !['home', 'custom-order', 'vypolnennye-obekty'].includes(data.slug))
     .filter(({ data }) => data.isActive !== false)
     .filter(({ data }) => !occupiedSlugs.has(data.slug))
     .map(({ data }) => ({ params: { slug: data.slug }, props: { item: data, itemType: 'static-page' } }));

@@ -154,6 +154,47 @@ Endpoint:
 ## Debug JSON
 JSON доступен только как отладочная секция внизу под `Показать JSON`.
 
+## Экспорт и импорт JSON-контента
+В визуальном редакторе блок **JSON** доступен для всех коллекций `src/content`:
+- `product-sections`, `product-categories`, `products`, `services`;
+- `projects`, `static-pages`, `jobs`, `site-settings`.
+
+На экране сущности доступны экспорт и импорт одного JSON-объекта. На экране списка — экспорт и импорт всей коллекции. Массовый файл имеет формат:
+```json
+{
+  "type": "smu1_content_collection",
+  "version": 1,
+  "collection": "projects",
+  "exportedAt": "2026-07-05T00:00:00.000Z",
+  "items": []
+}
+```
+
+Импорт всегда проходит через preview. Режим `merge` сохраняет поля, которых нет во входном JSON; `replace` удаляет отсутствующие поля и требует отдельного подтверждения. Массовый импорт создаёт и обновляет записи по `slug`, но не удаляет отсутствующие записи. Изменение slug через импорт запрещено.
+
+После применения можно скачать TXT-отчёт с изменёнными файлами, warnings и errors. JSON-импорт сохраняет данные локально и **не запускает публикацию**. Для отправки изменений используется отдельная кнопка **«Опубликовать тестовую версию»**.
+
+В разделе **Работа → Импорт данных** доступны кнопки полного экспорта и импорта сайта. `smu1_full_site_export` содержит коллекции `static-pages`, `services`, `product-sections`, `product-categories`, `products`, `projects`, `jobs`, а также singletons `site-settings`, `navigation`, `yandex`.
+
+На редакторах публичных страниц доступны **«Скачать JSON страницы»** и **«Загрузить JSON страницы»**. Формат `smu1_page_bundle` включает данные страницы и связанные коллекции. Для `/vypolnennye-obekty/` bundle содержит static page `vypolnennye-obekty` и всю коллекцию `projects`; для раздела каталога — связанные категории и товары.
+
+API:
+- `GET /api/admin/json-export/:collection/:slug` — одна сущность;
+- `GET /api/admin/json-export/:collection` — вся коллекция;
+- `GET /api/admin/json-export/page/:collection/:slug` — page bundle;
+- `GET /api/admin/json-export/full-site` — весь редактируемый сайт;
+- `POST /api/admin/json-import/preview` — проверка и diff;
+- `POST /api/admin/json-import/apply` — применение подтверждённого preview.
+
+После обновления `tools/admin-api/server.mjs` обязательно перезапустите `npm run admin:api`: Node не перечитывает новые маршруты автоматически. Ответы `/login` и `/me` содержат `capabilities.contentJson: 1` и `capabilities.contentBundles: 1`; если capability отсутствует, визуальный редактор скрывает соответствующие JSON-кнопки и показывает инструкцию по перезапуску.
+
+При ошибке JSON API админка показывает endpoint, HTTP method, collection, slug, status и краткую причину. Кнопка **«Скачать отчёт ошибки»** сохраняет TXT с этими данными, response body и очищенным от secrets сообщением/stack.
+
+### Расширенный формат выполненного объекта
+Коллекция `projects` поддерживает опциональные поля `category`, `locationLabel`, `workTypes[]`, `scope`, `materials`, `features`, `result` и `clientVisibility`. `materials` и `features` принимают строку или массив строк; визуальный редактор сохраняет отредактированные списки массивами. `clientVisibility` является служебной заметкой и публично не выводится.
+
+Старые объекты без новых полей остаются валидными. `image` используется как обложка, `gallery` продолжает принимать массив строк и расширенные объекты изображений. Формат `export-completed-projects-all.json` и версия envelope не изменились.
+
 ## Ограничения Stage 1
 Пока не реализовано:
 - массовый visual editor для всех страниц;
