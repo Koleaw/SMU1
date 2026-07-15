@@ -1,0 +1,231 @@
+---
+import { withBase } from '../../../utils/withBase';
+import settings from '../../../content/site-settings/global.json';
+import CatalogV2Layout from './CatalogV2Layout.astro';
+import V2Breadcrumbs from './V2Breadcrumbs.astro';
+import V2ProductGallery from './V2ProductGallery.astro';
+import V2ProductCard from './V2ProductCard.astro';
+import V2DirectContact from './V2DirectContact.astro';
+import {
+  catalogV2CategoryHref,
+  catalogV2ProductHref,
+  cleanTextItems,
+  formatProductPrice,
+  productGalleryImages,
+  type CatalogProductRoute,
+  type CatalogV2Links
+} from './catalogV2Data';
+
+interface Props {
+  route: CatalogProductRoute;
+  relatedProducts: CatalogProductRoute[];
+  links: CatalogV2Links;
+  currentPath: string;
+}
+
+const { route, relatedProducts, links, currentPath } = Astro.props as Props;
+const { section, category, product } = route;
+const images = productGalleryImages(product);
+const materials = cleanTextItems(product.materials);
+const colors = cleanTextItems(product.colors);
+const features = cleanTextItems(product.features);
+const customizationItems = cleanTextItems(product.customizationItems);
+const dimensions = Array.isArray(product.dimensions)
+  ? product.dimensions
+      .filter((item) => item?.isActive !== false && (item?.label?.trim() || item?.value?.trim()))
+      .slice()
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  : [];
+const genericSpecLabels = new Set([
+  'размеры и характеристики',
+  'размеры',
+  'характеристики'
+]);
+const normalizedSpecs = dimensions.map((item) => {
+  const label = item.label?.trim() || '';
+  const values = (item.value || '').split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const isGenericLabel = genericSpecLabels.has(label.toLocaleLowerCase('ru-RU'));
+  const isPair = Boolean(label && values.length > 0 && !isGenericLabel);
+  return { label, values, isGenericLabel, isPair };
+});
+const pairedSpecs = normalizedSpecs.filter((item) => item.isPair);
+const textualSpecs = normalizedSpecs.flatMap((item) => {
+  if (item.isPair) return [];
+  if (item.values.length > 0) return item.values;
+  return item.label && !item.isGenericLabel ? [item.label] : [];
+});
+const hasSpecifications = pairedSpecs.length > 0 || textualSpecs.length > 0;
+const description = product.description?.trim() || product.leadText?.trim() || product.shortDescription;
+const descriptionParagraphs = description.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
+const rawCaption = product.placeholderLabel?.trim() || '';
+const isDefaultPhotoNotice = /фото\s+изделия\s+будут\s+добавлены\s+позже/i.test(rawCaption);
+const galleryCaption = images.length > 0 && isDefaultPhotoNotice ? '' : rawCaption;
+const deliveryText = product.deliveryText?.trim() || '';
+const deliveryParagraphs = deliveryText.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
+const hasTechnicalPanels = hasSpecifications || materials.length > 0 || colors.length > 0 || customizationItems.length > 0;
+const finalContactTitle = product.showCustomProjectBlock !== false
+  ? product.customProjectTitle?.trim() || 'Индивидуальное исполнение'
+  : 'Рассчитать стоимость изделия';
+const finalContactDescription = product.showCustomProjectBlock !== false && product.customProjectText?.trim()
+  ? product.customProjectText.trim()
+  : 'Пришлите задачу, размеры, количество и место установки по телефону, в Telegram или по email.';
+const relatedAreFromCategory = relatedProducts.every((item) => item.category.slug === category.slug);
+const relatedTitle = relatedAreFromCategory ? 'Другие изделия категории' : 'Другие изделия раздела';
+const relatedHref = links.categoryHrefs[category.slug] || catalogV2CategoryHref(section.slug, category.slug);
+const relatedProductHref = (item: CatalogProductRoute) => links.productHrefs[item.product.slug]
+  || catalogV2ProductHref(item.section.slug, item.category.slug, item.product.slug);
+---
+
+<CatalogV2Layout
+  title={product.seoTitle}
+  description={product.seoDescription}
+  canonicalPath={route.href}
+  currentPath={currentPath}
+  ogImage={images[0] || product.image}
+  pageKind="product"
+>
+  <V2Breadcrumbs items={[
+    { title: 'Главная', href: '/design-lab/home-v2/' },
+    { title: section.title, href: links.sectionHref },
+    { title: category.title, href: links.categoryHrefs[category.slug] || catalogV2CategoryHref(section.slug, category.slug) },
+    { title: product.title }
+  ]} />
+
+  <section class="v2-product-top" aria-labelledby="v2-product-title">
+    <div class="hv2-shell hv2-grid v2-product-top__grid">
+      <div class="v2-product-top__gallery" data-v2-reveal>
+        <V2ProductGallery
+          images={images}
+          title={product.title}
+          imageView={product.imageView}
+          caption={galleryCaption}
+        />
+      </div>
+
+      <article class="v2-product-summary" data-v2-reveal>
+        <p class="hv2-eyebrow">{category.title}</p>
+        <h1 id="v2-product-title">{product.title}</h1>
+        <p class="v2-product-summary__lead">{product.leadText || product.shortDescription}</p>
+
+        <dl class="v2-product-summary__meta">
+          <div>
+            <dt>Стоимость</dt>
+            <dd>{formatProductPrice(product)}</dd>
+          </div>
+        </dl>
+
+        {features.length > 0 && (
+          <ul class="v2-product-summary__features">
+            {features.map((feature) => <li>{feature}</li>)}
+          </ul>
+        )}
+
+        <div class="hv2-actions v2-product-summary__actions">
+          <a class="hv2-button hv2-button--primary" href="#contact">Запросить расчёт<span aria-hidden="true">↗</span></a>
+          <a class="hv2-text-link" href={settings.telegram} target="_blank" rel="noopener noreferrer">
+            Написать в Telegram<span aria-hidden="true">↗</span>
+          </a>
+        </div>
+        <p class="v2-product-summary__note">Статус стоимости и характеристики показаны по текущей записи товара.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="v2-product-details" aria-label="Описание и характеристики товара">
+    <div class="hv2-shell">
+      {descriptionParagraphs.length > 0 && (
+        <article class="v2-product-description hv2-grid" data-v2-reveal>
+          <header>
+            <p class="hv2-eyebrow">О модели</p>
+            <h2>Описание</h2>
+          </header>
+          <div class="v2-product-description__text">
+            {descriptionParagraphs.map((paragraph) => <p>{paragraph}</p>)}
+          </div>
+        </article>
+      )}
+
+      {hasTechnicalPanels && <div class="v2-technical-grid">
+        {hasSpecifications && <section class="v2-technical-panel v2-technical-panel--specs" aria-labelledby="v2-specs-title" data-v2-reveal>
+          <header>
+            <p class="hv2-eyebrow">Технические данные</p>
+            <h2 id="v2-specs-title">Размеры и характеристики</h2>
+          </header>
+          <div class="v2-spec-content">
+            {pairedSpecs.length > 0 && (
+              <dl class="v2-spec-definitions">
+                {pairedSpecs.map((item) => (
+                  <div>
+                    <dt>{item.label}</dt>
+                    <dd>{item.values.map((value) => <span>{value}</span>)}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {textualSpecs.length === 1 ? (
+              <p class="v2-spec-copy">{textualSpecs[0]}</p>
+            ) : textualSpecs.length > 1 ? (
+              <ul class="v2-spec-points">
+                {textualSpecs.map((item) => <li>{item}</li>)}
+              </ul>
+            ) : null}
+          </div>
+          <a class="hv2-button hv2-button--primary" href="#contact">Запросить расчёт<span aria-hidden="true">↗</span></a>
+        </section>}
+
+        {materials.length > 0 && <section class="v2-technical-panel" aria-labelledby="v2-materials-title" data-v2-reveal>
+          <header><p class="hv2-eyebrow">Состав</p><h2 id="v2-materials-title">Материалы</h2></header>
+          <ul class="v2-data-list">{materials.map((item) => <li>{item}</li>)}</ul>
+        </section>}
+
+        {colors.length > 0 && <section class="v2-technical-panel" aria-labelledby="v2-colors-title" data-v2-reveal>
+          <header><p class="hv2-eyebrow">Варианты</p><h2 id="v2-colors-title">Цвета и покрытие</h2></header>
+          <ul class="v2-data-list">{colors.map((item) => <li>{item}</li>)}</ul>
+        </section>}
+
+        {customizationItems.length > 0 && <section class="v2-technical-panel v2-technical-panel--custom" aria-labelledby="v2-customization-title" data-v2-reveal>
+          <header><p class="hv2-eyebrow">Под задачу</p><h2 id="v2-customization-title">Что можно изменить</h2></header>
+          <ol class="v2-customization-list">
+            {customizationItems.map((item, index) => <li><span>{String(index + 1).padStart(2, '0')}</span><p>{item}</p></li>)}
+          </ol>
+        </section>}
+      </div>}
+
+      {product.showDeliveryBlock !== false && deliveryParagraphs.length > 0 && (
+        <section class="v2-delivery-block hv2-grid" aria-labelledby="v2-delivery-title" data-v2-reveal>
+          <header>
+            <p class="hv2-eyebrow">Получение изделия</p>
+            <h2 id="v2-delivery-title">Доставка</h2>
+          </header>
+          <div>
+            {deliveryParagraphs.map((paragraph) => <p>{paragraph}</p>)}
+            <a class="hv2-text-link" href="#contact">Уточнить условия<span aria-hidden="true">↓</span></a>
+          </div>
+        </section>
+      )}
+
+      {relatedProducts.length > 0 && (
+        <section class="v2-related-products" aria-labelledby="v2-related-title">
+          <header class="v2-section-heading" data-v2-reveal>
+            <div><p class="hv2-eyebrow">Другие изделия</p><h2 id="v2-related-title">{relatedTitle}</h2></div>
+            <a class="hv2-text-link" href={withBase(relatedHref)}>Все товары категории<span aria-hidden="true">↗</span></a>
+          </header>
+          <div class="v2-product-grid v2-product-grid--related" role="list">
+            {relatedProducts.map((item) => (
+              <div role="listitem"><V2ProductCard product={item.product} href={relatedProductHref(item)} related /></div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  </section>
+
+  <V2DirectContact
+    eyebrow="Индивидуальное изготовление"
+    title={finalContactTitle}
+    description={finalContactDescription}
+    primaryLabel="Запросить расчёт"
+    secondaryLabel="Обсудить задачу"
+    variant="product"
+  />
+</CatalogV2Layout>

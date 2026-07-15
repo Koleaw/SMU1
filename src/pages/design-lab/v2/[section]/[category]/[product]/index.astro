@@ -1,0 +1,44 @@
+---
+import CatalogProductV2 from '../../../../../../components/design-lab/v2/CatalogProductV2.astro';
+import {
+  createCatalogV2Links,
+  loadCatalogV2Snapshot,
+  selectRelatedProductRoutes
+} from '../../../../../../components/design-lab/v2/catalogV2Data';
+
+export async function getStaticPaths() {
+  const snapshot = await loadCatalogV2Snapshot();
+  return snapshot.productRoutes.map((route) => ({
+    params: {
+      section: route.section.slug,
+      category: route.category.slug,
+      product: route.product.slug
+    },
+    props: {
+      sectionSlug: route.section.slug,
+      categorySlug: route.category.slug,
+      productSlug: route.product.slug
+    }
+  }));
+}
+
+const { sectionSlug, categorySlug, productSlug } = Astro.props as {
+  sectionSlug: string;
+  categorySlug: string;
+  productSlug: string;
+};
+const snapshot = await loadCatalogV2Snapshot();
+const route = snapshot.productRoutes.find((item) => (
+  item.section.slug === sectionSlug &&
+  item.category.slug === categorySlug &&
+  item.product.slug === productSlug
+));
+if (!route) throw new Error(`Active catalog product route ${sectionSlug}/${categorySlug}/${productSlug} was not found.`);
+
+const relatedProducts = selectRelatedProductRoutes(snapshot, route);
+const links = createCatalogV2Links(snapshot, route.section.slug);
+const currentPath = links.productHrefs[route.product.slug];
+if (!currentPath) throw new Error(`V2 route was not created for product ${route.product.slug}.`);
+---
+
+<CatalogProductV2 route={route} relatedProducts={relatedProducts} links={links} currentPath={currentPath} />

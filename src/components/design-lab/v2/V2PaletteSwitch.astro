@@ -1,0 +1,39 @@
+<aside class="hv2-palette-switch v2-palette-switch" aria-label="Переключатель цветовой схемы">
+  <p>Цветовая схема</p>
+  <div role="group" aria-label="Цветовой пресет">
+    <button type="button" aria-pressed="true" data-v2-palette="olive">Оливковая</button>
+    <button type="button" aria-pressed="false" data-v2-palette="steel">Стальная</button>
+  </div>
+</aside>
+
+<script>
+  const initV2PaletteSwitch = () => {
+    const root = document.querySelector<HTMLElement>('[data-catalog-v2-root]');
+    if (!root || root.dataset.paletteReady === 'true') return;
+    root.dataset.paletteReady = 'true';
+    const documentRoot = document.documentElement;
+    const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-v2-palette]'));
+    const themeColor = document.querySelector<HTMLMetaElement>('[data-home-v2-theme-color]');
+
+    const setPalette = (palette: 'olive' | 'steel') => {
+      documentRoot.dataset.homeV2Theme = palette;
+      buttons.forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.v2Palette === palette));
+      });
+      themeColor?.setAttribute('content', palette === 'steel' ? '#F2EFE9' : '#F3F5F1');
+      try {
+        window.localStorage.setItem('smu1-home-v2-palette', palette);
+      } catch {
+        // Palette comparison remains functional without storage.
+      }
+    };
+
+    setPalette(documentRoot.dataset.homeV2Theme === 'steel' ? 'steel' : 'olive');
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => setPalette(button.dataset.v2Palette === 'steel' ? 'steel' : 'olive'));
+    });
+  };
+
+  initV2PaletteSwitch();
+  document.addEventListener('astro:page-load', initV2PaletteSwitch);
+</script>

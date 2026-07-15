@@ -1,0 +1,18 @@
+---
+interface Props {
+  location?: string;
+  year?: number;
+  className?: string;
+}
+
+const { location = '', year, className = '' } = Astro.props as Props;
+const hasMeta = Boolean(location || year);
+---
+
+{hasMeta && (
+  <p class:list={['v2-project-meta', className]} aria-label="Сведения об объекте">
+    {location && <span>{location}</span>}
+    {location && year && <i aria-hidden="true"></i>}
+    {year && <time datetime={String(year)}>{year}</time>}
+  </p>
+)}

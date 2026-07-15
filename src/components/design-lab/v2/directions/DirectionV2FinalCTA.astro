@@ -1,0 +1,23 @@
+---
+import settings from '../../../../content/site-settings/global.json';
+import V2DirectContact from '../V2DirectContact.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  secondaryLabel?: string;
+}
+
+const { title, description, secondaryLabel = 'Обсудить задачу' } = Astro.props as Props;
+const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
+---
+
+<V2DirectContact
+  eyebrow="Обсудить проект"
+  title={title}
+  description={description}
+  primaryLabel="Получить расчёт"
+  primaryHref={settings.telegram}
+  secondaryLabel={secondaryLabel}
+  secondaryHref={phoneHref}
+/>

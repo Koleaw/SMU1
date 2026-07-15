@@ -1,0 +1,88 @@
+---
+import { withBase } from '../../../../utils/withBase';
+import type { V2ProjectMedia, V2ProjectPresentation } from '../mediaRoleAdapter';
+import V2ProjectCard from './V2ProjectCard.astro';
+import V2ProjectGallery from './V2ProjectGallery.astro';
+import V2ProjectMeta from './V2ProjectMeta.astro';
+import '../../../../styles/design-lab/projects-v2.css';
+
+interface Props {
+  id: string;
+  eyebrow?: string;
+  title: string;
+  projects: V2ProjectPresentation[];
+  mediaBySlug?: Record<string, V2ProjectMedia[]>;
+}
+
+const {
+  id,
+  eyebrow = 'Выполненные объекты',
+  title,
+  projects,
+  mediaBySlug = {}
+} = Astro.props as Props;
+const mediaFor = (presentation: V2ProjectPresentation) =>
+  mediaBySlug[presentation.project.slug] ?? presentation.publicGallery;
+const visualProjects = projects.filter((presentation) => mediaFor(presentation).length > 0);
+const sparseProjects = projects.filter((presentation) => mediaFor(presentation).length === 0);
+const singleVisual = visualProjects.length === 1 ? visualProjects[0] : undefined;
+const titleId = `${id}-title`;
+---
+
+{projects.length > 0 && (
+  <section class="v2-project-proof" id={id} aria-labelledby={titleId}>
+    <div class="hv2-shell">
+      <header class="v2-project-proof__heading" data-v2-reveal>
+        <p class="hv2-eyebrow">{eyebrow}</p>
+        <h2 id={titleId}>{title}</h2>
+      </header>
+
+      {singleVisual && (
+        <article class="v2-project-proof__feature">
+          <div class="v2-project-proof__feature-media" data-v2-reveal>
+            <V2ProjectGallery
+              images={mediaFor(singleVisual)}
+              title={singleVisual.project.title}
+              galleryKey={`proof-${singleVisual.project.slug}`}
+              variant="proof"
+            />
+          </div>
+          <div class="v2-project-proof__feature-copy" data-v2-reveal>
+            <V2ProjectMeta location={singleVisual.location} year={singleVisual.project.year} />
+            <h3>{singleVisual.project.title}</h3>
+            <p class="v2-project-proof__lead">{singleVisual.project.shortDescription}</p>
+            <p>{singleVisual.project.whatWasDone}</p>
+            <a href={withBase(singleVisual.v2Route)}>
+              Открыть объект <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </article>
+      )}
+
+      {visualProjects.length > 1 && (
+        <div class="v2-project-proof__grid" role="list">
+          {visualProjects.map((presentation) => (
+            <div role="listitem">
+              <V2ProjectCard
+                presentation={presentation}
+                media={mediaFor(presentation)[0]}
+                variant="visual"
+                headingLevel="h3"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {sparseProjects.length > 0 && (
+        <div class="v2-project-proof__sparse" role="list" aria-label="Другие выполненные объекты">
+          {sparseProjects.map((presentation) => (
+            <div role="listitem">
+              <V2ProjectCard presentation={presentation} variant="text" headingLevel="h3" />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+)}

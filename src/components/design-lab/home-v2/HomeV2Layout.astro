@@ -1,0 +1,65 @@
+---
+import '../../../styles/design-lab/home-v2.css';
+import { withBase } from '../../../utils/withBase';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+  ogImage?: string;
+}
+
+const { title, description, canonicalPath = '', ogImage = '' } = Astro.props as Props;
+const canonicalUrl = canonicalPath ? new URL(withBase(canonicalPath), Astro.site).toString() : '';
+const ogImageUrl = ogImage ? new URL(withBase(ogImage), Astro.site).toString() : '';
+---
+
+<!doctype html>
+<html lang="ru" class="home-v2-html" data-home-v2-theme="olive">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content={description} />
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+    {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+    <meta name="twitter:card" content={ogImageUrl ? 'summary_large_image' : 'summary'} />
+    <meta name="theme-color" content="#F3F5F1" data-home-v2-theme-color />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Raleway:wght@600&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
+    <title>{title}</title>
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        const requestedTheme = new URLSearchParams(window.location.search).get('palette');
+        let savedTheme = '';
+
+        try {
+          savedTheme = window.localStorage.getItem('smu1-home-v2-palette') || '';
+        } catch {
+          savedTheme = '';
+        }
+
+        const theme = requestedTheme === 'steel' || requestedTheme === 'olive'
+          ? requestedTheme
+          : savedTheme === 'steel'
+            ? 'steel'
+            : 'olive';
+
+        root.dataset.homeV2Theme = theme;
+      })();
+    </script>
+  </head>
+  <body class="home-v2-body">
+    <slot />
+  </body>
+</html>

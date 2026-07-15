@@ -1,0 +1,22 @@
+---
+import CatalogV2Layout from '../../../../components/design-lab/v2/CatalogV2Layout.astro';
+import CustomOrderV2Page from '../../../../components/design-lab/v2/custom-order/CustomOrderV2Page.astro';
+import { loadCustomOrderV2Data } from '../../../../components/design-lab/v2/custom-order/customOrderV2Data';
+
+const currentPath = '/design-lab/v2/izgotovlenie-na-zakaz/';
+const data = await loadCustomOrderV2Data();
+const description = 'Рассматриваем изделия и конструкции по фотографии, эскизу, чертежу или техническому заданию и подбираем исполнение под условия конкретного объекта.';
+---
+
+<CatalogV2Layout
+  title="Изготовление под задачу объекта — СМУ-1"
+  description={description}
+  canonicalPath="/izgotovlenie-na-zakaz/"
+  currentPath={currentPath}
+  ogImage={data.heroMedia[0].src}
+  contactHref="#contact"
+  mobileCtaLabel="Обсудить задачу"
+  headerCtaLabel="Обсудить задачу"
+>
+  <CustomOrderV2Page data={data} />
+</CatalogV2Layout>

@@ -1,0 +1,27 @@
+---
+import DirectionV2Layout from '../directions/DirectionV2Layout.astro';
+import '../../../../styles/design-lab/place-direction-v2.css';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath: string;
+  currentPath: string;
+  ogImage?: string;
+}
+
+const { title, description, canonicalPath, currentPath, ogImage = '' } = Astro.props as Props;
+---
+
+<DirectionV2Layout
+  title={title}
+  description={description}
+  canonicalPath={canonicalPath}
+  currentPath={currentPath}
+  ogImage={ogImage}
+  variant="place-commercial"
+>
+  <div class="place-direction-v2" data-place-direction-v2>
+    <slot />
+  </div>
+</DirectionV2Layout>

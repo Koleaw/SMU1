@@ -1,0 +1,32 @@
+---
+import { withBase } from '../../../../utils/withBase';
+import settings from '../../../../content/site-settings/global.json';
+import '../../../../styles/design-lab/not-found-v2.css';
+
+const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
+---
+
+<div class="not-found-v2">
+  <section class="not-found-v2__main" aria-labelledby="not-found-v2-title" data-home-v2-header-sentinel>
+    <div class="hv2-shell hv2-grid not-found-v2__grid">
+      <div class="not-found-v2__copy" data-v2-reveal>
+        <p class="hv2-eyebrow">Навигация</p>
+        <h1 id="not-found-v2-title">Страница не найдена</h1>
+        <p>Возможно, адрес изменился или в ссылке есть ошибка. Вернитесь на главную либо откройте список направлений.</p>
+        <div class="not-found-v2__actions">
+          <a class="hv2-button hv2-button--primary" href={withBase('/design-lab/home-v2/')}>На главную <span aria-hidden="true">↗</span></a>
+          <a class="hv2-text-link" href={withBase('/design-lab/home-v2/#directions')}>Посмотреть направления <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+
+      <aside class="not-found-v2__contacts" id="contact" aria-labelledby="not-found-v2-contacts-title" data-v2-reveal>
+        <p class="hv2-eyebrow">Нужна помощь?</p>
+        <h2 id="not-found-v2-contacts-title">Свяжитесь с СМУ-1</h2>
+        <a href={phoneHref}><span>Телефон</span><strong>{settings.phonePrimary}</strong><i aria-hidden="true">↗</i></a>
+        <a href={settings.telegram} target="_blank" rel="noopener noreferrer"><span>Telegram</span><strong>{settings.telegramLabel}</strong><i aria-hidden="true">↗</i></a>
+        <a href={`mailto:${settings.email}`}><span>Email</span><strong>{settings.email}</strong><i aria-hidden="true">↗</i></a>
+      </aside>
+    </div>
+  </section>
+</div>
+

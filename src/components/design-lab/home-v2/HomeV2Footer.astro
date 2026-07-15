@@ -1,0 +1,168 @@
+---
+import { withBase } from '../../../utils/withBase';
+import settings from '../../../content/site-settings/global.json';
+
+interface Props {
+  currentPath?: string;
+  catalogV2?: boolean;
+  mobileCtaLabel?: string;
+  contactHref?: string;
+}
+
+const {
+  currentPath = '',
+  catalogV2 = false,
+  mobileCtaLabel = 'Получить расчёт',
+  contactHref = '#contact'
+} = Astro.props as Props;
+const path = (value: string) => withBase(value);
+const resolveHref = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : path(value);
+const directionV2Roots = [
+  '/design-lab/v2/ulichnaya-mebel/',
+  '/design-lab/v2/ograzhdeniya-i-zabory/',
+  '/design-lab/v2/navesy-i-kozyrki/',
+  '/design-lab/v2/topiarii/',
+  '/design-lab/v2/metallokonstruktsii-dlya-biznesa/',
+  '/design-lab/v2/stroitelstvo-i-remonty/',
+  '/design-lab/v2/blagoustroystvo-territoriy/',
+  '/design-lab/v2/vypolnennye-obekty/'
+];
+const objectsV2Root = directionV2Roots[7];
+const aboutV2Root = '/design-lab/v2/o-nas/';
+const contactsV2Root = '/design-lab/v2/kontakty/';
+const vacanciesV2Root = '/design-lab/v2/vakansii/';
+const legalV2Root = '/design-lab/v2/politika-konfidencialnosti/';
+const customOrderV2Root = '/design-lab/v2/izgotovlenie-na-zakaz/';
+const v2Roots = [...directionV2Roots, aboutV2Root, contactsV2Root, vacanciesV2Root, legalV2Root, customOrderV2Root];
+const normalizedCurrentPath = currentPath.endsWith('/') ? currentPath : `${currentPath}/`;
+const currentState = (href: string) => {
+  const normalizedHref = href.endsWith('/') ? href : `${href}/`;
+  if (normalizedCurrentPath === normalizedHref) return 'page';
+  if (v2Roots.includes(normalizedHref) && normalizedCurrentPath.startsWith(normalizedHref)) return 'location';
+  return undefined;
+};
+const directions = [
+  { label: 'Уличная мебель', href: catalogV2 ? directionV2Roots[0] : '/ulichnaya-mebel/' },
+  { label: 'Ограждения и заборы', href: catalogV2 ? directionV2Roots[1] : '/ograzhdeniya-i-zabory/' },
+  { label: 'Навесы и козырьки', href: catalogV2 ? directionV2Roots[2] : '/navesy-i-kozyrki/' },
+  { label: 'Металлоконструкции', href: catalogV2 ? directionV2Roots[4] : '/metallokonstruktsii-dlya-biznesa/' },
+  { label: 'Топиарии', href: catalogV2 ? directionV2Roots[3] : '/topiarii/' },
+  { label: 'Благоустройство территорий', href: catalogV2 ? directionV2Roots[6] : '/blagoustroystvo-territoriy/' },
+  { label: 'Строительство и ремонты', href: catalogV2 ? directionV2Roots[5] : '/stroitelstvo-i-remonty/' }
+];
+---
+
+<footer class="hv2-footer">
+  <div class="hv2-shell hv2-footer__grid">
+    <div class="hv2-footer__brand">
+      <a href={path(catalogV2 ? '/design-lab/home-v2/' : '/')} aria-label="СМУ-1 — на главную">
+        <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="355" height="211" />
+      </a>
+      <p>{settings.companyName}</p>
+      <p>ИНН {settings.inn} · КПП {settings.kpp}</p>
+      <p>ОГРН {settings.ogrn}</p>
+      <p>Дата регистрации: {settings.registrationDate}</p>
+    </div>
+
+    {catalogV2 ? (
+      <div class="hv2-footer__catalog-group hv2-footer__catalog-group--directions">
+        <nav class="hv2-footer__directions hv2-footer__catalog-desktop-nav" aria-label="Направления СМУ-1">
+          <p>Направления</p>
+          {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+        </nav>
+        <details class="hv2-footer__catalog-accordion" data-v2-footer-accordion>
+          <summary>Направления <span aria-hidden="true"></span></summary>
+          <nav class="hv2-footer__directions hv2-footer__catalog-accordion-content" aria-label="Направления СМУ-1">
+            {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+          </nav>
+        </details>
+      </div>
+    ) : (
+      <nav class="hv2-footer__directions" aria-label="Направления СМУ-1">
+        <p>Направления</p>
+        {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+      </nav>
+    )}
+
+    {catalogV2 ? (
+      <div class="hv2-footer__catalog-group hv2-footer__catalog-group--company">
+        <nav class="hv2-footer__company hv2-footer__catalog-desktop-nav" aria-label="Работа и компания">
+          <p>Работа и компания</p>
+          <a href={path(customOrderV2Root)} aria-current={currentState(customOrderV2Root)}>Изготовление на заказ</a>
+          <a href={path(objectsV2Root)} aria-current={currentState(objectsV2Root)}>Выполненные объекты</a>
+          <a href={path(aboutV2Root)} aria-current={currentState(aboutV2Root)}>О компании</a>
+          <a href={path(contactsV2Root)} aria-current={currentState(contactsV2Root)}>Контакты</a>
+          <a href={path(vacanciesV2Root)} aria-current={currentState(vacanciesV2Root)}>Вакансии</a>
+        </nav>
+        <details class="hv2-footer__catalog-accordion" data-v2-footer-accordion>
+          <summary>Работа и компания <span aria-hidden="true"></span></summary>
+          <nav class="hv2-footer__company hv2-footer__catalog-accordion-content" aria-label="Работа и компания">
+            <a href={path(customOrderV2Root)} aria-current={currentState(customOrderV2Root)}>Изготовление на заказ</a>
+            <a href={path(objectsV2Root)} aria-current={currentState(objectsV2Root)}>Выполненные объекты</a>
+            <a href={path(aboutV2Root)} aria-current={currentState(aboutV2Root)}>О компании</a>
+            <a href={path(contactsV2Root)} aria-current={currentState(contactsV2Root)}>Контакты</a>
+            <a href={path(vacanciesV2Root)} aria-current={currentState(vacanciesV2Root)}>Вакансии</a>
+          </nav>
+        </details>
+      </div>
+    ) : (
+      <nav class="hv2-footer__company" aria-label="Работа и компания">
+        <p>Работа и компания</p>
+        <a href={path(catalogV2 ? customOrderV2Root : '/izgotovlenie-na-zakaz/')} aria-current={catalogV2 ? currentState(customOrderV2Root) : undefined}>Изготовление на заказ</a>
+        <a href={path(objectsV2Root)} aria-current={currentState(objectsV2Root)}>Выполненные объекты</a>
+        <a href={path(aboutV2Root)} aria-current={currentState(aboutV2Root)}>О компании</a>
+        <a href={path(contactsV2Root)} aria-current={currentState(contactsV2Root)}>Контакты</a>
+        <a href={path(vacanciesV2Root)} aria-current={currentState(vacanciesV2Root)}>Вакансии</a>
+      </nav>
+    )}
+
+    <div class="hv2-footer__contacts">
+      <p>Прямая связь</p>
+      {catalogV2 && <a class="hv2-footer__mobile-cta" href={resolveHref(contactHref)}>{mobileCtaLabel}<span aria-hidden="true">↓</span></a>}
+      <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>{settings.phonePrimary}</a>
+      <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`}>{settings.phoneSecondary}</a>
+      <a href={settings.telegram} target="_blank" rel="noopener noreferrer">{settings.telegramLabel} · Telegram</a>
+      <a href={`mailto:${settings.email}`}>{settings.email}</a>
+      <address>{settings.address}</address>
+    </div>
+  </div>
+
+  <div class="hv2-shell hv2-footer__legal">
+    <small>© ООО «СМУ 1», 2026</small>
+    <small>Информация на сайте носит ознакомительный характер и не является публичной офертой.</small>
+    <a href={path(catalogV2 ? legalV2Root : '/politika-konfidencialnosti/')} aria-current={catalogV2 ? currentState(legalV2Root) : undefined}>Политика конфиденциальности</a>
+    <button type="button" data-hv2-cookie-open>Настройки cookies</button>
+  </div>
+</footer>
+
+<dialog class="hv2-cookie-dialog" aria-labelledby="hv2-cookie-title" data-hv2-cookie-dialog>
+  <div class="hv2-cookie-dialog__inner">
+    <p class="hv2-eyebrow">Конфиденциальность</p>
+    <h2 id="hv2-cookie-title">Настройки cookies</h2>
+    <p>Аналитические cookies на этой странице не используются.</p>
+    <button class="hv2-button hv2-button--primary" type="button" data-hv2-cookie-close>Закрыть</button>
+  </div>
+</dialog>
+
+<script>
+  const initHomeV2CookieDialog = () => {
+    const dialog = document.querySelector<HTMLDialogElement>('[data-hv2-cookie-dialog]');
+    const openButton = document.querySelector<HTMLButtonElement>('[data-hv2-cookie-open]');
+    const closeButton = document.querySelector<HTMLButtonElement>('[data-hv2-cookie-close]');
+    if (!dialog || !openButton || !closeButton || dialog.dataset.ready === 'true') return;
+    dialog.dataset.ready = 'true';
+
+    openButton.addEventListener('click', () => {
+      dialog.showModal();
+      closeButton.focus();
+    });
+    closeButton.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', () => openButton.focus());
+  };
+
+  initHomeV2CookieDialog();
+  document.addEventListener('astro:page-load', initHomeV2CookieDialog);
+</script>

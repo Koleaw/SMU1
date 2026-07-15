@@ -1,0 +1,118 @@
+---
+import V2Breadcrumbs from '../../../../components/design-lab/v2/V2Breadcrumbs.astro';
+import DirectionV2FinalCTA from '../../../../components/design-lab/v2/directions/DirectionV2FinalCTA.astro';
+import DirectionV2Related from '../../../../components/design-lab/v2/directions/DirectionV2Related.astro';
+import {
+  extractConfirmedBriefInputs,
+  getDirectionBlock,
+  getDirectionCardItems,
+  getDirectionListItems,
+  getDirectionStepItems
+} from '../../../../components/design-lab/v2/directions/directionV2Data';
+import EngineeringDirectionBrief from '../../../../components/design-lab/v2/engineering/EngineeringDirectionBrief.astro';
+import EngineeringDirectionHero from '../../../../components/design-lab/v2/engineering/EngineeringDirectionHero.astro';
+import EngineeringDirectionProof from '../../../../components/design-lab/v2/engineering/EngineeringDirectionProof.astro';
+import EngineeringDirectionScope from '../../../../components/design-lab/v2/engineering/EngineeringDirectionScope.astro';
+import EngineeringDirectionTasks from '../../../../components/design-lab/v2/engineering/EngineeringDirectionTasks.astro';
+import EngineeringDirectionV2Layout from '../../../../components/design-lab/v2/engineering/EngineeringDirectionV2Layout.astro';
+import { loadEngineeringDirectionV2Snapshot } from '../../../../components/design-lab/v2/engineering/engineeringDirectionV2Data';
+import { selectV2ProjectMedia } from '../../../../components/design-lab/v2/mediaRoleAdapter';
+
+const currentPath = '/design-lab/v2/metallokonstruktsii-dlya-biznesa/';
+const proofProjectSlug = 'kompleks-rabot-na-proizvodstvennoy-territorii';
+const data = await loadEngineeringDirectionV2Snapshot({
+  sectionSlug: 'metallokonstruktsii-dlya-biznesa',
+  proofProjectSlug
+});
+const { section, catalog, services, proofProject } = data;
+const typesBlock = getDirectionBlock(section, 'cardGrid');
+const scopeBlock = getDirectionBlock(section, 'listPanel');
+const inputBlock = getDirectionBlock(section, 'process');
+const tasks = getDirectionCardItems(typesBlock).map(({ title }) => ({ title }));
+const scope = getDirectionListItems(scopeBlock);
+const briefInputs = extractConfirmedBriefInputs([
+  section.contactDescription,
+  ...getDirectionStepItems(inputBlock),
+  ...getDirectionCardItems(typesBlock).flatMap((item) => [item.title, item.text])
+]);
+const heroImage = selectV2ProjectMedia(proofProject, {
+  allOf: ['metalworks', 'hero']
+})[0] || section.image;
+const proofImages = selectV2ProjectMedia(proofProject, {
+  allOf: ['metalworks', 'proof']
+});
+const canopies = catalog.sections.find((item) => item.slug === 'navesy-i-kozyrki');
+const construction = services.find((item) => item.slug === 'stroitelstvo-i-remonty');
+const related = [
+  canopies ? {
+    eyebrow: 'Смежное направление',
+    title: 'Навесы и козырьки',
+    href: '/design-lab/v2/navesy-i-kozyrki/'
+  } : null,
+  construction ? {
+    eyebrow: 'Нужен более широкий комплекс?',
+    title: construction.heroTitle || construction.title,
+    description: 'Для задачи, где важен готовый результат на объекте, а не отдельная металлическая конструкция.',
+    href: `/design-lab/v2/${construction.slug}/`
+  } : null
+].filter((item): item is NonNullable<typeof item> => Boolean(item));
+---
+
+<EngineeringDirectionV2Layout
+  title={section.seoTitle}
+  description={section.seoDescription}
+  canonicalPath={`/${section.slug}/`}
+  currentPath={currentPath}
+  ogImage={heroImage}
+>
+  <V2Breadcrumbs items={[
+    { title: 'Главная', href: '/design-lab/home-v2/' },
+    { title: section.title }
+  ]} />
+
+  <EngineeringDirectionHero
+    eyebrow="Металлоконструкции"
+    title="Металлоконструкции под объект"
+    description="Изготавливаем и монтируем конкретную металлоконструкцию или металлическую часть объекта — под задачу и исходные данные заказчика."
+    image={heroImage}
+    imageAlt="Металлический каркас на производственной территории"
+    imageView={{ fit: 'cover', positionX: 50, positionY: 48, scale: 1 }}
+    mediaCaption={proofProject?.title || section.title}
+  />
+
+  <EngineeringDirectionScope
+    title={scopeBlock?.title || 'Для каких объектов'}
+    description="Состав конструкции определяется назначением и исходными данными конкретного объекта."
+    items={scope}
+  />
+
+  <EngineeringDirectionTasks
+    title={typesBlock?.title || 'Что изготавливаем'}
+    description="От каркасов и рам до конструкций по чертежам — состав задачи уточняется для конкретного объекта."
+    items={tasks}
+  />
+
+  {proofProject && proofImages.length > 0 && (
+    <EngineeringDirectionProof
+      title={proofProject.title}
+      city={proofProject.city}
+      year={proofProject.year}
+      description="Этот пример показывает металлическую часть выполненного комплекса: открытый каркас и его элементы в ходе сборки четырёх цехов и частичной сборки пятого."
+      href={`/design-lab/v2/vypolnennye-obekty/${proofProject.slug}/`}
+      images={proofImages}
+    />
+  )}
+
+  <EngineeringDirectionBrief
+    title="Что можно прислать"
+    description="Для первоначального обсуждения отправьте те исходные материалы, которые уже есть. Они помогут точнее понять задачу, но не заменяют последующее уточнение."
+    items={briefInputs}
+  />
+
+  <DirectionV2Related title="Смежные направления" items={related} />
+
+  <DirectionV2FinalCTA
+    title="Обсудим металлоконструкции для вашего объекта"
+    description="Пришлите имеющиеся исходные материалы и кратко опишите задачу — обсудим решение и подготовим расчёт."
+  />
+</EngineeringDirectionV2Layout>

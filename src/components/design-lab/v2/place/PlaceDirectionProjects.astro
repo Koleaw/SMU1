@@ -1,0 +1,20 @@
+---
+import type { V2ProjectMedia, V2ProjectPresentation } from '../mediaRoleAdapter';
+import V2ProjectProof from '../projects/V2ProjectProof.astro';
+
+interface Props {
+  title: string;
+  projects: V2ProjectPresentation[];
+  mediaBySlug?: Record<string, V2ProjectMedia[]>;
+}
+
+const { title, projects, mediaBySlug = {} } = Astro.props as Props;
+---
+
+<V2ProjectProof
+  id="landscaping-proof"
+  eyebrow="Выполненные территории"
+  title={title}
+  projects={projects}
+  mediaBySlug={mediaBySlug}
+/>

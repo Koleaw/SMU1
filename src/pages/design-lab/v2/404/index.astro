@@ -1,0 +1,19 @@
+---
+import CatalogV2Layout from '../../../../components/design-lab/v2/CatalogV2Layout.astro';
+import V2NotFoundPage from '../../../../components/design-lab/v2/not-found/V2NotFoundPage.astro';
+
+const currentPath = '/design-lab/v2/404/';
+---
+
+<CatalogV2Layout
+  title="Страница не найдена — СМУ-1 V2"
+  description="Изолированный V2-прототип страницы 404."
+  canonicalPath=""
+  currentPath={currentPath}
+  contactHref="#contact"
+  mobileCtaLabel="Связаться"
+  headerCtaLabel="Связаться"
+>
+  <V2NotFoundPage />
+</CatalogV2Layout>
+

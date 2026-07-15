@@ -1,0 +1,45 @@
+---
+import { withBase } from '../../../utils/withBase';
+
+interface BreadcrumbItem {
+  title: string;
+  href?: string;
+}
+
+interface Props {
+  items: BreadcrumbItem[];
+}
+
+const { items } = Astro.props as Props;
+const publicItems = items.map((item) => ({
+  ...item,
+  title: item.title === 'Главная V2' ? 'Главная' : item.title
+}));
+const toAbsoluteUrl = (href?: string) => new URL(withBase(href || Astro.url.pathname), Astro.site).toString();
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: publicItems.map((item, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    name: item.title,
+    item: toAbsoluteUrl(item.href)
+  }))
+};
+---
+
+<div class="v2-breadcrumbs-bar">
+  <div class="hv2-shell">
+    <nav class="v2-breadcrumbs" aria-label="Хлебные крошки">
+      <ol>
+        {publicItems.map((item, index) => (
+          <li>
+            {item.href ? <a href={withBase(item.href)}>{item.title}</a> : <span aria-current="page">{item.title}</span>}
+            {index < publicItems.length - 1 && <i aria-hidden="true">/</i>}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  </div>
+</div>
+<script type="application/ld+json" set:html={JSON.stringify(schema)} is:inline />

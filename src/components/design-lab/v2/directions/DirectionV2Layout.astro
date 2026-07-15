@@ -1,0 +1,35 @@
+---
+import CatalogV2Layout from '../CatalogV2Layout.astro';
+import '../../../../styles/design-lab/direction-v2.css';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath: string;
+  currentPath: string;
+  ogImage?: string;
+  variant?: 'engineering-visual' | 'visual' | 'engineering-commercial' | 'project-commercial' | 'place-commercial';
+}
+
+const {
+  title,
+  description,
+  canonicalPath,
+  currentPath,
+  ogImage = '',
+  variant = 'engineering-visual'
+} = Astro.props as Props;
+---
+
+<CatalogV2Layout
+  title={title}
+  description={description}
+  canonicalPath={canonicalPath}
+  currentPath={currentPath}
+  ogImage={ogImage}
+  pageKind="section"
+>
+  <div class:list={['direction-v2', `direction-v2--${variant}`]} data-direction-v2-root>
+    <slot />
+  </div>
+</CatalogV2Layout>

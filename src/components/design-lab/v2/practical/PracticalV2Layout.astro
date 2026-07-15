@@ -1,0 +1,42 @@
+---
+import CatalogV2Layout from '../CatalogV2Layout.astro';
+import '../../../../styles/design-lab/practical-v2.css';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath: string;
+  currentPath: string;
+  ogImage?: string;
+  kind: 'company' | 'contacts' | 'vacancies' | 'vacancy' | 'legal';
+  contactHref?: string;
+  ctaLabel?: string;
+}
+
+const {
+  title,
+  description,
+  canonicalPath,
+  currentPath,
+  ogImage = '',
+  kind,
+  contactHref = '/design-lab/v2/kontakty/',
+  ctaLabel = 'Связаться'
+} = Astro.props as Props;
+---
+
+<CatalogV2Layout
+  title={title}
+  description={description}
+  canonicalPath={canonicalPath}
+  currentPath={currentPath}
+  ogImage={ogImage}
+  pageKind="section"
+  contactHref={contactHref}
+  mobileCtaLabel={ctaLabel}
+  headerCtaLabel={ctaLabel}
+>
+  <div class:list={['practical-v2', `practical-v2--${kind}`]} data-practical-v2-root>
+    <slot />
+  </div>
+</CatalogV2Layout>

@@ -1,0 +1,36 @@
+---
+interface Props {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  items: string[];
+  variant?: 'engineering' | 'visual';
+  id?: string;
+}
+
+const {
+  eyebrow = 'Применение',
+  title,
+  description = '',
+  items,
+  variant = 'engineering',
+  id = 'direction-scope'
+} = Astro.props as Props;
+---
+
+{items.length > 0 && (
+  <section class:list={['direction-scope', `direction-scope--${variant}`]} id={id} aria-labelledby={`${id}-title`}>
+    <div class="hv2-shell hv2-grid direction-scope__grid">
+      <header class="direction-scope__heading" data-v2-reveal>
+        <p class="hv2-eyebrow">{eyebrow}</p>
+        <h2 id={`${id}-title`}>{title}</h2>
+        {description && <p>{description}</p>}
+      </header>
+      <ol class="direction-scope__list" data-v2-reveal>
+        {items.map((item, index) => (
+          <li><span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><p>{item}</p></li>
+        ))}
+      </ol>
+    </div>
+  </section>
+)}

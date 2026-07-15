@@ -1,0 +1,41 @@
+---
+import type { V2ProjectRecord } from '../../../../../components/design-lab/v2/mediaRoleAdapter';
+import { getV2ProjectPresentation } from '../../../../../components/design-lab/v2/mediaRoleAdapter';
+import V2ProjectDetail from '../../../../../components/design-lab/v2/projects/V2ProjectDetail.astro';
+import V2ProjectsLayout from '../../../../../components/design-lab/v2/projects/V2ProjectsLayout.astro';
+import { loadPublishedV2Projects } from '../../../../../components/design-lab/v2/projects/projectV2Data';
+
+export async function getStaticPaths() {
+  const projects = await loadPublishedV2Projects();
+  return projects.map((project, index) => ({
+    params: { slug: project.slug },
+    props: {
+      project,
+      previousProject: projects[index - 1],
+      nextProject: projects[index + 1]
+    }
+  }));
+}
+
+interface Props {
+  project: V2ProjectRecord;
+  previousProject?: V2ProjectRecord;
+  nextProject?: V2ProjectRecord;
+}
+
+const { project, previousProject, nextProject } = Astro.props as Props;
+const presentation = getV2ProjectPresentation(project);
+const previous = previousProject ? getV2ProjectPresentation(previousProject) : undefined;
+const next = nextProject ? getV2ProjectPresentation(nextProject) : undefined;
+const currentPath = presentation.v2Route;
+---
+
+<V2ProjectsLayout
+  title={project.seoTitle}
+  description={project.seoDescription}
+  canonicalPath={presentation.productionRoute}
+  currentPath={currentPath}
+  ogImage={presentation.heroMedia?.src}
+>
+  <V2ProjectDetail presentation={presentation} previous={previous} next={next} />
+</V2ProjectsLayout>

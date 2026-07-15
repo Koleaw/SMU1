@@ -1,0 +1,28 @@
+---
+import { getCollection } from 'astro:content';
+import PracticalV2Layout from '../../../../components/design-lab/v2/practical/PracticalV2Layout.astro';
+import V2ContactsPage from '../../../../components/design-lab/v2/practical/V2ContactsPage.astro';
+
+type ListPanel = { type?: string; title?: string; items?: unknown[]; isActive?: boolean };
+const customOrder = (await getCollection('static-pages')).find(({ data }) => data.slug === 'custom-order')?.data;
+const inputBlock = customOrder?.pageBlocks?.find((block) => (
+  block.type === 'listPanel' && block.title === 'Что можно прислать' && block.isActive !== false
+)) as ListPanel | undefined;
+const taskInputs = (inputBlock?.items ?? [])
+  .filter((item): item is string => typeof item === 'string')
+  .map((item) => item.trim())
+  .filter(Boolean);
+const currentPath = '/design-lab/v2/kontakty/';
+---
+
+<PracticalV2Layout
+  title="Контакты — СМУ-1"
+  description="Контакты СМУ-1: телефоны, Telegram, электронная почта и адрес."
+  canonicalPath="/kontakty/"
+  currentPath={currentPath}
+  kind="contacts"
+  contactHref="#contact-methods"
+  ctaLabel="Связаться"
+>
+  <V2ContactsPage taskInputs={taskInputs} />
+</PracticalV2Layout>

@@ -1,0 +1,23 @@
+---
+interface Props {
+  eyebrow?: string;
+  title: string;
+  lead: string;
+  text?: string;
+}
+
+const { eyebrow = 'Результат для пространства', title, lead, text = '' } = Astro.props as Props;
+---
+
+<section class="place-intro" aria-labelledby="place-intro-title">
+  <div class="hv2-shell hv2-grid place-intro__grid" data-v2-reveal>
+    <header class="place-intro__heading">
+      <p class="hv2-eyebrow">{eyebrow}</p>
+      <h2 id="place-intro-title">{title}</h2>
+    </header>
+    <div class="place-intro__copy">
+      <p class="place-intro__lead">{lead}</p>
+      {text && <p>{text}</p>}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,28 @@
+---
+import CatalogSectionV2 from '../../../../components/design-lab/v2/CatalogSectionV2.astro';
+import {
+  createCatalogV2Links,
+  getActiveSectionCategories,
+  getCategoryProducts,
+  loadCatalogV2Snapshot
+} from '../../../../components/design-lab/v2/catalogV2Data';
+
+const currentPath = '/design-lab/v2/ulichnaya-mebel/';
+const snapshot = await loadCatalogV2Snapshot();
+const section = snapshot.sections.find((item) => item.slug === 'ulichnaya-mebel');
+if (!section) throw new Error('Active product section ulichnaya-mebel was not found.');
+const categories = getActiveSectionCategories(snapshot, section.slug);
+const categoryProductCounts = Object.fromEntries(categories.map((category) => [
+  category.slug,
+  getCategoryProducts(snapshot, category.slug).length
+]));
+const links = createCatalogV2Links(snapshot, section.slug);
+---
+
+<CatalogSectionV2
+  section={section}
+  categories={categories}
+  categoryProductCounts={categoryProductCounts}
+  links={links}
+  currentPath={currentPath}
+/>

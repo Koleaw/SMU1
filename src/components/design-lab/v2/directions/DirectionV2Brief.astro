@@ -1,0 +1,34 @@
+---
+interface Props {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  items: string[];
+  variant?: 'engineering' | 'visual';
+}
+
+const {
+  eyebrow = 'Для первого обсуждения',
+  title,
+  description,
+  items,
+  variant = 'engineering'
+} = Astro.props as Props;
+---
+
+{items.length > 0 && (
+  <section class:list={['direction-brief', `direction-brief--${variant}`]} id="direction-brief" aria-labelledby="direction-brief-title">
+    <div class="hv2-shell hv2-grid direction-brief__grid">
+      <header class="direction-brief__heading" data-v2-reveal>
+        <p class="hv2-eyebrow">{eyebrow}</p>
+        <h2 id="direction-brief-title">{title}</h2>
+        <p>{description}</p>
+      </header>
+      <ul class="direction-brief__items" data-v2-reveal>
+        {items.map((item, index) => (
+          <li><span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><strong>{item}</strong></li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}

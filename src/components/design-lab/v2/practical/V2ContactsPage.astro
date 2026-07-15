@@ -1,0 +1,156 @@
+---
+import settings from '../../../../content/site-settings/global.json';
+import yandex from '../../../../data/yandex.json';
+import { withBase } from '../../../../utils/withBase';
+import V2Breadcrumbs from '../V2Breadcrumbs.astro';
+import V2YandexMap from './V2YandexMap.astro';
+
+interface Props {
+  taskInputs: string[];
+}
+
+const { taskInputs } = Astro.props as Props;
+const tel = (value: string) => value.replace(/[^+\d]/g, '');
+---
+
+<V2Breadcrumbs items={[
+  { title: 'Главная', href: '/design-lab/home-v2/' },
+  { title: 'Контакты' }
+]} />
+
+<article class="practical-contacts">
+  <header class="practical-hero practical-contacts__hero">
+    <div class="hv2-shell practical-contacts__hero-grid">
+      <div data-v2-reveal>
+        <p class="hv2-eyebrow">Связь</p>
+        <h1>Контакты</h1>
+      </div>
+      <p data-v2-reveal>Позвоните или напишите в Telegram либо на электронную почту, чтобы обсудить изделие, конструкцию или работы на объекте.</p>
+    </div>
+  </header>
+
+  <section class="practical-contacts__methods" id="contact-methods" aria-label="Способы связи">
+    <div class="hv2-shell">
+      <div class="practical-contacts__method-grid">
+        <a
+          class="practical-contact-card practical-contact-card--primary"
+          href={`tel:${tel(settings.phonePrimary)}`}
+          aria-label={`Позвонить по основному телефону ${settings.phonePrimary}`}
+          data-v2-reveal
+        >
+          <span>Основной телефон</span>
+          <strong>{settings.phonePrimary}</strong>
+          <i aria-hidden="true">↗</i>
+        </a>
+        {settings.phoneSecondary && (
+          <a
+            class="practical-contact-card"
+            href={`tel:${tel(settings.phoneSecondary)}`}
+            aria-label={`Позвонить по дополнительному телефону ${settings.phoneSecondary}`}
+            data-v2-reveal
+          >
+            <span>Дополнительный телефон</span>
+            <strong>{settings.phoneSecondary}</strong>
+            <i aria-hidden="true">↗</i>
+          </a>
+        )}
+        <a
+          class="practical-contact-card"
+          href={settings.telegram}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Написать в Telegram ${settings.telegramLabel}`}
+          data-v2-reveal
+        >
+          <span>Telegram</span>
+          <strong>{settings.telegramLabel}</strong>
+          <i aria-hidden="true">↗</i>
+        </a>
+        <a
+          class="practical-contact-card"
+          href={`mailto:${settings.email}`}
+          aria-label={`Написать на электронную почту ${settings.email}`}
+          data-v2-reveal
+        >
+          <span>Электронная почта</span>
+          <strong>{settings.email}</strong>
+          <i aria-hidden="true">↗</i>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="practical-contacts__details" aria-labelledby="contacts-address-title">
+    <div class="hv2-shell practical-contacts__details-grid">
+      <article class="practical-contacts__address" data-v2-reveal>
+        <p class="hv2-eyebrow">Адрес</p>
+        <h2 id="contacts-address-title">{settings.address}</h2>
+        <p>Объект СМУ-1 отмечен на действующей карте.</p>
+        <iframe
+          class="practical-contacts__rating"
+          src={yandex.ratingBadge.src}
+          width={yandex.ratingBadge.width}
+          height={yandex.ratingBadge.height}
+          title="Рейтинг СМУ-1 в Яндекс Бизнес"
+          loading="lazy"
+        ></iframe>
+      </article>
+      <div class="practical-contacts__map" data-v2-reveal>
+        <V2YandexMap title={`Яндекс Карта: ${settings.address}`} />
+      </div>
+    </div>
+  </section>
+
+  {taskInputs.length > 0 && (
+    <section class="practical-contacts__brief" aria-labelledby="contacts-brief-title">
+      <div class="hv2-shell practical-contacts__brief-grid">
+        <header data-v2-reveal>
+          <p class="hv2-eyebrow">Начать обсуждение</p>
+          <h2 id="contacts-brief-title">Что можно прислать</h2>
+          <p>Достаточно доступных материалов: недостающие вводные можно уточнить в разговоре.</p>
+        </header>
+        <ol data-v2-reveal>
+          {taskInputs.map((item, index) => (
+            <li><span>{String(index + 1).padStart(2, '0')}</span><strong>{item}</strong></li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  )}
+
+  <section class="practical-contacts__legal" aria-labelledby="contacts-legal-title">
+    <div class="hv2-shell practical-contacts__legal-grid">
+      <div data-v2-reveal>
+        <p class="hv2-eyebrow">Реквизиты</p>
+        <h2 id="contacts-legal-title">{settings.companyName}</h2>
+        <p>{settings.legalAddress}</p>
+      </div>
+      <dl data-v2-reveal>
+        <div><dt>ИНН</dt><dd>{settings.inn}</dd></div>
+        <div><dt>КПП</dt><dd>{settings.kpp}</dd></div>
+        <div><dt>ОГРН</dt><dd>{settings.ogrn}</dd></div>
+      </dl>
+      <div class="practical-contacts__related" data-v2-reveal>
+        <a href={withBase('/design-lab/v2/o-nas/')}>О компании <span aria-hidden="true">↗</span></a>
+        <a href={withBase('/design-lab/v2/vakansii/')}>Вакансии <span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="practical-contacts__cta" aria-labelledby="contacts-cta-title">
+    <div class="hv2-shell practical-contacts__cta-grid">
+      <div data-v2-reveal>
+        <p class="hv2-eyebrow hv2-eyebrow--light">Обсудить задачу</p>
+        <h2 id="contacts-cta-title">Свяжемся и уточним исходные данные</h2>
+      </div>
+      <div class="hv2-actions" data-v2-reveal>
+        <a class="hv2-button hv2-button--light" href={settings.telegram} target="_blank" rel="noopener noreferrer">
+          Написать в Telegram <span aria-hidden="true">↗</span>
+        </a>
+        <a class="hv2-button hv2-button--contrast" href={`tel:${tel(settings.phonePrimary)}`}>
+          Позвонить <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</article>

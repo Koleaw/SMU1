@@ -1,0 +1,74 @@
+---
+import { withBase } from '../../../utils/withBase';
+import { imageViewStyle } from './catalogV2Data';
+
+interface Props {
+  kicker: string;
+  title: string;
+  description: string;
+  supportingText?: string;
+  image?: string;
+  imageAlt?: string;
+  imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
+  countLabel?: string;
+  primaryHref?: string;
+  primaryLabel?: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
+}
+
+const {
+  kicker,
+  title,
+  description,
+  supportingText = '',
+  image = '',
+  imageAlt = '',
+  imageView,
+  countLabel = '',
+  primaryHref = '#catalog-grid',
+  primaryLabel = 'Смотреть каталог',
+  secondaryHref = '/design-lab/v2/izgotovlenie-na-zakaz/',
+  secondaryLabel = 'Изготовление по задаче'
+} = Astro.props as Props;
+
+const href = (value: string) => value.startsWith('#') ? value : withBase(value);
+---
+
+<section class="v2-catalog-hero" aria-labelledby="v2-catalog-title">
+  <div class="hv2-shell hv2-grid v2-catalog-hero__grid">
+    <div class="v2-catalog-hero__copy" data-v2-reveal>
+      <div class="v2-catalog-hero__topline">
+        <p class="hv2-eyebrow">{kicker}</p>
+        {countLabel && <span>{countLabel}</span>}
+      </div>
+      <h1 id="v2-catalog-title">{title}</h1>
+      <p class="v2-catalog-hero__lead">{description}</p>
+      {supportingText && <p class="v2-catalog-hero__support">{supportingText}</p>}
+      <div class="hv2-actions v2-catalog-hero__actions">
+        <a class="hv2-button hv2-button--primary" href={href(primaryHref)}>{primaryLabel}<span aria-hidden="true">↓</span></a>
+        <a class="hv2-text-link" href={href(secondaryHref)}>{secondaryLabel}<span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+
+    <figure class="v2-catalog-hero__media" data-v2-media data-v2-reveal>
+      {image ? (
+        <img
+          src={withBase(image)}
+          alt={imageAlt || title}
+          width="1200"
+          height="900"
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+          style={imageViewStyle(imageView)}
+          data-v2-image
+        />
+      ) : null}
+      <div class="v2-media-empty" aria-hidden={Boolean(image)}>
+        <span></span><span></span><span></span>
+        <p>Изображение не указано</p>
+      </div>
+    </figure>
+  </div>
+</section>
