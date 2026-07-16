@@ -1,0 +1,74 @@
+---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import { imageViewStyle } from '../catalogV2Data';
+
+interface Props {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  image?: string;
+  imageAlt?: string;
+  imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
+  layout?: 'split-right' | 'full' | 'visual-split' | 'no-media';
+  primaryHref?: string;
+  primaryLabel?: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
+}
+
+const {
+  eyebrow = 'Направление СМУ-1',
+  title,
+  description,
+  image = '',
+  imageAlt = '',
+  imageView,
+  layout = 'split-right',
+  primaryHref = '#contact',
+  primaryLabel = 'Получить расчёт',
+  secondaryHref = '#direction-brief',
+  secondaryLabel = 'Обсудить задачу'
+} = Astro.props as Props;
+const resolvedLayout = image && layout !== 'no-media' ? layout : 'no-media';
+const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : withBase(value);
+const actionMark = (value: string) => value.startsWith('#') ? '↓' : '↗';
+---
+
+<section class:list={['direction-hero', `direction-hero--${resolvedLayout}`]} aria-labelledby="direction-v2-title">
+  <div class="hv2-shell hv2-grid direction-hero__grid">
+    <div class="direction-hero__copy" data-v2-reveal>
+      <p class:list={['hv2-eyebrow', { 'hv2-eyebrow--light': resolvedLayout === 'full' }]}>{eyebrow}</p>
+      <h1 id="direction-v2-title">{title}</h1>
+      <p class="direction-hero__lead">{description}</p>
+      <div class="hv2-actions direction-hero__actions">
+        <a class:list={['hv2-button', resolvedLayout === 'full' ? 'hv2-button--light' : 'hv2-button--primary']} href={href(primaryHref)}>
+          {primaryLabel}<span aria-hidden="true">{actionMark(primaryHref)}</span>
+        </a>
+        <a class:list={['hv2-button', resolvedLayout === 'full' ? 'hv2-button--contrast' : 'direction-hero__secondary']} href={href(secondaryHref)}>
+          {secondaryLabel}<span aria-hidden="true">{actionMark(secondaryHref)}</span>
+        </a>
+      </div>
+    </div>
+
+    {resolvedLayout !== 'no-media' && (
+      <figure class="direction-hero__media" data-v2-media data-v2-reveal>
+        <img
+          src={withBase(image)}
+          alt={imageAlt || title}
+          width="1448"
+          height="1086"
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+          style={imageViewStyle(imageView)}
+          data-v2-image
+        />
+        <div class="direction-hero__media-fallback" aria-hidden="true">
+          <span></span><span></span><span></span>
+          <p>Изображение направления недоступно</p>
+        </div>
+      </figure>
+    )}
+  </div>
+</section>

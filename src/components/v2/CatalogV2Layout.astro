@@ -1,0 +1,109 @@
+---
+import PublicV2Layout from '../../layouts/PublicV2Layout.astro';
+import HomeV2Header from './home-v2/HomeV2Header.astro';
+import HomeV2Footer from './home-v2/HomeV2Footer.astro';
+import V2PaletteSwitch from './V2PaletteSwitch.astro';
+import { getV2Scope } from '../../utils/v2Routes';
+import '../../styles/v2/catalog-v2.css';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath: string;
+  currentPath: string;
+  ogImage?: string;
+  pageKind?: 'section' | 'category' | 'product';
+  contactHref?: string;
+  mobileCtaLabel?: string;
+  headerCtaLabel?: string;
+  noCanonical?: boolean;
+  noindex?: boolean;
+  robots?: string;
+  refreshTarget?: string;
+}
+
+const {
+  title,
+  description,
+  canonicalPath,
+  currentPath,
+  ogImage = '',
+  pageKind = 'section',
+  contactHref = '#contact',
+  mobileCtaLabel = pageKind === 'product' ? 'Запросить расчёт' : 'Получить расчёт',
+  headerCtaLabel = pageKind === 'product' ? 'Запросить расчёт' : 'Получить расчёт',
+  noCanonical = false,
+  noindex = false,
+  robots,
+  refreshTarget = ''
+} = Astro.props as Props;
+const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
+---
+
+<PublicV2Layout
+  title={title}
+  description={description}
+  canonicalPath={canonicalPath}
+  ogImage={ogImage}
+  noCanonical={noCanonical}
+  noindex={noindex}
+  robots={robots}
+  refreshTarget={refreshTarget}
+>
+  <div class="home-v2 catalog-v2" data-catalog-v2-root>
+    <a class="v2-skip-link" href="#main-content">К основному содержанию</a>
+    <HomeV2Header mode="light" currentPath={currentPath} catalogV2 contactHref={contactHref} ctaLabel={headerCtaLabel} />
+    <main id="main-content" tabindex="-1">
+      <slot />
+    </main>
+    <HomeV2Footer currentPath={currentPath} catalogV2 mobileCtaLabel={mobileCtaLabel} contactHref={contactHref} />
+    {isDesignLab && <V2PaletteSwitch />}
+  </div>
+</PublicV2Layout>
+
+<script>
+  const initCatalogV2Enhancements = () => {
+    const root = document.querySelector<HTMLElement>('[data-catalog-v2-root]');
+    if (!root || root.dataset.enhancementsReady === 'true') return;
+    root.dataset.enhancementsReady = 'true';
+
+    root.querySelectorAll<HTMLImageElement>('[data-v2-image]').forEach((image) => {
+      const markBroken = () => {
+        image.hidden = true;
+        image.closest<HTMLElement>('[data-v2-media]')?.classList.add('is-broken');
+      };
+      if (image.complete && image.naturalWidth === 0) markBroken();
+      else image.addEventListener('error', markBroken, { once: true });
+    });
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const revealItems = Array.from(root.querySelectorAll<HTMLElement>('[data-v2-reveal]'));
+    if (!reducedMotion.matches && 'IntersectionObserver' in window) {
+      try {
+        revealItems.forEach((element) => element.classList.add('hv2-reveal-pending'));
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const element = entry.target as HTMLElement;
+            element.classList.remove('hv2-reveal-pending');
+            element.classList.add('hv2-reveal-visible');
+            observer.unobserve(element);
+          });
+        }, { rootMargin: '0px 0px -7% 0px', threshold: 0.08 });
+        revealItems.forEach((element) => observer.observe(element));
+        window.setTimeout(() => {
+          revealItems.forEach((element) => {
+            if (!element.classList.contains('hv2-reveal-pending')) return;
+            element.classList.remove('hv2-reveal-pending');
+            element.classList.add('hv2-reveal-visible');
+          });
+        }, 1400);
+      } catch {
+        revealItems.forEach((element) => element.classList.remove('hv2-reveal-pending'));
+      }
+    }
+  };
+
+  initCatalogV2Enhancements();
+  document.addEventListener('astro:page-load', initCatalogV2Enhancements);
+</script>

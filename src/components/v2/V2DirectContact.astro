@@ -1,0 +1,81 @@
+---
+import { v2Href as resolveV2Href } from '../../utils/v2Routes';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import settings from '../../content/site-settings/global.json';
+import { getV2TelegramLabel } from '../../utils/v2SiteSettings';
+
+interface Props {
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  primaryLabel?: string;
+  primaryHref?: string;
+  secondaryLabel?: string;
+  secondaryHref?: string;
+  phoneChannelLabel?: string;
+  telegramChannelLabel?: string;
+  emailChannelLabel?: string;
+  variant?: 'default' | 'product';
+}
+
+const {
+  eyebrow = 'Прямая связь',
+  title = 'Обсудим изделие и подготовим расчёт',
+  description = 'Пришлите описание задачи, количество, размеры или материалы проекта удобным способом.',
+  primaryLabel = 'Запросить расчёт',
+  primaryHref = settings.telegram,
+  secondaryLabel = 'Изготовление по задаче',
+  secondaryHref = '/design-lab/v2/izgotovlenie-na-zakaz/',
+  phoneChannelLabel = 'Основной телефон',
+  telegramChannelLabel = 'Telegram',
+  emailChannelLabel = 'Email',
+  variant = 'default'
+} = Astro.props as Props;
+const resolveHref = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : withBase(value);
+const isExternal = (value: string) => /^https?:/i.test(value);
+const telegramLabel = getV2TelegramLabel(settings);
+---
+
+<section class:list={['v2-direct-contact', { 'v2-direct-contact--product': variant === 'product' }]} id="contact" aria-labelledby="v2-contact-title">
+  <div class="hv2-shell hv2-grid v2-direct-contact__grid">
+    <div class="v2-direct-contact__intro" data-v2-reveal>
+      <p class="hv2-eyebrow hv2-eyebrow--light">{eyebrow}</p>
+      <h2 id="v2-contact-title">{title}</h2>
+      <p>{description}</p>
+      <div class="hv2-actions">
+        <a
+          class="hv2-button hv2-button--light"
+          href={resolveHref(primaryHref)}
+          target={isExternal(primaryHref) ? '_blank' : undefined}
+          rel={isExternal(primaryHref) ? 'noopener noreferrer' : undefined}
+        >
+          {primaryLabel}<span aria-hidden="true">↗</span>
+        </a>
+        {secondaryLabel && secondaryHref && (
+          <a
+            class="hv2-button hv2-button--contrast"
+            href={resolveHref(secondaryHref)}
+            target={isExternal(secondaryHref) ? '_blank' : undefined}
+            rel={isExternal(secondaryHref) ? 'noopener noreferrer' : undefined}
+          >
+            {secondaryLabel}<span aria-hidden="true">↗</span>
+          </a>
+        )}
+      </div>
+    </div>
+    <div class="v2-direct-contact__channels" data-v2-reveal>
+      <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
+        <span>{phoneChannelLabel}</span><strong>{settings.phonePrimary}</strong><i aria-hidden="true">↗</i>
+      </a>
+      <a href={settings.telegram} target="_blank" rel="noopener noreferrer">
+        <span>{telegramChannelLabel}</span><strong>{telegramLabel}</strong><i aria-hidden="true">↗</i>
+      </a>
+      <a href={`mailto:${settings.email}`}>
+        <span>{emailChannelLabel}</span><strong>{settings.email}</strong><i aria-hidden="true">↗</i>
+      </a>
+      <a href={withBase('/design-lab/v2/kontakty/')}>
+        <span>Все контакты</span><strong>{settings.address}</strong><i aria-hidden="true">↗</i>
+      </a>
+    </div>
+  </div>
+</section>

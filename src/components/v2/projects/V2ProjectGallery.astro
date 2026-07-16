@@ -1,0 +1,365 @@
+---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import type { V2ProjectMedia } from '../mediaRoleAdapter';
+import '../../../styles/v2/projects-v2.css';
+
+interface Props {
+  images: Array<Pick<V2ProjectMedia, 'src' | 'alt' | 'caption'>>;
+  title: string;
+  galleryKey: string;
+  eagerFirst?: boolean;
+  variant?: 'detail' | 'proof';
+}
+
+const {
+  images,
+  title,
+  galleryKey,
+  eagerFirst = false,
+  variant = 'detail'
+} = Astro.props as Props;
+const seen = new Set<string>();
+const galleryImages = images
+  .map((image) => ({
+    src: image.src?.trim(),
+    alt: image.alt?.trim() || title,
+    caption: image.caption?.trim() || ''
+  }))
+  .filter((image) => image.src && !seen.has(image.src) && seen.add(image.src));
+const hasImages = galleryImages.length > 0;
+const hasMultiple = galleryImages.length > 1;
+const safeKey = galleryKey.replace(/[^a-zA-Z0-9_-]/g, '-');
+const galleryId = `v2-project-gallery-${safeKey}`;
+const lightboxTitleId = `${galleryId}-lightbox-title`;
+const lightboxCaptionId = `${galleryId}-lightbox-caption`;
+const first = galleryImages[0];
+const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(image.src) }));
+---
+
+{hasImages && (
+  <section
+    class:list={['v2-project-gallery', `v2-project-gallery--${variant}`, { 'v2-project-gallery--single': !hasMultiple }]}
+    id={galleryId}
+    aria-label={`Галерея объекта «${title}»`}
+    data-v2-project-gallery
+  >
+    <div class="v2-project-gallery__stage" data-v2-project-gallery-context data-v2-project-gallery-swipe>
+      <div class="v2-project-gallery__media" data-v2-project-gallery-media>
+        <button
+          class="v2-project-gallery__open"
+          type="button"
+          aria-label="Открыть текущее изображение на весь экран"
+          data-v2-project-gallery-open
+        >
+          <img
+            src={withBase(first.src)}
+            alt={first.alt}
+            width="1600"
+            height="1100"
+            loading={eagerFirst ? 'eager' : 'lazy'}
+            fetchpriority={eagerFirst ? 'high' : 'auto'}
+            decoding="async"
+            data-v2-project-gallery-main
+          />
+          <span class="v2-project-gallery__zoom" aria-hidden="true">Развернуть ↗</span>
+          <span class="v2-project-gallery__fallback" data-v2-project-gallery-fallback hidden>
+            Изображение не удалось загрузить
+          </span>
+        </button>
+      </div>
+
+      {hasMultiple && (
+        <div class="v2-project-gallery__controls" aria-label="Переключение изображений">
+          <button type="button" aria-label="Предыдущее изображение" data-v2-project-gallery-prev>
+            <span aria-hidden="true">←</span>
+          </button>
+          <p aria-live="polite" aria-atomic="true" data-v2-project-gallery-status>1 / {galleryImages.length}</p>
+          <button type="button" aria-label="Следующее изображение" data-v2-project-gallery-next>
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      )}
+    </div>
+
+    {hasMultiple && (
+      <div
+        class="v2-project-gallery__thumbs"
+        aria-label="Все изображения объекта"
+        data-v2-project-gallery-context
+      >
+        {galleryImages.map((image, index) => (
+          <button
+            class:list={['v2-project-gallery__thumb', { 'is-current': index === 0 }]}
+            type="button"
+            aria-label={`Показать изображение ${index + 1} из ${galleryImages.length}`}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+            data-v2-project-gallery-thumb
+            data-v2-project-gallery-index={index}
+          >
+            <img src={withBase(image.src)} alt="" width="180" height="132" loading="lazy" decoding="async" />
+            <span>{String(index + 1).padStart(2, '0')}</span>
+          </button>
+        ))}
+      </div>
+    )}
+
+    <p class="v2-project-gallery__caption" hidden={!first.caption} data-v2-project-gallery-caption>
+      {first.caption}
+    </p>
+
+    <dialog
+      class="v2-project-lightbox"
+      aria-labelledby={lightboxTitleId}
+      aria-describedby={lightboxCaptionId}
+      data-v2-project-lightbox
+    >
+      <div class="v2-project-lightbox__inner">
+        <header class="v2-project-lightbox__header">
+          <div>
+            <p id={lightboxTitleId}>{title}</p>
+            {hasMultiple && <span aria-live="polite" data-v2-project-lightbox-status>1 / {galleryImages.length}</span>}
+          </div>
+          <div class="v2-project-lightbox__toolbar">
+            {hasMultiple && (
+              <div class="v2-project-lightbox__arrows" aria-label="Переключение полноэкранных изображений">
+                <button type="button" aria-label="Предыдущее изображение" data-v2-project-lightbox-prev>
+                  <span aria-hidden="true">←</span>
+                </button>
+                <button type="button" aria-label="Следующее изображение" data-v2-project-lightbox-next>
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
+            )}
+            <button
+              class="v2-project-lightbox__close"
+              type="button"
+              aria-label="Закрыть полноэкранную галерею"
+              data-v2-project-lightbox-close
+            ><span aria-hidden="true"></span></button>
+          </div>
+        </header>
+        <div class="v2-project-lightbox__media" data-v2-project-gallery-swipe>
+          <img alt="" data-v2-project-lightbox-image />
+          <p class="v2-project-lightbox__fallback" hidden data-v2-project-lightbox-fallback>
+            Изображение не удалось загрузить
+          </p>
+        </div>
+        <p id={lightboxCaptionId} class="v2-project-lightbox__caption" hidden data-v2-project-lightbox-caption></p>
+      </div>
+    </dialog>
+
+    <script type="application/json" data-v2-project-gallery-data set:html={JSON.stringify({ images: galleryData, title })} is:inline />
+  </section>
+)}
+
+<script>
+  type V2GalleryImage = { src: string; alt: string; caption?: string };
+
+  const initV2ProjectGalleries = () => {
+    document.querySelectorAll<HTMLElement>('[data-v2-project-gallery]').forEach((gallery) => {
+      if (gallery.dataset.ready === 'true') return;
+      gallery.dataset.ready = 'true';
+
+      const dataElement = gallery.querySelector<HTMLScriptElement>('[data-v2-project-gallery-data]');
+      let parsed: { images?: V2GalleryImage[]; title?: string } = {};
+      try {
+        parsed = JSON.parse(dataElement?.textContent || '{}');
+      } catch {
+        parsed = {};
+      }
+      const images = Array.isArray(parsed.images) ? parsed.images.filter((image) => image?.src) : [];
+      if (images.length === 0) return;
+
+      const mainImage = gallery.querySelector<HTMLImageElement>('[data-v2-project-gallery-main]');
+      const mainFallback = gallery.querySelector<HTMLElement>('[data-v2-project-gallery-fallback]');
+      const media = gallery.querySelector<HTMLElement>('[data-v2-project-gallery-media]');
+      const caption = gallery.querySelector<HTMLElement>('[data-v2-project-gallery-caption]');
+      const status = gallery.querySelector<HTMLElement>('[data-v2-project-gallery-status]');
+      const thumbs = Array.from(gallery.querySelectorAll<HTMLButtonElement>('[data-v2-project-gallery-thumb]'));
+      const openButton = gallery.querySelector<HTMLButtonElement>('[data-v2-project-gallery-open]');
+      const lightbox = gallery.querySelector<HTMLDialogElement>('[data-v2-project-lightbox]');
+      const lightboxImage = gallery.querySelector<HTMLImageElement>('[data-v2-project-lightbox-image]');
+      const lightboxFallback = gallery.querySelector<HTMLElement>('[data-v2-project-lightbox-fallback]');
+      const lightboxCaption = gallery.querySelector<HTMLElement>('[data-v2-project-lightbox-caption]');
+      const lightboxStatus = gallery.querySelector<HTMLElement>('[data-v2-project-lightbox-status]');
+      if (!mainImage || !media || !openButton || !lightbox || !lightboxImage) return;
+
+      let current = 0;
+      let lastFocus: HTMLElement | null = null;
+      let suppressOpen = false;
+
+      const normalizedIndex = (index: number) => (index + images.length) % images.length;
+      const syncCaption = (element: HTMLElement | null, value = '') => {
+        if (!element) return;
+        element.textContent = value;
+        element.hidden = !value;
+      };
+
+      const setMainImage = (image: V2GalleryImage) => {
+        media.classList.remove('is-broken');
+        mainFallback?.setAttribute('hidden', '');
+        mainImage.hidden = false;
+        mainImage.alt = image.alt || parsed.title || 'Фотография объекта';
+        mainImage.onload = () => {
+          mainImage.hidden = false;
+          media.classList.remove('is-broken');
+          mainFallback?.setAttribute('hidden', '');
+        };
+        mainImage.onerror = () => {
+          mainImage.hidden = true;
+          media.classList.add('is-broken');
+          mainFallback?.removeAttribute('hidden');
+        };
+        mainImage.src = image.src;
+      };
+
+      const syncLightbox = () => {
+        if (!lightbox.open) return;
+        const image = images[current];
+        lightboxFallback?.setAttribute('hidden', '');
+        lightboxImage.hidden = false;
+        lightboxImage.alt = image.alt || parsed.title || 'Фотография объекта';
+        lightboxImage.onload = () => {
+          lightboxImage.hidden = false;
+          lightboxFallback?.setAttribute('hidden', '');
+        };
+        lightboxImage.onerror = () => {
+          lightboxImage.hidden = true;
+          lightboxFallback?.removeAttribute('hidden');
+        };
+        lightboxImage.src = image.src;
+        if (lightboxStatus) lightboxStatus.textContent = `${current + 1} / ${images.length}`;
+        syncCaption(lightboxCaption, image.caption || '');
+      };
+
+      const setCurrent = (index: number) => {
+        current = normalizedIndex(index);
+        const image = images[current];
+        setMainImage(image);
+        syncCaption(caption, image.caption || '');
+        thumbs.forEach((thumb, thumbIndex) => {
+          const isCurrent = thumbIndex === current;
+          thumb.classList.toggle('is-current', isCurrent);
+          thumb.setAttribute('aria-pressed', String(isCurrent));
+        });
+        thumbs[current]?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+        if (status) status.textContent = `${current + 1} / ${images.length}`;
+        syncLightbox();
+      };
+
+      const previous = () => setCurrent(current - 1);
+      const next = () => setCurrent(current + 1);
+      gallery.querySelector<HTMLButtonElement>('[data-v2-project-gallery-prev]')?.addEventListener('click', previous);
+      gallery.querySelector<HTMLButtonElement>('[data-v2-project-gallery-next]')?.addEventListener('click', next);
+      gallery.querySelector<HTMLButtonElement>('[data-v2-project-lightbox-prev]')?.addEventListener('click', previous);
+      gallery.querySelector<HTMLButtonElement>('[data-v2-project-lightbox-next]')?.addEventListener('click', next);
+      thumbs.forEach((thumb, index) => thumb.addEventListener('click', () => setCurrent(index)));
+
+      gallery.addEventListener('keydown', (event) => {
+        if (images.length < 2) return;
+        const target = event.target;
+        if (!(target instanceof Element) || !target.closest('[data-v2-project-gallery-context]')) return;
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          previous();
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          next();
+        }
+      });
+
+      const addSwipe = (target: HTMLElement) => {
+        let pointerId = -1;
+        let startX = 0;
+        let startY = 0;
+        target.addEventListener('pointerdown', (event) => {
+          if (event.pointerType !== 'touch' || images.length < 2) return;
+          pointerId = event.pointerId;
+          startX = event.clientX;
+          startY = event.clientY;
+        });
+        target.addEventListener('pointerup', (event) => {
+          if (event.pointerId !== pointerId) return;
+          const deltaX = event.clientX - startX;
+          const deltaY = event.clientY - startY;
+          pointerId = -1;
+          if (Math.abs(deltaX) < 44 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+          suppressOpen = true;
+          window.setTimeout(() => { suppressOpen = false; }, 0);
+          if (deltaX > 0) previous();
+          else next();
+        });
+        target.addEventListener('pointercancel', () => { pointerId = -1; });
+      };
+      gallery.querySelectorAll<HTMLElement>('[data-v2-project-gallery-swipe]').forEach(addSwipe);
+
+      const focusableLightboxItems = () => Array.from(lightbox.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      )).filter((item) => !item.hasAttribute('hidden'));
+      const openLightbox = () => {
+        lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : openButton;
+        lightbox.showModal();
+        document.documentElement.classList.add('v2-project-lightbox-open');
+        syncLightbox();
+        gallery.querySelector<HTMLButtonElement>('[data-v2-project-lightbox-close]')?.focus();
+      };
+      const closeLightbox = () => {
+        if (lightbox.open) lightbox.close();
+      };
+
+      openButton.addEventListener('click', (event) => {
+        if (suppressOpen) {
+          event.preventDefault();
+          return;
+        }
+        openLightbox();
+      });
+      gallery.querySelector<HTMLButtonElement>('[data-v2-project-lightbox-close]')?.addEventListener('click', closeLightbox);
+      lightbox.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closeLightbox();
+      });
+      lightbox.addEventListener('close', () => {
+        document.documentElement.classList.remove('v2-project-lightbox-open');
+        lastFocus?.focus();
+      });
+      lightbox.addEventListener('click', (event) => {
+        if (event.target === lightbox) closeLightbox();
+      });
+      lightbox.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft' && images.length > 1) {
+          event.preventDefault();
+          previous();
+          return;
+        }
+        if (event.key === 'ArrowRight' && images.length > 1) {
+          event.preventDefault();
+          next();
+          return;
+        }
+        if (event.key !== 'Tab') return;
+        const items = focusableLightboxItems();
+        const firstItem = items[0];
+        const lastItem = items.at(-1);
+        if (!firstItem || !lastItem) return;
+        if (event.shiftKey && document.activeElement === firstItem) {
+          event.preventDefault();
+          lastItem.focus();
+        } else if (!event.shiftKey && document.activeElement === lastItem) {
+          event.preventDefault();
+          firstItem.focus();
+        }
+      });
+
+      thumbs.forEach((thumb) => {
+        const image = thumb.querySelector('img');
+        image?.addEventListener('error', () => thumb.classList.add('is-broken'), { once: true });
+      });
+      setCurrent(0);
+    });
+  };
+
+  initV2ProjectGalleries();
+  document.addEventListener('astro:page-load', initV2ProjectGalleries);
+</script>

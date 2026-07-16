@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
-import PracticalV2Layout from '../../../../components/design-lab/v2/practical/PracticalV2Layout.astro';
-import V2ContactsPage from '../../../../components/design-lab/v2/practical/V2ContactsPage.astro';
+import PracticalV2Layout from '../../../../components/v2/practical/PracticalV2Layout.astro';
+import V2ContactsPage from '../../../../components/v2/practical/V2ContactsPage.astro';
 
 type ListPanel = { type?: string; title?: string; items?: unknown[]; isActive?: boolean };
 const customOrder = (await getCollection('static-pages')).find(({ data }) => data.slug === 'custom-order')?.data;

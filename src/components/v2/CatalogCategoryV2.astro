@@ -1,0 +1,141 @@
+---
+import CatalogV2Layout from './CatalogV2Layout.astro';
+import { v2Href as resolveV2Href } from '../../utils/v2Routes';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import V2Breadcrumbs from './V2Breadcrumbs.astro';
+import V2CatalogHero from './V2CatalogHero.astro';
+import V2ProductCard from './V2ProductCard.astro';
+import V2ProductGallery from './V2ProductGallery.astro';
+import V2DirectContact from './V2DirectContact.astro';
+import V2CatalogSparseState from './V2CatalogSparseState.astro';
+import {
+  catalogV2ProductHref,
+  categoryGalleryImages,
+  isPlaceholderCatalogMedia,
+  type CatalogV2Links,
+  type ProductCategoryData,
+  type ProductData,
+  type ProductSectionData
+} from './catalogV2Data';
+
+interface Props {
+  section: ProductSectionData;
+  category: ProductCategoryData;
+  products: ProductData[];
+  links: CatalogV2Links;
+  currentPath: string;
+}
+
+const { section, category, products, links, currentPath } = Astro.props as Props;
+const productHref = (product: ProductData) =>
+  links.productHrefs[product.slug] || catalogV2ProductHref(section.slug, category.slug, product.slug);
+const categoryMedia = categoryGalleryImages(category);
+const rawCategoryImage = category.image?.trim() || '';
+const categoryHeroImage = rawCategoryImage && !isPlaceholderCatalogMedia(rawCategoryImage)
+  ? rawCategoryImage
+  : categoryMedia[0] || '';
+const hasProducts = products.length > 0;
+const productNoun = products.length % 10 === 1 && products.length % 100 !== 11
+  ? 'изделие'
+  : [2, 3, 4].includes(products.length % 10) && ![12, 13, 14].includes(products.length % 100)
+    ? 'изделия'
+    : 'изделий';
+---
+
+<CatalogV2Layout
+  title={category.seoTitle}
+  description={category.seoDescription}
+  canonicalPath={`/${section.slug}/${category.slug}/`}
+  currentPath={currentPath}
+  ogImage={categoryHeroImage}
+  pageKind="category"
+>
+  <V2Breadcrumbs items={[
+    { title: 'Главная', href: '/design-lab/home-v2/' },
+    { title: section.title, href: links.sectionHref },
+    { title: category.title }
+  ]} />
+
+  <V2CatalogHero
+    kicker="Категория изделий"
+    title={category.heroTitle}
+    description={category.heroDescription}
+    supportingText={category.shortDescription}
+    image={categoryHeroImage}
+    imageAlt={category.title}
+    imageView={category.imageView}
+    countLabel={hasProducts ? `${products.length} ${productNoun}` : 'Изготовление по задаче'}
+    primaryHref={hasProducts ? '#product-grid' : '#contact'}
+    primaryLabel={hasProducts ? 'Смотреть изделия' : 'Обсудить задачу'}
+    secondaryHref={hasProducts ? '#contact' : links.sectionHref}
+    secondaryLabel={hasProducts ? 'Получить расчёт' : `Все ${section.title.toLocaleLowerCase('ru-RU')}`}
+  />
+
+  {hasProducts ? (
+    <>
+      <section class="v2-product-list" id="product-grid" aria-labelledby="v2-product-grid-title">
+        <div class="hv2-shell">
+          <header class="v2-section-heading v2-section-heading--catalog" data-v2-reveal>
+            <div>
+              <p class="hv2-eyebrow">Каталог категории</p>
+              <h2 id="v2-product-grid-title">Все опубликованные изделия</h2>
+            </div>
+            <p>{products.length} {productNoun}. Статус цены и заполненные сведения показаны непосредственно в карточках.</p>
+          </header>
+
+        <div class="v2-product-grid" role="list" aria-label={`Товары категории ${category.title}`}>
+          {products.map((product, index) => (
+            <div role="listitem">
+              <V2ProductCard product={product} href={productHref(product)} loading={index < 4 ? 'eager' : 'lazy'} />
+            </div>
+          ))}
+        </div>
+        </div>
+      </section>
+
+      {categoryMedia.length > 0 && (
+        <section class="v2-category-examples" aria-labelledby="v2-category-examples-title">
+          <div class="hv2-shell">
+            <header class="v2-section-heading" data-v2-reveal>
+              <div>
+                <p class="hv2-eyebrow">Материалы категории</p>
+                <h2 id="v2-category-examples-title">Примеры решений</h2>
+              </div>
+              <p>{category.galleryIntro?.trim() || category.shortDescription}</p>
+            </header>
+            <div class="v2-category-examples__gallery" data-v2-reveal>
+              <V2ProductGallery
+                images={categoryMedia}
+                title={category.title}
+                imageView={category.imageView}
+                entityLabel="категории"
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section class="v2-custom-cta" aria-labelledby="v2-category-custom-title">
+        <div class="hv2-shell hv2-grid v2-custom-cta__grid" data-v2-reveal>
+          <div>
+            <p class="hv2-eyebrow">Вне типовой линейки</p>
+            <h2 id="v2-category-custom-title">Решение под конкретный объект</h2>
+          </div>
+          <div>
+            <p>Для обсуждения можно прислать фотографию, размеры, эскиз, чертёж или техническое задание.</p>
+            <a class="hv2-text-link" href={withBase('/design-lab/v2/izgotovlenie-na-zakaz/')}>Подробнее об индивидуальном изготовлении<span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+      </section>
+
+      <V2DirectContact
+        title="Подберём изделие или обсудим конструкцию по задаче"
+        description={category.heroDescription}
+        primaryLabel="Получить расчёт"
+        secondaryLabel="Обсудить задачу"
+      />
+    </>
+  ) : (
+    <V2CatalogSparseState category={category} sectionTitle={section.title} sectionHref={links.sectionHref} />
+  )}
+</CatalogV2Layout>

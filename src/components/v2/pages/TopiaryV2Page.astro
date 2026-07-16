@@ -1,0 +1,137 @@
+---
+import V2Breadcrumbs from '../V2Breadcrumbs.astro';
+import DirectionV2Brief from '../directions/DirectionV2Brief.astro';
+import DirectionV2FinalCTA from '../directions/DirectionV2FinalCTA.astro';
+import DirectionV2Hero from '../directions/DirectionV2Hero.astro';
+import DirectionV2Intro from '../directions/DirectionV2Intro.astro';
+import DirectionV2Layout from '../directions/DirectionV2Layout.astro';
+import DirectionV2Related from '../directions/DirectionV2Related.astro';
+import DirectionV2Scope from '../directions/DirectionV2Scope.astro';
+import DirectionV2Types from '../directions/DirectionV2Types.astro';
+import {
+  extractConfirmedBriefInputs,
+  getDirectionBlock,
+  getDirectionCardItems,
+  getDirectionListItems,
+  loadDirectionV2Snapshot
+} from '../directions/directionV2Data';
+import {
+  approvedMediaUntilEdited,
+  approvedUntilEdited
+} from '../directions/directionV2Presentation';
+
+const currentPath = Astro.url.pathname;
+const data = await loadDirectionV2Snapshot({ sectionSlug: 'topiarii' });
+const { section, services } = data;
+const typesBlock = getDirectionBlock(section, 'cardGrid');
+const scopeBlock = getDirectionBlock(section, 'listPanel');
+const types = getDirectionCardItems(typesBlock);
+const scope = getDirectionListItems(scopeBlock);
+const referenceText = types.find((item) => /референс/iu.test(item.title))?.text;
+const briefInputs = extractConfirmedBriefInputs([
+  referenceText,
+  section.contactDescription,
+  section.heroDescription
+]);
+const landscaping = services.find((item) => item.slug === 'blagoustroystvo-territoriy');
+const related = landscaping ? [{
+  eyebrow: 'Связанное направление',
+  title: landscaping.title,
+  description: landscaping.shortDescription,
+  href: `/design-lab/v2/${landscaping.slug}/`
+}] : [];
+const heroMedia = approvedMediaUntilEdited(
+  section.image,
+  '/uploads/chatgpt-image-5-2026-21-56-34-1783277800820.png',
+  '/uploads/chatgpt-image-5-2026-21-56-34-1783277800820.png'
+);
+const directionTitle = approvedUntilEdited(section.title, 'Топиарии', 'Топиарии');
+const heroKicker = approvedUntilEdited(section.heroKicker, undefined, 'Топиарии');
+const heroTitle = approvedUntilEdited(section.heroTitle, 'Топиарии под заказ', 'Топиарии под заказ');
+const heroDescription = approvedUntilEdited(
+  section.heroDescription,
+  'Изготавливаем декоративные топиарные фигуры и зеленые композиции для парков, входных групп, общественных пространств, коммерческих территорий и частных объектов.',
+  'Изготавливаем декоративные топиарные фигуры и зеленые композиции для парков, входных групп, общественных пространств, коммерческих территорий и частных объектов.'
+);
+const contactTitle = approvedUntilEdited(
+  section.contactTitle,
+  'Нужен топиарий под конкретный объект?',
+  'Нужен топиарий под конкретный объект?'
+);
+const contactDescription = approvedUntilEdited(
+  section.contactDescription,
+  'Напишите нам, и мы подберем форму, размер, материал покрытия и способ установки под вашу территорию, мероприятие или входную зону.',
+  'Пришлите идею или имеющиеся исходные материалы — обсудим форму и подготовим расчёт.'
+);
+const telegramLabel = approvedUntilEdited(section.contactTelegramLabel, 'Написать в Telegram', 'Получить расчёт');
+const phoneLabel = approvedUntilEdited(section.contactPhoneLabel, 'Позвонить', 'Обсудить задачу');
+const emailLabel = approvedUntilEdited(section.contactEmailLabel, 'Написать на почту', 'Email');
+const heroImageView = section.imageView
+  ? { ...section.imageView, fit: 'contain' as const }
+  : { fit: 'contain' as const, positionX: 50, positionY: 50, scale: 1 };
+---
+
+<DirectionV2Layout
+  title={section.seoTitle}
+  description={section.seoDescription}
+  canonicalPath={`/${section.slug}/`}
+  currentPath={currentPath}
+  ogImage={heroMedia.src}
+  variant="visual"
+>
+  <V2Breadcrumbs items={[
+    { title: 'Главная', href: '/design-lab/home-v2/' },
+    { title: directionTitle }
+  ]} />
+
+  <DirectionV2Hero
+    eyebrow={heroKicker}
+    title={heroTitle}
+    description={heroDescription}
+    image={heroMedia.src}
+    imageAlt={directionTitle}
+    imageView={heroImageView}
+    layout="full"
+  />
+
+  <DirectionV2Types
+    eyebrow="Формы и композиции"
+    title={typesBlock?.title || 'Что изготавливаем'}
+    items={types}
+    variant="visual"
+  />
+
+  <DirectionV2Intro
+    eyebrow="Образ направления"
+    title="Форма для конкретного пространства"
+    lead={section.shortDescription}
+    variant="visual"
+  />
+
+  <DirectionV2Scope
+    eyebrow="Сценарии применения"
+    title={scopeBlock?.title || 'Где используют топиарии'}
+    items={scope}
+    variant="visual"
+  />
+
+  <DirectionV2Brief
+    eyebrow="Собственная идея"
+    title="Покажите желаемый образ"
+    description="Для первоначального обсуждения можно передать идею и те исходные материалы, которые уже есть."
+    items={briefInputs}
+    variant="visual"
+  />
+
+  <DirectionV2Related title="Топиарии в благоустройстве" items={related} variant="compact" />
+
+  <DirectionV2FinalCTA
+    title={contactTitle}
+    description={contactDescription}
+    primaryLabel={telegramLabel}
+    secondaryLabel={phoneLabel}
+    telegramChannelLabel={approvedUntilEdited(section.contactTelegramLabel, 'Написать в Telegram', 'Telegram')}
+    phoneChannelLabel={approvedUntilEdited(section.contactPhoneLabel, 'Позвонить', 'Основной телефон')}
+    emailChannelLabel={emailLabel}
+  />
+</DirectionV2Layout>

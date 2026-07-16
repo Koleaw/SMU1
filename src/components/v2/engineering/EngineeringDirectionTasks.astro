@@ -1,0 +1,40 @@
+---
+interface TaskItem {
+  title: string;
+  text?: string;
+}
+
+interface Props {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  items: TaskItem[];
+}
+
+const { eyebrow = 'Виды задач', title, description, items } = Astro.props as Props;
+---
+
+{items.length > 0 && (
+  <section class="engineering-tasks" aria-labelledby="engineering-tasks-title">
+    <div class="hv2-shell">
+      <header class="engineering-tasks__heading hv2-grid" data-v2-reveal>
+        <div>
+          <p class="hv2-eyebrow">{eyebrow}</p>
+          <h2 id="engineering-tasks-title">{title}</h2>
+        </div>
+        <p>{description}</p>
+      </header>
+      <ol class="engineering-tasks__list">
+        {items.map((item, index) => (
+          <li data-v2-reveal>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <div>
+              <h3>{item.title}</h3>
+              {item.text && <p>{item.text}</p>}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+)}

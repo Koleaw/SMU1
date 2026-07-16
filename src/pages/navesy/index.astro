@@ -1,15 +1,16 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { withBase } from '../../utils/withBase';
-
-const target = withBase('/navesy-i-kozyrki/');
+import CatalogV2Layout from '../../components/v2/CatalogV2Layout.astro';
+import LegacyV2Fallback from '../../components/v2/LegacyV2Fallback.astro';
+const target = '/navesy-i-kozyrki/';
 ---
-<BaseLayout title="Перенаправление — Навесы" description="Перенаправление на страницу направления «Навесы».">
-  <meta http-equiv="refresh" content={`0;url=${target}`} />
-  <section class="section">
-    <div class="container">
-      <h1>Перенаправляем на страницу «Навесы»</h1>
-      <p><a href={target}>Если переход не сработал, откройте страницу вручную.</a></p>
-    </div>
-  </section>
-</BaseLayout>
+<CatalogV2Layout
+  title="Навесы и козырьки — основной адрес"
+  description="Страница направления «Навесы и козырьки» доступна по основному адресу."
+  canonicalPath={target}
+  currentPath={Astro.url.pathname}
+  noindex
+  refreshTarget={target}
+  contactHref="/kontakty/"
+>
+  <LegacyV2Fallback title="Навесы и козырьки" target={target} />
+</CatalogV2Layout>

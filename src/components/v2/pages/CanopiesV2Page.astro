@@ -1,0 +1,166 @@
+---
+import V2Breadcrumbs from '../V2Breadcrumbs.astro';
+import DirectionV2Brief from '../directions/DirectionV2Brief.astro';
+import DirectionV2FinalCTA from '../directions/DirectionV2FinalCTA.astro';
+import DirectionV2Gallery from '../directions/DirectionV2Gallery.astro';
+import DirectionV2Hero from '../directions/DirectionV2Hero.astro';
+import DirectionV2Intro from '../directions/DirectionV2Intro.astro';
+import DirectionV2Layout from '../directions/DirectionV2Layout.astro';
+import DirectionV2Related from '../directions/DirectionV2Related.astro';
+import DirectionV2Scope from '../directions/DirectionV2Scope.astro';
+import DirectionV2Types from '../directions/DirectionV2Types.astro';
+import {
+  extractConfirmedBriefInputs,
+  getDirectionBlock,
+  getDirectionCardItems,
+  getDirectionGalleryImages,
+  getDirectionListItems,
+  loadDirectionV2Snapshot
+} from '../directions/directionV2Data';
+import {
+  approvedMediaUntilEdited,
+  approvedUntilEdited
+} from '../directions/directionV2Presentation';
+
+const currentPath = Astro.url.pathname;
+const data = await loadDirectionV2Snapshot({
+  sectionSlug: 'navesy-i-kozyrki',
+  catalogCategorySlug: 'navesy'
+});
+const { section, catalogCategory, catalogProducts, catalog, services } = data;
+const typesBlock = getDirectionBlock(section, 'cardGrid');
+const scopeBlock = getDirectionBlock(section, 'listPanel');
+const types = getDirectionCardItems(typesBlock);
+const scope = getDirectionListItems(scopeBlock);
+const galleryImages = getDirectionGalleryImages(catalogProducts);
+const briefInputs = extractConfirmedBriefInputs(catalogProducts.map((product) => product.customProjectText));
+const approvedHeroImage = catalogCategory?.image?.trim() || galleryImages[0] || '';
+const heroMedia = approvedMediaUntilEdited(
+  section.image,
+  '/uploads/2026-03-08-221112-1777541397642.png',
+  approvedHeroImage
+);
+const heroImage = heroMedia.src;
+const heroImageView = heroMedia.usesApprovedBaseline
+  ? (catalogCategory?.imageView
+    ? { ...catalogCategory.imageView, fit: 'contain' as const }
+    : { fit: 'contain' as const, positionX: 50, positionY: 50, scale: 1 })
+  : (section.imageView || { fit: 'cover' as const, positionX: 50, positionY: 50, scale: 1 });
+const directionTitle = approvedUntilEdited(section.title, 'Навесы', 'Навесы и козырьки');
+const heroKicker = approvedUntilEdited(section.heroKicker, undefined, 'Навесы и козырьки');
+const heroTitle = approvedUntilEdited(section.heroTitle, 'Навесы под объект', 'Навесы и козырьки под объект');
+const heroDescription = approvedUntilEdited(
+  section.heroDescription,
+  'Проектируем и изготавливаем навесы для входных групп, зон ожидания, велопарковок, контейнерных площадок, хозяйственных зон и общественных пространств под размеры объекта и условия эксплуатации.',
+  'Проектируем и изготавливаем навесы и козырьки для входных групп, зон ожидания, велопарковок, контейнерных площадок, хозяйственных зон и общественных пространств под размеры и условия объекта.'
+);
+const contactTitle = approvedUntilEdited(
+  section.contactTitle,
+  undefined,
+  'Обсудим навес или козырёк для вашего объекта'
+);
+const contactDescription = approvedUntilEdited(
+  section.contactDescription,
+  undefined,
+  'Опишите задачу и приложите имеющиеся исходные материалы — обсудим решение и подготовим расчёт.'
+);
+const telegramLabel = approvedUntilEdited(
+  section.contactTelegramLabel,
+  '@smu1build · Написать в Telegram',
+  'Получить расчёт'
+);
+const phoneLabel = approvedUntilEdited(section.contactPhoneLabel, undefined, 'Обсудить задачу');
+const emailLabel = approvedUntilEdited(section.contactEmailLabel, undefined, 'Email');
+const fences = catalog.sections.find((item) => item.slug === 'ograzhdeniya-i-zabory');
+const landscaping = services.find((item) => item.slug === 'blagoustroystvo-territoriy');
+const related = [
+  catalogCategory ? {
+    eyebrow: 'Каталог изделий',
+    title: `${catalogCategory.title} в каталоге`,
+    href: '/design-lab/v2/ulichnaya-mebel/navesy/'
+  } : null,
+  fences ? {
+    eyebrow: 'Конструкции для территории',
+    title: fences.title,
+    description: fences.shortDescription,
+    href: '/design-lab/v2/ograzhdeniya-i-zabory/'
+  } : null,
+  landscaping ? {
+    eyebrow: 'Комплексная задача',
+    title: landscaping.title,
+    description: landscaping.shortDescription,
+    href: `/design-lab/v2/${landscaping.slug}/`
+  } : null
+].filter((item): item is NonNullable<typeof item> => Boolean(item));
+---
+
+<DirectionV2Layout
+  title={section.seoTitle}
+  description={section.seoDescription}
+  canonicalPath={`/${section.slug}/`}
+  currentPath={currentPath}
+  ogImage={heroImage}
+  variant="engineering-visual"
+>
+  <V2Breadcrumbs items={[
+    { title: 'Главная', href: '/design-lab/home-v2/' },
+    { title: directionTitle }
+  ]} />
+
+  <DirectionV2Hero
+    eyebrow={heroKicker}
+    title={heroTitle}
+    description={heroDescription}
+    image={heroImage}
+    imageAlt={directionTitle}
+    imageView={heroImageView}
+    layout="split-right"
+  />
+
+  <DirectionV2Intro
+    title="Решение под задачу объекта"
+    lead={section.shortDescription}
+    variant="engineering"
+  />
+
+  <DirectionV2Types
+    eyebrow="Структура направления"
+    title="Какие навесы и козырьки делаем"
+    items={types}
+    variant="engineering"
+  />
+
+  <DirectionV2Gallery
+    title="Примеры навесов и козырьков"
+    description="Визуальные примеры из связанных карточек навесов."
+    images={galleryImages}
+    galleryTitle="Навесы и козырьки — примеры"
+    caption="Изображения сохранены в исходном порядке опубликованных галерей."
+  />
+
+  <DirectionV2Scope
+    eyebrow="Контекст объекта"
+    title={scopeBlock?.title || 'Для каких объектов'}
+    items={scope}
+    variant="engineering"
+  />
+
+  <DirectionV2Brief
+    title="Что можно прислать"
+    description="Для первоначального обсуждения отправьте те исходные материалы, которые уже есть."
+    items={briefInputs}
+    variant="engineering"
+  />
+
+  <DirectionV2Related items={related} />
+
+  <DirectionV2FinalCTA
+    title={contactTitle}
+    description={contactDescription}
+    primaryLabel={telegramLabel}
+    secondaryLabel={phoneLabel}
+    telegramChannelLabel={approvedUntilEdited(section.contactTelegramLabel, '@smu1build · Написать в Telegram', 'Telegram')}
+    phoneChannelLabel={approvedUntilEdited(section.contactPhoneLabel, undefined, 'Основной телефон')}
+    emailChannelLabel={emailLabel}
+  />
+</DirectionV2Layout>

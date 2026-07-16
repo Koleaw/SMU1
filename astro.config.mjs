@@ -82,11 +82,19 @@ const isSitemapPageAllowed = (page) => {
       ? `/${pathname.slice(normalizedBasePath.length)}`
       : pathname;
 
+  const excludedCompatibilityRoutes = new Set([
+    '/lavochki-i-skameyki/',
+    '/urny/',
+    '/navesy/'
+  ]);
+
   return (
     !routePath.startsWith('/admin/') &&
     !routePath.startsWith('/api/') &&
     !routePath.startsWith('/design-lab/') &&
     routePath !== '/404.html' &&
+    routePath !== '/404/' &&
+    !excludedCompatibilityRoutes.has(routePath) &&
     routePath !== '/robots.txt'
   );
 };

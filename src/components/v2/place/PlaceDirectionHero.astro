@@ -1,0 +1,70 @@
+---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import { imageViewStyle } from '../catalogV2Data';
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  description: string;
+  image?: string;
+  imageAlt: string;
+  imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
+  caption?: string;
+  primaryHref?: string;
+  secondaryHref?: string;
+}
+
+const {
+  eyebrow,
+  title,
+  description,
+  image = '',
+  imageAlt,
+  imageView,
+  caption = '',
+  primaryHref = '#contact',
+  secondaryHref = '#landscaping-brief'
+} = Astro.props as Props;
+const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : withBase(value);
+---
+
+<section class:list={['place-hero', { 'place-hero--no-media': !image }]} aria-labelledby="place-direction-title">
+  <div class="hv2-shell">
+    <div class="place-hero__frame">
+      {image && (
+        <figure class="place-hero__media" data-v2-media>
+          <img
+            src={withBase(image)}
+            alt={imageAlt}
+            width="1920"
+            height="1280"
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+            style={imageViewStyle(imageView || { fit: 'cover', positionX: 50, positionY: 52, scale: 1 })}
+            data-v2-image
+          />
+          <div class="place-hero__fallback" aria-hidden="true">Изображение территории недоступно</div>
+          {caption && <figcaption>{caption}</figcaption>}
+        </figure>
+      )}
+
+      <div class="place-hero__copy">
+        <p class="hv2-eyebrow hv2-eyebrow--light">{eyebrow}</p>
+        <h1 id="place-direction-title">{title}</h1>
+        <p class="place-hero__lead">{description}</p>
+        <div class="hv2-actions place-hero__actions">
+          <a class="hv2-button hv2-button--light" href={href(primaryHref)}>
+            Получить расчёт <span aria-hidden="true">↓</span>
+          </a>
+          <a class="hv2-button hv2-button--ghost" href={href(secondaryHref)}>
+            Обсудить территорию <span aria-hidden="true">↓</span>
+          </a>
+        </div>
+      </div>
+
+      {image && <p class="place-hero__marker" aria-hidden="true"><span>Готовая территория</span><i></i></p>}
+    </div>
+  </div>
+</section>

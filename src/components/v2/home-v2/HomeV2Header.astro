@@ -1,0 +1,409 @@
+---
+import settings from '../../../content/site-settings/global.json';
+import { v2CurrentState, v2Href } from '../../../utils/v2Routes';
+import { getV2Navigation } from '../../../utils/v2Navigation';
+import { getV2TelegramLabel } from '../../../utils/v2SiteSettings';
+
+interface Props {
+  mode?: 'overlay' | 'light';
+  currentPath?: string;
+  catalogV2?: boolean;
+  contactHref?: string;
+  ctaLabel?: string;
+}
+
+const {
+  mode = 'overlay',
+  currentPath = Astro.url.pathname,
+  catalogV2 = true,
+  contactHref = '#contact',
+  ctaLabel = 'Получить расчёт'
+} = Astro.props as Props;
+const path = (value: string) => v2Href(value, Astro.url.pathname);
+const resolveHref = (value: string) => value.startsWith('#') ? value : path(value);
+const productV2Roots = [
+  '/ulichnaya-mebel/',
+  '/ograzhdeniya-i-zabory/',
+  '/navesy-i-kozyrki/',
+  '/topiarii/'
+];
+const metalworksV2Root = '/metallokonstruktsii-dlya-biznesa/';
+const constructionV2Root = '/stroitelstvo-i-remonty/';
+const landscapingV2Root = '/blagoustroystvo-territoriy/';
+const objectsV2Root = '/vypolnennye-obekty/';
+const aboutV2Root = '/o-nas/';
+const contactsV2Root = '/kontakty/';
+const vacanciesV2Root = '/vakansii/';
+const legalV2Root = '/politika-konfidencialnosti/';
+const customOrderV2Root = '/izgotovlenie-na-zakaz/';
+const { productLinks, primaryLinks, companyLinks, workAndCompanyLinks } = await getV2Navigation();
+const telegramLabel = getV2TelegramLabel(settings);
+const companyV2Roots = [aboutV2Root, contactsV2Root, vacanciesV2Root, legalV2Root];
+const v2Roots = [
+  ...productV2Roots,
+  metalworksV2Root,
+  constructionV2Root,
+  landscapingV2Root,
+  objectsV2Root,
+  customOrderV2Root,
+  ...companyV2Roots
+];
+const currentState = (href: string) => v2CurrentState(currentPath, href, v2Roots);
+const isCatalogV2Location = productV2Roots.some((href) => v2CurrentState(currentPath, href, productV2Roots))
+  || Boolean(v2CurrentState(currentPath, customOrderV2Root, [customOrderV2Root]));
+const isCompanyV2Location = companyV2Roots.some((href) => v2CurrentState(currentPath, href, companyV2Roots));
+const productsMenuId = 'home-v2-products-menu';
+const companyMenuId = 'home-v2-company-menu';
+const mobileMenuId = 'home-v2-mobile-menu';
+
+---
+
+<header class:list={['hv2-header', { 'is-scrolled': mode === 'light' }]} data-home-v2-header data-hv2-header-mode={mode}>
+  <div class="hv2-shell hv2-header__inner">
+    <a
+      class="hv2-header__brand"
+      href={path('/')}
+      aria-label="СМУ-1 — на главную"
+      aria-current={currentState('/')}
+    >
+      <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="355" height="211" />
+    </a>
+
+    <nav class="hv2-header__nav" aria-label="Основная навигация">
+      <div class="hv2-dropdown" data-hv2-dropdown>
+        <button
+          class="hv2-header__nav-button"
+          type="button"
+          aria-expanded="false"
+          aria-controls={productsMenuId}
+          aria-current={catalogV2 && isCatalogV2Location ? 'location' : undefined}
+          data-hv2-dropdown-trigger
+        >
+          <span>Продукция</span>
+          <span class="hv2-header__chevron" aria-hidden="true"></span>
+        </button>
+        <div class="hv2-dropdown__panel" id={productsMenuId} data-hv2-dropdown-panel>
+          <p class="hv2-dropdown__eyebrow">Продукция и конструкции</p>
+          <div class="hv2-dropdown__links">
+            {productLinks.map((item) => (
+              <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-dropdown-link>
+                <span>{item.label}</span><span aria-hidden="true">↗</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {primaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+
+      <div class="hv2-dropdown" data-hv2-dropdown>
+        <button
+          class="hv2-header__nav-button"
+          type="button"
+          aria-expanded="false"
+          aria-controls={companyMenuId}
+          aria-current={isCompanyV2Location ? 'location' : undefined}
+          data-hv2-dropdown-trigger
+        >
+          <span>Компания</span>
+          <span class="hv2-header__chevron" aria-hidden="true"></span>
+        </button>
+        <div class="hv2-dropdown__panel hv2-dropdown__panel--right" id={companyMenuId} data-hv2-dropdown-panel>
+          <p class="hv2-dropdown__eyebrow">СМУ-1</p>
+          <div class="hv2-dropdown__links">
+            {companyLinks.map((item) => (
+              <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-dropdown-link>
+                <span>{item.label}</span><span aria-hidden="true">↗</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="hv2-header__actions" aria-label="Быстрые действия">
+      <a class="hv2-header__phone" href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
+        {settings.phonePrimary}
+      </a>
+      <a class="hv2-header__telegram" href={settings.telegram} target="_blank" rel="noopener noreferrer">
+        Telegram <span aria-hidden="true">↗</span>
+      </a>
+      <a class="hv2-button hv2-button--header" href={resolveHref(contactHref)}>{ctaLabel}</a>
+    </div>
+
+    <button
+      class="hv2-header__menu-button"
+      type="button"
+      aria-expanded="false"
+      aria-controls={mobileMenuId}
+      aria-label="Открыть меню"
+      data-hv2-mobile-open
+    >
+      <span>Меню</span>
+      <span class="hv2-header__menu-lines" aria-hidden="true"><i></i><i></i></span>
+    </button>
+  </div>
+</header>
+
+<div
+  class="hv2-mobile-menu"
+  id={mobileMenuId}
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="home-v2-mobile-menu-title"
+  aria-hidden="true"
+  hidden
+  data-hv2-mobile-menu
+>
+  <div class="hv2-mobile-menu__top">
+    <a class="hv2-mobile-menu__brand" href={path('/')} aria-current={currentState('/')} data-hv2-mobile-link>
+      <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="355" height="211" />
+    </a>
+    <p id="home-v2-mobile-menu-title">Навигация</p>
+    <button class="hv2-mobile-menu__close" type="button" aria-label="Закрыть меню" data-hv2-mobile-close>
+      <span aria-hidden="true"></span>
+    </button>
+  </div>
+
+  <div class="hv2-mobile-menu__scroll">
+    <a class="hv2-button hv2-button--primary hv2-mobile-menu__cta" href={resolveHref(contactHref)} data-hv2-mobile-link>
+      {ctaLabel} <span aria-hidden="true">↗</span>
+    </a>
+
+    <nav class="hv2-mobile-menu__nav" aria-label="Мобильная навигация">
+      <div class="hv2-mobile-menu__group">
+        <p>Продукция</p>
+        {productLinks.filter((item) => item.href !== customOrderV2Root).map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-mobile-link>{item.label}</a>)}
+      </div>
+
+      <div class="hv2-mobile-menu__group hv2-mobile-menu__group--primary">
+        {primaryLinks.filter((item) => item.href !== objectsV2Root).map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-mobile-link>{item.label}</a>)}
+      </div>
+
+      <div class="hv2-mobile-menu__group">
+        <p>Работа и компания</p>
+        {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-mobile-link>{item.label}</a>)}
+      </div>
+    </nav>
+
+    <section class="hv2-mobile-menu__contacts" aria-labelledby="home-v2-mobile-contacts-title">
+      <p id="home-v2-mobile-contacts-title">Прямая связь</p>
+      <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>{settings.phonePrimary}</a>
+      <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`}>
+        {settings.phoneSecondary} <span>· дополнительный телефон</span>
+      </a>
+      <a href={settings.telegram} target="_blank" rel="noopener noreferrer">{telegramLabel} · Telegram</a>
+      <a href={`mailto:${settings.email}`}>{settings.email}</a>
+      <address>{settings.address}</address>
+    </section>
+  </div>
+</div>
+
+<script>
+  const initHomeV2Header = () => {
+    const header = document.querySelector<HTMLElement>('[data-home-v2-header]');
+    const menu = document.querySelector<HTMLElement>('[data-hv2-mobile-menu]');
+    const menuOpen = document.querySelector<HTMLButtonElement>('[data-hv2-mobile-open]');
+    const menuClose = document.querySelector<HTMLButtonElement>('[data-hv2-mobile-close]');
+
+    if (!header || !menu || !menuOpen || !menuClose || header.dataset.ready === 'true') return;
+    header.dataset.ready = 'true';
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const dropdowns = Array.from(header.querySelectorAll<HTMLElement>('[data-hv2-dropdown]'));
+    let closeTimer = 0;
+
+    const closeDropdown = (group: HTMLElement, restoreFocus = false) => {
+      const trigger = group.querySelector<HTMLButtonElement>('[data-hv2-dropdown-trigger]');
+      group.classList.remove('is-open');
+      trigger?.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) trigger?.focus();
+    };
+
+    const closeAllDropdowns = (except?: HTMLElement) => {
+      dropdowns.forEach((group) => {
+        if (group !== except) closeDropdown(group);
+      });
+    };
+
+    const openDropdown = (group: HTMLElement, focusFirst = false) => {
+      window.clearTimeout(closeTimer);
+      closeAllDropdowns(group);
+      const trigger = group.querySelector<HTMLButtonElement>('[data-hv2-dropdown-trigger]');
+      group.classList.add('is-open');
+      trigger?.setAttribute('aria-expanded', 'true');
+      if (focusFirst) group.querySelector<HTMLAnchorElement>('[data-hv2-dropdown-link]')?.focus();
+    };
+
+    dropdowns.forEach((group) => {
+      const trigger = group.querySelector<HTMLButtonElement>('[data-hv2-dropdown-trigger]');
+      const panel = group.querySelector<HTMLElement>('[data-hv2-dropdown-panel]');
+      const links = Array.from(group.querySelectorAll<HTMLAnchorElement>('[data-hv2-dropdown-link]'));
+      if (!trigger || !panel) return;
+
+      group.addEventListener('pointerenter', (event) => {
+        if (event.pointerType === 'mouse') openDropdown(group);
+      });
+      group.addEventListener('pointerleave', (event) => {
+        if (event.pointerType !== 'mouse') return;
+        closeTimer = window.setTimeout(() => closeDropdown(group), 180);
+      });
+      group.addEventListener('focusin', () => openDropdown(group));
+      group.addEventListener('focusout', (event) => {
+        const next = event.relatedTarget;
+        if (!(next instanceof Node) || !group.contains(next)) {
+          closeTimer = window.setTimeout(() => closeDropdown(group), 0);
+        }
+      });
+
+      trigger.addEventListener('click', () => {
+        if (group.classList.contains('is-open')) closeDropdown(group);
+        else openDropdown(group);
+      });
+
+      trigger.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          openDropdown(group, true);
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          closeDropdown(group, true);
+        }
+      });
+
+      panel.addEventListener('keydown', (event) => {
+        const currentIndex = links.indexOf(document.activeElement as HTMLAnchorElement);
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeDropdown(group, true);
+        } else if (event.key === 'ArrowDown' && links.length) {
+          event.preventDefault();
+          links[(currentIndex + 1 + links.length) % links.length]?.focus();
+        } else if (event.key === 'ArrowUp' && links.length) {
+          event.preventDefault();
+          links[(currentIndex - 1 + links.length) % links.length]?.focus();
+        }
+      });
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+      if (!(event.target instanceof Node) || !header.contains(event.target)) closeAllDropdowns();
+    });
+
+    const syncHeaderState = () => {
+      if (header.dataset.hv2HeaderMode === 'light') {
+        header.classList.add('is-scrolled');
+        return;
+      }
+      const sentinel = document.querySelector<HTMLElement>('[data-home-v2-header-sentinel]');
+      if (!sentinel) return;
+      header.classList.toggle('is-scrolled', sentinel.getBoundingClientRect().top <= header.offsetHeight);
+    };
+
+    const sentinel = document.querySelector<HTMLElement>('[data-home-v2-header-sentinel]');
+    if (sentinel && 'IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(syncHeaderState, {
+        rootMargin: `-${header.offsetHeight}px 0px 0px 0px`,
+        threshold: 0
+      });
+      observer.observe(sentinel);
+    }
+    window.addEventListener('scroll', syncHeaderState, { passive: true });
+    window.addEventListener('resize', syncHeaderState);
+    syncHeaderState();
+
+    let lastFocus: HTMLElement | null = null;
+    let lockedScrollY = 0;
+    let hideTimer = 0;
+
+    const focusableItems = () => Array.from(menu.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter((element) => !element.hasAttribute('hidden'));
+
+    const lockPage = () => {
+      lockedScrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${lockedScrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      document.documentElement.classList.add('hv2-menu-open');
+      document.querySelector('main')?.setAttribute('inert', '');
+      header.setAttribute('inert', '');
+    };
+
+    const unlockPage = () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      document.documentElement.classList.remove('hv2-menu-open');
+      document.querySelector('main')?.removeAttribute('inert');
+      header.removeAttribute('inert');
+      window.scrollTo(0, lockedScrollY);
+    };
+
+    const openMobileMenu = () => {
+      window.clearTimeout(hideTimer);
+      const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      lastFocus = activeElement && activeElement !== document.body ? activeElement : menuOpen;
+      menu.hidden = false;
+      menu.setAttribute('aria-hidden', 'false');
+      menuOpen.setAttribute('aria-expanded', 'true');
+      lockPage();
+      requestAnimationFrame(() => {
+        menu.classList.add('is-open');
+        menuClose.focus();
+      });
+    };
+
+    const closeMobileMenu = (restoreFocus = true) => {
+      if (menu.hidden) return;
+      menu.classList.remove('is-open');
+      menu.setAttribute('aria-hidden', 'true');
+      menuOpen.setAttribute('aria-expanded', 'false');
+      unlockPage();
+      const finish = () => {
+        menu.hidden = true;
+        if (restoreFocus) lastFocus?.focus();
+      };
+      if (reducedMotion.matches) finish();
+      else hideTimer = window.setTimeout(finish, 300);
+    };
+
+    menuOpen.addEventListener('click', openMobileMenu);
+    menuClose.addEventListener('click', () => closeMobileMenu());
+    menu.querySelectorAll('[data-hv2-mobile-link]').forEach((link) => {
+      link.addEventListener('click', () => closeMobileMenu(false));
+    });
+
+    menu.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMobileMenu();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const items = focusableItems();
+      const first = items[0];
+      const last = items.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeAllDropdowns();
+    });
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 1100 && !menu.hidden) closeMobileMenu(false);
+    });
+  };
+
+  initHomeV2Header();
+  document.addEventListener('astro:page-load', initHomeV2Header);
+</script>

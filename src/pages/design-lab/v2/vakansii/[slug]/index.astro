@@ -1,11 +1,12 @@
 ---
-import PracticalV2Layout from '../../../../../components/design-lab/v2/practical/PracticalV2Layout.astro';
-import V2VacancyDetail from '../../../../../components/design-lab/v2/practical/V2VacancyDetail.astro';
+import PracticalV2Layout from '../../../../../components/v2/practical/PracticalV2Layout.astro';
+import V2VacancyDetail from '../../../../../components/v2/practical/V2VacancyDetail.astro';
 import {
   loadActiveV2Jobs,
+  vacancyProductionRoute,
   vacancyV2Route,
   type V2JobRecord
-} from '../../../../../components/design-lab/v2/practical/practicalV2Data';
+} from '../../../../../components/v2/practical/practicalV2Data';
 
 export async function getStaticPaths() {
   const jobs = await loadActiveV2Jobs();
@@ -19,7 +20,7 @@ const currentPath = vacancyV2Route(job);
 <PracticalV2Layout
   title={`${job.title} — вакансии СМУ-1`}
   description={job.shortDescription}
-  canonicalPath="/vakansii/"
+  canonicalPath={vacancyProductionRoute(job)}
   currentPath={currentPath}
   kind="vacancy"
   contactHref="#vacancy-contact"

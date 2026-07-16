@@ -1,25 +1,29 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import Breadcrumbs from '../../components/Breadcrumbs.astro';
-import { withBase } from '../../utils/withBase';
+import PracticalV2Layout from '../../components/v2/practical/PracticalV2Layout.astro';
+import V2Breadcrumbs from '../../components/v2/V2Breadcrumbs.astro';
 ---
 
-<BaseLayout
+<PracticalV2Layout
   title="Политика конфиденциальности и обработки персональных данных — СМУ-1"
   description="Политика конфиденциальности и обработки персональных данных ООО «СМУ 1»."
+  canonicalPath="/politika-konfidencialnosti/"
+  currentPath={Astro.url.pathname}
+  kind="legal"
+  contactHref="/kontakty/"
+  ctaLabel="Связаться"
 >
-  <div class="breadcrumbs-bar">
-    <div class="container">
-      <Breadcrumbs
-        items={[
-          { title: 'Главная', href: withBase('/') },
-          { title: 'Политика конфиденциальности и обработки персональных данных' }
-        ]}
-      />
-    </div>
-  </div>
+  <V2Breadcrumbs items={[
+    { title: 'Главная', href: '/' },
+    { title: 'Политика конфиденциальности и обработки персональных данных' }
+  ]} />
 
-  <section class="section policy-page">
+  <article class="practical-legal">
+    <div class="hv2-shell practical-legal__layout">
+      <aside class="practical-legal__aside" aria-label="О документе" data-v2-reveal>
+        <p class="hv2-eyebrow">Юридический документ</p>
+        <p>Политика конфиденциальности и обработки персональных данных ООО «СМУ 1».</p>
+      </aside>
+      <section class="practical-legal__document" data-v2-reveal>
     <div class="container policy-page__container">
       <h1>Политика конфиденциальности и обработки персональных данных</h1>
       <p class="policy-page__updated"><strong>Дата редакции:</strong> 25.04.2026</p>
@@ -183,4 +187,6 @@ import { withBase } from '../../utils/withBase';
       </div>
     </div>
   </section>
-</BaseLayout>
+    </div>
+  </article>
+</PracticalV2Layout>

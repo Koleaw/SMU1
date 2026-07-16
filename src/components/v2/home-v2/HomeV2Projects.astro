@@ -1,0 +1,266 @@
+---
+import { getCollection } from 'astro:content';
+import { v2Href } from '../../../utils/v2Routes';
+import { getV2ProjectPresentation } from '../mediaRoleAdapter';
+
+const path = (value: string) => v2Href(value, Astro.url.pathname);
+const projects = (await getCollection('projects', ({ data }) => data.isActive))
+  .sort((a, b) => a.data.order - b.data.order)
+  .map((entry) => getV2ProjectPresentation(entry.data))
+  .filter((presentation) => presentation.hasMedia && presentation.publicGallery.length > 0)
+  .slice(0, 3)
+  .map((presentation) => ({
+    type: presentation.category || 'Выполненный объект',
+    title: presentation.project.title,
+    description: presentation.project.shortDescription,
+    facts: presentation.project.whatWasDone,
+    city: presentation.project.city,
+    year: presentation.project.year,
+    href: presentation.productionRoute,
+    images: presentation.publicGallery.slice(0, 3).map(({ src, alt }) => ({ src, alt }))
+  }));
+---
+
+<div class="hv2-projects-grid">
+  {projects.map((project) => (
+    <article class="hv2-project" data-hv2-gallery data-reveal>
+      <div
+        class="hv2-project__gallery"
+        role="region"
+        aria-roledescription={project.images.length > 1 ? 'карусель' : undefined}
+        aria-label={`Фотографии объекта «${project.title}»`}
+        tabindex="0"
+        data-hv2-gallery-viewport
+      >
+        <div class="hv2-project__slides">
+          {project.images.map((image, imageIndex) => (
+            <figure
+              class={`hv2-project__slide${imageIndex === 0 ? ' is-current' : ''}`}
+              aria-hidden={imageIndex === 0 ? 'false' : 'true'}
+              data-hv2-gallery-slide
+            >
+              <img
+                src={path(image.src)}
+                alt={image.alt}
+                width="1920"
+                height="1200"
+                loading="lazy"
+                decoding="async"
+              />
+            </figure>
+          ))}
+        </div>
+
+        <div class="hv2-project__topline">
+          <span>{project.type}</span>
+          <span>{project.city} · {project.year}</span>
+        </div>
+
+        {project.images.length > 1 && (
+          <>
+            <div class="hv2-project__controls">
+              <button type="button" aria-label={`Предыдущее фото объекта «${project.title}»`} data-hv2-gallery-prev>
+                <span aria-hidden="true">←</span>
+              </button>
+              <p aria-live="polite" aria-atomic="true" data-hv2-gallery-status>1 / {project.images.length}</p>
+              <button type="button" aria-label={`Следующее фото объекта «${project.title}»`} data-hv2-gallery-next>
+                <span aria-hidden="true">→</span>
+              </button>
+              <button
+                class="hv2-project__pause"
+                type="button"
+                aria-label={`Приостановить смену фото объекта «${project.title}»`}
+                aria-pressed="false"
+                data-hv2-gallery-pause
+              >
+                <span class="hv2-project__pause-icon" aria-hidden="true"></span>
+                <span data-hv2-gallery-pause-label>Пауза</span>
+              </button>
+            </div>
+
+            <div class="hv2-project__dots" aria-label="Выбор фотографии">
+              {project.images.map((_, imageIndex) => (
+                <button
+                  class={imageIndex === 0 ? 'is-current' : ''}
+                  type="button"
+                  aria-label={`Показать фото ${imageIndex + 1} из ${project.images.length}`}
+                  aria-current={imageIndex === 0 ? 'true' : undefined}
+                  data-hv2-gallery-dot={imageIndex}
+                ><span></span></button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div class="hv2-project__body">
+        <div>
+          <h3>{project.title}</h3>
+          <p>{project.description}</p>
+          <p class="hv2-project__facts">{project.facts}</p>
+          <a class="hv2-text-link" href={path(project.href)}>
+            Открыть объект <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </div>
+    </article>
+  ))}
+</div>
+
+<script>
+  const initHomeV2Galleries = () => {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const galleries = Array.from(document.querySelectorAll<HTMLElement>('[data-hv2-gallery]'));
+
+    galleries.forEach((gallery) => {
+      if (gallery.dataset.ready === 'true') return;
+      gallery.dataset.ready = 'true';
+
+      const viewport = gallery.querySelector<HTMLElement>('[data-hv2-gallery-viewport]');
+      const slides = Array.from(gallery.querySelectorAll<HTMLElement>('[data-hv2-gallery-slide]'));
+      const dots = Array.from(gallery.querySelectorAll<HTMLButtonElement>('[data-hv2-gallery-dot]'));
+      const prev = gallery.querySelector<HTMLButtonElement>('[data-hv2-gallery-prev]');
+      const next = gallery.querySelector<HTMLButtonElement>('[data-hv2-gallery-next]');
+      const pause = gallery.querySelector<HTMLButtonElement>('[data-hv2-gallery-pause]');
+      const pauseLabel = gallery.querySelector<HTMLElement>('[data-hv2-gallery-pause-label]');
+      const status = gallery.querySelector<HTMLElement>('[data-hv2-gallery-status]');
+      if (!viewport || slides.length < 2 || !prev || !next || !pause || !status) return;
+
+      let index = 0;
+      let timer = 0;
+      let isVisible = false;
+      let isHovering = false;
+      let hasFocus = false;
+      let pausedByUser = false;
+      let pointerStartX: number | null = null;
+      let pointerStartY: number | null = null;
+
+      const canAutoplay = () => (
+        !reducedMotion.matches &&
+        !pausedByUser &&
+        isVisible &&
+        !isHovering &&
+        !hasFocus &&
+        document.visibilityState === 'visible'
+      );
+
+      const stopTimer = () => {
+        window.clearTimeout(timer);
+        timer = 0;
+      };
+
+      const schedule = () => {
+        stopTimer();
+        if (!canAutoplay()) return;
+        timer = window.setTimeout(() => {
+          show(index + 1, false);
+        }, 5600);
+      };
+
+      const show = (requestedIndex: number, announce = true) => {
+        index = (requestedIndex + slides.length) % slides.length;
+        slides.forEach((slide, slideIndex) => {
+          const current = slideIndex === index;
+          slide.classList.toggle('is-current', current);
+          slide.setAttribute('aria-hidden', String(!current));
+        });
+        dots.forEach((dot, dotIndex) => {
+          const current = dotIndex === index;
+          dot.classList.toggle('is-current', current);
+          if (current) dot.setAttribute('aria-current', 'true');
+          else dot.removeAttribute('aria-current');
+        });
+        status.textContent = `${index + 1} / ${slides.length}`;
+        if (!announce) status.setAttribute('aria-live', 'off');
+        else status.setAttribute('aria-live', 'polite');
+        schedule();
+      };
+
+      const syncPause = () => {
+        pause.setAttribute('aria-pressed', String(pausedByUser));
+        pause.setAttribute(
+          'aria-label',
+          pausedByUser ? 'Продолжить автоматическую смену фотографий' : 'Приостановить автоматическую смену фотографий'
+        );
+        if (pauseLabel) pauseLabel.textContent = pausedByUser ? 'Продолжить' : 'Пауза';
+        pause.classList.toggle('is-paused', pausedByUser);
+      };
+
+      prev.addEventListener('click', () => show(index - 1));
+      next.addEventListener('click', () => show(index + 1));
+      dots.forEach((dot) => {
+        dot.addEventListener('click', () => show(Number(dot.dataset.hv2GalleryDot || 0)));
+      });
+      pause.addEventListener('click', () => {
+        pausedByUser = !pausedByUser;
+        syncPause();
+        schedule();
+      });
+
+      viewport.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          show(index - 1);
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          show(index + 1);
+        }
+      });
+
+      viewport.addEventListener('pointerdown', (event) => {
+        if (event.pointerType === 'mouse' || !(event.target instanceof Element) || event.target.closest('button')) return;
+        pointerStartX = event.clientX;
+        pointerStartY = event.clientY;
+      });
+      viewport.addEventListener('pointerup', (event) => {
+        if (pointerStartX === null || pointerStartY === null) return;
+        const deltaX = event.clientX - pointerStartX;
+        const deltaY = event.clientY - pointerStartY;
+        pointerStartX = null;
+        pointerStartY = null;
+        if (Math.abs(deltaX) < 42 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+        show(deltaX > 0 ? index - 1 : index + 1);
+      });
+      viewport.addEventListener('pointercancel', () => {
+        pointerStartX = null;
+        pointerStartY = null;
+      });
+
+      gallery.addEventListener('pointerenter', () => {
+        isHovering = true;
+        stopTimer();
+      });
+      gallery.addEventListener('pointerleave', () => {
+        isHovering = false;
+        schedule();
+      });
+      gallery.addEventListener('focusin', () => {
+        hasFocus = true;
+        stopTimer();
+      });
+      gallery.addEventListener('focusout', (event) => {
+        const nextFocus = event.relatedTarget;
+        hasFocus = nextFocus instanceof Node && gallery.contains(nextFocus);
+        schedule();
+      });
+
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+          isVisible = entries.some((entry) => entry.isIntersecting);
+          schedule();
+        }, { threshold: 0.2 });
+        observer.observe(gallery);
+      } else {
+        isVisible = true;
+      }
+
+      document.addEventListener('visibilitychange', schedule);
+      reducedMotion.addEventListener('change', schedule);
+      syncPause();
+      show(0, false);
+    });
+  };
+
+  initHomeV2Galleries();
+  document.addEventListener('astro:page-load', initHomeV2Galleries);
+</script>

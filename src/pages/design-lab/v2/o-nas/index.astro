@@ -1,8 +1,8 @@
 ---
 import { getCollection } from 'astro:content';
-import PracticalV2Layout from '../../../../components/design-lab/v2/practical/PracticalV2Layout.astro';
-import V2CompanyPage from '../../../../components/design-lab/v2/practical/V2CompanyPage.astro';
-import { loadPublishedV2ProjectPresentations } from '../../../../components/design-lab/v2/projects/projectV2Data';
+import PracticalV2Layout from '../../../../components/v2/practical/PracticalV2Layout.astro';
+import V2CompanyPage from '../../../../components/v2/practical/V2CompanyPage.astro';
+import { loadPublishedV2ProjectPresentations } from '../../../../components/v2/projects/projectV2Data';
 
 const currentPath = '/design-lab/v2/o-nas/';
 const page = (await getCollection('static-pages')).find(({ data }) => data.slug === 'o-nas' && data.isActive !== false)?.data;

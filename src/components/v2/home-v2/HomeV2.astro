@@ -1,0 +1,524 @@
+---
+import settings from '../../../content/site-settings/global.json';
+import home from '../../../content/static-pages/home.json';
+import { getV2Scope, v2Href } from '../../../utils/v2Routes';
+import { loadV2Directions } from '../../../utils/v2Directions';
+import { getV2Regions, getV2TelegramLabel } from '../../../utils/v2SiteSettings';
+import HomeV2Header from './HomeV2Header.astro';
+import HomeV2Projects from './HomeV2Projects.astro';
+import HomeV2Footer from './HomeV2Footer.astro';
+import { getHomeV2Presentation } from './homeV2Presentation';
+
+const path = (value: string) => v2Href(value, Astro.url.pathname);
+const regionLine = getV2Regions(settings).join(' · ');
+const telegramLabel = getV2TelegramLabel(settings);
+const showPaletteSwitch = getV2Scope(Astro.url.pathname) === 'design-lab';
+const copy = getHomeV2Presentation(home);
+const directionBySlug = new Map(
+  (await loadV2Directions()).filter((item) => item.showOnHome).map((item) => [item.slug, item])
+);
+const streetFurnitureDirection = directionBySlug.get('ulichnaya-mebel');
+const fencesDirection = directionBySlug.get('ograzhdeniya-i-zabory');
+const canopiesDirection = directionBySlug.get('navesy-i-kozyrki');
+const metalworksDirection = directionBySlug.get('metallokonstruktsii-dlya-biznesa');
+const topiaryDirection = directionBySlug.get('topiarii');
+const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
+const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
+---
+
+<div class="home-v2" data-home-v2-root>
+  <HomeV2Header currentPath={Astro.url.pathname} catalogV2 />
+
+  <main>
+    <section class="hv2-hero" aria-labelledby="home-v2-title" data-hv2-hero>
+      <span class="hv2-hero__header-sentinel" aria-hidden="true" data-home-v2-header-sentinel></span>
+      <div class="hv2-hero__media" aria-hidden="true">
+        <picture class="hv2-hero__poster">
+          <source media="(max-width: 700px)" srcset={path(home.heroMediaPosterMobile)} />
+          <img
+            src={path(home.heroMediaPoster)}
+            alt=""
+            width="1920"
+            height="1080"
+            loading="eager"
+            fetchpriority="high"
+          />
+        </picture>
+        <video
+          class="hv2-hero__video"
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          poster={path(home.heroMediaPoster)}
+          data-hv2-hero-video
+          data-autoplay="true"
+        >
+          <source src={path(home.heroMediaVideoMobile)} type="video/mp4" media="(max-width: 700px)" />
+          <source src={path(home.heroMediaVideo)} type="video/mp4" />
+        </video>
+        <div class="hv2-hero__veil"></div>
+      </div>
+
+      <div class="hv2-shell hv2-hero__content">
+        <div class="hv2-hero__copy" data-reveal>
+          <p class="hv2-eyebrow hv2-eyebrow--light">{copy.heroKicker}</p>
+          <h1 id="home-v2-title">{copy.heroTitle}</h1>
+          <p class="hv2-hero__lead">{copy.heroDescription}</p>
+          <div class="hv2-actions">
+            <a class="hv2-button hv2-button--primary" href="#contact">
+              {copy.heroPrimaryLabel} <span aria-hidden="true">↗</span>
+            </a>
+            <a class="hv2-button hv2-button--ghost" href={path('/design-lab/v2/vypolnennye-obekty/')}>{copy.heroSecondaryLabel}</a>
+          </div>
+        </div>
+
+        <nav class="hv2-hero__quick" aria-label="Быстрые переходы">
+          <a href={path('/design-lab/v2/metallokonstruktsii-dlya-biznesa/')}>Металлоконструкции <span aria-hidden="true">↗</span></a>
+          <a href={path('/design-lab/v2/stroitelstvo-i-remonty/')}>Строительство <span aria-hidden="true">↗</span></a>
+          <a href="#directions">Все направления <span aria-hidden="true">↓</span></a>
+        </nav>
+      </div>
+    </section>
+
+    <nav class="hv2-section-nav" aria-label="Навигация по главной" data-hv2-section-nav>
+      <div class="hv2-shell hv2-section-nav__inner">
+        <p><span aria-hidden="true"></span> По странице</p>
+        <div>
+          <a href="#directions" aria-current="location" data-hv2-section-link="directions">Направления</a>
+          <a href="#projects" data-hv2-section-link="projects">Объекты</a>
+          <a href="#brief" data-hv2-section-link="brief">Как начать</a>
+          <a href="#contact" data-hv2-section-link="contact">Контакты</a>
+        </div>
+      </div>
+    </nav>
+
+    <section class="hv2-positioning" aria-labelledby="home-v2-positioning-title">
+      <div class="hv2-shell hv2-grid">
+        <p class="hv2-eyebrow">{copy.positioningKicker}</p>
+        <h2 id="home-v2-positioning-title">{copy.positioningTitle}</h2>
+        <p class="hv2-positioning__summary">{copy.positioningSummary}</p>
+      </div>
+    </section>
+
+    <section class="hv2-competencies" id="directions" aria-labelledby="home-v2-directions-title">
+      <div class="hv2-shell">
+        <header class="hv2-section-head hv2-grid" data-reveal>
+          <div>
+            <p class="hv2-eyebrow">{copy.directionsEyebrow}</p>
+            <h2 id="home-v2-directions-title">От предметного решения до строительного объекта</h2>
+          </div>
+          <p>{copy.directionsDescription}</p>
+        </header>
+
+        <div class="hv2-competency-map hv2-grid">
+          {constructionDirection && <a
+            class:list={['hv2-competency', 'hv2-competency--construction', constructionDirection.image ? 'hv2-competency--media' : 'hv2-competency--graphic']}
+            href={path(constructionDirection.href)}
+            data-reveal
+          >
+            {constructionDirection.image && <><img
+              src={path(constructionDirection.image)}
+              alt={constructionDirection.title}
+              width="1920"
+              height="1200"
+              loading="lazy"
+              decoding="async"
+              style={`object-fit:${constructionDirection.imageFit};object-position:${constructionDirection.imagePosition};`}
+            /><span class="hv2-competency__veil"></span></>}
+            <span class="hv2-competency__body">
+              <span class="hv2-eyebrow hv2-eyebrow--light">Объектные работы</span>
+              <strong>{constructionDirection.title}</strong>
+              <span>{constructionDirection.description}</span>
+              <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+            </span>
+          </a>}
+
+          {metalworksDirection && <a
+            class:list={['hv2-competency', 'hv2-competency--metals', metalworksDirection.image ? 'hv2-competency--media' : 'hv2-competency--graphic']}
+            href={path(metalworksDirection.href)}
+            data-reveal
+          >
+            {metalworksDirection.image && <><img
+              src={path(metalworksDirection.image)}
+              alt={metalworksDirection.title}
+              width="1920"
+              height="1200"
+              loading="lazy"
+              decoding="async"
+              style={`object-fit:${metalworksDirection.imageFit};object-position:${metalworksDirection.imagePosition};`}
+            /><span class="hv2-competency__veil"></span></>}
+            <span class="hv2-competency__body">
+              <span class="hv2-eyebrow hv2-eyebrow--light">Конструкции под объект</span>
+              <strong>{metalworksDirection.title}</strong>
+              <span>{metalworksDirection.description}</span>
+              <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+            </span>
+          </a>}
+
+          {streetFurnitureDirection && <a
+            class:list={['hv2-competency', 'hv2-competency--furniture', streetFurnitureDirection.image ? 'hv2-competency--media' : 'hv2-competency--graphic']}
+            href={path(streetFurnitureDirection.href)}
+            data-reveal
+          >
+            {streetFurnitureDirection.image && <><img
+              src={path(streetFurnitureDirection.image)}
+              alt={streetFurnitureDirection.title}
+              width="1920"
+              height="1200"
+              loading="lazy"
+              decoding="async"
+              style={`object-fit:${streetFurnitureDirection.imageFit};object-position:${streetFurnitureDirection.imagePosition};`}
+            /><span class="hv2-competency__veil"></span></>}
+            <span class="hv2-competency__body">
+              <span class="hv2-eyebrow hv2-eyebrow--light">Каталог и адаптация</span>
+              <strong>{streetFurnitureDirection.title}</strong>
+              <span>{streetFurnitureDirection.description}</span>
+              <span class="hv2-competency__link">Перейти в каталог <i aria-hidden="true">↗</i></span>
+            </span>
+          </a>}
+
+          {fencesDirection && <a
+            class:list={['hv2-competency', 'hv2-competency--fences', fencesDirection.image ? 'hv2-competency--media' : 'hv2-competency--graphic']}
+            href={path(fencesDirection.href)}
+            data-reveal
+          >
+            {fencesDirection.image && <><img
+              src={path(fencesDirection.image)}
+              alt={fencesDirection.title}
+              width="1920"
+              height="1200"
+              loading="lazy"
+              decoding="async"
+              style={`object-fit:${fencesDirection.imageFit};object-position:${fencesDirection.imagePosition};`}
+            /><span class="hv2-competency__veil"></span></>}
+            <span class="hv2-competency__body">
+              <span class="hv2-eyebrow hv2-eyebrow--light">Под конкретный объект</span>
+              <strong>{fencesDirection.title}</strong>
+              <span>{fencesDirection.description}</span>
+              <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+            </span>
+          </a>}
+
+          {(canopiesDirection || topiaryDirection) && <div class="hv2-competency-stack">
+            {canopiesDirection && <a
+              class:list={['hv2-competency', 'hv2-competency--canopies', canopiesDirection.image ? 'hv2-competency--media' : 'hv2-competency--graphic']}
+              href={path(canopiesDirection.href)}
+              data-reveal
+            >
+              {canopiesDirection.image ? (
+                <><img
+                  src={path(canopiesDirection.image)}
+                  alt={canopiesDirection.title}
+                  width="1600"
+                  height="1200"
+                  loading="lazy"
+                  decoding="async"
+                  style={`object-fit:${canopiesDirection.imageFit};object-position:${canopiesDirection.imagePosition};`}
+                /><span class="hv2-competency__veil"></span></>
+              ) : (
+                <span class="hv2-competency__drawing hv2-competency__drawing--canopy" aria-hidden="true"><i></i><i></i><i></i></span>
+              )}
+              <span class="hv2-competency__body">
+                <span class="hv2-eyebrow">Конструкция под размеры</span>
+                <strong>{canopiesDirection.title}</strong>
+                <span>{canopiesDirection.description}</span>
+                <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+              </span>
+            </a>}
+
+            {topiaryDirection && <a
+              class:list={['hv2-competency', 'hv2-competency--topiary', topiaryDirection.image ? 'hv2-competency--media' : 'hv2-competency--graphic']}
+              href={path(topiaryDirection.href)}
+              data-reveal
+            >
+              {topiaryDirection.image ? (
+                <><img
+                  src={path(topiaryDirection.image)}
+                  alt={topiaryDirection.title}
+                  width="1600"
+                  height="1200"
+                  loading="lazy"
+                  decoding="async"
+                  style={`object-fit:${topiaryDirection.imageFit};object-position:${topiaryDirection.imagePosition};`}
+                /><span class="hv2-competency__veil"></span></>
+              ) : (
+                <span class="hv2-competency__drawing hv2-competency__drawing--topiary" aria-hidden="true"><i></i><i></i><i></i></span>
+              )}
+              <span class="hv2-competency__body">
+                <span class="hv2-eyebrow">Для территории</span>
+                <strong>{topiaryDirection.title}</strong>
+                <span>{topiaryDirection.description}</span>
+                <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+              </span>
+            </a>}
+          </div>}
+
+          {landscapingDirection && <a
+            class:list={['hv2-competency', 'hv2-competency--landscape', landscapingDirection.image ? 'hv2-competency--media' : 'hv2-competency--graphic']}
+            href={path(landscapingDirection.href)}
+            data-reveal
+          >
+            {landscapingDirection.image && <><img
+              src={path(landscapingDirection.image)}
+              alt={landscapingDirection.title}
+              width="1920"
+              height="1200"
+              loading="lazy"
+              decoding="async"
+              style={`object-fit:${landscapingDirection.imageFit};object-position:${landscapingDirection.imagePosition};`}
+            /><span class="hv2-competency__veil"></span></>}
+            <span class="hv2-competency__body">
+              <span class="hv2-eyebrow hv2-eyebrow--light">Территория целиком</span>
+              <strong>{landscapingDirection.title}</strong>
+              <span>{landscapingDirection.description}</span>
+              <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+            </span>
+          </a>}
+        </div>
+      </div>
+    </section>
+
+    <section class="hv2-projects" id="projects" aria-labelledby="home-v2-projects-title">
+      <div class="hv2-shell">
+        <header class="hv2-section-head hv2-section-head--projects hv2-grid" data-reveal>
+          <div>
+            <p class="hv2-eyebrow hv2-eyebrow--light">{copy.projectsEyebrow}</p>
+            <h2 id="home-v2-projects-title">Результаты разного масштаба — в реальных фотографиях</h2>
+          </div>
+          <div>
+            <p>{copy.projectsDescription}</p>
+            <a class="hv2-text-link hv2-text-link--light" href={path('/design-lab/v2/vypolnennye-obekty/')}>
+              Все выполненные объекты <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </header>
+
+        <HomeV2Projects />
+      </div>
+    </section>
+
+    <section class="hv2-brief" id="brief" aria-labelledby="home-v2-brief-title">
+      <div class="hv2-shell hv2-brief__layout hv2-grid">
+        <div class="hv2-brief__intro" data-reveal>
+          <p class="hv2-eyebrow">Как начать работу</p>
+          <h2 id="home-v2-brief-title">Пришлите то, что уже есть</h2>
+          <p>
+            Для первого разговора не нужен готовый комплект документов. Опишите задачу и приложите доступные вводные —
+            по ним можно уточнить формат решения и расчёта.
+          </p>
+          <a class="hv2-text-link" href={path('/design-lab/v2/izgotovlenie-na-zakaz/')}>
+            Изготовление на заказ <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+
+        <ul class="hv2-brief__inputs" aria-label="Что можно прислать" data-reveal>
+          <li><span>Описание задачи</span><i aria-hidden="true">Текст</i></li>
+          <li><span>Фотографию</span><i aria-hidden="true">JPG / PNG</i></li>
+          <li><span>Размеры</span><i aria-hidden="true">Габариты</i></li>
+          <li><span>Эскиз</span><i aria-hidden="true">Идея</i></li>
+          <li><span>Чертёж</span><i aria-hidden="true">Документ</i></li>
+          <li><span>Техническое задание</span><i aria-hidden="true">ТЗ</i></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="hv2-contact" id="contact" aria-labelledby="home-v2-contact-title">
+      <div class="hv2-shell hv2-contact__grid hv2-grid">
+        <div class="hv2-contact__intro" data-reveal>
+          <p class="hv2-eyebrow hv2-eyebrow--light">Прямая связь</p>
+          <h2 id="home-v2-contact-title">{copy.contactTitle}</h2>
+          <p>{copy.contactDescription}</p>
+          <div class="hv2-actions">
+            <a class="hv2-button hv2-button--light" href={settings.telegram} target="_blank" rel="noopener noreferrer">
+              Написать в Telegram <span aria-hidden="true">↗</span>
+            </a>
+            <a class="hv2-button hv2-button--contrast" href={path('/design-lab/v2/kontakty/')}>Все контакты</a>
+          </div>
+        </div>
+
+        <div class="hv2-contact__channels" data-reveal>
+          <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
+            <span>Основной телефон</span><strong>{settings.phonePrimary}</strong><i aria-hidden="true">↗</i>
+          </a>
+          <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`}>
+            <span>Дополнительный телефон</span><strong>{settings.phoneSecondary}</strong><i aria-hidden="true">↗</i>
+          </a>
+          <a href={settings.telegram} target="_blank" rel="noopener noreferrer">
+            <span>Telegram</span><strong>{telegramLabel}</strong><i aria-hidden="true">↗</i>
+          </a>
+          <a href={`mailto:${settings.email}`}>
+            <span>Электронная почта</span><strong>{settings.email}</strong><i aria-hidden="true">↗</i>
+          </a>
+          <div>
+            <span>Адрес</span><strong>{settings.address}</strong>
+          </div>
+          {regionLine && <div>
+            <span>География</span><strong>{regionLine}</strong>
+          </div>}
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <HomeV2Footer currentPath={Astro.url.pathname} catalogV2 />
+
+  {showPaletteSwitch && (
+    <aside class="hv2-palette-switch" aria-label="Переключатель цветовой схемы">
+      <p>Цветовая схема</p>
+      <div role="group" aria-label="Цветовой пресет">
+        <button type="button" aria-pressed="true" data-hv2-palette="olive">Оливковая</button>
+        <button type="button" aria-pressed="false" data-hv2-palette="steel">Стальная</button>
+      </div>
+    </aside>
+  )}
+</div>
+
+<script>
+  const initHomeV2Page = () => {
+    const root = document.querySelector<HTMLElement>('[data-home-v2-root]');
+    if (!root || root.dataset.ready === 'true') return;
+    root.dataset.ready = 'true';
+
+    const documentRoot = document.documentElement;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const hero = document.querySelector<HTMLElement>('[data-hv2-hero]');
+    const video = document.querySelector<HTMLVideoElement>('[data-hv2-hero-video]');
+    let playAttempted = false;
+    let pausedForVisibility = false;
+
+    const showPoster = () => hero?.classList.remove('is-video-playing');
+    const playHeroVideo = () => {
+      if (!video || reducedMotion.matches || playAttempted) return;
+      playAttempted = true;
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      video.autoplay = true;
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(showPoster);
+      }
+    };
+
+    if (video) {
+      video.addEventListener('playing', () => hero?.classList.add('is-video-playing'));
+      video.addEventListener('error', showPoster);
+      video.addEventListener('stalled', () => {
+        if (!video.currentSrc) showPoster();
+      });
+
+      if (reducedMotion.matches) {
+        video.autoplay = false;
+        video.pause();
+        showPoster();
+      } else {
+        requestAnimationFrame(playHeroVideo);
+      }
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden' && !video.paused) {
+          pausedForVisibility = true;
+          video.pause();
+        } else if (
+          document.visibilityState === 'visible' &&
+          pausedForVisibility &&
+          !reducedMotion.matches
+        ) {
+          pausedForVisibility = false;
+          video.play().catch(showPoster);
+        }
+      });
+
+      reducedMotion.addEventListener('change', () => {
+        if (reducedMotion.matches) {
+          video.autoplay = false;
+          video.pause();
+          showPoster();
+        } else if (!playAttempted) {
+          playHeroVideo();
+        }
+      });
+    }
+
+    const paletteButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-hv2-palette]'));
+    const themeColor = document.querySelector<HTMLMetaElement>('[data-home-v2-theme-color]');
+    const setPalette = (palette: 'olive' | 'steel') => {
+      documentRoot.dataset.homeV2Theme = palette;
+      paletteButtons.forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.hv2Palette === palette));
+      });
+      themeColor?.setAttribute('content', palette === 'steel' ? '#F2EFE9' : '#F3F5F1');
+      try {
+        window.localStorage.setItem('smu1-home-v2-palette', palette);
+      } catch {
+        // The comparison still works when storage is unavailable.
+      }
+    };
+
+    const initialPalette = documentRoot.dataset.homeV2Theme === 'steel' ? 'steel' : 'olive';
+    setPalette(initialPalette);
+    paletteButtons.forEach((button) => {
+      button.addEventListener('click', () => setPalette(button.dataset.hv2Palette === 'steel' ? 'steel' : 'olive'));
+    });
+
+    const sectionNav = document.querySelector<HTMLElement>('[data-hv2-section-nav]');
+    const sectionLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-hv2-section-link]'));
+    const sections = sectionLinks
+      .map((link) => {
+        const id = link.dataset.hv2SectionLink || '';
+        const element = document.getElementById(id);
+        return element ? { id, element } : null;
+      })
+      .filter((item): item is { id: string; element: HTMLElement } => Boolean(item));
+
+    const syncSectionNavigation = () => {
+      const headerHeight = document.querySelector<HTMLElement>('[data-home-v2-header]')?.offsetHeight || 0;
+      const navHeight = sectionNav?.offsetHeight || 0;
+      const threshold = headerHeight + navHeight + 40;
+      let activeId = sections[0]?.id;
+      sections.forEach((section) => {
+        if (section.element.getBoundingClientRect().top <= threshold) activeId = section.id;
+      });
+      if (!activeId) return;
+      sectionLinks.forEach((link) => {
+        if (link.dataset.hv2SectionLink === activeId) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      });
+    };
+
+    window.addEventListener('scroll', syncSectionNavigation, { passive: true });
+    window.addEventListener('resize', syncSectionNavigation);
+    syncSectionNavigation();
+
+    const revealElements = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
+    if (!reducedMotion.matches && 'IntersectionObserver' in window) {
+      try {
+        const revealObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.remove('hv2-reveal-pending');
+            entry.target.classList.add('hv2-reveal-visible');
+            revealObserver.unobserve(entry.target);
+          });
+        }, { rootMargin: '0px 0px -9% 0px', threshold: 0.08 });
+
+        revealElements.forEach((element, index) => {
+          const rect = element.getBoundingClientRect();
+          if (rect.top < window.innerHeight * 0.94) {
+            element.classList.add('hv2-reveal-visible');
+            return;
+          }
+          element.style.setProperty('--hv2-reveal-delay', `${Math.min((index % 4) * 55, 165)}ms`);
+          element.classList.add('hv2-reveal-pending');
+          revealObserver.observe(element);
+        });
+      } catch {
+        revealElements.forEach((element) => element.classList.remove('hv2-reveal-pending'));
+      }
+    }
+  };
+
+  initHomeV2Page();
+  document.addEventListener('astro:page-load', initHomeV2Page);
+</script>

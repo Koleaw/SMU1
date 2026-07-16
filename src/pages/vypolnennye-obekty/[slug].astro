@@ -1,74 +1,40 @@
 ---
-import { getCollection } from 'astro:content';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import Hero from '../../components/Hero.astro';
-import Breadcrumbs from '../../components/Breadcrumbs.astro';
-import ObjectProjectGallery from '../../components/ObjectProjectGallery.astro';
-import { getProjectImages } from '../../utils/projectImages';
-import { projectCategory, projectLocation, projectText, projectWorkTypes } from '../../utils/projectContent';
-import { withBase } from '../../utils/withBase';
+import type { V2ProjectRecord } from '../../components/v2/mediaRoleAdapter';
+import { getV2ProjectPresentation } from '../../components/v2/mediaRoleAdapter';
+import V2ProjectDetail from '../../components/v2/projects/V2ProjectDetail.astro';
+import V2ProjectsLayout from '../../components/v2/projects/V2ProjectsLayout.astro';
+import { loadPublishedV2Projects } from '../../components/v2/projects/projectV2Data';
 
 export async function getStaticPaths() {
-  const projects = await getCollection('projects');
-
-  return projects
-    .filter(({ data }) => data.isActive)
-    .map(({ data }) => ({ params: { slug: data.slug }, props: { item: data } }));
+  const projects = await loadPublishedV2Projects();
+  return projects.map((project, index) => ({
+    params: { slug: project.slug },
+    props: {
+      project,
+      previousProject: projects[index - 1],
+      nextProject: projects[index + 1]
+    }
+  }));
 }
 
-const { item } = Astro.props;
-const images = getProjectImages(item);
-const category = projectCategory(item);
-const location = projectLocation(item);
-const locationAndYear = [location, item.year].filter(Boolean).join(', ');
-const workTypes = projectWorkTypes(item);
-const materials = projectText(item.materials);
-const features = projectText(item.features);
-const factCards = [
-  { title: 'Кратко', text: item.shortDescription },
-  item.task ? { title: 'Задача', text: item.task } : null,
-  { title: 'Что сделали', text: item.whatWasDone },
-  workTypes ? { title: 'Виды работ', text: workTypes } : null,
-  item.scope ? { title: 'Объем работ', text: item.scope } : null,
-  materials ? { title: 'Материалы', text: materials } : null,
-  features ? { title: 'Особенности объекта', text: features } : null,
-  item.result ? { title: 'Результат', text: item.result } : null
-].filter((card): card is { title: string; text: string } => Boolean(card?.text));
+interface Props {
+  project: V2ProjectRecord;
+  previousProject?: V2ProjectRecord;
+  nextProject?: V2ProjectRecord;
+}
+
+const { project, previousProject, nextProject } = Astro.props as Props;
+const presentation = getV2ProjectPresentation(project);
+const previous = previousProject ? getV2ProjectPresentation(previousProject) : undefined;
+const next = nextProject ? getV2ProjectPresentation(nextProject) : undefined;
 ---
-<BaseLayout title={item.seoTitle} description={item.seoDescription}>
-  <div class="breadcrumbs-bar">
-    <div class="container">
-      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Выполненные объекты', href: withBase('/vypolnennye-obekty/') }, { title: item.title }]} />
-    </div>
-  </div>
 
-  <Hero
-    kicker={category || 'Кейс объекта'}
-    className="hero--trust"
-    title={item.title}
-    description={locationAndYear}
-    primaryLabel="Обсудить похожую задачу"
-    primaryHref={withBase('/kontakty/')}
-    secondaryLabel="Все объекты"
-    secondaryHref={withBase('/vypolnennye-obekty/')}
-  />
-
-  {images.length > 0 && (
-    <section class="section object-gallery-section">
-      <div class="container">
-        <ObjectProjectGallery title={item.title} images={images} />
-      </div>
-    </section>
-  )}
-
-  <section class="section section--soft">
-    <div class="container object-story-grid">
-      {factCards.map((card) => (
-        <article class="card object-fact-card">
-          <h2>{card.title}</h2>
-          <p class="lead">{card.text}</p>
-        </article>
-      ))}
-    </div>
-  </section>
-</BaseLayout>
+<V2ProjectsLayout
+  title={project.seoTitle}
+  description={project.seoDescription}
+  canonicalPath={presentation.productionRoute}
+  currentPath={Astro.url.pathname}
+  ogImage={presentation.heroMedia?.src}
+>
+  <V2ProjectDetail presentation={presentation} previous={previous} next={next} />
+</V2ProjectsLayout>

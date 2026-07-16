@@ -1,0 +1,179 @@
+---
+import '../styles/v2/home-v2.css';
+import '../styles/v2/cookie-banner-v2.css';
+import CookieBanner from '../components/CookieBanner.astro';
+import siteSettings from '../content/site-settings/global.json';
+import yandex from '../data/yandex.json';
+import { withBase } from '../utils/withBase';
+import { getV2Scope, productionV2Path, type V2Scope } from '../utils/v2Routes';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+  ogImage?: string;
+  scope?: V2Scope;
+  robots?: string;
+  noindex?: boolean;
+  noCanonical?: boolean;
+  structuredData?: Record<string, unknown> | Record<string, unknown>[];
+  refreshTarget?: string;
+}
+
+const {
+  title,
+  description,
+  canonicalPath,
+  ogImage = '/assets/images/placeholders/og-default.svg',
+  scope = getV2Scope(Astro.url.pathname),
+  robots,
+  noindex = false,
+  noCanonical = false,
+  structuredData,
+  refreshTarget = ''
+} = Astro.props as Props;
+
+const isProduction = scope === 'production';
+const pageTitle = title?.trim() || 'СМУ-1';
+const pageDescription = description?.trim()
+  || 'СМУ-1: производство металлоконструкций, уличной мебели, ограждений и изделий для благоустройства.';
+const resolvedCanonicalPath = canonicalPath === undefined
+  ? productionV2Path(Astro.url.pathname)
+  : canonicalPath;
+const canonicalUrl = !noCanonical && resolvedCanonicalPath
+  ? new URL(withBase(resolvedCanonicalPath), Astro.site).toString()
+  : '';
+const robotsContent = robots || (!isProduction || noindex ? 'noindex, nofollow' : 'index, follow');
+const toAbsoluteUrl = (path: string) => /^https?:\/\//i.test(path)
+  ? path
+  : new URL(withBase(path), Astro.site).toString();
+const ogImageUrl = ogImage ? toAbsoluteUrl(ogImage) : '';
+
+const siteRoot = new URL(withBase('/'), Astro.site).toString();
+const isHomePage = isProduction && productionV2Path(Astro.url.pathname) === '/';
+const organizationData = {
+  '@type': 'LocalBusiness',
+  '@id': `${siteRoot}#organization`,
+  name: siteSettings.companyName || 'СМУ-1',
+  url: siteRoot,
+  telephone: siteSettings.phonePrimary,
+  email: siteSettings.email,
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: siteSettings.address || siteSettings.legalAddress,
+    addressLocality: siteSettings.city || 'Курган',
+    addressCountry: 'RU'
+  },
+  sameAs: [siteSettings.telegram].filter(Boolean)
+};
+const websiteData = isHomePage ? {
+  '@type': 'WebSite',
+  '@id': `${siteRoot}#website`,
+  name: siteSettings.companyName || 'СМУ-1',
+  url: siteRoot,
+  publisher: { '@id': `${siteRoot}#organization` }
+} : null;
+const extraStructuredData = Array.isArray(structuredData)
+  ? structuredData
+  : structuredData
+    ? [structuredData]
+    : [];
+const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filter(Boolean);
+---
+
+<!doctype html>
+<html lang="ru" class="home-v2-html" data-home-v2-theme="olive">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content={robotsContent} />
+    <meta name="description" content={pageDescription} />
+    {refreshTarget && <meta http-equiv="refresh" content={`0;url=${withBase(refreshTarget)}`} />}
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+    {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+    <meta name="twitter:card" content={ogImageUrl ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
+    <meta name="theme-color" content="#F3F5F1" data-home-v2-theme-color />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Raleway:wght@600&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
+    <title>{pageTitle}</title>
+    {isProduction && !noindex && (
+      <script type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', '@graph': jsonLdGraph })} />
+    )}
+    {scope === 'design-lab' && (
+      <script is:inline>
+        (() => {
+          const root = document.documentElement;
+          const requestedTheme = new URLSearchParams(window.location.search).get('palette');
+          let savedTheme = '';
+          try { savedTheme = window.localStorage.getItem('smu1-home-v2-palette') || ''; } catch { savedTheme = ''; }
+          root.dataset.homeV2Theme = requestedTheme === 'steel' || requestedTheme === 'olive'
+            ? requestedTheme
+            : savedTheme === 'steel' ? 'steel' : 'olive';
+        })();
+      </script>
+    )}
+    {isProduction && (
+      <script
+        is:inline
+        define:vars={{
+          metrikaCounterId: yandex.metrika.counterId,
+          metrikaScriptSrc: yandex.metrika.scriptSrc,
+          metrikaInit: yandex.metrika.init,
+          metrikaDelayMs: 7000
+        }}
+      >
+        (() => {
+          const stateKey = '__smu1MetrikaState';
+          window[stateKey] = window[stateKey] || { loaded: false, timer: null };
+          const state = window[stateKey];
+
+          const loadMetrika = () => {
+            if (state.loaded || !metrikaCounterId || !metrikaScriptSrc) return;
+            state.loaded = true;
+            (function(m, e, t, r, i, k, a) {
+              m[i] = m[i] || function() { (m[i].a = m[i].a || []).push(arguments); };
+              m[i].l = 1 * new Date();
+              for (let j = 0; j < document.scripts.length; j++) {
+                if (document.scripts[j].src === r) return;
+              }
+              k = e.createElement(t);
+              a = e.getElementsByTagName(t)[0];
+              k.async = 1;
+              k.src = r;
+              a.parentNode.insertBefore(k, a);
+            })(window, document, 'script', metrikaScriptSrc, 'ym');
+            window.ym(metrikaCounterId, 'init', { ...metrikaInit, referrer: document.referrer, url: location.href });
+          };
+
+          const scheduleMetrika = () => {
+            if (state.loaded || state.timer) return;
+            state.timer = window.setTimeout(() => { state.timer = null; loadMetrika(); }, metrikaDelayMs);
+          };
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', scheduleMetrika, { once: true });
+          } else {
+            scheduleMetrika();
+          }
+          document.addEventListener('astro:page-load', scheduleMetrika);
+        })();
+      </script>
+    )}
+  </head>
+  <body class="home-v2-body">
+    <slot />
+    {isProduction && <CookieBanner />}
+  </body>
+</html>

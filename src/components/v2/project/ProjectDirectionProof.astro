@@ -1,0 +1,84 @@
+---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import V2ProductGallery from '../V2ProductGallery.astro';
+
+interface FeaturedProject {
+  title: string;
+  city?: string;
+  year?: number;
+  description: string;
+  href: string;
+  images: string[];
+}
+
+interface SupportingProject {
+  title: string;
+  city?: string;
+  year?: number;
+  description: string;
+  href: string;
+  image?: string;
+  imageAlt?: string;
+}
+
+interface Props {
+  title: string;
+  featured: FeaturedProject;
+  supporting?: SupportingProject[];
+}
+
+const { title, featured, supporting = [] } = Astro.props as Props;
+const meta = (project: { city?: string; year?: number }) => [project.city, project.year].filter(Boolean).join(' · ');
+---
+
+<section class="project-proof" id="construction-proof" aria-labelledby="project-proof-title">
+  <div class="hv2-shell">
+    <header class="project-proof__heading hv2-grid" data-v2-reveal>
+      <div>
+        <p class="hv2-eyebrow">Выполненные работы</p>
+        <h2 id="project-proof-title">{title}</h2>
+      </div>
+      <p>Готовый внешний результат и выполненные ремонтные задачи на реальных объектах.</p>
+    </header>
+
+    <article class="project-proof__featured">
+      <div class="project-proof__gallery" data-v2-reveal>
+        <V2ProductGallery
+          images={featured.images}
+          title={featured.title}
+          imageView={{ fit: 'contain', positionX: 50, positionY: 50, scale: 1 }}
+          caption="Готовый внешний вид объекта."
+          entityLabel="объекта"
+        />
+      </div>
+      <div class="project-proof__story" data-v2-reveal>
+        <p class="project-proof__meta">{meta(featured)}</p>
+        <h3>{featured.title}</h3>
+        <p>{featured.description}</p>
+        <a href={withBase(featured.href)}>Открыть объект <span aria-hidden="true">↗</span></a>
+      </div>
+    </article>
+
+    {supporting.length > 0 && (
+      <div class="project-proof__supporting" role="list">
+        {supporting.map((project) => (
+          <article class:list={['project-proof-card', { 'project-proof-card--no-media': !project.image }]} role="listitem" data-v2-reveal>
+            {project.image && (
+              <figure data-v2-media>
+                <img src={withBase(project.image)} alt={project.imageAlt || project.title} width="960" height="720" loading="lazy" decoding="async" data-v2-image />
+                <div class="project-proof-card__fallback" aria-hidden="true">Изображение объекта недоступно</div>
+              </figure>
+            )}
+            <div>
+              <p class="project-proof__meta">{meta(project)}</p>
+              <h3>{project.title}</h3>
+              <p>{project.description}</p>
+              <a href={withBase(project.href)}>Открыть объект <span aria-hidden="true">↗</span></a>
+            </div>
+          </article>
+        ))}
+      </div>
+    )}
+  </div>
+</section>

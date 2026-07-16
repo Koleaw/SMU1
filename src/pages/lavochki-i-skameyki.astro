@@ -1,4 +1,16 @@
 ---
-import { withBase } from '../utils/withBase';
-return Astro.redirect(withBase('/ulichnaya-mebel/lavochki-i-skameyki/'), 301);
+import CatalogV2Layout from '../components/v2/CatalogV2Layout.astro';
+import LegacyV2Fallback from '../components/v2/LegacyV2Fallback.astro';
+const target = '/ulichnaya-mebel/lavochki-i-skameyki/';
 ---
+<CatalogV2Layout
+  title="Лавочки и скамейки — основной адрес"
+  description="Страница категории «Лавочки и скамейки» доступна по основному адресу."
+  canonicalPath={target}
+  currentPath={Astro.url.pathname}
+  noindex
+  refreshTarget={target}
+  contactHref="/kontakty/"
+>
+  <LegacyV2Fallback title="Лавочки и скамейки" target={target} />
+</CatalogV2Layout>

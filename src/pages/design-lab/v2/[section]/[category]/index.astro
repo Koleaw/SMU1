@@ -1,10 +1,10 @@
 ---
-import CatalogCategoryV2 from '../../../../../components/design-lab/v2/CatalogCategoryV2.astro';
+import CatalogCategoryV2 from '../../../../../components/v2/CatalogCategoryV2.astro';
 import {
   createCatalogV2Links,
   getCategoryProducts,
   loadCatalogV2Snapshot
-} from '../../../../../components/design-lab/v2/catalogV2Data';
+} from '../../../../../components/v2/catalogV2Data';
 
 export async function getStaticPaths() {
   const snapshot = await loadCatalogV2Snapshot();
