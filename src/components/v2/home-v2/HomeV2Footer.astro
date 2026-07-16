@@ -53,45 +53,31 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
       <p>Дата регистрации: {settings.registrationDate}</p>
     </div>
 
-    {catalogV2 ? (
-      <div class="hv2-footer__catalog-group hv2-footer__catalog-group--directions">
-        <nav class="hv2-footer__directions hv2-footer__catalog-desktop-nav" aria-label="Направления СМУ-1">
-          <p>Направления</p>
-          {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
-        </nav>
-        <details class="hv2-footer__catalog-accordion" data-v2-footer-accordion>
-          <summary>Направления <span aria-hidden="true"></span></summary>
-          <nav class="hv2-footer__directions hv2-footer__catalog-accordion-content" aria-label="Направления СМУ-1">
-            {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
-          </nav>
-        </details>
-      </div>
-    ) : (
-      <nav class="hv2-footer__directions" aria-label="Направления СМУ-1">
+    <div class="hv2-footer__nav-group hv2-footer__nav-group--directions">
+      <nav class="hv2-footer__directions hv2-footer__desktop-nav" aria-label="Направления СМУ-1">
         <p>Направления</p>
         {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
       </nav>
-    )}
-
-    {catalogV2 ? (
-      <div class="hv2-footer__catalog-group hv2-footer__catalog-group--company">
-        <nav class="hv2-footer__company hv2-footer__catalog-desktop-nav" aria-label="Работа и компания">
-          <p>Работа и компания</p>
-          {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+      <details class="hv2-footer__accordion">
+        <summary>Направления <span aria-hidden="true"></span></summary>
+        <nav class="hv2-footer__directions hv2-footer__accordion-content" aria-label="Направления СМУ-1">
+          {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
         </nav>
-        <details class="hv2-footer__catalog-accordion" data-v2-footer-accordion>
-          <summary>Работа и компания <span aria-hidden="true"></span></summary>
-          <nav class="hv2-footer__company hv2-footer__catalog-accordion-content" aria-label="Работа и компания">
-            {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
-          </nav>
-        </details>
-      </div>
-    ) : (
-      <nav class="hv2-footer__company" aria-label="Работа и компания">
+      </details>
+    </div>
+
+    <div class="hv2-footer__nav-group hv2-footer__nav-group--company">
+      <nav class="hv2-footer__company hv2-footer__desktop-nav" aria-label="Работа и компания">
         <p>Работа и компания</p>
         {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
       </nav>
-    )}
+      <details class="hv2-footer__accordion">
+        <summary>Работа и компания <span aria-hidden="true"></span></summary>
+        <nav class="hv2-footer__company hv2-footer__accordion-content" aria-label="Работа и компания">
+          {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+        </nav>
+      </details>
+    </div>
 
     <div class="hv2-footer__contacts">
       <p>Прямая связь</p>

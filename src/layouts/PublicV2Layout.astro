@@ -1,6 +1,7 @@
 ---
 import '../styles/v2/home-v2.css';
 import '../styles/v2/cookie-banner-v2.css';
+import '../styles/v2/visual-polish-v2.css';
 import CookieBanner from '../components/CookieBanner.astro';
 import siteSettings from '../content/site-settings/global.json';
 import yandex from '../data/yandex.json';
@@ -99,7 +100,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={pageDescription} />
     {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
-    <meta name="theme-color" content="#F3F5F1" data-home-v2-theme-color />
+    <meta name="theme-color" content="#F6F3ED" data-home-v2-theme-color />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

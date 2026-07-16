@@ -1,6 +1,6 @@
 ---
-import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import DirectionV2FinalCTA from '../directions/DirectionV2FinalCTA.astro';
+import ImmersiveDirectionHero from '../directions/ImmersiveDirectionHero.astro';
 import DirectionV2Related from '../directions/DirectionV2Related.astro';
 import {
   extractConfirmedBriefInputs,
@@ -13,7 +13,6 @@ import {
 } from '../directions/directionV2Presentation';
 import ProjectDirectionBrief from '../project/ProjectDirectionBrief.astro';
 import ProjectDirectionContexts from '../project/ProjectDirectionContexts.astro';
-import ProjectDirectionHero from '../project/ProjectDirectionHero.astro';
 import ProjectDirectionIntro from '../project/ProjectDirectionIntro.astro';
 import ProjectDirectionProof from '../project/ProjectDirectionProof.astro';
 import ProjectDirectionScope from '../project/ProjectDirectionScope.astro';
@@ -85,19 +84,6 @@ const contactDescription = approvedUntilEdited(
 const telegramLabel = approvedUntilEdited(service.contactTelegramLabel, 'Написать в Telegram', 'Получить расчёт');
 const phoneLabel = approvedUntilEdited(service.contactPhoneLabel, 'Позвонить', 'Обсудить объект');
 const emailLabel = approvedUntilEdited(service.contactEmailLabel, 'Написать на почту', 'Email');
-const heroMedia = industrialHero ? [
-  {
-    src: industrialHero,
-    alt: resolvedHeroMedia.usesApprovedBaseline
-      ? 'Готовое обшитое здание на производственной территории'
-      : directionTitle,
-    caption: resolvedHeroMedia.usesApprovedBaseline ? industrial?.title : directionTitle,
-    view: resolvedHeroMedia.usesApprovedBaseline
-      ? { fit: 'cover' as const, positionX: 50, positionY: 50, scale: 1 }
-      : service.imageView
-  }
-] : [];
-
 const supportingProjects = [
   squareRepair ? {
     title: squareRepair.title,
@@ -140,16 +126,27 @@ const related = [
   currentPath={currentPath}
   ogImage={industrialHero}
 >
-  <V2Breadcrumbs items={[
-    { title: 'Главная', href: '/design-lab/home-v2/' },
-    { title: directionTitle }
-  ]} />
-
-  <ProjectDirectionHero
+  <ImmersiveDirectionHero
+    variant="construction"
+    breadcrumbs={[
+      { title: 'Главная', href: '/design-lab/home-v2/' },
+      { title: directionTitle }
+    ]}
     eyebrow={heroKicker}
     title={heroTitle}
     description={heroDescription}
-    media={heroMedia}
+    image={industrialHero}
+    imageAlt={resolvedHeroMedia.usesApprovedBaseline
+      ? 'Готовое обшитое здание на производственной территории'
+      : directionTitle}
+    imageView={resolvedHeroMedia.usesApprovedBaseline
+      ? { fit: 'cover', positionX: 50, positionY: 50, scale: 1 }
+      : service.imageView}
+    caption={resolvedHeroMedia.usesApprovedBaseline ? industrial?.title : directionTitle}
+    titleId="project-direction-title"
+    primaryLabel="Получить расчёт"
+    secondaryHref="#construction-brief"
+    secondaryLabel="Обсудить объект"
   />
 
   <ProjectDirectionIntro

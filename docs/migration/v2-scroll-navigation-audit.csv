@@ -1,0 +1,138 @@
+kind,sequence,source_route,target_route,route_type,viewport,initial_scroll_y,final_scroll_y,expected_scroll_y,hash,history_action,status,notes
+direct,1,,/,home,1440x900,0,0,0,,,pass,after-media=0
+direct,2,,/ulichnaya-mebel/,direction,1440x900,0,0,0,,,pass,after-media=0
+direct,3,,/ograzhdeniya-i-zabory/,direction,1440x900,0,0,0,,,pass,after-media=0
+direct,4,,/navesy-i-kozyrki/,direction,1440x900,0,0,0,,,pass,after-media=0
+direct,5,,/metallokonstruktsii-dlya-biznesa/,direction,1440x900,0,0,0,,,pass,after-media=0
+direct,6,,/topiarii/,direction,1440x900,0,0,0,,,pass,after-media=0
+direct,7,,/blagoustroystvo-territoriy/,direction,1440x900,0,0,0,,,pass,after-media=0
+direct,8,,/stroitelstvo-i-remonty/,direction,1440x900,0,0,0,,,pass,after-media=0
+direct,9,,/ograzhdeniya-i-zabory/zabory/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,10,,/ulichnaya-mebel/lavochki-i-skameyki/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,11,,/ograzhdeniya-i-zabory/vorota/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,12,,/ulichnaya-mebel/stoly-i-komplekty/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,13,,/ograzhdeniya-i-zabory/kalitki/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,14,,/ulichnaya-mebel/urny/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,15,,/ulichnaya-mebel/vazony-i-tsvetochnitsy/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,16,,/ograzhdeniya-i-zabory/sekcionnye-ograzhdeniya/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,17,,/ulichnaya-mebel/veloparkovki/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,18,,/ograzhdeniya-i-zabory/dekorativnye-ograzhdeniya/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,19,,/ograzhdeniya-i-zabory/gazonnye-ograzhdeniya/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,20,,/ulichnaya-mebel/shezlongi/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,21,,/ulichnaya-mebel/kacheli/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,22,,/ograzhdeniya-i-zabory/perila-i-poruchni/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,23,,/ulichnaya-mebel/besedki-i-pergoly/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,24,,/ograzhdeniya-i-zabory/stolbiki-i-bollardy/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,25,,/ograzhdeniya-i-zabory/ograzhdeniya-kontejnernyh-ploshchadok/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,26,,/ulichnaya-mebel/ulichnoe-osveshchenie/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,27,,/ulichnaya-mebel/malye-elementy/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,28,,/ulichnaya-mebel/navesy/,category,1440x900,0,0,0,,,pass,after-media=0
+direct,29,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-smu1-bazovaya/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,30,,/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-ritm/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,31,,/ulichnaya-mebel/kacheli/kachel-portal/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,32,,/ograzhdeniya-i-zabory/ograzhdeniya-kontejnernyh-ploshchadok/konteynernaya-ploshchadka-modul/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,33,,/ulichnaya-mebel/veloparkovki/parkovka-dlya-samokatov-arka/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,34,,/ulichnaya-mebel/besedki-i-pergoly/pergola-lamel/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,35,,/ulichnaya-mebel/malye-elementy/sidenie-pilon/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,36,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-loft/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,37,,/ulichnaya-mebel/stoly-i-komplekty/stol-so-skamyami-orbita/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,38,,/ulichnaya-mebel/urny/urna-vertikal/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,39,,/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-vektor/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,40,,/ulichnaya-mebel/shezlongi/shezlong-volna/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,41,,/ulichnaya-mebel/navesy/ekran-s-navesom/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,42,,/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-kontur/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,43,,/ulichnaya-mebel/veloparkovki/veloparkovka-marker/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,44,,/ulichnaya-mebel/kacheli/kachel-duga/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,45,,/ograzhdeniya-i-zabory/ograzhdeniya-kontejnernyh-ploshchadok/konteynernaya-ploshchadka-zakrytaya/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,46,,/ulichnaya-mebel/navesy/naves-terra/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,47,,/ulichnaya-mebel/besedki-i-pergoly/pergola-s-lavkoy/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,48,,/ulichnaya-mebel/malye-elementy/sidenie-kub/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,49,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-volna/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,50,,/ulichnaya-mebel/urny/urna-monolit/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,51,,/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-vektor-vysokiy/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,52,,/ulichnaya-mebel/shezlongi/shezlong-dyuna/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,53,,/ulichnaya-mebel/besedki-i-pergoly/besedka-kofe/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,54,,/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-koltso/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,55,,/ulichnaya-mebel/veloparkovki/veloparkovka-pik/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,56,,/ulichnaya-mebel/kacheli/kacheli-pergola/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,57,,/ograzhdeniya-i-zabory/ograzhdeniya-kontejnernyh-ploshchadok/konteynernaya-ploshchadka-duo/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,58,,/ulichnaya-mebel/navesy/naves-galereya/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,59,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-liniya/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,60,,/ulichnaya-mebel/urny/urna-panel/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,61,,/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-sektor/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,62,,/ulichnaya-mebel/shezlongi/shezlong-vitok/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,63,,/ulichnaya-mebel/besedki-i-pergoly/besedka-kub/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,64,,/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-gorizont/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,65,,/ulichnaya-mebel/veloparkovki/veloparkovka-duga/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,66,,/ulichnaya-mebel/kacheli/kachel-s-navesom/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,67,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-radius/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,68,,/ulichnaya-mebel/urny/urna-blok/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,69,,/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-mayak/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,70,,/ulichnaya-mebel/shezlongi/shezlong-siluet/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,71,,/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-soft/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,72,,/ulichnaya-mebel/veloparkovki/veloparkovka-pilon/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,73,,/ulichnaya-mebel/kacheli/kacheli-s-dlinnym-navesom/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,74,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-radius-so-spinkami/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,75,,/ulichnaya-mebel/urny/urna-kolonna/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,76,,/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-prizma/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,77,,/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-lenta/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,78,,/ulichnaya-mebel/veloparkovki/veloparkovka-ramka/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,79,,/ulichnaya-mebel/kacheli/kachel-patio/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,80,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-liniya-so-spinkami/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,81,,/ulichnaya-mebel/urny/urna-profil/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,82,,/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-liniya/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,83,,/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-oval/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,84,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-kontur/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,85,,/ulichnaya-mebel/urny/urna-layn/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,86,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-kapsula/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,87,,/ulichnaya-mebel/urny/urna-slim/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,88,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-plato/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,89,,/ulichnaya-mebel/urny/stantsiya-razdelnogo-sbora/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,90,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-podium/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,91,,/ulichnaya-mebel/urny/urna-ellips/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,92,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-skoba/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,93,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-bulvar/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,94,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-park/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,95,,/ulichnaya-mebel/lavochki-i-skameyki/skamya-reyka/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,96,,/ulichnaya-mebel/lavochki-i-skameyki/bolshaya-skameyka-amplituda/,product,1440x900,0,0,0,,,pass,after-media=0
+direct,97,,/vypolnennye-obekty/,projects-archive,1440x900,0,0,0,,,pass,after-media=0
+direct,98,,/vypolnennye-obekty/blagoustroystvo-naberezhnoy-reki-tobol/,project,1440x900,0,0,0,,,pass,after-media=0
+direct,99,,/vypolnennye-obekty/remont-skvera-na-ulitse-gogolya/,project,1440x900,0,0,0,,,pass,after-media=0
+direct,100,,/vypolnennye-obekty/kompleks-rabot-na-proizvodstvennoy-territorii/,project,1440x900,0,0,0,,,pass,after-media=0
+direct,101,,/vypolnennye-obekty/gorodskie-kacheli-dlya-obshchestvennyh-territoriy/,project,1440x900,0,0,0,,,pass,after-media=0
+direct,102,,/o-nas/,company,1440x900,0,0,0,,,pass,after-media=0
+direct,103,,/kontakty/,contacts,1440x900,0,0,0,,,pass,after-media=0
+direct,104,,/vakansii/,vacancies,1440x900,0,0,0,,,pass,after-media=0
+direct,105,,/vakansii/svarshchik-metallokonstruktsiy/,vacancy,1440x900,0,0,0,,,pass,after-media=0
+direct,106,,/politika-konfidencialnosti/,privacy,1440x900,0,0,0,,,pass,after-media=0
+direct,107,,/izgotovlenie-na-zakaz/,custom-order,1440x900,0,0,0,,,pass,after-media=0
+click,1,/,/metallokonstruktsii-dlya-biznesa/,direction,1440x900,306,0,0,,,pass,Металлоконструкции ↗ | /metallokonstruktsii-dlya-biznesa/
+click,2,/metallokonstruktsii-dlya-biznesa/,/blagoustroystvo-territoriy/,direction,1440x900,5667,0,0,,,pass,Благоустройство | /blagoustroystvo-territoriy/
+click,3,/blagoustroystvo-territoriy/,/stroitelstvo-i-remonty/,direction,1440x900,5357,0,0,,,pass,"Более широкий комплексСтроительно-монтажные работыДля задачи, где главным результатом становится готовый или преобразова | /stroitelstvo-i-remonty/"
+click,4,/stroitelstvo-i-remonty/,/navesy-i-kozyrki/,direction,1440x900,5024,0,0,,,pass,"Входные и хозяйственные зоныНавесы и козырькиНавесы для входных групп, зон ожидания, велопарковок, контейнерных площадок | /navesy-i-kozyrki/"
+click,5,/navesy-i-kozyrki/,/topiarii/,direction,1440x900,5598,0,0,,,pass,Топиарии | /topiarii/
+click,6,/topiarii/,/ulichnaya-mebel/,direction,1440x900,4529,0,0,,,pass,Уличная мебель | /ulichnaya-mebel/
+click,7,/ulichnaya-mebel/,/ulichnaya-mebel/kacheli/,category,1440x900,1885,0,0,,,pass,Фотоматериалы не указаны    6 опубликованных изделий Качели  Открыть категорию ↗ | /ulichnaya-mebel/kacheli/
+click,8,/ulichnaya-mebel/kacheli/,/ulichnaya-mebel/kacheli/kachel-duga/,product,1440x900,932,0,0,,,pass,"Фото не указано    Стальной каркас Качель Дуга Уличная качель с деревянной лавкой, навесом и металлическим каркасом.  Це | /ulichnaya-mebel/kacheli/kachel-duga/"
+click,9,/ulichnaya-mebel/kacheli/kachel-duga/,/ulichnaya-mebel/kacheli/,category,1440x900,0,0,0,,,pass,Качели | /ulichnaya-mebel/kacheli/
+click,10,/ulichnaya-mebel/kacheli/,/ulichnaya-mebel/,direction,1440x900,0,0,0,,,pass,Уличная мебель | /ulichnaya-mebel/
+click,11,/ulichnaya-mebel/,/ograzhdeniya-i-zabory/,direction,1440x900,3747,0,0,,,pass,Ограждения | /ograzhdeniya-i-zabory/
+click,12,/ograzhdeniya-i-zabory/,/ograzhdeniya-i-zabory/zabory/,category,1440x900,1146,0,0,,,pass,"Фотоматериалы не указаны    Изготовление по задаче Заборы Ограждения периметра для частных, коммерческих и производствен | /ograzhdeniya-i-zabory/zabory/"
+click,13,/ograzhdeniya-i-zabory/zabory/,/izgotovlenie-na-zakaz/,custom-order,1440x900,2109,0,0,,,pass,Изготовление на заказ | /izgotovlenie-na-zakaz/
+click,14,/izgotovlenie-na-zakaz/,/vypolnennye-obekty/,projects-archive,1440x900,4097,0,0,,,pass,Объекты | /vypolnennye-obekty/
+click,15,/vypolnennye-obekty/,/vypolnennye-obekty/kompleks-rabot-na-proizvodstvennoy-territorii/,project,1440x900,584,0,0,,,pass,Открыть объект ↗ | /vypolnennye-obekty/kompleks-rabot-na-proizvodstvennoy-territorii/
+click,16,/vypolnennye-obekty/kompleks-rabot-na-proizvodstvennoy-territorii/,/vypolnennye-obekty/,projects-archive,1440x900,0,0,0,,,pass,Выполненные объекты | /vypolnennye-obekty/
+click,17,/vypolnennye-obekty/,/vypolnennye-obekty/blagoustroystvo-naberezhnoy-reki-tobol/,project,1440x900,584,0,0,,,pass,Открыть объект ↗ | /vypolnennye-obekty/blagoustroystvo-naberezhnoy-reki-tobol/
+click,18,/vypolnennye-obekty/blagoustroystvo-naberezhnoy-reki-tobol/,/kontakty/,contacts,1440x900,3066,0,0,,,pass,"Все контактыул. Промышленная, 17, Курган↗ | /kontakty/"
+click,19,/kontakty/,/vakansii/,vacancies,1440x900,619,0,0,,,pass,Вакансии ↗ | /vakansii/
+click,20,/vakansii/,/politika-konfidencialnosti/,privacy,1440x900,429,0,0,,,pass,Политика конфиденциальности | /politika-konfidencialnosti/
+click,21,/politika-konfidencialnosti/,/,home,1440x900,0,0,0,,,pass,Главная | /
+click,22,/,/izgotovlenie-na-zakaz/,custom-order,1440x900,4988,0,0,,,pass,Изготовление на заказ ↗ | /izgotovlenie-na-zakaz/
+click,23,/izgotovlenie-na-zakaz/,/navesy-i-kozyrki/,direction,1440x900,1628,0,0,,,pass,"03 Навесы и козырькиДля входных групп, зон ожидания, велопарковок и хозяйственных площадок. ↗ | /navesy-i-kozyrki/"
+click,24,/navesy-i-kozyrki/,/kontakty/,contacts,1440x900,5283,0,0,,,pass,"Все контактыул. Промышленная, 17, Курган↗ | /kontakty/"
+history,1,/kontakty/,/o-nas/,company,1440x900,0,4468,4468,,back,pass,native restoration tolerance 32px; source click scroll=4468
+history,2,/o-nas/,/kontakty/,contacts,1440x900,4468,0,0,,forward,pass,native forward restoration tolerance 4px
+hash,1,/ulichnaya-mebel/kacheli/kachel-duga/,/ulichnaya-mebel/kacheli/kachel-duga/#contact,product,1440x900,122,3282,anchor,#contact,click,pass,targetTop=157.765625; targetBottom=755.96875
+hash,2,/ulichnaya-mebel/kacheli/kachel-duga/#contact,/ulichnaya-mebel/kacheli/kachel-duga/,product,1440x900,3282,122,122,,back,pass,remove hash via native Back; restoration tolerance 32px; source click scroll=122
+hash,3,/ulichnaya-mebel/kacheli/kachel-duga/,/ulichnaya-mebel/kacheli/kachel-duga/#contact,product,1440x900,122,3282,anchor,#contact,forward,pass,restore hash via native Forward; targetTop=157.765625; targetBottom=755.96875
+hash,4,,/ulichnaya-mebel/kacheli/kachel-duga/#contact,product,1440x900,,3282,anchor,#contact,direct,pass,targetTop=157.765625; targetBottom=755.96875

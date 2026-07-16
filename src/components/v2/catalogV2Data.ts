@@ -176,6 +176,45 @@ export const cleanTextItems = (items: unknown) => {
     .filter(Boolean)));
 };
 
+const catalogHelperCopyPatterns = [
+  /^описание первого экрана[.!]?$/iu,
+  /^описание страницы[.!]?$/iu,
+  /^краткое описание(?: типа)? изделий[.!]?$/iu,
+  /^заголовок блока[.!]?$/iu,
+  /^текст блока[.!]?$/iu,
+  /^текст[.!]?$/iu,
+  /^lorem ipsum(?:[\s\S]*)$/iu,
+  /^placeholder(?: text| copy)?[.!]?$/iu,
+  /^dev(?:elopment)?[\s/_-]*(?:copy|text|placeholder)[.!]?$/iu,
+  /^v2[\s/_-]*(?:copy|text|placeholder)[.!]?$/iu
+];
+
+/**
+ * Presentation-only guard for helper copy that can remain in migrated records.
+ * The source record is deliberately left untouched; empty output means that the
+ * consuming component should omit the optional copy block.
+ */
+export const publicCatalogCopy = (value: unknown) => {
+  if (typeof value !== 'string') return '';
+  const copy = value.trim();
+  if (!copy) return '';
+  return catalogHelperCopyPatterns.some((pattern) => pattern.test(copy)) ? '' : copy;
+};
+
+export type CatalogMediaPresentation = 'isolated' | 'contextual' | 'none';
+
+export const catalogMediaPresentation = (
+  source: string,
+  view?: { fit?: 'cover' | 'contain' }
+): CatalogMediaPresentation => {
+  const media = source.trim();
+  if (!media) return 'none';
+  if (view?.fit === 'contain') return 'isolated';
+  if (view?.fit === 'cover') return 'contextual';
+  if (/\.(?:png|svg)(?:[?#].*)?$/iu.test(media)) return 'isolated';
+  return 'contextual';
+};
+
 export const isPlaceholderCatalogMedia = (value: string) =>
   /\/assets\/images\/placeholders\//i.test(value);
 

@@ -32,7 +32,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
   <main>
     <section class="hv2-hero" aria-labelledby="home-v2-title" data-hv2-hero>
       <span class="hv2-hero__header-sentinel" aria-hidden="true" data-home-v2-header-sentinel></span>
-      <div class="hv2-hero__media" aria-hidden="true">
+      <div class="hv2-hero__media" aria-hidden="true" data-reveal style="--hv2-reveal-delay: 220ms">
         <picture class="hv2-hero__poster">
           <source media="(max-width: 700px)" srcset={path(home.heroMediaPosterMobile)} />
           <img
@@ -61,11 +61,11 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
       </div>
 
       <div class="hv2-shell hv2-hero__content">
-        <div class="hv2-hero__copy" data-reveal>
-          <p class="hv2-eyebrow hv2-eyebrow--light">{copy.heroKicker}</p>
-          <h1 id="home-v2-title">{copy.heroTitle}</h1>
-          <p class="hv2-hero__lead">{copy.heroDescription}</p>
-          <div class="hv2-actions">
+        <div class="hv2-hero__copy">
+          <p class="hv2-eyebrow hv2-eyebrow--light" data-reveal style="--hv2-reveal-delay: 0ms">{copy.heroKicker}</p>
+          <h1 id="home-v2-title" data-reveal style="--hv2-reveal-delay: 60ms">{copy.heroTitle}</h1>
+          <p class="hv2-hero__lead" data-reveal style="--hv2-reveal-delay: 120ms">{copy.heroDescription}</p>
+          <div class="hv2-actions" data-reveal style="--hv2-reveal-delay: 180ms">
             <a class="hv2-button hv2-button--primary" href="#contact">
               {copy.heroPrimaryLabel} <span aria-hidden="true">↗</span>
             </a>
@@ -73,7 +73,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
           </div>
         </div>
 
-        <nav class="hv2-hero__quick" aria-label="Быстрые переходы">
+        <nav class="hv2-hero__quick" aria-label="Быстрые переходы" data-reveal style="--hv2-reveal-delay: 240ms">
           <a href={path('/design-lab/v2/metallokonstruktsii-dlya-biznesa/')}>Металлоконструкции <span aria-hidden="true">↗</span></a>
           <a href={path('/design-lab/v2/stroitelstvo-i-remonty/')}>Строительство <span aria-hidden="true">↗</span></a>
           <a href="#directions">Все направления <span aria-hidden="true">↓</span></a>
@@ -448,7 +448,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
       paletteButtons.forEach((button) => {
         button.setAttribute('aria-pressed', String(button.dataset.hv2Palette === palette));
       });
-      themeColor?.setAttribute('content', palette === 'steel' ? '#F2EFE9' : '#F3F5F1');
+      themeColor?.setAttribute('content', palette === 'steel' ? '#F2EFE9' : '#F6F3ED');
       try {
         window.localStorage.setItem('smu1-home-v2-palette', palette);
       } catch {
@@ -491,31 +491,61 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
     window.addEventListener('resize', syncSectionNavigation);
     syncSectionNavigation();
 
-    const revealElements = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
-    if (!reducedMotion.matches && 'IntersectionObserver' in window) {
+    const revealElements = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
+    let revealObserver: IntersectionObserver | undefined;
+    let revealScanQueued = false;
+    const revealElement = (element: HTMLElement) => {
+      element.classList.remove('hv2-reveal-pending');
+      element.classList.add('hv2-reveal-visible');
+      revealObserver?.unobserve(element);
+    };
+    const revealReached = (viewportFactor = 0.94) => {
+      revealScanQueued = false;
+      revealElements.forEach((element) => {
+        if (!element.classList.contains('hv2-reveal-pending')) return;
+        if (element.getBoundingClientRect().top < window.innerHeight * viewportFactor) revealElement(element);
+      });
+    };
+    const queueRevealScan = () => {
+      if (revealScanQueued) return;
+      revealScanQueued = true;
+      requestAnimationFrame(() => revealReached());
+    };
+
+    if (reducedMotion.matches) {
+      revealElements.forEach(revealElement);
+    } else if ('IntersectionObserver' in window) {
       try {
-        const revealObserver = new IntersectionObserver((entries) => {
+        revealObserver = new IntersectionObserver((entries) => {
           entries.forEach((entry) => {
             if (!entry.isIntersecting) return;
-            entry.target.classList.remove('hv2-reveal-pending');
-            entry.target.classList.add('hv2-reveal-visible');
-            revealObserver.unobserve(entry.target);
+            revealElement(entry.target as HTMLElement);
           });
         }, { rootMargin: '0px 0px -9% 0px', threshold: 0.08 });
 
         revealElements.forEach((element, index) => {
-          const rect = element.getBoundingClientRect();
-          if (rect.top < window.innerHeight * 0.94) {
-            element.classList.add('hv2-reveal-visible');
-            return;
+          if (!element.style.getPropertyValue('--hv2-reveal-delay')) {
+            element.style.setProperty('--hv2-reveal-delay', `${Math.min((index % 4) * 55, 165)}ms`);
           }
-          element.style.setProperty('--hv2-reveal-delay', `${Math.min((index % 4) * 55, 165)}ms`);
           element.classList.add('hv2-reveal-pending');
-          revealObserver.observe(element);
+          revealObserver?.observe(element);
         });
+
+        window.addEventListener('scroll', queueRevealScan, { passive: true });
+        window.addEventListener('resize', queueRevealScan);
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          revealReached();
+        }));
+
+        window.setTimeout(() => {
+          revealReached(1);
+        }, 1600);
       } catch {
-        revealElements.forEach((element) => element.classList.remove('hv2-reveal-pending'));
+        revealElements.forEach(revealElement);
       }
+    } else {
+      revealElements.forEach(revealElement);
     }
   };
 

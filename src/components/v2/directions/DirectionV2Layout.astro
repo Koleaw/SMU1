@@ -1,6 +1,7 @@
 ---
 import CatalogV2Layout from '../CatalogV2Layout.astro';
 import '../../../styles/v2/direction-v2.css';
+import '../../../styles/v2/immersive-direction-v2.css';
 
 interface Props {
   title: string;
@@ -28,6 +29,8 @@ const {
   currentPath={currentPath}
   ogImage={ogImage}
   pageKind="section"
+  headerMode="overlay"
+  rootClass="catalog-v2--immersive"
 >
   <div class:list={['direction-v2', `direction-v2--${variant}`]} data-direction-v2-root>
     <slot />

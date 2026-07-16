@@ -1,6 +1,6 @@
 ---
-import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import DirectionV2FinalCTA from '../directions/DirectionV2FinalCTA.astro';
+import ImmersiveDirectionHero from '../directions/ImmersiveDirectionHero.astro';
 import DirectionV2Related from '../directions/DirectionV2Related.astro';
 import { getDirectionCardItems, getDirectionListItems } from '../directions/directionV2Data';
 import {
@@ -14,7 +14,6 @@ import {
 } from '../mediaRoleAdapter';
 import PlaceDirectionBrief from '../place/PlaceDirectionBrief.astro';
 import PlaceDirectionContexts from '../place/PlaceDirectionContexts.astro';
-import PlaceDirectionHero from '../place/PlaceDirectionHero.astro';
 import PlaceDirectionIntro from '../place/PlaceDirectionIntro.astro';
 import PlaceDirectionProjects from '../place/PlaceDirectionProjects.astro';
 import PlaceDirectionScope from '../place/PlaceDirectionScope.astro';
@@ -127,12 +126,12 @@ const briefInputs = ['Описание задачи', 'Фотография те
   currentPath={currentPath}
   ogImage={heroImage}
 >
-  <V2Breadcrumbs items={[
-    { title: 'Главная', href: '/design-lab/home-v2/' },
-    { title: directionTitle }
-  ]} />
-
-  <PlaceDirectionHero
+  <ImmersiveDirectionHero
+    variant="landscaping"
+    breadcrumbs={[
+      { title: 'Главная', href: '/design-lab/home-v2/' },
+      { title: directionTitle }
+    ]}
     eyebrow={heroKicker}
     title={heroTitle}
     description={heroDescription}
@@ -144,6 +143,10 @@ const briefInputs = ['Описание задачи', 'Фотография те
       ? { fit: 'cover', positionX: 50, positionY: 52, scale: 1 }
       : service.imageView}
     caption={resolvedHeroMedia.usesApprovedBaseline ? embankment?.title : directionTitle}
+    titleId="place-direction-title"
+    primaryLabel="Получить расчёт"
+    secondaryHref="#landscaping-brief"
+    secondaryLabel="Обсудить территорию"
   />
 
   <PlaceDirectionIntro

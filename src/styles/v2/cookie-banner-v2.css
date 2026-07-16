@@ -22,10 +22,10 @@
 .cookie-banner .btn {
   min-height: 44px;
   padding: 10px 16px;
-  border: 1px solid #315a45;
+  border: 1px solid var(--hv2-accent, var(--hv2-action));
   border-radius: 999px;
   color: #fff;
-  background: #315a45;
+  background: var(--hv2-accent, var(--hv2-action));
   font: inherit;
   font-weight: 700;
   cursor: pointer;

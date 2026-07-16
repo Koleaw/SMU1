@@ -302,7 +302,7 @@
   min-height: clamp(500px, 58vw, 760px);
   overflow: hidden;
   border: 1px solid var(--hv2-border);
-  background: #172126;
+  background: var(--hv2-graphite, #1d2421);
   touch-action: pan-y pinch-zoom;
 }
 
@@ -325,7 +325,7 @@
   overflow: hidden;
   border: 0;
   color: #ffffff;
-  background: #172126;
+  background: var(--hv2-graphite, #1d2421);
   cursor: zoom-in;
 }
 
@@ -368,7 +368,7 @@
   place-items: center;
   padding: 28px;
   color: rgba(255, 255, 255, 0.78);
-  background: #172126;
+  background: var(--hv2-graphite, #1d2421);
   text-align: center;
 }
 
@@ -499,7 +499,7 @@
   padding: 0;
   border: 0;
   color: #ffffff;
-  background: #101719;
+  background: var(--hv2-graphite, #1d2421);
 }
 
 .v2-project-lightbox:not([open]) {
@@ -592,7 +592,7 @@
   min-height: 0;
   place-items: center;
   overflow: hidden;
-  background: #0c1214;
+  background: var(--hv2-graphite, #1d2421);
   touch-action: pan-y pinch-zoom;
 }
 

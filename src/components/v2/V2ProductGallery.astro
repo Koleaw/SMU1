@@ -138,6 +138,7 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
       const media = gallery.querySelector<HTMLElement>('[data-v2-media]');
       const emptyState = gallery.querySelector<HTMLElement>('[data-v2-gallery-empty]');
       const status = gallery.querySelector<HTMLElement>('[data-v2-gallery-status]');
+      const thumbsTrack = gallery.querySelector<HTMLElement>('.v2-product-gallery__thumbs');
       const thumbs = Array.from(gallery.querySelectorAll<HTMLButtonElement>('[data-v2-gallery-thumb]'));
       const stage = gallery.querySelector<HTMLElement>('.v2-product-gallery__stage');
       const openButton = gallery.querySelector<HTMLButtonElement>('[data-v2-gallery-open]');
@@ -192,7 +193,25 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
         if (lightboxStatus) lightboxStatus.textContent = `${current + 1} / ${sources.length}`;
       };
 
-      const setCurrent = (index: number) => {
+      const revealCurrentThumb = () => {
+        const thumb = thumbs[current];
+        if (!thumbsTrack || !thumb) return;
+
+        const trackRect = thumbsTrack.getBoundingClientRect();
+        const thumbRect = thumb.getBoundingClientRect();
+        const startDelta = thumbRect.left - trackRect.left;
+        const endDelta = thumbRect.right - trackRect.right;
+        const delta = startDelta < 0 ? startDelta : endDelta > 0 ? endDelta : 0;
+        if (delta === 0) return;
+
+        thumbsTrack.scrollTo({
+          left: Math.max(0, thumbsTrack.scrollLeft + delta),
+          top: thumbsTrack.scrollTop,
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+        });
+      };
+
+      const setCurrent = (index: number, revealThumb = true) => {
         current = normalizedIndex(index);
         setImageState(mainImage, media, sources[current], altFor(current));
         thumbs.forEach((thumb, thumbIndex) => {
@@ -200,7 +219,7 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
           thumb.classList.toggle('is-current', isCurrent);
           thumb.setAttribute('aria-pressed', String(isCurrent));
         });
-        thumbs[current]?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+        if (revealThumb) revealCurrentThumb();
         if (status) status.textContent = `${current + 1} / ${sources.length}`;
         syncLightbox();
       };
@@ -312,7 +331,7 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
         image.addEventListener('error', () => thumb.classList.add('is-broken'), { once: true });
       });
 
-      setCurrent(0);
+      setCurrent(0, false);
     });
   };
 

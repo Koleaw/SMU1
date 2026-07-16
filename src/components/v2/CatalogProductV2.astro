@@ -13,6 +13,7 @@ import {
   cleanTextItems,
   formatProductPrice,
   productGalleryImages,
+  publicCatalogCopy,
   type CatalogProductRoute,
   type CatalogV2Links
 } from './catalogV2Data';
@@ -27,10 +28,13 @@ interface Props {
 const { route, relatedProducts, links, currentPath } = Astro.props as Props;
 const { section, category, product } = route;
 const images = productGalleryImages(product);
-const materials = cleanTextItems(product.materials);
-const colors = cleanTextItems(product.colors);
-const features = cleanTextItems(product.features);
-const customizationItems = cleanTextItems(product.customizationItems);
+const publicTextItems = (items: unknown) => cleanTextItems(items)
+  .map((item) => publicCatalogCopy(item))
+  .filter(Boolean);
+const materials = publicTextItems(product.materials);
+const colors = publicTextItems(product.colors);
+const features = publicTextItems(product.features);
+const customizationItems = publicTextItems(product.customizationItems);
 const dimensions = Array.isArray(product.dimensions)
   ? product.dimensions
       .filter((item) => item?.isActive !== false && (item?.label?.trim() || item?.value?.trim()))
@@ -56,30 +60,40 @@ const textualSpecs = normalizedSpecs.flatMap((item) => {
   return item.label && !item.isGenericLabel ? [item.label] : [];
 });
 const hasSpecifications = pairedSpecs.length > 0 || textualSpecs.length > 0;
-const description = product.description?.trim() || product.leadText?.trim() || product.shortDescription;
+const productLead = publicCatalogCopy(product.leadText) || publicCatalogCopy(product.shortDescription);
+const description = publicCatalogCopy(product.description) || productLead;
 const descriptionParagraphs = description.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
-const rawCaption = product.placeholderLabel?.trim() || '';
+const rawCaption = publicCatalogCopy(product.placeholderLabel);
 const isDefaultPhotoNotice = /фото\s+изделия\s+будут\s+добавлены\s+позже/i.test(rawCaption);
 const galleryCaption = images.length > 0 && isDefaultPhotoNotice ? '' : rawCaption;
-const deliveryText = product.deliveryText?.trim() || '';
+const deliveryText = publicCatalogCopy(product.deliveryText);
 const deliveryParagraphs = deliveryText.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
 const hasTechnicalPanels = hasSpecifications || materials.length > 0 || colors.length > 0 || customizationItems.length > 0;
 const finalContactTitle = product.showCustomProjectBlock !== false
-  ? product.customProjectTitle?.trim() || 'Индивидуальное исполнение'
+  ? publicCatalogCopy(product.customProjectTitle) || 'Индивидуальное исполнение'
   : 'Рассчитать стоимость изделия';
-const finalContactDescription = product.showCustomProjectBlock !== false && product.customProjectText?.trim()
-  ? product.customProjectText.trim()
+const customProjectText = publicCatalogCopy(product.customProjectText);
+const finalContactDescription = product.showCustomProjectBlock !== false && customProjectText
+  ? customProjectText
   : 'Пришлите задачу, размеры, количество и место установки по телефону, в Telegram или по email.';
 const relatedAreFromCategory = relatedProducts.every((item) => item.category.slug === category.slug);
 const relatedTitle = relatedAreFromCategory ? 'Другие изделия категории' : 'Другие изделия раздела';
 const relatedHref = links.categoryHrefs[category.slug] || catalogV2CategoryHref(section.slug, category.slug);
 const relatedProductHref = (item: CatalogProductRoute) => links.productHrefs[item.product.slug]
   || catalogV2ProductHref(item.section.slug, item.category.slug, item.product.slug);
+const displayRelatedProducts = relatedProducts.map((item) => ({
+  ...item,
+  product: {
+    ...item.product,
+    leadText: publicCatalogCopy(item.product.leadText),
+    shortDescription: publicCatalogCopy(item.product.shortDescription)
+  }
+}));
 ---
 
 <CatalogV2Layout
   title={product.seoTitle}
-  description={product.seoDescription}
+  description={publicCatalogCopy(product.seoDescription) || productLead || product.title}
   canonicalPath={route.href}
   currentPath={currentPath}
   ogImage={images[0] || product.image}
@@ -92,9 +106,16 @@ const relatedProductHref = (item: CatalogProductRoute) => links.productHrefs[ite
     { title: product.title }
   ]} />
 
-  <section class="v2-product-top" aria-labelledby="v2-product-title">
+  <section
+    class:list={[
+      'v2-product-top',
+      { 'v2-product-top--no-media': images.length === 0, 'v2-product-top--single-media': images.length === 1 }
+    ]}
+    data-product-media-count={images.length}
+    aria-labelledby="v2-product-title"
+  >
     <div class="hv2-shell hv2-grid v2-product-top__grid">
-      <div class="v2-product-top__gallery" data-v2-reveal>
+      <div class="v2-product-top__gallery" data-v2-reveal="entry-media">
         <V2ProductGallery
           images={images}
           title={product.title}
@@ -103,12 +124,12 @@ const relatedProductHref = (item: CatalogProductRoute) => links.productHrefs[ite
         />
       </div>
 
-      <article class="v2-product-summary" data-v2-reveal>
-        <p class="hv2-eyebrow">{category.title}</p>
-        <h1 id="v2-product-title">{product.title}</h1>
-        <p class="v2-product-summary__lead">{product.leadText || product.shortDescription}</p>
+      <article class="v2-product-summary">
+        <p class="hv2-eyebrow" data-v2-reveal="entry-meta">{category.title}</p>
+        <h1 id="v2-product-title" data-v2-reveal="entry-title">{product.title}</h1>
+        {productLead && <p class="v2-product-summary__lead" data-v2-reveal="entry-copy">{productLead}</p>}
 
-        <dl class="v2-product-summary__meta">
+        <dl class="v2-product-summary__meta" data-v2-reveal="entry-price">
           <div>
             <dt>Стоимость</dt>
             <dd>{formatProductPrice(product)}</dd>
@@ -116,18 +137,17 @@ const relatedProductHref = (item: CatalogProductRoute) => links.productHrefs[ite
         </dl>
 
         {features.length > 0 && (
-          <ul class="v2-product-summary__features">
+          <ul class="v2-product-summary__features" data-v2-reveal="entry-features">
             {features.map((feature) => <li>{feature}</li>)}
           </ul>
         )}
 
-        <div class="hv2-actions v2-product-summary__actions">
+        <div class="hv2-actions v2-product-summary__actions" data-v2-reveal="entry-actions">
           <a class="hv2-button hv2-button--primary" href="#contact">Запросить расчёт<span aria-hidden="true">↗</span></a>
           <a class="hv2-text-link" href={settings.telegram} target="_blank" rel="noopener noreferrer">
             Написать в Telegram<span aria-hidden="true">↗</span>
           </a>
         </div>
-        <p class="v2-product-summary__note">Статус стоимости и характеристики показаны по текущей записи товара.</p>
       </article>
     </div>
   </section>
@@ -212,7 +232,7 @@ const relatedProductHref = (item: CatalogProductRoute) => links.productHrefs[ite
             <a class="hv2-text-link" href={withBase(relatedHref)}>Все товары категории<span aria-hidden="true">↗</span></a>
           </header>
           <div class="v2-product-grid v2-product-grid--related" role="list">
-            {relatedProducts.map((item) => (
+            {displayRelatedProducts.map((item) => (
               <div role="listitem"><V2ProductCard product={item.product} href={relatedProductHref(item)} related /></div>
             ))}
           </div>

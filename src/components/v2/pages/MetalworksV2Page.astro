@@ -1,6 +1,6 @@
 ---
-import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import DirectionV2FinalCTA from '../directions/DirectionV2FinalCTA.astro';
+import ImmersiveDirectionHero from '../directions/ImmersiveDirectionHero.astro';
 import DirectionV2Related from '../directions/DirectionV2Related.astro';
 import {
   extractConfirmedBriefInputs,
@@ -14,7 +14,6 @@ import {
   approvedUntilEdited
 } from '../directions/directionV2Presentation';
 import EngineeringDirectionBrief from '../engineering/EngineeringDirectionBrief.astro';
-import EngineeringDirectionHero from '../engineering/EngineeringDirectionHero.astro';
 import EngineeringDirectionProof from '../engineering/EngineeringDirectionProof.astro';
 import EngineeringDirectionScope from '../engineering/EngineeringDirectionScope.astro';
 import EngineeringDirectionTasks from '../engineering/EngineeringDirectionTasks.astro';
@@ -112,19 +111,23 @@ const related = [
   currentPath={currentPath}
   ogImage={heroImage}
 >
-  <V2Breadcrumbs items={[
-    { title: 'Главная', href: '/design-lab/home-v2/' },
-    { title: directionTitle }
-  ]} />
-
-  <EngineeringDirectionHero
+  <ImmersiveDirectionHero
+    variant="metalworks"
+    breadcrumbs={[
+      { title: 'Главная', href: '/design-lab/home-v2/' },
+      { title: directionTitle }
+    ]}
     eyebrow={heroKicker}
     title={heroTitle}
     description={heroDescription}
     image={heroImage}
     imageAlt={heroMedia.usesApprovedBaseline ? 'Металлический каркас на производственной территории' : directionTitle}
     imageView={heroImageView}
-    mediaCaption={heroMedia.usesApprovedBaseline ? (proofProject?.title || directionTitle) : directionTitle}
+    caption={heroMedia.usesApprovedBaseline ? (proofProject?.title || directionTitle) : directionTitle}
+    titleId="engineering-direction-title"
+    primaryLabel="Получить расчёт"
+    secondaryHref="#engineering-brief"
+    secondaryLabel="Обсудить задачу"
   />
 
   <EngineeringDirectionScope

@@ -7,7 +7,9 @@ import V2CatalogHero from './V2CatalogHero.astro';
 import V2CategoryCard from './V2CategoryCard.astro';
 import V2DirectContact from './V2DirectContact.astro';
 import {
+  catalogMediaPresentation,
   catalogV2CategoryHref,
+  publicCatalogCopy,
   type CatalogV2Links,
   type ProductCategoryData,
   type ProductSectionData
@@ -36,14 +38,27 @@ const blocks = Array.isArray(section.pageBlocks)
 const customBlock = blocks
   .filter((block) => block.isActive !== false && block.type === 'mediaText')
   .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))[0];
-const customTitle = customBlock?.title?.trim() || 'Типовое решение не закрывает задачу?';
-const customText = customBlock?.text?.trim()
+const customTitle = publicCatalogCopy(customBlock?.title) || 'Типовое решение не закрывает задачу?';
+const customText = publicCatalogCopy(customBlock?.text)
   || 'Передайте фотографию, размеры, эскиз, чертёж или техническое задание для обсуждения изделия под объект.';
+const heroDescription = publicCatalogCopy(section.heroDescription);
+const heroSupportingText = publicCatalogCopy(section.shortDescription);
+const displayCategories = categories.map((category) => ({
+  ...category,
+  heroDescription: publicCatalogCopy(category.heroDescription),
+  shortDescription: publicCatalogCopy(category.shortDescription)
+}));
+const contactTitle = publicCatalogCopy(section.contactTitle) || 'Обсудим изделие и подготовим расчёт';
+const contactDescription = publicCatalogCopy(section.contactDescription)
+  || 'Пришлите описание задачи, количество, размеры или материалы проекта удобным способом.';
+const heroMediaPresentation = section.mode === 'catalog-hub' && section.image?.trim()
+  ? 'isolated'
+  : catalogMediaPresentation(section.image || '', section.imageView);
 ---
 
 <CatalogV2Layout
   title={section.seoTitle}
-  description={section.seoDescription}
+  description={publicCatalogCopy(section.seoDescription) || heroDescription || heroSupportingText || section.title}
   canonicalPath={`/${section.slug}/`}
   currentPath={currentPath}
   ogImage={section.image}
@@ -54,13 +69,15 @@ const customText = customBlock?.text?.trim()
   ]} />
 
   <V2CatalogHero
+    variant="section"
     kicker="Каталог изделий"
     title={section.heroTitle}
-    description={section.heroDescription}
-    supportingText={section.shortDescription}
+    description={heroDescription}
+    supportingText={heroSupportingText}
     image={section.image}
     imageAlt={section.title}
     imageView={section.imageView}
+    mediaPresentation={heroMediaPresentation}
     countLabel={`${categories.length} категорий`}
     primaryHref="#catalog-grid"
     primaryLabel="Выбрать категорию"
@@ -75,11 +92,11 @@ const customText = customBlock?.text?.trim()
           <p class="hv2-eyebrow">Полный ассортимент</p>
           <h2 id="v2-category-grid-title">Выберите тип изделия</h2>
         </div>
-        <p>Все активные категории раздела показаны сразу. Внутри — доступные модели или формат изготовления по задаче.</p>
+        <p>Категории собраны по типу изделия. Внутри — доступные модели или формат изготовления по задаче.</p>
       </header>
-      {categories.length > 0 ? (
+      {displayCategories.length > 0 ? (
         <div class="v2-category-grid" role="list">
-          {categories.map((category, index) => (
+          {displayCategories.map((category, index) => (
             <div role="listitem" class:list={['v2-category-grid__item', { 'v2-category-grid__item--featured': index === 0 }]}>
               <V2CategoryCard
                 category={category}
@@ -94,7 +111,7 @@ const customText = customBlock?.text?.trim()
       ) : (
         <div class="v2-empty-state" role="status">
           <h2>Категории пока не опубликованы</h2>
-          <p>Данные раздела сохранены, но активных категорий для показа сейчас нет.</p>
+          <p>Можно обсудить изделие по фотографии, размерам, эскизу, чертежу или техническому заданию.</p>
         </div>
       )}
     </div>
@@ -114,8 +131,8 @@ const customText = customBlock?.text?.trim()
   </section>
 
   <V2DirectContact
-    title={section.contactTitle?.trim() || 'Обсудим изделие и подготовим расчёт'}
-    description={section.contactDescription?.trim() || 'Пришлите описание задачи, количество, размеры или материалы проекта удобным способом.'}
+    title={contactTitle}
+    description={contactDescription}
     primaryLabel="Получить расчёт"
     secondaryLabel="Обсудить задачу"
   />
