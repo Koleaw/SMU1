@@ -47,7 +47,7 @@
   min-height: clamp(650px, 62vw, 840px);
   overflow: hidden;
   color: #ffffff;
-  background: #17231d;
+  background: var(--hv2-dark-olive, #20352b);
 }
 
 .place-hero__frame > .place-hero__media {
@@ -89,7 +89,7 @@
   place-items: center;
   padding: 28px;
   color: rgba(255, 255, 255, 0.7);
-  background: #17231d;
+  background: var(--hv2-dark-olive, #20352b);
   text-align: center;
 }
 
@@ -249,7 +249,7 @@
 .place-contexts {
   padding: clamp(86px, 10vw, 142px) 0;
   color: var(--hv2-on-contrast);
-  background: #20352b;
+  background: var(--hv2-dark-olive, #20352b);
 }
 
 .place-contexts__grid {
@@ -365,11 +365,11 @@
 .place-projects__gallery .v2-product-gallery__stage {
   min-height: clamp(500px, 50vw, 720px);
   border-color: rgba(32, 53, 43, 0.35);
-  background: #18261f;
+  background: var(--hv2-dark-olive, #20352b);
 }
 
 .place-projects__gallery .v2-product-gallery__open > img {
-  background: #18261f;
+  background: var(--hv2-dark-olive, #20352b);
 }
 
 .place-projects__gallery .v2-product-gallery__thumb {
@@ -594,7 +594,7 @@
 
   .place-hero__copy {
     padding: 38px 20px 44px;
-    background: #17231d;
+    background: var(--hv2-dark-olive, #20352b);
   }
 
   .place-hero h1 {

@@ -32,7 +32,6 @@ const {
 } = Astro.props as Props;
 const resolvedLayout = image && layout !== 'no-media' ? layout : 'no-media';
 const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : withBase(value);
-const actionMark = (value: string) => value.startsWith('#') ? '↓' : '↗';
 ---
 
 <section class:list={['direction-hero', `direction-hero--${resolvedLayout}`]} aria-labelledby="direction-v2-title">
@@ -43,10 +42,10 @@ const actionMark = (value: string) => value.startsWith('#') ? '↓' : '↗';
       <p class="direction-hero__lead">{description}</p>
       <div class="hv2-actions direction-hero__actions">
         <a class:list={['hv2-button', resolvedLayout === 'full' ? 'hv2-button--light' : 'hv2-button--primary']} href={href(primaryHref)}>
-          {primaryLabel}<span aria-hidden="true">{actionMark(primaryHref)}</span>
+          {primaryLabel}
         </a>
         <a class:list={['hv2-button', resolvedLayout === 'full' ? 'hv2-button--contrast' : 'direction-hero__secondary']} href={href(secondaryHref)}>
-          {secondaryLabel}<span aria-hidden="true">{actionMark(secondaryHref)}</span>
+          {secondaryLabel}
         </a>
       </div>
     </div>

@@ -19,8 +19,8 @@ const { title, description, items } = Astro.props as Props;
         <p>{description}</p>
       </header>
       <ul class="engineering-brief__items" data-v2-reveal>
-        {items.map((item, index) => (
-          <li><span>{String(index + 1).padStart(2, '0')}</span><strong>{item}</strong></li>
+        {items.map((item) => (
+          <li><strong>{item}</strong></li>
         ))}
       </ul>
     </div>

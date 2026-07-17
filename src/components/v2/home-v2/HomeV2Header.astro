@@ -87,7 +87,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
           <div class="hv2-dropdown__links">
             {productLinks.map((item) => (
               <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-dropdown-link>
-                <span>{item.label}</span><span aria-hidden="true">↗</span>
+                <span>{item.label}</span>
               </a>
             ))}
           </div>
@@ -113,7 +113,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
           <div class="hv2-dropdown__links">
             {companyLinks.map((item) => (
               <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-dropdown-link>
-                <span>{item.label}</span><span aria-hidden="true">↗</span>
+                <span>{item.label}</span>
               </a>
             ))}
           </div>
@@ -126,7 +126,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
         {settings.phonePrimary}
       </a>
       <a class="hv2-header__telegram" href={settings.telegram} target="_blank" rel="noopener noreferrer">
-        Telegram <span aria-hidden="true">↗</span>
+        Telegram
       </a>
       <a class="hv2-button hv2-button--header" href={resolveHref(contactHref)}>{ctaLabel}</a>
     </div>
@@ -167,7 +167,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
 
   <div class="hv2-mobile-menu__scroll">
     <a class="hv2-button hv2-button--primary hv2-mobile-menu__cta" href={resolveHref(contactHref)} data-hv2-mobile-link>
-      {ctaLabel} <span aria-hidden="true">↗</span>
+      {ctaLabel}
     </a>
 
     <nav class="hv2-mobile-menu__nav" aria-label="Мобильная навигация">

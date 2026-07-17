@@ -27,7 +27,7 @@ const facts = [city, year ? String(year) : ''].filter(Boolean).join(' · ');
         <div class="engineering-proof__summary">
           {facts && <p class="engineering-proof__facts">{facts}</p>}
           <p>{description}</p>
-          <a href={withBase(href)}>Открыть объект <span aria-hidden="true">↗</span></a>
+          <a href={withBase(href)}>Открыть объект</a>
         </div>
       </header>
       <div class="engineering-proof__gallery" data-v2-reveal>

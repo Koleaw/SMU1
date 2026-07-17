@@ -51,7 +51,6 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
         >
           <span>Основной телефон</span>
           <strong>{settings.phonePrimary}</strong>
-          <i aria-hidden="true">↗</i>
         </a>
         {settings.phoneSecondary && (
           <a
@@ -62,7 +61,6 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
           >
             <span>Дополнительный телефон</span>
             <strong>{settings.phoneSecondary}</strong>
-            <i aria-hidden="true">↗</i>
           </a>
         )}
         <a
@@ -75,7 +73,6 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
         >
           <span>Telegram</span>
           <strong>{telegramLabel}</strong>
-          <i aria-hidden="true">↗</i>
         </a>
         <a
           class="practical-contact-card practical-contact-card--email"
@@ -85,7 +82,6 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
         >
           <span>Электронная почта</span>
           <strong>{settings.email}</strong>
-          <i aria-hidden="true">↗</i>
         </a>
       </div>
     </div>
@@ -118,7 +114,7 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
           rel="noopener noreferrer"
           aria-label={`Открыть адрес ${settings.address} в Яндекс Картах`}
         >
-          Открыть в Яндекс Картах <span aria-hidden="true">↗</span>
+          Открыть в Яндекс Картах
         </a>
       </div>
     </div>
@@ -132,11 +128,11 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
           <h2 id="contacts-brief-title">Что можно прислать</h2>
           <p>Достаточно доступных материалов: недостающие вводные можно уточнить в разговоре.</p>
         </header>
-        <ol data-v2-reveal>
-          {taskInputs.map((item, index) => (
-            <li><span>{String(index + 1).padStart(2, '0')}</span><strong>{item}</strong></li>
+        <ul data-v2-reveal>
+          {taskInputs.map((item) => (
+            <li><strong>{item}</strong></li>
           ))}
-        </ol>
+        </ul>
       </div>
     </section>
   )}
@@ -154,8 +150,8 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
         <div><dt>ОГРН</dt><dd>{settings.ogrn}</dd></div>
       </dl>
       <div class="practical-contacts__related" data-v2-reveal>
-        <a href={withBase('/design-lab/v2/o-nas/')}>О компании <span aria-hidden="true">↗</span></a>
-        <a href={withBase('/design-lab/v2/vakansii/')}>Вакансии <span aria-hidden="true">↗</span></a>
+        <a href={withBase('/design-lab/v2/o-nas/')}>О компании</a>
+        <a href={withBase('/design-lab/v2/vakansii/')}>Вакансии</a>
       </div>
     </div>
   </section>
@@ -168,10 +164,10 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
       </div>
       <div class="hv2-actions" data-v2-reveal>
         <a class="hv2-button hv2-button--light" href={settings.telegram} target="_blank" rel="noopener noreferrer">
-          Написать в Telegram <span aria-hidden="true">↗</span>
+          Написать в Telegram
         </a>
         <a class="hv2-button hv2-button--contrast" href={`tel:${tel(settings.phonePrimary)}`}>
-          Позвонить <span aria-hidden="true">↗</span>
+          Позвонить
         </a>
       </div>
     </div>

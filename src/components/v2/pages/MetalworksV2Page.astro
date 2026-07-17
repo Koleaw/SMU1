@@ -130,6 +130,17 @@ const related = [
     secondaryLabel="Обсудить задачу"
   />
 
+  {proofProject && proofImages.length > 0 && (
+    <EngineeringDirectionProof
+      title={proofProject.title}
+      city={proofProject.city}
+      year={proofProject.year}
+      description={proofProject.whatWasDone?.trim() || proofProject.shortDescription}
+      href={`/design-lab/v2/vypolnennye-obekty/${proofProject.slug}/`}
+      images={proofImages}
+    />
+  )}
+
   <EngineeringDirectionScope
     title={scopeBlock?.title || 'Для каких объектов'}
     description={scopeDescription}
@@ -141,17 +152,6 @@ const related = [
     description="От каркасов и рам до конструкций по чертежам — состав задачи уточняется для конкретного объекта."
     items={tasks}
   />
-
-  {proofProject && proofImages.length > 0 && (
-    <EngineeringDirectionProof
-      title={proofProject.title}
-      city={proofProject.city}
-      year={proofProject.year}
-      description={proofProject.whatWasDone?.trim() || proofProject.shortDescription}
-      href={`/design-lab/v2/vypolnennye-obekty/${proofProject.slug}/`}
-      images={proofImages}
-    />
-  )}
 
   <EngineeringDirectionBrief
     title="Что можно прислать"

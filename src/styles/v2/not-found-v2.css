@@ -28,7 +28,7 @@
 .not-found-v2__copy h1 {
   max-width: 720px;
   margin-top: 18px;
-  font-family: 'Raleway', 'Manrope', sans-serif;
+  font-family: 'Manrope', 'Segoe UI', Arial, sans-serif;
   font-size: clamp(50px, 5.5vw, 78px);
   font-weight: 600;
   line-height: 1;
@@ -60,7 +60,7 @@
 
 .not-found-v2__contacts h2 {
   margin: 12px 0 24px;
-  font-family: 'Raleway', 'Manrope', sans-serif;
+  font-family: 'Manrope', 'Segoe UI', Arial, sans-serif;
   font-size: clamp(27px, 2.8vw, 40px);
   font-weight: 600;
   line-height: 1.05;

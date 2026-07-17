@@ -41,7 +41,7 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
             style={imageViewStyle(imageView)}
             data-v2-gallery-main
           />
-          <span class="v2-product-gallery__zoom" aria-hidden="true">Развернуть ↗</span>
+          <span class="v2-product-gallery__zoom" aria-hidden="true">Развернуть</span>
         </button>
       ) : null}
       <div class="v2-media-empty v2-product-gallery__empty" aria-hidden={hasImages} data-v2-gallery-empty>
@@ -77,7 +77,6 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
           data-v2-gallery-src={withBase(image)}
         >
           <img src={withBase(image)} alt="" width="180" height="140" loading="lazy" decoding="async" />
-          <span>{String(index + 1).padStart(2, '0')}</span>
         </button>
       ))}
     </div>

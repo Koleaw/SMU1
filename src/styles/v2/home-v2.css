@@ -1,10 +1,10 @@
 :root {
   --hv2-motion-fast: 180ms;
-  --hv2-motion-standard: 300ms;
-  --hv2-motion-reveal: 560ms;
+  --hv2-motion-standard: 220ms;
+  --hv2-motion-reveal: 480ms;
   --hv2-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --hv2-header-height: 80px;
-  --hv2-section-nav-height: 54px;
+  --hv2-section-nav-height: 0px;
 }
 
 .home-v2-html {
@@ -15,15 +15,15 @@
 }
 
 .home-v2-html[data-home-v2-theme='olive'] {
-  --hv2-background: #f3f5f1;
-  --hv2-surface: #fbfaf6;
-  --hv2-secondary-surface: #e7ece7;
-  --hv2-text: #18221d;
-  --hv2-muted: #5a665f;
+  --hv2-background: #f6f3ed;
+  --hv2-surface: #fffdf8;
+  --hv2-secondary-surface: #e9e5dc;
+  --hv2-text: #18201c;
+  --hv2-muted: #626761;
   --hv2-action: #285d47;
   --hv2-action-hover: #1e4938;
   --hv2-contrast: #20352b;
-  --hv2-border: #c9cec6;
+  --hv2-border: #d2cfc6;
   --hv2-on-action: #ffffff;
   --hv2-on-contrast: #f8faf7;
   --hv2-focus: #285d47;
@@ -73,7 +73,7 @@
 }
 
 .home-v2-body :where(h1, h2, h3, strong) {
-  font-family: 'Raleway', 'Manrope', 'Segoe UI', sans-serif;
+  font-family: 'Manrope', 'Segoe UI', Arial, sans-serif;
   font-weight: 600;
   line-height: 1.08;
   letter-spacing: -0.018em;
@@ -620,7 +620,7 @@
   min-height: 52px;
   align-items: center;
   border-bottom: 1px solid var(--hv2-border);
-  font-family: 'Raleway', 'Manrope', sans-serif;
+  font-family: 'Manrope', 'Segoe UI', Arial, sans-serif;
   font-size: clamp(18px, 5vw, 24px);
   font-weight: 600;
   line-height: 1.15;
@@ -657,7 +657,7 @@
   height: 100svh;
   overflow: hidden;
   color: #ffffff;
-  background: #151c19;
+  background: var(--hv2-graphite);
 }
 
 .hv2-hero__header-sentinel {
@@ -933,7 +933,7 @@
 
 .hv2-competency--media {
   color: #ffffff;
-  background: #1d2823;
+  background: var(--hv2-dark-olive);
 }
 
 .hv2-competency--media > img,
@@ -1234,7 +1234,7 @@
   grid-column: 1 / 8;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background: #121a16;
+  background: var(--hv2-graphite);
   touch-action: pan-y;
 }
 
@@ -1483,7 +1483,7 @@
 }
 
 .hv2-brief__inputs span {
-  font-family: 'Raleway', 'Manrope', sans-serif;
+  font-family: 'Manrope', 'Segoe UI', Arial, sans-serif;
   font-size: clamp(17px, 1.5vw, 22px);
   font-weight: 600;
   line-height: 1.2;

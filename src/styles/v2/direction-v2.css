@@ -176,7 +176,7 @@
   grid-column: 1 / 13;
   min-height: 100%;
   border-color: rgba(24, 34, 29, 0.16);
-  background: #fbfaf6;
+  background: var(--hv2-elevated, #fffdf8);
 }
 
 .direction-hero--full .direction-hero__copy {
@@ -462,16 +462,16 @@
 .direction-gallery .v2-product-gallery__stage {
   min-height: clamp(480px, 54vw, 720px);
   border-color: rgba(255, 255, 255, 0.26);
-  background: #111a15;
+  background: var(--hv2-graphite, #1d2421);
 }
 
 .direction-gallery .v2-product-gallery__open > img {
-  background: #111a15;
+  background: var(--hv2-graphite, #1d2421);
 }
 
 .direction-gallery .v2-product-gallery__thumb {
   border-color: rgba(255, 255, 255, 0.3) !important;
-  background: #111a15 !important;
+  background: var(--hv2-graphite, #1d2421) !important;
 }
 
 .direction-gallery .v2-product-gallery__thumb.is-current {

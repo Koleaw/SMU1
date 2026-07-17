@@ -64,8 +64,8 @@ const hasMedia = Boolean(image);
       {description && <p class="v2-catalog-hero__lead" data-v2-reveal="entry-copy">{description}</p>}
       {supportingText && <p class="v2-catalog-hero__support" data-v2-reveal="entry-support">{supportingText}</p>}
       <div class="hv2-actions v2-catalog-hero__actions" data-v2-reveal="entry-actions">
-        <a class="hv2-button hv2-button--primary" href={href(primaryHref)}>{primaryLabel}<span aria-hidden="true">↓</span></a>
-        {secondaryLabel && <a class="hv2-text-link" href={href(secondaryHref)}>{secondaryLabel}<span aria-hidden="true">↗</span></a>}
+        <a class="hv2-button hv2-button--primary" href={href(primaryHref)}>{primaryLabel}</a>
+        {secondaryLabel && <a class="hv2-text-link" href={href(secondaryHref)}>{secondaryLabel}</a>}
       </div>
     </div>
 

@@ -44,7 +44,6 @@ const {
 
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : withBase(value);
-const actionMark = (value: string) => value.startsWith('#') ? '↓' : '↗';
 const mediaFit = imageView?.fit || 'cover';
 ---
 
@@ -72,10 +71,10 @@ const mediaFit = imageView?.fit || 'cover';
         <p class="immersive-direction-hero__lead" data-v2-reveal data-v2-reveal-stage="description">{description}</p>
         <div class="hv2-actions immersive-direction-hero__actions" data-v2-reveal data-v2-reveal-stage="actions">
           <a class="hv2-button hv2-button--primary" href={href(primaryHref)}>
-            {primaryLabel}<span aria-hidden="true">{actionMark(primaryHref)}</span>
+            {primaryLabel}
           </a>
           <a class="hv2-button hv2-button--ghost" href={href(secondaryHref)}>
-            {secondaryLabel}<span aria-hidden="true">{actionMark(secondaryHref)}</span>
+            {secondaryLabel}
           </a>
         </div>
       </div>

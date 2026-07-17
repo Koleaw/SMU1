@@ -1421,7 +1421,7 @@ a:focus-visible .v2-card-link i {
   padding: 0;
   border: 0;
   color: #ffffff;
-  background: #101713;
+  background: var(--hv2-graphite);
 }
 
 .v2-product-lightbox::backdrop {

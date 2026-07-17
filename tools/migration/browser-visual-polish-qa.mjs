@@ -497,18 +497,30 @@ class CdpClient {
         const pending = this.pending.get(message.id);
         if (!pending) return;
         this.pending.delete(message.id);
+        clearTimeout(pending.timer);
         if (message.error) pending.reject(new Error(message.error.message));
         else pending.resolve(message.result || {});
         return;
       }
       for (const listener of this.listeners.get(message.method) || []) listener(message.params || {});
     });
+    this.socket.addEventListener('close', () => {
+      for (const [id, pending] of this.pending) {
+        clearTimeout(pending.timer);
+        pending.reject(new Error(`CDP connection closed while command ${id} was pending.`));
+      }
+      this.pending.clear();
+    }, { once: true });
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, timeoutMs = 20_000) {
     const id = ++this.id;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`CDP ${method} timed out after ${timeoutMs}ms.`));
+      }, timeoutMs);
+      this.pending.set(id, { resolve, reject, timer });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
   }
@@ -1263,6 +1275,7 @@ const waitForMap = async (timeoutMs = 12_000) => evaluate(`new Promise((resolve)
 })`);
 
 const runInteractionAudit = async (name, audit) => {
+  progress(`interaction ${name}`);
   try {
     const result = await audit();
     const { pass, ...details } = result || {};
@@ -1275,6 +1288,138 @@ const runInteractionAudit = async (name, audit) => {
     fail('functional-interaction-exception', `${name}: ${String(error)}`, { interaction: name });
   }
 };
+
+const auditHomeVideoInteraction = async (name, viewportName, mode) => runInteractionAudit(name, async () => {
+  const viewport = exactViewports.find((item) => item.name === viewportName);
+  await setViewport(viewport);
+  await navigateDirect(homeRoute, 120);
+  await waitForLocalImages(6500);
+  const media = await evaluate(`(() => {
+    const element = document.querySelector('[data-hv2-hero-video]');
+    const hero = document.querySelector('[data-hv2-hero]');
+    const poster = hero?.querySelector('.hv2-hero__poster img');
+    const control = document.querySelector('[data-hv2-video-toggle]');
+    if (!element) return { video: { exists: false, sources: [] }, poster: {}, control: {} };
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return {
+      heroPlaying: hero?.classList.contains('is-video-playing') || false,
+      video: {
+        exists: true,
+        sources: Array.from(element.querySelectorAll('source')).map((source) => ({
+          src: source.getAttribute('src') || '',
+          media: source.getAttribute('media') || ''
+        })),
+        dataSource: element.dataset.hv2VideoSrc || '',
+        srcAttribute: element.getAttribute('src') || '',
+        currentSrc: element.currentSrc,
+        poster: element.getAttribute('poster') || '',
+        readyState: element.readyState,
+        paused: element.paused,
+        error: element.error ? { code: element.error.code, message: element.error.message } : null,
+        visible: style.display !== 'none' && style.visibility !== 'hidden'
+          && Number.parseFloat(style.opacity || '1') > 0.01 && rect.width > 0 && rect.height > 0
+      },
+      poster: poster ? {
+        exists: true,
+        currentSrc: poster.currentSrc,
+        complete: poster.complete,
+        naturalWidth: poster.naturalWidth
+      } : { exists: false },
+      control: control ? {
+        exists: true,
+        hidden: control.hidden,
+        visible: getComputedStyle(control).display !== 'none' && !control.hidden,
+        label: control.textContent?.trim() || '',
+        ariaLabel: control.getAttribute('aria-label') || ''
+      } : { exists: false }
+    };
+  })()`);
+  const video = media.video;
+  const sourcePaths = video.sources.map((source) => {
+    try { return new URL(source.src, origin).pathname; } catch { return source.src; }
+  });
+  const currentPath = (() => {
+    if (!video.currentSrc) return '';
+    try { return new URL(video.currentSrc, origin).pathname; } catch { return video.currentSrc || ''; }
+  })();
+  const dataSourcePath = (() => {
+    if (!video.dataSource) return '';
+    try { return new URL(video.dataSource, origin).pathname; } catch { return video.dataSource || ''; }
+  })();
+  const posterPath = (() => {
+    if (!media.poster.currentSrc) return '';
+    try { return new URL(media.poster.currentSrc, origin).pathname; } catch { return media.poster.currentSrc || ''; }
+  })();
+  const declarativeSourcesRemoved = sourcePaths.length === 0;
+  const desktopContract = mode === 'desktop-video'
+    && dataSourcePath === homePageRecord.heroMediaVideo
+    && currentPath === homePageRecord.heroMediaVideo
+    && declarativeSourcesRemoved
+    && video.readyState >= 2
+    && !video.error
+    && video.visible
+    && media.heroPlaying
+    && media.control.exists
+    && !media.control.hidden
+    && media.control.visible;
+  const mobileContract = mode === 'mobile-poster'
+    && dataSourcePath === homePageRecord.heroMediaVideo
+    && currentPath === ''
+    && video.srcAttribute === ''
+    && declarativeSourcesRemoved
+    && !video.visible
+    && !media.heroPlaying
+    && media.poster.exists
+    && media.poster.complete
+    && media.poster.naturalWidth > 0
+    && posterPath === homePageRecord.heroMediaPosterMobile
+    && media.control.exists
+    && (media.control.hidden || !media.control.visible);
+  const controlCycle = desktopContract ? await evaluate(`(async () => {
+    const element = document.querySelector('[data-hv2-hero-video]');
+    const hero = document.querySelector('[data-hv2-hero]');
+    const control = document.querySelector('[data-hv2-video-toggle]');
+    if (!element || !control) return { pauseObserved: false, resumeObserved: false, released: false };
+    control.click();
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const pauseObserved = element.paused;
+    const pauseLabel = control.textContent?.trim() || '';
+    const playing = new Promise((resolve) => element.addEventListener('playing', () => resolve(true), { once: true }));
+    control.click();
+    const playingEvent = await Promise.race([
+      playing,
+      new Promise((resolve) => setTimeout(() => resolve(false), 1800))
+    ]);
+    const resumeObserved = Boolean(playingEvent) && !element.paused;
+    element.pause();
+    hero?.classList.remove('is-video-playing');
+    return {
+      pauseObserved,
+      resumeObserved,
+      pauseLabel,
+      released: element.paused
+    };
+  })()`) : null;
+  const interactionContract = mode === 'desktop-video'
+    ? desktopContract && controlCycle?.pauseObserved && controlCycle?.resumeObserved && controlCycle?.released
+    : mobileContract;
+  return {
+    pass: video.exists && interactionContract,
+    route: homeRoute,
+    viewport: viewport.name,
+    mode,
+    desktopContract,
+    mobileContract,
+    controlCycle,
+    declarativeSourcesRemoved,
+    sourcePaths,
+    dataSourcePath,
+    currentPath,
+    posterPath,
+    media
+  };
+});
 
 const runFunctionalInteractionAudits = async () => {
   progress('bounded functional interaction assertions');
@@ -1644,57 +1789,112 @@ const runFunctionalInteractionAudits = async () => {
     };
   });
 
-  const auditHomeVideo = async (name, viewportName, expectedCurrentSource) => runInteractionAudit(name, async () => {
+  const auditHomeVideo = async (name, viewportName, mode) => runInteractionAudit(name, async () => {
     const viewport = exactViewports.find((item) => item.name === viewportName);
     await setViewport(viewport);
     await navigateDirect(homeRoute, 120);
     await waitForLocalImages(6500);
-    const video = await evaluate(`(() => {
+    const media = await evaluate(`(() => {
       const element = document.querySelector('[data-hv2-hero-video]');
-      if (!element) return { exists: false, sources: [] };
+      const hero = document.querySelector('[data-hv2-hero]');
+      const poster = hero?.querySelector('.hv2-hero__poster img');
+      const control = document.querySelector('[data-hv2-video-toggle]');
+      if (!element) return { video: { exists: false, sources: [] }, poster: {}, control: {} };
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
       return {
-        exists: true,
-        sources: Array.from(element.querySelectorAll('source')).map((source) => ({
-          src: source.getAttribute('src') || '',
-          media: source.getAttribute('media') || ''
-        })),
-        currentSrc: element.currentSrc,
-        poster: element.getAttribute('poster') || '',
-        readyState: element.readyState,
-        error: element.error ? { code: element.error.code, message: element.error.message } : null,
-        visible: style.display !== 'none' && style.visibility !== 'hidden'
-          && Number.parseFloat(style.opacity || '1') > 0.01 && rect.width > 0 && rect.height > 0
+        heroPlaying: hero?.classList.contains('is-video-playing') || false,
+        video: {
+          exists: true,
+          sources: Array.from(element.querySelectorAll('source')).map((source) => ({
+            src: source.getAttribute('src') || '',
+            media: source.getAttribute('media') || ''
+          })),
+          dataSource: element.dataset.hv2VideoSrc || '',
+          srcAttribute: element.getAttribute('src') || '',
+          currentSrc: element.currentSrc,
+          poster: element.getAttribute('poster') || '',
+          readyState: element.readyState,
+          paused: element.paused,
+          error: element.error ? { code: element.error.code, message: element.error.message } : null,
+          visible: style.display !== 'none' && style.visibility !== 'hidden'
+            && Number.parseFloat(style.opacity || '1') > 0.01 && rect.width > 0 && rect.height > 0
+        },
+        poster: poster ? {
+          exists: true,
+          currentSrc: poster.currentSrc,
+          complete: poster.complete,
+          naturalWidth: poster.naturalWidth
+        } : { exists: false },
+        control: control ? {
+          exists: true,
+          hidden: control.hidden,
+          visible: getComputedStyle(control).display !== 'none' && !control.hidden,
+          label: control.textContent?.trim() || '',
+          ariaLabel: control.getAttribute('aria-label') || ''
+        } : { exists: false }
       };
     })()`);
+    const video = media.video;
     const sourcePaths = video.sources.map((source) => {
       try { return new URL(source.src, origin).pathname; } catch { return source.src; }
     });
     const currentPath = (() => {
+      if (!video.currentSrc) return '';
       try { return new URL(video.currentSrc, origin).pathname; } catch { return video.currentSrc || ''; }
     })();
-    const desktopSourcePreserved = sourcePaths.includes(homePageRecord.heroMediaVideo);
-    const mobileSourcePreserved = sourcePaths.includes(homePageRecord.heroMediaVideoMobile);
-    const selectedMatches = currentPath === expectedCurrentSource;
-    const visiblePlaybackReady = !video.visible || (selectedMatches && video.readyState >= 2 && !video.error);
+    const dataSourcePath = (() => {
+      if (!video.dataSource) return '';
+      try { return new URL(video.dataSource, origin).pathname; } catch { return video.dataSource || ''; }
+    })();
+    const posterPath = (() => {
+      if (!media.poster.currentSrc) return '';
+      try { return new URL(media.poster.currentSrc, origin).pathname; } catch { return media.poster.currentSrc || ''; }
+    })();
+    const declarativeSourcesRemoved = sourcePaths.length === 0;
+    const desktopContract = mode === 'desktop-video'
+      && dataSourcePath === homePageRecord.heroMediaVideo
+      && currentPath === homePageRecord.heroMediaVideo
+      && declarativeSourcesRemoved
+      && video.readyState >= 2
+      && !video.error
+      && video.visible
+      && media.heroPlaying
+      && media.control.exists
+      && !media.control.hidden
+      && media.control.visible;
+    const mobileContract = mode === 'mobile-poster'
+      && dataSourcePath === homePageRecord.heroMediaVideo
+      && currentPath === ''
+      && video.srcAttribute === ''
+      && declarativeSourcesRemoved
+      && !video.visible
+      && !media.heroPlaying
+      && media.poster.exists
+      && media.poster.complete
+      && media.poster.naturalWidth > 0
+      && posterPath === homePageRecord.heroMediaPosterMobile
+      && media.control.exists
+      && (media.control.hidden || !media.control.visible);
     return {
-      pass: video.exists && desktopSourcePreserved && mobileSourcePreserved && visiblePlaybackReady,
+      pass: video.exists && (desktopContract || mobileContract),
       route: homeRoute,
       viewport: viewport.name,
-      expectedCurrentSource,
-      desktopSourcePreserved,
-      mobileSourcePreserved,
-      selectedMatches,
-      visiblePlaybackReady,
+      mode,
+      desktopContract,
+      mobileContract,
+      declarativeSourcesRemoved,
       sourcePaths,
+      dataSourcePath,
       currentPath,
-      video
+      posterPath,
+      media
     };
   });
 
-  await auditHomeVideo('home-video-desktop', '1920x1080', homePageRecord.heroMediaVideo);
-  await auditHomeVideo('home-video-mobile', '390x844', homePageRecord.heroMediaVideoMobile);
+  if (!report.interactions['home-video-mobile']) {
+    await auditHomeVideo('home-video-mobile', '390x844', 'mobile-poster');
+  }
 };
 
 const prepareProofPage = async () => {
@@ -1884,6 +2084,9 @@ try {
     if (!url.startsWith(origin)) return;
     localNetworkErrors.push({ route: currentRoute, kind: 'loading-failed', errorText, type, requestId, url });
   });
+
+  await auditHomeVideoInteraction('home-video-mobile', '390x844', 'mobile-poster');
+  await auditHomeVideoInteraction('home-video-desktop', '1920x1080', 'desktop-video');
 
   progress(`direct-load and final-motion audit for ${directRouteEntries.length} canonical routes`);
   await setViewport(exactViewports.find((viewport) => viewport.name === '1440x900'));
@@ -2121,7 +2324,7 @@ try {
   process.exitCode = 1;
 } finally {
   if (cdp) {
-    await cdp.send('Browser.close').catch(() => {});
+    await cdp.send('Browser.close', {}, 4000).catch(() => {});
     cdp.close();
   }
   await Promise.race([

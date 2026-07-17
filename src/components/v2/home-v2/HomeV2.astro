@@ -49,16 +49,23 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
           muted
           loop
           playsinline
-          preload="metadata"
+          preload="none"
           poster={path(home.heroMediaPoster)}
           data-hv2-hero-video
-          data-autoplay="true"
-        >
-          <source src={path(home.heroMediaVideoMobile)} type="video/mp4" media="(max-width: 700px)" />
-          <source src={path(home.heroMediaVideo)} type="video/mp4" />
-        </video>
+          data-hv2-video-src={path(home.heroMediaVideo)}
+        ></video>
         <div class="hv2-hero__veil"></div>
       </div>
+
+      <button
+        class="hv2-hero__video-toggle"
+        type="button"
+        aria-label="Приостановить фоновое видео"
+        data-hv2-video-toggle
+        hidden
+      >
+        <span data-hv2-video-toggle-label>Пауза видео</span>
+      </button>
 
       <div class="hv2-shell hv2-hero__content">
         <div class="hv2-hero__copy">
@@ -67,37 +74,11 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
           <p class="hv2-hero__lead" data-reveal style="--hv2-reveal-delay: 120ms">{copy.heroDescription}</p>
           <div class="hv2-actions" data-reveal style="--hv2-reveal-delay: 180ms">
             <a class="hv2-button hv2-button--primary" href="#contact">
-              {copy.heroPrimaryLabel} <span aria-hidden="true">↗</span>
+              {copy.heroPrimaryLabel}
             </a>
             <a class="hv2-button hv2-button--ghost" href={path('/design-lab/v2/vypolnennye-obekty/')}>{copy.heroSecondaryLabel}</a>
           </div>
         </div>
-
-        <nav class="hv2-hero__quick" aria-label="Быстрые переходы" data-reveal style="--hv2-reveal-delay: 240ms">
-          <a href={path('/design-lab/v2/metallokonstruktsii-dlya-biznesa/')}>Металлоконструкции <span aria-hidden="true">↗</span></a>
-          <a href={path('/design-lab/v2/stroitelstvo-i-remonty/')}>Строительство <span aria-hidden="true">↗</span></a>
-          <a href="#directions">Все направления <span aria-hidden="true">↓</span></a>
-        </nav>
-      </div>
-    </section>
-
-    <nav class="hv2-section-nav" aria-label="Навигация по главной" data-hv2-section-nav>
-      <div class="hv2-shell hv2-section-nav__inner">
-        <p><span aria-hidden="true"></span> По странице</p>
-        <div>
-          <a href="#directions" aria-current="location" data-hv2-section-link="directions">Направления</a>
-          <a href="#projects" data-hv2-section-link="projects">Объекты</a>
-          <a href="#brief" data-hv2-section-link="brief">Как начать</a>
-          <a href="#contact" data-hv2-section-link="contact">Контакты</a>
-        </div>
-      </div>
-    </nav>
-
-    <section class="hv2-positioning" aria-labelledby="home-v2-positioning-title">
-      <div class="hv2-shell hv2-grid">
-        <p class="hv2-eyebrow">{copy.positioningKicker}</p>
-        <h2 id="home-v2-positioning-title">{copy.positioningTitle}</h2>
-        <p class="hv2-positioning__summary">{copy.positioningSummary}</p>
       </div>
     </section>
 
@@ -108,7 +89,10 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
             <p class="hv2-eyebrow">{copy.directionsEyebrow}</p>
             <h2 id="home-v2-directions-title">От предметного решения до строительного объекта</h2>
           </div>
-          <p>{copy.directionsDescription}</p>
+          <div class="hv2-section-head__summary">
+            <p><strong>{copy.positioningTitle}</strong> {copy.positioningSummary}</p>
+            <p>{copy.directionsDescription}</p>
+          </div>
         </header>
 
         <div class="hv2-competency-map hv2-grid">
@@ -130,7 +114,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
               <span class="hv2-eyebrow hv2-eyebrow--light">Объектные работы</span>
               <strong>{constructionDirection.title}</strong>
               <span>{constructionDirection.description}</span>
-              <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+              <span class="hv2-competency__link">Открыть направление</span>
             </span>
           </a>}
 
@@ -152,7 +136,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
               <span class="hv2-eyebrow hv2-eyebrow--light">Конструкции под объект</span>
               <strong>{metalworksDirection.title}</strong>
               <span>{metalworksDirection.description}</span>
-              <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+              <span class="hv2-competency__link">Открыть направление</span>
             </span>
           </a>}
 
@@ -174,7 +158,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
               <span class="hv2-eyebrow hv2-eyebrow--light">Каталог и адаптация</span>
               <strong>{streetFurnitureDirection.title}</strong>
               <span>{streetFurnitureDirection.description}</span>
-              <span class="hv2-competency__link">Перейти в каталог <i aria-hidden="true">↗</i></span>
+              <span class="hv2-competency__link">Перейти в каталог</span>
             </span>
           </a>}
 
@@ -196,7 +180,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
               <span class="hv2-eyebrow hv2-eyebrow--light">Под конкретный объект</span>
               <strong>{fencesDirection.title}</strong>
               <span>{fencesDirection.description}</span>
-              <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+              <span class="hv2-competency__link">Открыть направление</span>
             </span>
           </a>}
 
@@ -223,7 +207,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
                 <span class="hv2-eyebrow">Конструкция под размеры</span>
                 <strong>{canopiesDirection.title}</strong>
                 <span>{canopiesDirection.description}</span>
-                <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+                <span class="hv2-competency__link">Открыть направление</span>
               </span>
             </a>}
 
@@ -249,7 +233,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
                 <span class="hv2-eyebrow">Для территории</span>
                 <strong>{topiaryDirection.title}</strong>
                 <span>{topiaryDirection.description}</span>
-                <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+                <span class="hv2-competency__link">Открыть направление</span>
               </span>
             </a>}
           </div>}
@@ -272,7 +256,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
               <span class="hv2-eyebrow hv2-eyebrow--light">Территория целиком</span>
               <strong>{landscapingDirection.title}</strong>
               <span>{landscapingDirection.description}</span>
-              <span class="hv2-competency__link">Открыть направление <i aria-hidden="true">↗</i></span>
+              <span class="hv2-competency__link">Открыть направление</span>
             </span>
           </a>}
         </div>
@@ -289,7 +273,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
           <div>
             <p>{copy.projectsDescription}</p>
             <a class="hv2-text-link hv2-text-link--light" href={path('/design-lab/v2/vypolnennye-obekty/')}>
-              Все выполненные объекты <span aria-hidden="true">↗</span>
+              Все выполненные объекты
             </a>
           </div>
         </header>
@@ -308,7 +292,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
             по ним можно уточнить формат решения и расчёта.
           </p>
           <a class="hv2-text-link" href={path('/design-lab/v2/izgotovlenie-na-zakaz/')}>
-            Изготовление на заказ <span aria-hidden="true">↗</span>
+            Изготовление на заказ
           </a>
         </div>
 
@@ -331,7 +315,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
           <p>{copy.contactDescription}</p>
           <div class="hv2-actions">
             <a class="hv2-button hv2-button--light" href={settings.telegram} target="_blank" rel="noopener noreferrer">
-              Написать в Telegram <span aria-hidden="true">↗</span>
+              Написать в Telegram
             </a>
             <a class="hv2-button hv2-button--contrast" href={path('/design-lab/v2/kontakty/')}>Все контакты</a>
           </div>
@@ -339,16 +323,16 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
 
         <div class="hv2-contact__channels" data-reveal>
           <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
-            <span>Основной телефон</span><strong>{settings.phonePrimary}</strong><i aria-hidden="true">↗</i>
+            <span>Основной телефон</span><strong>{settings.phonePrimary}</strong>
           </a>
           <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`}>
-            <span>Дополнительный телефон</span><strong>{settings.phoneSecondary}</strong><i aria-hidden="true">↗</i>
+            <span>Дополнительный телефон</span><strong>{settings.phoneSecondary}</strong>
           </a>
           <a href={settings.telegram} target="_blank" rel="noopener noreferrer">
-            <span>Telegram</span><strong>{telegramLabel}</strong><i aria-hidden="true">↗</i>
+            <span>Telegram</span><strong>{telegramLabel}</strong>
           </a>
           <a href={`mailto:${settings.email}`}>
-            <span>Электронная почта</span><strong>{settings.email}</strong><i aria-hidden="true">↗</i>
+            <span>Электронная почта</span><strong>{settings.email}</strong>
           </a>
           <div>
             <span>Адрес</span><strong>{settings.address}</strong>
@@ -382,39 +366,77 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
 
     const documentRoot = document.documentElement;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const desktopVideo = window.matchMedia('(min-width: 701px)');
     const hero = document.querySelector<HTMLElement>('[data-hv2-hero]');
     const video = document.querySelector<HTMLVideoElement>('[data-hv2-hero-video]');
-    let playAttempted = false;
+    const videoToggle = document.querySelector<HTMLButtonElement>('[data-hv2-video-toggle]');
+    const videoToggleLabel = videoToggle?.querySelector<HTMLElement>('[data-hv2-video-toggle-label]');
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    const saveData = Boolean(connection?.saveData);
+    let videoLoaded = false;
+    let userPaused = false;
     let pausedForVisibility = false;
 
     const showPoster = () => hero?.classList.remove('is-video-playing');
+    const syncVideoControl = () => {
+      if (!video || !videoToggle || !videoToggleLabel) return;
+      videoToggle.hidden = !videoLoaded || reducedMotion.matches || !desktopVideo.matches;
+      const isPaused = video.paused;
+      videoToggleLabel.textContent = isPaused ? 'Включить видео' : 'Пауза видео';
+      videoToggle.setAttribute('aria-label', isPaused ? 'Включить фоновое видео' : 'Приостановить фоновое видео');
+    };
     const playHeroVideo = () => {
-      if (!video || reducedMotion.matches || playAttempted) return;
-      playAttempted = true;
+      if (!video || !videoLoaded || reducedMotion.matches || !desktopVideo.matches || userPaused) return;
       video.muted = true;
       video.defaultMuted = true;
       video.playsInline = true;
-      video.autoplay = true;
       const playPromise = video.play();
       if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.catch(showPoster);
+        playPromise.catch(() => {
+          showPoster();
+          syncVideoControl();
+        });
       }
+    };
+    const loadHeroVideo = () => {
+      if (!video || videoLoaded || reducedMotion.matches || saveData || !desktopVideo.matches) return;
+      const source = video.dataset.hv2VideoSrc;
+      if (!source) return;
+      videoLoaded = true;
+      video.src = source;
+      video.load();
+      syncVideoControl();
+      playHeroVideo();
     };
 
     if (video) {
-      video.addEventListener('playing', () => hero?.classList.add('is-video-playing'));
-      video.addEventListener('error', showPoster);
+      video.addEventListener('playing', () => {
+        hero?.classList.add('is-video-playing');
+        syncVideoControl();
+      });
+      video.addEventListener('pause', syncVideoControl);
+      video.addEventListener('error', () => {
+        showPoster();
+        videoLoaded = false;
+        syncVideoControl();
+      });
       video.addEventListener('stalled', () => {
         if (!video.currentSrc) showPoster();
       });
 
-      if (reducedMotion.matches) {
-        video.autoplay = false;
-        video.pause();
-        showPoster();
-      } else {
-        requestAnimationFrame(playHeroVideo);
-      }
+      requestAnimationFrame(() => requestAnimationFrame(loadHeroVideo));
+
+      videoToggle?.addEventListener('click', () => {
+        if (video.paused) {
+          userPaused = false;
+          playHeroVideo();
+        } else {
+          userPaused = true;
+          video.pause();
+          showPoster();
+        }
+        syncVideoControl();
+      });
 
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden' && !video.paused) {
@@ -423,22 +445,37 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
         } else if (
           document.visibilityState === 'visible' &&
           pausedForVisibility &&
-          !reducedMotion.matches
+          !reducedMotion.matches &&
+          !userPaused
         ) {
           pausedForVisibility = false;
-          video.play().catch(showPoster);
+          playHeroVideo();
         }
       });
 
       reducedMotion.addEventListener('change', () => {
         if (reducedMotion.matches) {
-          video.autoplay = false;
           video.pause();
           showPoster();
-        } else if (!playAttempted) {
+        } else {
+          loadHeroVideo();
           playHeroVideo();
         }
+        syncVideoControl();
       });
+
+      desktopVideo.addEventListener('change', () => {
+        if (!desktopVideo.matches) {
+          video.pause();
+          showPoster();
+        } else {
+          loadHeroVideo();
+          playHeroVideo();
+        }
+        syncVideoControl();
+      });
+
+      syncVideoControl();
     }
 
     const paletteButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-hv2-palette]'));
@@ -461,35 +498,6 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
     paletteButtons.forEach((button) => {
       button.addEventListener('click', () => setPalette(button.dataset.hv2Palette === 'steel' ? 'steel' : 'olive'));
     });
-
-    const sectionNav = document.querySelector<HTMLElement>('[data-hv2-section-nav]');
-    const sectionLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-hv2-section-link]'));
-    const sections = sectionLinks
-      .map((link) => {
-        const id = link.dataset.hv2SectionLink || '';
-        const element = document.getElementById(id);
-        return element ? { id, element } : null;
-      })
-      .filter((item): item is { id: string; element: HTMLElement } => Boolean(item));
-
-    const syncSectionNavigation = () => {
-      const headerHeight = document.querySelector<HTMLElement>('[data-home-v2-header]')?.offsetHeight || 0;
-      const navHeight = sectionNav?.offsetHeight || 0;
-      const threshold = headerHeight + navHeight + 40;
-      let activeId = sections[0]?.id;
-      sections.forEach((section) => {
-        if (section.element.getBoundingClientRect().top <= threshold) activeId = section.id;
-      });
-      if (!activeId) return;
-      sectionLinks.forEach((link) => {
-        if (link.dataset.hv2SectionLink === activeId) link.setAttribute('aria-current', 'location');
-        else link.removeAttribute('aria-current');
-      });
-    };
-
-    window.addEventListener('scroll', syncSectionNavigation, { passive: true });
-    window.addEventListener('resize', syncSectionNavigation);
-    syncSectionNavigation();
 
     const revealElements = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
     let revealObserver: IntersectionObserver | undefined;

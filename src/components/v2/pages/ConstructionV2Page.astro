@@ -13,7 +13,6 @@ import {
 } from '../directions/directionV2Presentation';
 import ProjectDirectionBrief from '../project/ProjectDirectionBrief.astro';
 import ProjectDirectionContexts from '../project/ProjectDirectionContexts.astro';
-import ProjectDirectionIntro from '../project/ProjectDirectionIntro.astro';
 import ProjectDirectionProof from '../project/ProjectDirectionProof.astro';
 import ProjectDirectionScope from '../project/ProjectDirectionScope.astro';
 import ProjectDirectionV2Layout from '../project/ProjectDirectionV2Layout.astro';
@@ -65,11 +64,6 @@ const heroDescription = approvedUntilEdited(
   service.heroDescription,
   'Выполняем строительные и монтажные работы для частных, коммерческих и производственных объектов: подготовка площадок, основания, входные группы, хозяйственные зоны, монтаж конструкций и работы по ТЗ.',
   'Выполняем комплекс строительных и ремонтных работ, когда заказчику важен готовый или преобразованный объект.'
-);
-const introLead = approvedUntilEdited(
-  service.shortDescription,
-  'Строительные и монтажные работы на объекте: основания, входные группы, хозяйственные зоны, монтаж конструкций и работы по ТЗ.',
-  'Работаем с задачами для частных, коммерческих, производственных и общественных объектов.'
 );
 const contactTitle = approvedUntilEdited(
   service.contactTitle,
@@ -147,12 +141,6 @@ const related = [
     primaryLabel="Получить расчёт"
     secondaryHref="#construction-brief"
     secondaryLabel="Обсудить объект"
-  />
-
-  <ProjectDirectionIntro
-    title="Работы с понятным результатом на объекте"
-    lead={introLead}
-    text="Состав работ определяется конкретной задачей, а главным результатом остаётся готовый или преобразованный объект."
   />
 
   {industrial && industrialProofMedia.length > 0 && (

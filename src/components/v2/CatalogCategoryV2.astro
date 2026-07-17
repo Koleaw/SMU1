@@ -35,6 +35,7 @@ const rawCategoryImage = category.image?.trim() || '';
 const categoryHeroImage = rawCategoryImage && !isPlaceholderCatalogMedia(rawCategoryImage)
   ? rawCategoryImage
   : categoryMedia[0] || '';
+const categoryGalleryMedia = categoryMedia.filter((image) => image !== categoryHeroImage);
 const hasProducts = products.length > 0;
 const heroDescription = publicCatalogCopy(category.heroDescription);
 const heroSupportingText = publicCatalogCopy(category.shortDescription);
@@ -114,7 +115,7 @@ const productNoun = products.length % 10 === 1 && products.length % 100 !== 11
         </div>
       </section>
 
-      {categoryMedia.length > 0 && (
+      {categoryGalleryMedia.length > 0 && (
         <section
           class:list={['v2-category-examples', `v2-category-examples--${mediaPresentation}`]}
           aria-labelledby="v2-category-examples-title"
@@ -129,7 +130,7 @@ const productNoun = products.length % 10 === 1 && products.length % 100 !== 11
             </header>
             <div class="v2-category-examples__gallery" data-v2-reveal>
               <V2ProductGallery
-                images={categoryMedia}
+                images={categoryGalleryMedia}
                 title={category.title}
                 imageView={category.imageView}
                 entityLabel="категории"
@@ -147,7 +148,7 @@ const productNoun = products.length % 10 === 1 && products.length % 100 !== 11
           </div>
           <div>
             <p>Для обсуждения можно прислать фотографию, размеры, эскиз, чертёж или техническое задание.</p>
-            <a class="hv2-text-link" href={withBase('/design-lab/v2/izgotovlenie-na-zakaz/')}>Подробнее об индивидуальном изготовлении<span aria-hidden="true">↗</span></a>
+            <a class="hv2-text-link" href={withBase('/design-lab/v2/izgotovlenie-na-zakaz/')}>Подробнее об индивидуальном изготовлении</a>
           </div>
         </div>
       </section>

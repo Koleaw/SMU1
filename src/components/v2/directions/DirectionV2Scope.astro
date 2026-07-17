@@ -26,11 +26,11 @@ const {
         <h2 id={`${id}-title`}>{title}</h2>
         {description && <p>{description}</p>}
       </header>
-      <ol class="direction-scope__list" data-v2-reveal>
-        {items.map((item, index) => (
-          <li><span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><p>{item}</p></li>
+      <ul class="direction-scope__list" data-v2-reveal>
+        {items.map((item) => (
+          <li><p>{item}</p></li>
         ))}
-      </ol>
+      </ul>
     </div>
   </section>
 )}

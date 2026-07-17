@@ -26,6 +26,7 @@ const {
   isTextOnly
 } = presentation;
 const eyebrow = presentation.category || 'Выполненный объект';
+const heroLead = project.result?.trim() || project.shortDescription;
 const additionalFacts = [
   project.summary && project.summary !== project.shortDescription ? { title: 'Об объекте', text: project.summary } : null,
   project.task ? { title: 'Задача', text: project.task } : null,
@@ -33,7 +34,6 @@ const additionalFacts = [
     ? { title: 'Виды работ', text: project.workTypes.join(', ') }
     : project.workType ? { title: 'Виды работ', text: project.workType } : null,
   project.scope ? { title: 'Объём работ', text: project.scope } : null,
-  project.result ? { title: 'Результат', text: project.result } : null,
   projectTextItems(project.materials).length
     ? { title: 'Материалы', text: projectTextItems(project.materials).join(', ') }
     : null,
@@ -56,9 +56,9 @@ const additionalFacts = [
         <p class="hv2-eyebrow">{eyebrow}</p>
         <h1>{project.title}</h1>
         <V2ProjectMeta location={location} year={project.year} />
-        <p class="v2-project-detail__lead">{project.shortDescription}</p>
+        <p class="v2-project-detail__lead">{heroLead}</p>
         <a class="v2-project-detail__back" href={withBase('/design-lab/v2/vypolnennye-obekty/')}>
-          <span aria-hidden="true">←</span> Все объекты
+          Все объекты
         </a>
       </div>
       {heroMedia && (
@@ -143,7 +143,6 @@ const additionalFacts = [
             <a href={withBase(direction.href)} role="listitem" data-v2-reveal>
               <span>{direction.context}</span>
               <strong>{direction.label}</strong>
-              <i aria-hidden="true">↗</i>
             </a>
           ))}
         </div>
@@ -156,13 +155,13 @@ const additionalFacts = [
       <div class="hv2-shell">
         {previous && (
           <a href={withBase(previous.v2Route)} rel="prev">
-            <span><i aria-hidden="true">←</i> Предыдущий объект</span>
+            <span>Предыдущий объект</span>
             <strong>{previous.project.title}</strong>
           </a>
         )}
         {next && (
           <a href={withBase(next.v2Route)} rel="next">
-            <span>Следующий объект <i aria-hidden="true">→</i></span>
+            <span>Следующий объект</span>
             <strong>{next.project.title}</strong>
           </a>
         )}

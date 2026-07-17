@@ -24,17 +24,16 @@ const { eyebrow = 'Виды задач', title, description, items } = Astro.pro
         </div>
         <p>{description}</p>
       </header>
-      <ol class="engineering-tasks__list">
-        {items.map((item, index) => (
+      <ul class="engineering-tasks__list">
+        {items.map((item) => (
           <li data-v2-reveal>
-            <span>{String(index + 1).padStart(2, '0')}</span>
             <div>
               <h3>{item.title}</h3>
               {item.text && <p>{item.text}</p>}
             </div>
           </li>
         ))}
-      </ol>
+      </ul>
     </div>
   </section>
 )}

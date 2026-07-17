@@ -70,7 +70,7 @@ const heroFrames = visibleProjects.map((item) => ({
         <h1>{companyHeroTitle}</h1>
         {page.heroDescription && <p class="practical-hero__lead">{page.heroDescription}</p>}
         <a class="hv2-text-link" href="#company-directions">
-          Перейти к направлениям <span aria-hidden="true">↓</span>
+          Перейти к направлениям
         </a>
       </div>
 
@@ -117,11 +117,9 @@ const heroFrames = visibleProjects.map((item) => ({
         <p>Каталог изделий, конструкции под объект, благоустройство и строительные работы собраны в отдельных разделах.</p>
       </header>
       <nav class="practical-company__direction-list" aria-label="Направления СМУ-1">
-        {directionLinks.map((item, index) => (
+        {directionLinks.map((item) => (
           <a href={withBase(item.href)} data-v2-reveal>
-            <span>{String(index + 1).padStart(2, '0')}</span>
             <strong>{item.label}</strong>
-            <i aria-hidden="true">↗</i>
           </a>
         ))}
       </nav>
@@ -162,7 +160,7 @@ const heroFrames = visibleProjects.map((item) => ({
             <h2 id="company-projects-title">Результат можно посмотреть в деталях</h2>
           </div>
           <a class="hv2-text-link" href={withBase('/design-lab/v2/vypolnennye-obekty/')}>
-            Все объекты <span aria-hidden="true">↗</span>
+            Все объекты
           </a>
         </header>
         <div class="practical-company__project-grid">
@@ -198,7 +196,7 @@ const heroFrames = visibleProjects.map((item) => ({
         <p class="hv2-eyebrow">Юридическая информация</p>
         <h2 id="company-legal-title">{settings.companyName}</h2>
         <a class="hv2-text-link" href={withBase('/design-lab/v2/politika-konfidencialnosti/')}>
-          Политика конфиденциальности <span aria-hidden="true">↗</span>
+          Политика конфиденциальности
         </a>
       </div>
       <dl data-v2-reveal>

@@ -204,7 +204,7 @@
 .project-proof {
   padding: clamp(88px, 9vw, 138px) 0;
   color: var(--hv2-on-contrast);
-  background: #26322c;
+  background: var(--hv2-dark-olive, #20352b);
 }
 
 .project-proof__heading {
@@ -240,12 +240,12 @@
 .project-proof__gallery .v2-product-gallery__stage {
   min-height: clamp(470px, 49vw, 680px);
   border-color: rgba(255, 255, 255, 0.24);
-  background: #141c18;
+  background: var(--hv2-graphite, #1d2421);
 }
 
 .project-proof__gallery .v2-product-gallery__open > img,
 .project-proof__gallery .v2-product-gallery__thumb {
-  background: #141c18 !important;
+  background: var(--hv2-graphite, #1d2421) !important;
 }
 
 .project-proof__gallery .v2-product-gallery__thumb {
@@ -317,14 +317,14 @@
   min-width: 0;
   min-height: 340px;
   grid-template-columns: minmax(180px, 0.82fr) minmax(0, 1fr);
-  background: #26322c;
+  background: var(--hv2-dark-olive, #20352b);
 }
 
 .project-proof-card figure {
   position: relative;
   min-height: 100%;
   overflow: hidden;
-  background: #141c18;
+  background: var(--hv2-graphite, #1d2421);
 }
 
 .project-proof-card figure img {

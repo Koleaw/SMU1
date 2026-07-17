@@ -62,7 +62,7 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
             decoding="async"
             data-v2-project-gallery-main
           />
-          <span class="v2-project-gallery__zoom" aria-hidden="true">Развернуть ↗</span>
+          <span class="v2-project-gallery__zoom" aria-hidden="true">Развернуть</span>
           <span class="v2-project-gallery__fallback" data-v2-project-gallery-fallback hidden>
             Изображение не удалось загрузить
           </span>
@@ -98,7 +98,6 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
             data-v2-project-gallery-index={index}
           >
             <img src={withBase(image.src)} alt="" width="180" height="132" loading="lazy" decoding="async" />
-            <span>{String(index + 1).padStart(2, '0')}</span>
           </button>
         ))}
       </div>

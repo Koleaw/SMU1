@@ -49,7 +49,7 @@ const telegramLabel = getV2TelegramLabel(settings);
           target={isExternal(primaryHref) ? '_blank' : undefined}
           rel={isExternal(primaryHref) ? 'noopener noreferrer' : undefined}
         >
-          {primaryLabel}<span aria-hidden="true">↗</span>
+          {primaryLabel}
         </a>
         {secondaryLabel && secondaryHref && (
           <a
@@ -58,23 +58,23 @@ const telegramLabel = getV2TelegramLabel(settings);
             target={isExternal(secondaryHref) ? '_blank' : undefined}
             rel={isExternal(secondaryHref) ? 'noopener noreferrer' : undefined}
           >
-            {secondaryLabel}<span aria-hidden="true">↗</span>
+            {secondaryLabel}
           </a>
         )}
       </div>
     </div>
     <div class="v2-direct-contact__channels" data-v2-reveal>
       <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
-        <span>{phoneChannelLabel}</span><strong>{settings.phonePrimary}</strong><i aria-hidden="true">↗</i>
+        <span>{phoneChannelLabel}</span><strong>{settings.phonePrimary}</strong>
       </a>
       <a href={settings.telegram} target="_blank" rel="noopener noreferrer">
-        <span>{telegramChannelLabel}</span><strong>{telegramLabel}</strong><i aria-hidden="true">↗</i>
+        <span>{telegramChannelLabel}</span><strong>{telegramLabel}</strong>
       </a>
       <a href={`mailto:${settings.email}`}>
-        <span>{emailChannelLabel}</span><strong>{settings.email}</strong><i aria-hidden="true">↗</i>
+        <span>{emailChannelLabel}</span><strong>{settings.email}</strong>
       </a>
       <a href={withBase('/design-lab/v2/kontakty/')}>
-        <span>Все контакты</span><strong>{settings.address}</strong><i aria-hidden="true">↗</i>
+        <span>Все контакты</span><strong>{settings.address}</strong>
       </a>
     </div>
   </div>

@@ -33,7 +33,7 @@ const {
         {description && <p>{description}</p>}
       </header>
       <div class="direction-types__grid" role="list">
-        {items.map((item, index) => (
+        {items.map((item) => (
           <article class="direction-type-card" role="listitem" data-v2-reveal>
             {item.image ? (
               <figure class="direction-type-card__media" data-v2-media>
@@ -43,7 +43,6 @@ const {
               <span class="direction-type-card__graphic" aria-hidden="true"></span>
             )}
             <div class="direction-type-card__body">
-              <span class="direction-type-card__number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
               <h3>{item.title}</h3>
               {item.text && <p>{item.text}</p>}
             </div>

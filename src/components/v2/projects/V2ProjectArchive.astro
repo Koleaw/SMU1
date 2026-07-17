@@ -10,20 +10,33 @@ interface Props {
 const { projects } = Astro.props as Props;
 const visualProjects = projects.filter((item) => !item.isTextOnly && item.archiveCoverMedia);
 const textProjects = projects.filter((item) => item.isTextOnly);
-const firstMediaSlug = visualProjects[0]?.project.slug;
+const featuredProject = visualProjects[0];
+const remainingVisualProjects = visualProjects.slice(1);
 ---
 
 <section class="v2-project-archive" aria-label="Список выполненных объектов">
   <div class="hv2-shell">
-    {visualProjects.length > 0 && (
+    {featuredProject && (
+      <div class="v2-project-archive__featured" role="list" aria-label="Выбранный выполненный объект">
+        <div class="v2-project-archive__item" role="listitem">
+          <V2ProjectCard
+            presentation={featuredProject}
+            variant="visual"
+            headingLevel="h2"
+            eager
+          />
+        </div>
+      </div>
+    )}
+
+    {remainingVisualProjects.length > 0 && (
       <div class="v2-project-archive__visual-grid" role="list">
-        {visualProjects.map((presentation) => (
+        {remainingVisualProjects.map((presentation) => (
           <div class="v2-project-archive__item" role="listitem">
             <V2ProjectCard
               presentation={presentation}
               variant="visual"
               headingLevel="h2"
-              eager={presentation.project.slug === firstMediaSlug}
             />
           </div>
         ))}

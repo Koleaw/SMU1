@@ -143,9 +143,9 @@ const displayRelatedProducts = relatedProducts.map((item) => ({
         )}
 
         <div class="hv2-actions v2-product-summary__actions" data-v2-reveal="entry-actions">
-          <a class="hv2-button hv2-button--primary" href="#contact">Запросить расчёт<span aria-hidden="true">↗</span></a>
+          <a class="hv2-button hv2-button--primary" href="#contact">Запросить расчёт</a>
           <a class="hv2-text-link" href={settings.telegram} target="_blank" rel="noopener noreferrer">
-            Написать в Telegram<span aria-hidden="true">↗</span>
+            Написать в Telegram
           </a>
         </div>
       </article>
@@ -191,7 +191,6 @@ const displayRelatedProducts = relatedProducts.map((item) => ({
               </ul>
             ) : null}
           </div>
-          <a class="hv2-button hv2-button--primary" href="#contact">Запросить расчёт<span aria-hidden="true">↗</span></a>
         </section>}
 
         {materials.length > 0 && <section class="v2-technical-panel" aria-labelledby="v2-materials-title" data-v2-reveal>
@@ -206,9 +205,9 @@ const displayRelatedProducts = relatedProducts.map((item) => ({
 
         {customizationItems.length > 0 && <section class="v2-technical-panel v2-technical-panel--custom" aria-labelledby="v2-customization-title" data-v2-reveal>
           <header><p class="hv2-eyebrow">Под задачу</p><h2 id="v2-customization-title">Что можно изменить</h2></header>
-          <ol class="v2-customization-list">
-            {customizationItems.map((item, index) => <li><span>{String(index + 1).padStart(2, '0')}</span><p>{item}</p></li>)}
-          </ol>
+          <ul class="v2-customization-list">
+            {customizationItems.map((item) => <li><p>{item}</p></li>)}
+          </ul>
         </section>}
       </div>}
 
@@ -220,7 +219,7 @@ const displayRelatedProducts = relatedProducts.map((item) => ({
           </header>
           <div>
             {deliveryParagraphs.map((paragraph) => <p>{paragraph}</p>)}
-            <a class="hv2-text-link" href="#contact">Уточнить условия<span aria-hidden="true">↓</span></a>
+            <a class="hv2-text-link" href="#contact">Уточнить условия</a>
           </div>
         </section>
       )}
@@ -229,7 +228,7 @@ const displayRelatedProducts = relatedProducts.map((item) => ({
         <section class="v2-related-products" aria-labelledby="v2-related-title">
           <header class="v2-section-heading" data-v2-reveal>
             <div><p class="hv2-eyebrow">Другие изделия</p><h2 id="v2-related-title">{relatedTitle}</h2></div>
-            <a class="hv2-text-link" href={withBase(relatedHref)}>Все товары категории<span aria-hidden="true">↗</span></a>
+            <a class="hv2-text-link" href={withBase(relatedHref)}>Все товары категории</a>
           </header>
           <div class="v2-product-grid v2-product-grid--related" role="list">
             {displayRelatedProducts.map((item) => (

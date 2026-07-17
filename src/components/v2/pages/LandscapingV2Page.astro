@@ -14,7 +14,6 @@ import {
 } from '../mediaRoleAdapter';
 import PlaceDirectionBrief from '../place/PlaceDirectionBrief.astro';
 import PlaceDirectionContexts from '../place/PlaceDirectionContexts.astro';
-import PlaceDirectionIntro from '../place/PlaceDirectionIntro.astro';
 import PlaceDirectionProjects from '../place/PlaceDirectionProjects.astro';
 import PlaceDirectionScope from '../place/PlaceDirectionScope.astro';
 import PlaceDirectionV2Layout from '../place/PlaceDirectionV2Layout.astro';
@@ -61,11 +60,6 @@ const heroDescription = approvedUntilEdited(
   service.heroDescription,
   'Выполняем работы по благоустройству частных, коммерческих и общественных территорий: от отдельных элементов и МАФ до обустройства дворов, входных групп, зон отдыха и хозяйственных площадок.',
   'Благоустраиваем частные, коммерческие и общественные территории — от отдельных элементов до цельного результата для конкретного пространства.'
-);
-const introLead = approvedUntilEdited(
-  service.shortDescription,
-  'Благоустройство территорий, входных групп, дворов, зон отдыха и хозяйственных площадок с подбором МАФ, конструкций и монтажом.',
-  'Благоустройство — это результат на всей территории: во дворе, у входной группы, в зоне отдыха или общественном пространстве.'
 );
 const contactTitle = approvedUntilEdited(
   service.contactTitle,
@@ -149,10 +143,10 @@ const briefInputs = ['Описание задачи', 'Фотография те
     secondaryLabel="Обсудить территорию"
   />
 
-  <PlaceDirectionIntro
-    title="Пространство, собранное в одно целое"
-    lead={introLead}
-    text="Состав работ определяется задачей объекта и тем, какой результат нужен конкретной территории."
+  <PlaceDirectionProjects
+    title="Примеры благоустройства"
+    projects={proofProjects}
+    mediaBySlug={proofMediaBySlug}
   />
 
   <PlaceDirectionScope
@@ -165,12 +159,6 @@ const briefInputs = ['Описание задачи', 'Фотография те
     title={contextsBlock?.title || 'Для каких объектов'}
     description="Частные, коммерческие и общественные пространства, где важен цельный и аккуратный результат."
     items={contexts}
-  />
-
-  <PlaceDirectionProjects
-    title="Примеры благоустройства"
-    projects={proofProjects}
-    mediaBySlug={proofMediaBySlug}
   />
 
   <PlaceDirectionBrief

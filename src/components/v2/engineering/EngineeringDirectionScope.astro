@@ -17,11 +17,11 @@ const { eyebrow = 'Контекст задачи', title, description, items } =
         <h2 id="engineering-scope-title">{title}</h2>
         <p>{description}</p>
       </header>
-      <ol class="engineering-scope__list" data-v2-reveal>
-        {items.map((item, index) => (
-          <li><span>{String(index + 1).padStart(2, '0')}</span><p>{item}</p></li>
+      <ul class="engineering-scope__list" data-v2-reveal>
+        {items.map((item) => (
+          <li><p>{item}</p></li>
         ))}
-      </ol>
+      </ul>
     </div>
   </section>
 )}

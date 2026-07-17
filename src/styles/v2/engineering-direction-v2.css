@@ -17,7 +17,7 @@
 .engineering-hero {
   padding: clamp(54px, 6vw, 86px) 0 clamp(72px, 8vw, 118px);
   color: var(--hv2-on-contrast);
-  background: #18231e;
+  background: var(--hv2-dark-olive, #20352b);
 }
 
 .engineering-hero__heading {
@@ -66,7 +66,7 @@
 .engineering-hero__secondary:hover,
 .engineering-hero__secondary:focus-visible {
   border-color: #ffffff;
-  color: #18231e;
+  color: var(--hv2-text-primary, #18201c);
   background: #ffffff;
 }
 
@@ -76,7 +76,7 @@
   margin-top: clamp(46px, 5vw, 72px);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.24);
-  background: #101713;
+  background: var(--hv2-graphite, #1d2421);
 }
 
 .engineering-hero__media > img {
@@ -244,7 +244,7 @@
 .engineering-proof {
   padding: clamp(88px, 9vw, 138px) 0;
   color: var(--hv2-on-contrast);
-  background: #202a25;
+  background: var(--hv2-dark-olive, #20352b);
 }
 
 .engineering-proof__heading {
@@ -291,12 +291,12 @@
 .engineering-proof__gallery .v2-product-gallery__stage {
   min-height: clamp(500px, 57vw, 760px);
   border-color: rgba(255, 255, 255, 0.25);
-  background: #111713;
+  background: var(--hv2-graphite, #1d2421);
 }
 
 .engineering-proof__gallery .v2-product-gallery__open > img,
 .engineering-proof__gallery .v2-product-gallery__thumb {
-  background: #111713 !important;
+  background: var(--hv2-graphite, #1d2421) !important;
 }
 
 .engineering-proof__gallery .v2-product-gallery__thumb {

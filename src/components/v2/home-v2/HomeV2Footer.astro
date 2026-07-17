@@ -81,7 +81,7 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
 
     <div class="hv2-footer__contacts">
       <p>Прямая связь</p>
-      {catalogV2 && <a class="hv2-footer__mobile-cta" href={resolveHref(contactHref)}>{mobileCtaLabel}<span aria-hidden="true">↓</span></a>}
+      {catalogV2 && <a class="hv2-footer__mobile-cta" href={resolveHref(contactHref)}>{mobileCtaLabel}</a>}
       <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>{settings.phonePrimary}</a>
       <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`}>{settings.phoneSecondary}</a>
       <a href={settings.telegram} target="_blank" rel="noopener noreferrer">{telegramLabel} · Telegram</a>

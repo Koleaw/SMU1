@@ -30,8 +30,8 @@ const telegramLabel = getV2TelegramLabel(settings);
         <h1 id="custom-order-title">{data.copy.heroTitle}</h1>
         <p class="custom-order-hero__lead">{data.copy.heroDescription}</p>
         <div class="custom-order-hero__actions">
-          <a class="hv2-button hv2-button--primary" href="#contact">Обсудить задачу <span aria-hidden="true">↓</span></a>
-          <a class="hv2-text-link" href={emailHref}>Отправить исходные данные <span aria-hidden="true">↗</span></a>
+          <a class="hv2-button hv2-button--primary" href="#contact">Обсудить задачу</a>
+          <a class="hv2-text-link" href={emailHref}>Отправить исходные данные</a>
         </div>
         <p class="custom-order-hero__note">Это сквозной сценарий: сначала можно выбрать близкое направление, затем передать имеющиеся вводные.</p>
       </div>
@@ -62,11 +62,11 @@ const telegramLabel = getV2TelegramLabel(settings);
         <h2 id="custom-order-changes-title">Что можно изменить</h2>
         <p>Показываем только варианты, которые уже указаны в активных карточках изделий.</p>
       </header>
-      <ol class="custom-order-changes__list" data-v2-reveal>
-        {data.changeOptions.map((item, index) => (
-          <li><span>{String(index + 1).padStart(2, '0')}</span><p>{item}</p></li>
+      <ul class="custom-order-changes__list" data-v2-reveal>
+        {data.changeOptions.map((item) => (
+          <li><p>{item}</p></li>
         ))}
-      </ol>
+      </ul>
     </div>
   </section>
 
@@ -80,11 +80,9 @@ const telegramLabel = getV2TelegramLabel(settings);
         <p>Если задача находится между разделами, можно перейти сразу к контактам — отдельное восьмое направление не требуется.</p>
       </header>
       <div class="custom-order-directions__grid" role="list">
-        {data.directions.map((direction, index) => (
+        {data.directions.map((direction) => (
           <a href={withBase(direction.href)} role="listitem" data-v2-reveal>
-            <span>{String(index + 1).padStart(2, '0')}</span>
             <div><h3>{direction.title}</h3><p>{direction.description}</p></div>
-            <i aria-hidden="true">↗</i>
           </a>
         ))}
       </div>
@@ -99,8 +97,8 @@ const telegramLabel = getV2TelegramLabel(settings);
         <p>Достаточно тех исходных данных, которые уже есть. Недостающие вводные можно уточнить при обсуждении.</p>
       </div>
       <ul class="custom-order-inputs__list" data-v2-reveal>
-        {data.sourceMaterials.map((item, index) => (
-          <li><span>{String(index + 1).padStart(2, '0')}</span>{item}</li>
+        {data.sourceMaterials.map((item) => (
+          <li>{item}</li>
         ))}
       </ul>
     </div>
@@ -132,7 +130,7 @@ const telegramLabel = getV2TelegramLabel(settings);
               <p class="hv2-eyebrow">{example.eyebrow}</p>
               <h3>{example.title}</h3>
               <p>{example.description}</p>
-              <span>Открыть пример <i aria-hidden="true">↗</i></span>
+              <span>Открыть пример</span>
             </div>
           </a>
         ))}
@@ -148,9 +146,9 @@ const telegramLabel = getV2TelegramLabel(settings);
         <p>{data.copy.contactDescription}</p>
       </div>
       <div class="custom-order-contact__channels" data-v2-reveal>
-        <a href={phoneHref}><span>Основной телефон</span><strong>{settings.phonePrimary}</strong><i aria-hidden="true">↗</i></a>
-        <a href={settings.telegram} target="_blank" rel="noopener noreferrer"><span>Telegram</span><strong>{telegramLabel}</strong><i aria-hidden="true">↗</i></a>
-        <a href={emailHref}><span>Email</span><strong>{settings.email}</strong><i aria-hidden="true">↗</i></a>
+        <a href={phoneHref}><span>Основной телефон</span><strong>{settings.phonePrimary}</strong></a>
+        <a href={settings.telegram} target="_blank" rel="noopener noreferrer"><span>Telegram</span><strong>{telegramLabel}</strong></a>
+        <a href={emailHref}><span>Email</span><strong>{settings.email}</strong></a>
       </div>
     </div>
   </section>

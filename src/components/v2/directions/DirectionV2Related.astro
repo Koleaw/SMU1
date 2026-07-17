@@ -34,7 +34,6 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
             <span>{item.eyebrow || 'Направление'}</span>
             <h3>{item.title}</h3>
             {item.description && <p>{item.description}</p>}
-            <i aria-hidden="true">↗</i>
           </a>
         ))}
       </div>
