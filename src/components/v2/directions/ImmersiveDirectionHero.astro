@@ -56,6 +56,7 @@ const mediaFit = imageView?.fit || 'cover';
   ]}
   aria-labelledby={titleId}
   data-immersive-direction-hero
+  data-v2-hero-scroll
 >
   <span class="immersive-direction-hero__sentinel" aria-hidden="true" data-home-v2-header-sentinel></span>
 
@@ -65,7 +66,7 @@ const mediaFit = imageView?.fit || 'cover';
     </div>
 
     <div class="immersive-direction-hero__composition">
-      <div class="immersive-direction-hero__copy">
+      <div class="immersive-direction-hero__copy" data-v2-hero-scroll-copy>
         <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-reveal data-v2-reveal-stage="eyebrow">{eyebrow}</p>
         <h1 id={titleId} data-v2-reveal data-v2-reveal-stage="title">{title}</h1>
         <p class="immersive-direction-hero__lead" data-v2-reveal data-v2-reveal-stage="description">{description}</p>
@@ -99,15 +100,11 @@ const mediaFit = imageView?.fit || 'cover';
         style={imageViewStyle(imageView)}
         data-v2-image
       />
-      <div class="immersive-direction-hero__fallback" aria-hidden="true">
-        <span></span><span></span><span></span>
-      </div>
+      <div class="immersive-direction-hero__fallback" aria-hidden="true"></div>
       {caption && <figcaption>{caption}</figcaption>}
     </figure>
   ) : (
-    <div class="immersive-direction-hero__fallback immersive-direction-hero__fallback--standalone" aria-hidden="true">
-      <span></span><span></span><span></span>
-    </div>
+    <div class="immersive-direction-hero__fallback immersive-direction-hero__fallback--standalone" aria-hidden="true"></div>
   )}
 
   <div class="immersive-direction-hero__veil" aria-hidden="true"></div>

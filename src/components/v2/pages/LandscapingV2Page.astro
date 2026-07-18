@@ -22,6 +22,7 @@ import {
   loadProjectDirectionV2Snapshot,
   selectProject
 } from '../project/projectDirectionV2Data';
+import V2SectionNav from '../V2SectionNav.astro';
 
 const currentPath = Astro.url.pathname;
 const data = await loadProjectDirectionV2Snapshot('blagoustroystvo-territoriy');
@@ -111,6 +112,13 @@ const proofProjects = [embankment, squareRepair]
   .map(getV2ProjectPresentation);
 const proofMediaBySlug = embankment ? { [embankment.slug]: proofMedia } : {};
 const briefInputs = ['Описание задачи', 'Фотография территории', 'Размеры', 'Эскиз', 'Чертёж', 'ТЗ'];
+const sectionNavItems = [
+  ...(proofProjects.length > 0 ? [{ id: 'landscaping-proof', label: 'Объекты' }] : []),
+  ...(scopeItems.length > 0 ? [{ id: 'landscaping-scope', label: 'Что делаем' }] : []),
+  ...(contexts.length > 0 ? [{ id: 'landscaping-contexts', label: 'Для каких объектов' }] : []),
+  ...(briefInputs.length > 0 ? [{ id: 'landscaping-brief', label: 'Исходные данные' }] : []),
+  { id: 'contact', label: 'Обсудить задачу' }
+];
 ---
 
 <PlaceDirectionV2Layout
@@ -142,6 +150,8 @@ const briefInputs = ['Описание задачи', 'Фотография те
     secondaryHref="#landscaping-brief"
     secondaryLabel="Обсудить территорию"
   />
+
+  <V2SectionNav items={sectionNavItems} label="Разделы направления" />
 
   <PlaceDirectionProjects
     title="Примеры благоустройства"

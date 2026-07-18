@@ -9,7 +9,8 @@
 }
 
 .practical-v2 :where(h1, h2, h3) {
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .practical-hero {
@@ -91,6 +92,7 @@
 }
 
 .practical-company__hero {
+  min-height: clamp(440px, 52svh, 580px);
   background:
     linear-gradient(
       90deg,
@@ -124,12 +126,12 @@
 
 .practical-company__intro-grid {
   display: grid;
-  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.15fr);
   gap: clamp(40px, 7vw, 110px);
 }
 
 .practical-company__intro h2 {
-  max-width: 12ch;
+  max-width: 15ch;
   margin-top: 14px;
   font-size: clamp(36px, 4.2vw, 58px);
 }
@@ -165,12 +167,20 @@
   display: grid;
   min-width: 0;
   min-height: 92px;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
   align-items: center;
   padding: 20px 22px 20px 0;
   border-bottom: 1px solid var(--hv2-border);
   transition: color var(--hv2-motion-fast) var(--hv2-ease), background-color var(--hv2-motion-fast) var(--hv2-ease);
+}
+
+.practical-company__direction-list a::after {
+  content: '\2197';
+  color: var(--hv2-action);
+  font-size: 16px;
+  line-height: 1;
+  transition: transform var(--hv2-motion-fast) var(--hv2-ease);
 }
 
 .practical-company__direction-list a:nth-child(odd) {
@@ -203,7 +213,9 @@
 }
 
 .practical-company__direction-list a:hover i,
-.practical-company__direction-list a:focus-visible i {
+.practical-company__direction-list a:focus-visible i,
+.practical-company__direction-list a:hover::after,
+.practical-company__direction-list a:focus-visible::after {
   transform: translate(3px, -3px);
 }
 
@@ -278,6 +290,12 @@
   border-bottom: 1px solid var(--hv2-border);
 }
 
+.practical-company__project-link {
+  display: block;
+  height: 100%;
+  color: inherit;
+}
+
 .practical-company__project-media {
   display: block;
   overflow: hidden;
@@ -291,9 +309,14 @@
   transition: transform var(--hv2-motion-standard) var(--hv2-ease);
 }
 
-.practical-company__project-media:hover img,
-.practical-company__project-media:focus-visible img {
+.practical-company__project-link:hover img,
+.practical-company__project-link:focus-visible img {
   transform: scale(1.018);
+}
+
+.practical-company__project-link:focus-visible {
+  outline: 3px solid var(--hv2-action);
+  outline-offset: 3px;
 }
 
 .practical-company__project-copy {
@@ -373,6 +396,7 @@
 /* Contacts */
 
 .practical-contacts__hero {
+  min-height: 0;
   padding-block: clamp(32px, 3.5vw, 46px);
 }
 
@@ -404,24 +428,34 @@
 
 .practical-contacts__method-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1px;
   border-top: 1px solid var(--hv2-border);
-  border-left: 1px solid var(--hv2-border);
+  border-left: 0;
+  background: var(--hv2-border);
 }
 
 .practical-contact-card {
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 122px;
+  min-height: clamp(112px, 10vw, 138px);
+  grid-column: span 2;
   flex-direction: column;
   justify-content: space-between;
   gap: 22px;
   padding: 24px;
-  border-right: 1px solid var(--hv2-border);
-  border-bottom: 1px solid var(--hv2-border);
+  border: 0;
   background: var(--hv2-surface);
   transition: color var(--hv2-motion-fast) var(--hv2-ease), background-color var(--hv2-motion-fast) var(--hv2-ease);
+}
+
+.practical-contact-card--primary {
+  grid-column: span 5;
+}
+
+.practical-contact-card--email {
+  grid-column: span 3;
 }
 
 .home-v2-body .practical-contact-card--primary,
@@ -668,6 +702,7 @@
 /* Vacancies */
 
 .practical-vacancies__hero {
+  min-height: 0;
   padding-block: clamp(42px, 4.5vw, 64px);
 }
 
@@ -791,11 +826,45 @@
   border-bottom: 1px solid var(--hv2-border);
 }
 
+.practical-v2 .practical-company__hero {
+  min-height: clamp(440px, 52svh, 580px);
+}
+
+.practical-v2 :where(.practical-contacts__hero, .practical-vacancies__hero) {
+  min-height: 0;
+}
+
+.practical-v2 :where(.practical-contacts__hero h1, .practical-vacancies__hero h1) {
+  font-size: clamp(44px, 5vw, 68px);
+}
+
+.practical-v2 .practical-vacancy__hero h1 {
+  overflow-wrap: anywhere !important;
+  font-size: clamp(40px, 4.5vw, 64px);
+  hyphens: auto;
+}
+
+.practical-v2 .practical-contact-card {
+  min-height: clamp(112px, 10vw, 138px);
+}
+
+.practical-v2 .practical-contact-card--primary strong {
+  font-size: clamp(22px, 2.2vw, 34px);
+}
+
 .practical-vacancy__hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
   gap: clamp(42px, 6vw, 88px);
   align-items: end;
+}
+
+.practical-vacancy__hero-grid > *,
+.practical-vacancy__contact-grid > *,
+.practical-vacancy__channels,
+.practical-vacancy__channels a,
+.practical-vacancy__channels strong {
+  min-width: 0;
 }
 
 .practical-vacancy__back {
@@ -1087,8 +1156,12 @@
     grid-column: 1 / -1;
   }
 
-  .practical-contacts__method-grid {
+  .practical-v2 .practical-contacts__method-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .practical-v2 :is(.practical-contact-card, .practical-contact-card--primary, .practical-contact-card--email) {
+    grid-column: auto;
   }
 
   .practical-contacts__brief ol {
@@ -1238,8 +1311,10 @@
     gap: 5px;
   }
 
-  .practical-contacts__hero {
-    padding-block: 44px;
+  .practical-v2 .practical-contacts__hero,
+  .practical-v2 .practical-vacancies__hero {
+    min-height: 0;
+    padding-block: 32px 38px;
   }
 
   .practical-contacts__method-grid {
@@ -1252,11 +1327,11 @@
     padding: 18px;
   }
 
-  .practical-contact-card--primary {
+  .practical-v2 .practical-contact-card--primary {
     grid-column: 1 / -1;
   }
 
-  .practical-contact-card--email {
+  .practical-v2 .practical-contact-card--email {
     grid-column: 1 / -1;
   }
 

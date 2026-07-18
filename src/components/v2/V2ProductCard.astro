@@ -15,9 +15,15 @@ const primaryMaterial = Array.isArray(product.materials)
   ? product.materials.find((item) => typeof item === 'string' && item.trim())?.trim()
   : '';
 const cardImage = productGalleryImages(product)[0] || '';
+const isPremium = product.presentationType === 'premium';
 ---
 
-<a class:list={['v2-product-card', { 'v2-product-card--related': related }]} href={withBase(href)} data-v2-reveal>
+<a
+  class:list={['v2-product-card', { 'v2-product-card--related': related, 'v2-product-card--premium': isPremium }]}
+  href={withBase(href)}
+  data-product-card-presentation={isPremium ? 'premium' : 'standard'}
+  data-v2-reveal
+>
   <div class="v2-product-card__media" data-v2-media>
     {cardImage ? (
       <img
@@ -32,11 +38,13 @@ const cardImage = productGalleryImages(product)[0] || '';
       />
     ) : null}
     <div class="v2-media-empty" aria-hidden={Boolean(cardImage)}>
-      <span></span><span></span><span></span>
       <p>Фото не указано</p>
     </div>
   </div>
   <div class="v2-product-card__body">
+    {isPremium ? (
+      <p class="v2-product-card__presentation" data-product-presentation-indicator="premium">Решение для объекта</p>
+    ) : null}
     <p class="v2-product-card__type">{primaryMaterial || 'Материалы не указаны'}</p>
     <h3>{product.title}</h3>
     <p class="v2-product-card__description">{product.shortDescription}</p>

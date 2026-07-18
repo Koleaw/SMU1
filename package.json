@@ -9,7 +9,11 @@
     "test:admin-import": "node --test tools/admin-api/content-json.test.mjs tools/admin-api/project-media.test.mjs tools/admin-api/server-routes.test.mjs",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "qa:final:static": "node tools/migration/final-design-qa.mjs",
+    "qa:final:browser": "node tools/migration/browser-final-design-qa.mjs",
+    "qa:admin-browser": "node tools/admin-api/admin-browser-roundtrip.mjs",
+    "qa:final": "npm run check && npm run test:admin-import && npm run build && npm run qa:final:static && npm run qa:final:browser"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.2.1",

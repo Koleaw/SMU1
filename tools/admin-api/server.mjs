@@ -7,6 +7,10 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createContentJsonService } from './content-json.mjs';
 import {
+  buildProductImportPayload,
+  validateProductContentForWrite
+} from './product-presentation.mjs';
+import {
   MAX_PROJECT_MEDIA_REQUEST_SIZE,
   parseMultipartFiles,
   saveProjectMediaFiles
@@ -15,6 +19,9 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
+const contentRoot = process.env.ADMIN_TEST_CONTENT_ROOT
+  ? path.resolve(process.env.ADMIN_TEST_CONTENT_ROOT)
+  : path.join(repoRoot, 'src', 'content');
 const execFileAsync = promisify(execFile);
 
 const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -45,43 +52,43 @@ const COLLECTIONS = {
   'product-sections': {
     label: 'Страницы каталога',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/product-sections')
+    path: path.join(contentRoot, 'product-sections')
   },
   services: {
     label: 'Проектные страницы',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/services')
+    path: path.join(contentRoot, 'services')
   },
   'product-categories': {
     label: 'Подстраницы каталога',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/product-categories')
+    path: path.join(contentRoot, 'product-categories')
   },
   products: {
     label: 'Товары каталога',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/products')
+    path: path.join(contentRoot, 'products')
   },
   projects: {
     label: 'Выполненные объекты',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/projects')
+    path: path.join(contentRoot, 'projects')
   },
   jobs: {
     label: 'Вакансии',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/jobs')
+    path: path.join(contentRoot, 'jobs')
   },
   'site-settings': {
     label: 'Настройки сайта',
     type: 'single-file',
-    path: path.join(repoRoot, 'src/content/site-settings/global.json'),
+    path: path.join(contentRoot, 'site-settings', 'global.json'),
     slug: 'global'
   },
   'static-pages': {
     label: 'Страницы',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/static-pages')
+    path: path.join(contentRoot, 'static-pages')
   }
 };
 
@@ -1087,8 +1094,13 @@ async function buildCatalogExport() {
     },
     productCategories,
     products,
-    catalogPages
+    catalogPages,
+    productImport: buildProductImportPayload(products)
   };
+}
+
+function validateContentForWrite(collection, content) {
+  return collection === 'products' ? validateProductContentForWrite(content) : content;
 }
 
 async function assertSlugIsUnique(collection, slug, currentPath = null) {
@@ -1549,8 +1561,9 @@ const server = http.createServer(async (req, res) => {
         // file does not exist yet
       }
 
+      const savedContent = validateContentForWrite(collection, { ...content, slug });
       await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, `${JSON.stringify({ ...content, slug }, null, 2)}\n`, 'utf8');
+      await fs.writeFile(filePath, `${JSON.stringify(savedContent, null, 2)}\n`, 'utf8');
       const saved = await readJsonFile(filePath);
       sendJson(res, 201, { ok: true, slug, content: saved });
       return;
@@ -1586,7 +1599,7 @@ const server = http.createServer(async (req, res) => {
 
       const previousSlug = sanitizeSlug(previousContent?.slug ?? slug);
       const nextSlug = await validateDirectoryContentSlug(collection, body, filePath, previousSlug);
-      const savedContent = { ...body, slug: nextSlug };
+      const savedContent = validateContentForWrite(collection, { ...body, slug: nextSlug });
       const nextPath = getDirectoryEntryPath(config, nextSlug);
 
       if (!isSamePath(filePath, nextPath)) {
@@ -1632,6 +1645,7 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, error?.code === 'PRODUCTION_NOT_READY' ? 409 : 400, {
       error: message,
       code: error?.code || 'ADMIN_API_ERROR',
+      ...(Array.isArray(error?.validationIssues) ? { validationIssues: error.validationIssues } : {}),
       ...(isProductionNotReady ? getPublishConfigPayload() : {})
     });
   }

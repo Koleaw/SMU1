@@ -80,7 +80,10 @@ const mobileMenuId = 'home-v2-mobile-menu';
           data-hv2-dropdown-trigger
         >
           <span>Продукция</span>
-          <span class="hv2-header__chevron" aria-hidden="true"></span>
+          <span class="hv2-header__dropdown-indicator" aria-hidden="true">
+            <span class="hv2-header__dropdown-indicator-open">+</span>
+            <span class="hv2-header__dropdown-indicator-close">−</span>
+          </span>
         </button>
         <div class="hv2-dropdown__panel" id={productsMenuId} data-hv2-dropdown-panel>
           <p class="hv2-dropdown__eyebrow">Продукция и конструкции</p>
@@ -106,7 +109,10 @@ const mobileMenuId = 'home-v2-mobile-menu';
           data-hv2-dropdown-trigger
         >
           <span>Компания</span>
-          <span class="hv2-header__chevron" aria-hidden="true"></span>
+          <span class="hv2-header__dropdown-indicator" aria-hidden="true">
+            <span class="hv2-header__dropdown-indicator-open">+</span>
+            <span class="hv2-header__dropdown-indicator-close">−</span>
+          </span>
         </button>
         <div class="hv2-dropdown__panel hv2-dropdown__panel--right" id={companyMenuId} data-hv2-dropdown-panel>
           <p class="hv2-dropdown__eyebrow">СМУ-1</p>
@@ -125,8 +131,14 @@ const mobileMenuId = 'home-v2-mobile-menu';
       <a class="hv2-header__phone" href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
         {settings.phonePrimary}
       </a>
-      <a class="hv2-header__telegram" href={settings.telegram} target="_blank" rel="noopener noreferrer">
-        Telegram
+      <a
+        class="hv2-header__telegram"
+        href={settings.telegram}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Telegram"
+      >
+        <span class="hv2-header__telegram-label">Telegram</span>
       </a>
       <a class="hv2-button hv2-button--header" href={resolveHref(contactHref)}>{ctaLabel}</a>
     </div>
@@ -212,6 +224,8 @@ const mobileMenuId = 'home-v2-mobile-menu';
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const dropdowns = Array.from(header.querySelectorAll<HTMLElement>('[data-hv2-dropdown]'));
     let closeTimer = 0;
+    const revealHeader = () => header.classList.remove('is-hidden');
+    header.addEventListener('focusin', revealHeader);
 
     const closeDropdown = (group: HTMLElement, restoreFocus = false) => {
       const trigger = group.querySelector<HTMLButtonElement>('[data-hv2-dropdown-trigger]');
@@ -228,6 +242,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
 
     const openDropdown = (group: HTMLElement, focusFirst = false) => {
       window.clearTimeout(closeTimer);
+      revealHeader();
       closeAllDropdowns(group);
       const trigger = group.querySelector<HTMLButtonElement>('[data-hv2-dropdown-trigger]');
       group.classList.add('is-open');
@@ -290,27 +305,67 @@ const mobileMenuId = 'home-v2-mobile-menu';
       if (!(event.target instanceof Node) || !header.contains(event.target)) closeAllDropdowns();
     });
 
+    const heroBoundary = document.querySelector<HTMLElement>(
+      '[data-hv2-hero], [data-immersive-direction-hero], [data-v2-hero-scroll]'
+    );
+    let lastScrollY = Math.max(0, window.scrollY);
+    let scrollIntent = 0;
+    let scrollDirection = 0;
+    let headerFrame = 0;
+
     const syncHeaderState = () => {
-      if (header.dataset.hv2HeaderMode === 'light') {
-        header.classList.add('is-scrolled');
-        return;
+      headerFrame = 0;
+      const currentScrollY = Math.max(0, window.scrollY);
+      const solid = header.dataset.hv2HeaderMode === 'light'
+        || !heroBoundary
+        || heroBoundary.getBoundingClientRect().bottom <= header.offsetHeight;
+      header.classList.toggle('is-scrolled', solid);
+
+      const delta = currentScrollY - lastScrollY;
+      const nextDirection = Math.sign(delta);
+      if (nextDirection && nextDirection !== scrollDirection) {
+        scrollDirection = nextDirection;
+        scrollIntent = 0;
       }
-      const sentinel = document.querySelector<HTMLElement>('[data-home-v2-header-sentinel]');
-      if (!sentinel) return;
-      header.classList.toggle('is-scrolled', sentinel.getBoundingClientRect().top <= header.offsetHeight);
+      scrollIntent += delta;
+
+      const interactionIsOpen = header.matches(':focus-within')
+        || !menu.hidden
+        || dropdowns.some((group) => group.classList.contains('is-open'));
+      const canHide = solid && currentScrollY > header.offsetHeight * 2 && !interactionIsOpen;
+
+      if (!canHide) {
+        revealHeader();
+        header.dataset.scrollDirection = 'idle';
+        scrollIntent = 0;
+      } else if (scrollIntent >= 14) {
+        header.classList.add('is-hidden');
+        header.dataset.scrollDirection = 'down';
+        scrollIntent = 0;
+      } else if (scrollIntent <= -8) {
+        revealHeader();
+        header.dataset.scrollDirection = 'up';
+        scrollIntent = 0;
+      }
+
+      lastScrollY = currentScrollY;
     };
 
-    const sentinel = document.querySelector<HTMLElement>('[data-home-v2-header-sentinel]');
-    if (sentinel && 'IntersectionObserver' in window) {
-      const observer = new IntersectionObserver(syncHeaderState, {
-        rootMargin: `-${header.offsetHeight}px 0px 0px 0px`,
-        threshold: 0
-      });
-      observer.observe(sentinel);
+    const queueHeaderSync = () => {
+      if (headerFrame) return;
+      headerFrame = window.requestAnimationFrame(syncHeaderState);
+    };
+
+    window.addEventListener('scroll', queueHeaderSync, { passive: true });
+    window.addEventListener('resize', () => {
+      revealHeader();
+      queueHeaderSync();
+    });
+    if (heroBoundary && 'ResizeObserver' in window) {
+      new ResizeObserver(queueHeaderSync).observe(heroBoundary);
     }
-    window.addEventListener('scroll', syncHeaderState, { passive: true });
-    window.addEventListener('resize', syncHeaderState);
     syncHeaderState();
+    window.requestAnimationFrame(() => header.classList.add('is-ready'));
 
     let lastFocus: HTMLElement | null = null;
     let lockedScrollY = 0;
@@ -344,6 +399,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
 
     const openMobileMenu = () => {
       window.clearTimeout(hideTimer);
+      revealHeader();
       const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       lastFocus = activeElement && activeElement !== document.body ? activeElement : menuOpen;
       menu.hidden = false;
@@ -400,7 +456,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
       if (event.key === 'Escape') closeAllDropdowns();
     });
     window.addEventListener('resize', () => {
-      if (window.innerWidth > 1100 && !menu.hidden) closeMobileMenu(false);
+      if (window.innerWidth > 1180 && !menu.hidden) closeMobileMenu(false);
     });
   };
 

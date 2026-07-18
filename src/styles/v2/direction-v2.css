@@ -8,8 +8,13 @@
   scroll-margin-top: calc(var(--hv2-header-height) + 20px);
 }
 
-.direction-v2 :where(h1, h2, h3, p, li, a) {
+.direction-v2 :where(p, li, a) {
   overflow-wrap: anywhere;
+}
+
+.direction-v2 :where(h1, h2, h3) {
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .direction-section-heading {
@@ -129,20 +134,7 @@
   text-align: center;
 }
 
-.direction-hero__media-fallback span {
-  display: block;
-  width: min(160px, 42%);
-  height: 1px;
-  margin-inline: auto;
-  background: var(--hv2-border);
-}
-
-.direction-hero__media-fallback span:nth-child(2) {
-  width: min(96px, 28%);
-}
-
 .direction-hero__media-fallback p {
-  margin-top: 12px;
   font-size: 12px;
 }
 
@@ -329,13 +321,6 @@
   flex-direction: column;
 }
 
-.direction-type-card__number {
-  color: rgba(255, 255, 255, 0.48);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
 .direction-type-card h3 {
   max-width: 300px;
   margin-top: auto;
@@ -425,15 +410,6 @@
   flex-direction: column;
 }
 
-.direction-types--visual .direction-type-card__number {
-  color: var(--hv2-muted);
-}
-
-.direction-types--visual .direction-type-card:nth-child(1) .direction-type-card__number,
-.direction-types--visual .direction-type-card:nth-child(8) .direction-type-card__number {
-  color: rgba(255, 255, 255, 0.66);
-}
-
 .direction-types--visual .direction-type-card h3 {
   font-size: clamp(28px, 3.1vw, 46px);
 }
@@ -520,8 +496,8 @@
 .direction-scope__list li {
   display: grid;
   min-height: 112px;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
   align-items: center;
   padding: 20px;
   border-top: 1px solid var(--hv2-border);
@@ -678,6 +654,17 @@
     background-color var(--hv2-motion-fast) var(--hv2-ease);
 }
 
+.direction-related__card::after {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  content: '\2197';
+  color: var(--hv2-action);
+  font-size: 17px;
+  line-height: 1;
+  transition: transform var(--hv2-motion-fast) var(--hv2-ease);
+}
+
 .direction-related__card:hover,
 .direction-related__card:focus-visible {
   color: var(--hv2-on-action);
@@ -722,8 +709,15 @@
 }
 
 .direction-related__card:hover i,
-.direction-related__card:focus-visible i {
+.direction-related__card:focus-visible i,
+.direction-related__card:hover::after,
+.direction-related__card:focus-visible::after {
   transform: translate(3px, -3px);
+}
+
+.direction-related__card:hover::after,
+.direction-related__card:focus-visible::after {
+  color: inherit;
 }
 
 .direction-related--compact {

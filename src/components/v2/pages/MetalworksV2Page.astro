@@ -20,6 +20,7 @@ import EngineeringDirectionTasks from '../engineering/EngineeringDirectionTasks.
 import EngineeringDirectionV2Layout from '../engineering/EngineeringDirectionV2Layout.astro';
 import { loadEngineeringDirectionV2Snapshot } from '../engineering/engineeringDirectionV2Data';
 import { getV2ProjectPresentation, selectV2ProjectMedia } from '../mediaRoleAdapter';
+import V2SectionNav from '../V2SectionNav.astro';
 
 const currentPath = Astro.url.pathname;
 const proofProjectSlug = 'kompleks-rabot-na-proizvodstvennoy-territorii';
@@ -102,6 +103,13 @@ const related = [
     href: `/design-lab/v2/${construction.slug}/`
   } : null
 ].filter((item): item is NonNullable<typeof item> => Boolean(item));
+const sectionNavItems = [
+  ...(proofProject && proofImages.length > 0 ? [{ id: 'engineering-proof', label: 'Объекты' }] : []),
+  ...(scope.length > 0 ? [{ id: 'engineering-scope', label: 'Для каких объектов' }] : []),
+  ...(tasks.length > 0 ? [{ id: 'engineering-tasks', label: 'Что изготавливаем' }] : []),
+  ...(briefInputs.length > 0 ? [{ id: 'engineering-brief', label: 'Исходные данные' }] : []),
+  { id: 'contact', label: 'Обсудить задачу' }
+];
 ---
 
 <EngineeringDirectionV2Layout
@@ -129,6 +137,8 @@ const related = [
     secondaryHref="#engineering-brief"
     secondaryLabel="Обсудить задачу"
   />
+
+  <V2SectionNav items={sectionNavItems} label="Разделы направления" />
 
   {proofProject && proofImages.length > 0 && (
     <EngineeringDirectionProof

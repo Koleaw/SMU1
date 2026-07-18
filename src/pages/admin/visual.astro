@@ -366,6 +366,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         title: 'Название',
         slug: 'URL страницы',
         productCategorySlug: 'Категория товара',
+        presentationType: 'Тип подачи товара',
         sku: 'Артикул',
         order: 'Порядок показа',
         isActive: 'Опубликовано',
@@ -389,10 +390,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         deliveryText: 'Текст доставки',
         showCustomProjectBlock: 'Показывать индивидуальный проект',
         customProjectTitle: 'Заголовок индивидуального проекта',
-        customProjectText: 'Текст индивидуального проекта'
+        customProjectText: 'Текст индивидуального проекта',
+        solutionKicker: 'Короткая подпись решения'
       };
       const FIELD_HINTS = {
         slug: 'Латиница, цифры и дефисы. Например: skamya-loft.',
+        presentationType: 'Стандартный товар получает компактную товарную страницу. Премиум / инженерное решение — расширенный сценарий для пространственно и конструктивно значимых изделий.',
         sku: 'Внутренний код изделия. Можно оставить пустым.',
         order: 'Чем меньше число, тем выше товар в каталоге.',
         isActive: 'Если выключено, страница товара не должна быть доступна пользователям или не должна отображаться публично, в зависимости от текущей логики сайта.',
@@ -400,7 +403,8 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         seoTitle: 'Заголовок страницы для поисковиков и вкладки браузера.',
         seoDescription: 'Короткое описание страницы для поисковой выдачи.',
         deliveryText: 'Если поле пустое, на сайте будет показан общий текст про самовывоз и отправку транспортной компанией.',
-        customProjectText: 'Коротко объясните, что можно изготовить по фото, эскизу, размерам или ТЗ.'
+        customProjectText: 'Коротко объясните, что можно изготовить по фото, эскизу, размерам или ТЗ.',
+        solutionKicker: 'Короткая статусная формулировка для первого экрана премиального решения.'
       };
       const state = {
         collection: null,
@@ -1809,8 +1813,17 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           return finishImportPreview(preview);
         }
 
+        if (payload?.type === 'catalog_export') {
+          if (payload.productImport?.type === 'products_import' && Array.isArray(payload.productImport.items)) {
+            payload = payload.productImport;
+          } else {
+            preview.errors.push('Файл catalog_export не содержит совместимый productImport. Скачайте новый экспорт каталога и повторите импорт.');
+            return finishImportPreview(preview);
+          }
+        }
+
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) preview.errors.push('Корневой объект JSON должен быть объектом.');
-        if (payload?.type !== 'products_import') preview.errors.push('type должен быть равен "products_import".');
+        if (payload?.type !== 'products_import') preview.errors.push('type должен быть равен "products_import" или "catalog_export".');
         if (!Array.isArray(payload?.items)) preview.errors.push('items отсутствует или не является массивом.');
         if (preview.errors.length) return finishImportPreview(preview);
 
@@ -1863,10 +1876,15 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (!productCategorySlug) errors.push('Нет productCategorySlug.');
         else if (!categoryRecord) errors.push(`Категория "${productCategorySlug}" не найдена.`);
         if (slug && importSlugCounts.get(slug) > 1) errors.push('slug повторяется в импортируемом JSON.');
+        if (item.presentationType !== undefined && !['standard', 'premium'].includes(safeText(item.presentationType).toLowerCase())) {
+          errors.push('presentationType должен быть равен "standard" или "premium".');
+        }
 
         validateArrayField(item, 'images', errors);
         validateArrayField(item, 'advantages', errors);
         validateArrayField(item, 'customProduction', errors);
+        validateArrayField(item, 'applicationItems', errors);
+        validateArrayField(item, 'executionVariants', errors);
         validateArrayField(item, 'materials', errors);
         validateArrayField(item, 'colors', errors);
         validateArrayField(item, 'relatedProducts', errors);
@@ -1936,11 +1954,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const next = existing ? clone(existing) : {};
         const priceFrom = normalizePriceFrom(item.priceFrom ?? item.price);
         const priceMode = normalizePriceMode(item.priceMode, priceFrom);
+        const presentationType = normalizePresentationType(item.presentationType, next.presentationType);
 
         Object.assign(next, {
           title,
           slug: safeText(item.slug),
           productCategorySlug: safeText(item.productCategorySlug),
+          presentationType,
           sku: safeText(item.sku),
           shortDescription,
           leadText,
@@ -1967,6 +1987,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           seoDescription: safeText(item.seoDescription) || shortDescription || leadText
         });
 
+        if (item.solutionKicker !== undefined) next.solutionKicker = safeText(item.solutionKicker);
+        if (item.applicationItems !== undefined) next.applicationItems = cleanStringArray(item.applicationItems);
+        if (item.executionVariants !== undefined) next.executionVariants = cleanStringArray(item.executionVariants);
+
         const images = Array.isArray(item.images) ? cleanStringArray(item.images) : [];
         if (images.length) {
           next.image = images[0];
@@ -1980,6 +2004,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         }
 
         return next;
+      }
+
+      function normalizePresentationType(value, fallback = 'standard') {
+        const normalized = safeText(value).toLowerCase();
+        if (normalized === 'premium') return 'premium';
+        if (normalized === 'standard') return 'standard';
+        return fallback === 'premium' ? 'premium' : 'standard';
       }
 
       function normalizePriceMode(mode, priceFrom) {
@@ -2615,11 +2646,20 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function renderProductPage(ref) {
         const item = getRecord(ref).draft;
+        const presentationType = item.presentationType === 'premium' ? 'premium' : 'standard';
         return `
           <section class="admin-panel">
             <div class="container">
               <div class="admin-panel-card admin-product-panel-grid">
                 <strong>Основное</strong>
+                <label class="admin-field">
+                  <span>${esc(FIELD_LABELS.presentationType)}</span>
+                  <select data-field-ref="${ref}" data-field-path="presentationType">
+                    <option value="standard" ${presentationType === 'standard' ? 'selected' : ''}>Стандартный товар</option>
+                    <option value="premium" ${presentationType === 'premium' ? 'selected' : ''}>Премиум / инженерное решение</option>
+                  </select>
+                  <small class="admin-field-hint">${esc(FIELD_HINTS.presentationType)} При возврате к стандартной подаче заполненные премиальные поля сохраняются и снова появятся после переключения.</small>
+                </label>
                 <div class="admin-grid-2">
                   ${renderField(ref, 'title', item.title)}
                   ${renderField(ref, 'productCategorySlug', item.productCategorySlug)}
@@ -2636,6 +2676,18 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
               </div>
             </div>
           </section>
+          ${presentationType === 'premium' ? `
+          <section class="admin-panel" data-premium-product-fields>
+            <div class="container">
+              <div class="admin-panel-card admin-product-panel-grid">
+                <strong>Премиальная подача решения</strong>
+                <p class="admin-field-hint">Эти поля используются только расширенным шаблоном. Они не удаляются при временном переключении товара на стандартную подачу.</p>
+                ${renderField(ref, 'solutionKicker', item.solutionKicker)}
+                ${renderArrayEditor(ref, 'applicationItems', 'Где применяется')}
+                ${renderArrayEditor(ref, 'executionVariants', 'Варианты исполнения')}
+              </div>
+            </div>
+          </section>` : ''}
           <section class="admin-panel">
             <div class="container">
               <div class="admin-panel-card admin-product-panel-grid">
@@ -3105,7 +3157,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (collection === 'product-sections') return { title, slug, shortDescription: 'Краткое описание раздела.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, showInMenu: true, menuTitle: title, showBadge: true, mode: 'custom-direction', image: '/assets/images/placeholders/street-furniture.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.', pageBlocks: [] };
         if (collection === 'services') return { title, slug, shortDescription: 'Краткое описание услуги.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showOnHome: true, isActive: true, showInMenu: true, menuTitle: title, showBadge: true, image: '/assets/images/placeholders/construction.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, placeholderLabel: 'Фото будут добавлены позже.', seoTitle: title, seoDescription: 'Описание страницы.', pageBlocks: [] };
         if (collection === 'product-categories') return { title, slug, parentSectionSlug: fields.parentSectionSlug || 'ulichnaya-mebel', shortDescription: 'Краткое описание типа изделий.', heroTitle: title, heroDescription: 'Описание первого экрана.', order: nextOrder(collection), showInSectionGrid: true, isActive: true, image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото будут добавлены позже.', mode: 'catalog-list', gallery: [], galleryIntro: '', seoTitle: title, seoDescription: 'Описание страницы.' };
-        if (collection === 'products') return { title, slug, productCategorySlug: fields.productCategorySlug || 'lavochki-i-skameyki', sku: '', shortDescription: 'Краткое описание модели.', leadText: 'Описание изделия.', description: 'Подробное описание изделия, назначения и вариантов исполнения.', materials: ['Стальной каркас', 'Покрытие по согласованию'], colors: ['По палитре RAL'], dimensions: [{ label: 'Размер', value: 'Уточняется при расчете', order: 10, isActive: true }], features: ['Изготавливаем под размеры объекта', 'Цвет металла по RAL', 'Доставка по России'], customizationItems: ['Размеры под объект', 'Цвет металла по RAL', 'Крепление и установка по задаче', 'Изготовим по фото, эскизу, ТЗ или чертежу'], gallery: [], showDeliveryBlock: true, deliveryText: '', relatedProductSlugs: [], showCustomProjectBlock: true, customProjectTitle: 'Не нашли подходящее изделие?', customProjectText: 'Изготовим решение под ваш объект: по фото, эскизу, размерам или техническому заданию.', priceMode: 'on_request', priceFrom: null, currency: 'RUB', image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото изделия будут добавлены позже.', order: nextOrder(collection), isActive: true, showInCatalog: true, seoTitle: title, seoDescription: 'Описание изделия.' };
+        if (collection === 'products') return { title, slug, productCategorySlug: fields.productCategorySlug || 'lavochki-i-skameyki', presentationType: 'standard', sku: '', shortDescription: 'Краткое описание модели.', leadText: 'Описание изделия.', description: 'Подробное описание изделия, назначения и вариантов исполнения.', materials: ['Стальной каркас', 'Покрытие по согласованию'], colors: ['По палитре RAL'], dimensions: [{ label: 'Размер', value: 'Уточняется при расчете', order: 10, isActive: true }], features: ['Изготавливаем под размеры объекта', 'Цвет металла по RAL', 'Доставка по России'], customizationItems: ['Размеры под объект', 'Цвет металла по RAL', 'Крепление и установка по задаче', 'Изготовим по фото, эскизу, ТЗ или чертежу'], gallery: [], showDeliveryBlock: true, deliveryText: '', relatedProductSlugs: [], showCustomProjectBlock: true, customProjectTitle: 'Не нашли подходящее изделие?', customProjectText: 'Изготовим решение под ваш объект: по фото, эскизу, размерам или техническому заданию.', priceMode: 'on_request', priceFrom: null, currency: 'RUB', image: '/assets/images/placeholders/street-furniture.svg', placeholderLabel: 'Фото изделия будут добавлены позже.', order: nextOrder(collection), isActive: true, showInCatalog: true, seoTitle: title, seoDescription: 'Описание изделия.' };
         if (collection === 'projects') return { title, slug, city: 'Курган', category: '', locationLabel: '', workTypes: [], scope: '', materials: [], features: [], result: '', clientVisibility: '', shortDescription: 'Краткое описание объекта.', whatWasDone: 'Описание выполненных работ.', image: '', gallery: [], placeholderLabel: 'Фото объекта будет добавлено позже', order: nextOrder(collection), isActive: true, year: new Date().getFullYear(), seoTitle: title, seoDescription: 'Описание объекта.' };
         if (collection === 'jobs') return { title, slug, city: 'Курган', employmentType: 'Полная занятость', salary: 'По договоренности', shortDescription: 'Краткое описание вакансии.', responsibilities: ['Новая обязанность'], requirements: ['Новое требование'], conditions: ['Новое условие'], order: nextOrder(collection), isActive: true };
         if (collection === 'static-pages') return { title, slug, seoTitle: title, seoDescription: 'Описание страницы.', order: nextOrder(collection), isActive: true, showInMenu: true, menuTitle: title, showBadge: true, heroKicker: '', heroTitle: title, heroDescription: 'Описание первого экрана.', image: '/assets/images/placeholders/construction.svg', heroMediaPoster: '', heroMediaVideo: '', heroMediaVideoMobile: '', heroOverlayOpacity: 60, contactTitle: 'Не нашли, что искали?', contactDescription: 'Напишите нам, и мы подберем решение под задачу.', pageBlocks: [] };

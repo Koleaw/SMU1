@@ -23,7 +23,9 @@ const options = {
   screenshots: hasFlag('--screenshots') || process.env.V2_VISUAL_QA_SCREENSHOTS === '1',
   smoke: hasFlag('--smoke'),
   headful: hasFlag('--headful'),
-  externalOrigin: optionValue('--origin').trim().replace(/\/$/, '')
+  externalOrigin: optionValue('--origin').trim().replace(/\/$/, ''),
+  routeValues: optionValue('--routes').split(',').map((value) => value.trim()).filter(Boolean),
+  viewportValues: optionValue('--viewports').split(',').map((value) => value.trim()).filter(Boolean)
 };
 
 const usage = `
@@ -43,6 +45,9 @@ Visual-polish browser QA (local only)
 
   node tools/migration/browser-visual-polish-qa.mjs --smoke
       Short representative run; writes only under .astro and never replaces final audits.
+
+  node tools/migration/browser-visual-polish-qa.mjs --routes=/,/vakansii/example/ --viewports=1440x900,320x700
+      Targeted direct/reduced-motion/responsive regression run. Reports stay under .astro.
 
 Environment:
   CHROME_PATH                  Chrome/Chromium executable.
@@ -136,6 +141,12 @@ const canonicalByRoute = new Map(canonicalRoutes.map((entry) => [entry.route, en
 if (canonicalByRoute.size !== canonicalRoutes.length) {
   throw new Error(`Duplicate canonical routes in content plan: ${canonicalRoutes.length - canonicalByRoute.size}`);
 }
+const targetedRoutes = [...new Set(options.routeValues.map(normalizeRoute))];
+const unknownTargetedRoutes = targetedRoutes.filter((route) => !canonicalByRoute.has(route));
+if (unknownTargetedRoutes.length) {
+  throw new Error(`Unknown --routes value(s): ${unknownTargetedRoutes.join(', ')}`);
+}
+const targetedMode = targetedRoutes.length > 0;
 
 const routeOr = (preferred, fallbackType) => canonicalByRoute.has(preferred)
   ? preferred
@@ -150,6 +161,11 @@ const furnitureRoute = routeOr('/ulichnaya-mebel/', 'direction');
 const fencesRoute = routeOr('/ograzhdeniya-i-zabory/', 'direction');
 const swingsCategoryRoute = routeOr('/ulichnaya-mebel/kacheli/', 'category');
 const swingProductRoute = routeOr('/ulichnaya-mebel/kacheli/kachel-duga/', 'product');
+const premiumPortalProductRoute = routeOr('/ulichnaya-mebel/kacheli/kachel-portal/', 'product');
+const standardBenchProductRoute = routeOr(
+  '/ulichnaya-mebel/lavochki-i-skameyki/skamya-smu1-bazovaya/',
+  'product'
+);
 const mediaRichProductEntry = products
   .map((entry) => ({ entry, mediaCount: Number(Boolean(entry.data.image?.trim())) + (entry.data.gallery || []).filter(Boolean).length }))
   .sort((left, right) => right.mediaCount - left.mediaCount)[0]?.entry;
@@ -228,6 +244,8 @@ const representativeRoutes = [...new Set([
   longTitleCategoryRoute,
   mediaRichProductRoute,
   swingProductRoute,
+  premiumPortalProductRoute,
+  standardBenchProductRoute,
   zeroMediaProductRoute,
   singleImageMinimalProductRoute,
   portraitProductRoute,
@@ -256,6 +274,8 @@ const reducedMotionRoutes = [...new Set([
   furnitureRoute,
   swingsCategoryRoute,
   swingProductRoute,
+  premiumPortalProductRoute,
+  standardBenchProductRoute,
   projectsRoute,
   companyRoute,
   contactsRoute,
@@ -278,6 +298,8 @@ const footerRoutes = [...new Set([
   metalworksRoute,
   swingsCategoryRoute,
   swingProductRoute,
+  premiumPortalProductRoute,
+  standardBenchProductRoute,
   industrialProjectRoute,
   contactsRoute,
   vacancyRoute,
@@ -345,9 +367,17 @@ const screenshotPlan = [
   { file: 'category-sparse-desktop.png', route: sparseCategoryRoute, viewport: '1440x900' },
   { file: 'product-swing-desktop.png', route: swingProductRoute, viewport: '1440x900' },
   { file: 'product-swing-mobile.png', route: swingProductRoute, viewport: '390x844' },
+  { file: 'product-standard-bench-desktop.png', route: standardBenchProductRoute, viewport: '1440x900' },
+  { file: 'product-standard-bench-mobile.png', route: standardBenchProductRoute, viewport: '390x844' },
+  { file: 'product-premium-portal-desktop.png', route: premiumPortalProductRoute, viewport: '1440x900' },
+  { file: 'product-premium-portal-mobile.png', route: premiumPortalProductRoute, viewport: '390x844' },
   { file: 'product-zero-media-desktop.png', route: zeroMediaProductRoute, viewport: '1440x900' },
   { file: 'product-fullscreen.png', route: mediaRichProductRoute, viewport: '1440x900', action: 'product-fullscreen' },
   { file: 'projects-desktop.png', route: projectsRoute, viewport: '1440x900' },
+  { file: 'project-detail-desktop.png', route: industrialProjectRoute, viewport: '1440x900' },
+  { file: 'project-detail-mobile.png', route: industrialProjectRoute, viewport: '390x844' },
+  { file: 'custom-order-desktop.png', route: customOrderRoute, viewport: '1440x900' },
+  { file: 'custom-order-mobile.png', route: customOrderRoute, viewport: '390x844' },
   { file: 'company-desktop.png', route: companyRoute, viewport: '1440x900' },
   { file: 'contacts-desktop.png', route: contactsRoute, viewport: '1440x900', waitForMap: true },
   { file: 'vacancies-desktop.png', route: vacanciesRoute, viewport: '1440x900' }
@@ -372,13 +402,13 @@ if (options.plan) {
 }
 
 const smokeRoot = path.join(root, '.astro');
-const reportPath = options.smoke
+const reportPath = options.smoke || targetedMode
   ? path.join(smokeRoot, 'browser-visual-polish-smoke.json')
   : path.join(docsRoot, 'v2-visual-polish-browser-qa.json');
-const scrollAuditPath = options.smoke
+const scrollAuditPath = options.smoke || targetedMode
   ? path.join(smokeRoot, 'v2-scroll-navigation-audit-smoke.csv')
   : path.join(docsRoot, 'v2-scroll-navigation-audit.csv');
-const motionAuditPath = options.smoke
+const motionAuditPath = options.smoke || targetedMode
   ? path.join(smokeRoot, 'v2-motion-audit-smoke.csv')
   : path.join(docsRoot, 'v2-motion-audit.csv');
 const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
@@ -574,7 +604,7 @@ const motionRows = [];
 const report = {
   startedAt: new Date().toISOString(),
   origin,
-  mode: options.smoke ? 'smoke' : 'full',
+  mode: targetedMode ? 'targeted' : options.smoke ? 'smoke' : 'full',
   screenshotsEnabled: options.screenshots,
   counts: {
     canonicalRoutes: canonicalRoutes.length,
@@ -730,7 +760,7 @@ const waitForLocalImages = async (timeoutMs = 2600) => evaluate(`(async () => {
   return { images: images.length, videos: videos.length };
 })()`);
 
-const revealSelector = '[data-reveal], [data-v2-reveal], [data-v2-reveal-stage]';
+const revealSelector = '[data-reveal], [data-v2-reveal], [data-v2-reveal-stage], [data-v2-hero-scroll-copy]';
 const inspectRevealState = async () => evaluate(`(() => {
   const elements = Array.from(document.querySelectorAll(${JSON.stringify(revealSelector)}));
   const rendered = elements.filter((element) => {
@@ -859,6 +889,51 @@ const pageDiagnostics = async (viewportName = '') => evaluate(`(() => {
     const rect = element.getBoundingClientRect();
     return style.position !== 'fixed' && (rect.left < -1 || rect.right > root.clientWidth + 1);
   }).slice(0, 12).map((element) => ({ tag: element.tagName, className: String(element.className || '') }));
+  const horizontalCandidates = Array.from(document.querySelectorAll('body *')).filter((element) => {
+    if (!visible(element)) return false;
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.position !== 'fixed' && (rect.left < -1 || rect.right > root.clientWidth + 1);
+  }).slice(0, 20).map((element) => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      tag: element.tagName,
+      id: element.id || '',
+      className: String(element.className || ''),
+      left: Math.round(rect.left),
+      right: Math.round(rect.right),
+      width: Math.round(rect.width),
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+      overflowX: style.overflowX,
+      clippedByAncestor: clippedInline(element)
+    };
+  });
+  const heroScrollCopies = Array.from(document.querySelectorAll('[data-v2-hero-scroll-copy]')).map((copy) => {
+    const hero = copy.closest('[data-v2-hero-scroll]');
+    const style = getComputedStyle(copy);
+    const rect = copy.getBoundingClientRect();
+    const heroRect = hero?.getBoundingClientRect();
+    const parentRect = copy.parentElement?.getBoundingClientRect();
+    const parentStyle = copy.parentElement ? getComputedStyle(copy.parentElement) : null;
+    return {
+      opacity: Number.parseFloat(style.opacity || '1'),
+      transform: style.transform,
+      top: Math.round(rect.top),
+      bottom: Math.round(rect.bottom),
+      heroTop: heroRect ? Math.round(heroRect.top) : null,
+      heroBottom: heroRect ? Math.round(heroRect.bottom) : null,
+      heroHeight: heroRect ? Math.round(heroRect.height) : null,
+      parentTop: parentRect ? Math.round(parentRect.top) : null,
+      parentBottom: parentRect ? Math.round(parentRect.bottom) : null,
+      parentHeight: parentRect ? Math.round(parentRect.height) : null,
+      parentGridRows: parentStyle?.gridTemplateRows || '',
+      parentPaddingTop: parentStyle?.paddingTop || '',
+      parentPaddingBottom: parentStyle?.paddingBottom || '',
+      scrollOpacity: hero instanceof HTMLElement ? hero.style.getPropertyValue('--v2-hero-scroll-opacity') : ''
+    };
+  });
   return {
     viewport: ${JSON.stringify(viewportName)},
     route: location.pathname + location.hash,
@@ -870,6 +945,8 @@ const pageDiagnostics = async (viewportName = '') => evaluate(`(() => {
     pageHeight: root.scrollHeight,
     horizontalOverflow: Math.max(0, root.scrollWidth - root.clientWidth),
     horizontalOffenders,
+    horizontalCandidates,
+    heroScrollCopies,
     duplicateIds,
     brokenImages,
     pendingImages,
@@ -2024,20 +2101,35 @@ const auditDiagnosticFailures = (diagnostics, context, { checkScroll = false } =
   if (diagnostics.visibleSpinners.length) issues.push(`visible-loaders:${diagnostics.visibleSpinners.length}`);
   if (diagnostics.h1Count !== 1) issues.push(`h1-count:${diagnostics.h1Count}`);
   if (checkScroll && Math.abs(diagnostics.scrollY) > 2) issues.push(`scrollY:${diagnostics.scrollY}`);
+  if (checkScroll) {
+    diagnostics.heroScrollCopies.forEach((copy, index) => {
+      if (copy.opacity < 0.99 || copy.bottom <= 0 || copy.top >= diagnostics.height) {
+        issues.push(`hero-copy-outside-first-screen:${index + 1}`);
+      }
+    });
+  }
   for (const issue of issues) fail('page-diagnostic', `${context}: ${issue}`, { ...diagnostics, context });
   return issues;
 };
 
-const directRouteEntries = options.smoke
-  ? representativeRoutes.filter((route) => canonicalByRoute.has(route)).slice(0, 8).map((route) => canonicalByRoute.get(route))
-  : canonicalRoutes;
-const responsiveRoutes = options.smoke ? representativeRoutes.slice(0, 6) : representativeRoutes;
-const responsiveViewports = options.smoke
-  ? exactViewports.filter((viewport) => ['1440x900', '390x844'].includes(viewport.name))
-  : exactViewports;
-const reducedRoutes = options.smoke ? reducedMotionRoutes.slice(0, 4) : reducedMotionRoutes;
-const footerAuditRoutes = options.smoke ? footerRoutes.slice(0, 2) : footerRoutes;
-const navigationPlan = options.smoke ? clickPlan.slice(0, 3) : clickPlan;
+const directRouteEntries = targetedMode
+  ? targetedRoutes.map((route) => canonicalByRoute.get(route))
+  : options.smoke
+    ? representativeRoutes.filter((route) => canonicalByRoute.has(route)).slice(0, 8).map((route) => canonicalByRoute.get(route))
+    : canonicalRoutes;
+const responsiveRoutes = targetedMode ? targetedRoutes : options.smoke ? representativeRoutes.slice(0, 6) : representativeRoutes;
+const responsiveViewports = targetedMode
+  ? exactViewports.filter((viewport) => !options.viewportValues.length || options.viewportValues.includes(viewport.name))
+  : options.smoke
+    ? exactViewports.filter((viewport) => ['1440x900', '390x844'].includes(viewport.name))
+    : exactViewports;
+if (targetedMode && options.viewportValues.length && responsiveViewports.length !== new Set(options.viewportValues).size) {
+  const known = new Set(exactViewports.map((viewport) => viewport.name));
+  throw new Error(`Unknown --viewports value(s): ${options.viewportValues.filter((name) => !known.has(name)).join(', ')}`);
+}
+const reducedRoutes = targetedMode ? targetedRoutes : options.smoke ? reducedMotionRoutes.slice(0, 4) : reducedMotionRoutes;
+const footerAuditRoutes = targetedMode ? [] : options.smoke ? footerRoutes.slice(0, 2) : footerRoutes;
+const navigationPlan = targetedMode ? [] : options.smoke ? clickPlan.slice(0, 3) : clickPlan;
 
 try {
   cdp = new CdpClient(await waitForDebugger());
@@ -2085,8 +2177,10 @@ try {
     localNetworkErrors.push({ route: currentRoute, kind: 'loading-failed', errorText, type, requestId, url });
   });
 
-  await auditHomeVideoInteraction('home-video-mobile', '390x844', 'mobile-poster');
-  await auditHomeVideoInteraction('home-video-desktop', '1920x1080', 'desktop-video');
+  if (!targetedMode) {
+    await auditHomeVideoInteraction('home-video-mobile', '390x844', 'mobile-poster');
+    await auditHomeVideoInteraction('home-video-desktop', '1920x1080', 'desktop-video');
+  }
 
   progress(`direct-load and final-motion audit for ${directRouteEntries.length} canonical routes`);
   await setViewport(exactViewports.find((viewport) => viewport.name === '1440x900'));
@@ -2266,7 +2360,7 @@ try {
     }
   }
 
-  if (!options.smoke) {
+  if (!options.smoke && !targetedMode) {
     progress('native Back/Forward and hash navigation');
     try { await runHistoryAudit(); } catch (error) { fail('history-exception', String(error)); }
     try { await runHashAudit(); } catch (error) { fail('hash-exception', String(error)); }
@@ -2275,9 +2369,9 @@ try {
   progress(`Footer desktop/mobile variants on ${footerAuditRoutes.length} routes`);
   await runFooterAudit(footerAuditRoutes);
 
-  await runFunctionalInteractionAudits();
+  if (!targetedMode) await runFunctionalInteractionAudits();
 
-  if (options.screenshots) {
+  if (options.screenshots && !targetedMode) {
     progress(`capturing ${screenshotPlan.length} proof screenshots (files are not git-added)`);
     await mkdir(proofRoot, { recursive: true });
     for (const target of screenshotPlan) {

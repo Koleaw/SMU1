@@ -53,9 +53,10 @@ const hasMedia = Boolean(image);
     { 'v2-catalog-hero--no-media': !hasMedia }
   ]}
   aria-labelledby="v2-catalog-title"
+  data-v2-hero-scroll
 >
   <div class="hv2-shell hv2-grid v2-catalog-hero__grid">
-    <div class="v2-catalog-hero__copy">
+    <div class="v2-catalog-hero__copy" data-v2-hero-scroll-copy>
       <div class="v2-catalog-hero__topline" data-v2-reveal="entry-meta">
         <p class="hv2-eyebrow">{kicker}</p>
         {countLabel && <span>{countLabel}</span>}

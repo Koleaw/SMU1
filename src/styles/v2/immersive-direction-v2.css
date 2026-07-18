@@ -160,11 +160,6 @@
   background: var(--hv2-graphite, #1d2421);
 }
 
-.immersive-direction-hero__fallback span {
-  display: block;
-  background: linear-gradient(155deg, rgba(255, 255, 255, 0.055), transparent 64%);
-}
-
 .immersive-direction-hero__media.is-broken .immersive-direction-hero__fallback,
 .immersive-direction-hero__fallback--standalone {
   display: grid;

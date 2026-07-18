@@ -8,6 +8,7 @@ import V2ProductCard from './V2ProductCard.astro';
 import V2ProductGallery from './V2ProductGallery.astro';
 import V2DirectContact from './V2DirectContact.astro';
 import V2CatalogSparseState from './V2CatalogSparseState.astro';
+import V2SectionNav from './V2SectionNav.astro';
 import {
   catalogV2ProductHref,
   categoryGalleryImages,
@@ -60,6 +61,12 @@ const productNoun = products.length % 10 === 1 && products.length % 100 !== 11
   : [2, 3, 4].includes(products.length % 10) && ![12, 13, 14].includes(products.length % 100)
     ? 'изделия'
     : 'изделий';
+const sectionNavItems = [
+  { id: 'product-grid', label: 'Изделия' },
+  ...(categoryGalleryMedia.length > 0 ? [{ id: 'category-examples', label: 'Примеры' }] : []),
+  { id: 'category-custom', label: 'По вашей задаче' },
+  { id: 'contact', label: 'Получить расчёт' }
+];
 ---
 
 <CatalogV2Layout
@@ -93,6 +100,8 @@ const productNoun = products.length % 10 === 1 && products.length % 100 !== 11
     secondaryLabel={hasProducts ? 'Получить расчёт' : `Все ${section.title.toLocaleLowerCase('ru-RU')}`}
   />
 
+  {hasProducts && <V2SectionNav items={sectionNavItems} label="Разделы категории" />}
+
   {hasProducts ? (
     <>
       <section class="v2-product-list" id="product-grid" aria-labelledby="v2-product-grid-title">
@@ -118,6 +127,7 @@ const productNoun = products.length % 10 === 1 && products.length % 100 !== 11
       {categoryGalleryMedia.length > 0 && (
         <section
           class:list={['v2-category-examples', `v2-category-examples--${mediaPresentation}`]}
+          id="category-examples"
           aria-labelledby="v2-category-examples-title"
         >
           <div class="hv2-shell">
@@ -140,7 +150,7 @@ const productNoun = products.length % 10 === 1 && products.length % 100 !== 11
         </section>
       )}
 
-      <section class="v2-custom-cta" aria-labelledby="v2-category-custom-title">
+      <section class="v2-custom-cta" id="category-custom" aria-labelledby="v2-category-custom-title">
         <div class="hv2-shell hv2-grid v2-custom-cta__grid" data-v2-reveal>
           <div>
             <p class="hv2-eyebrow">Вне типовой линейки</p>

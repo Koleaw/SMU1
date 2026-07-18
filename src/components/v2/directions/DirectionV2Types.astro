@@ -39,9 +39,7 @@ const {
               <figure class="direction-type-card__media" data-v2-media>
                 <img src={withBase(item.image)} alt="" width="720" height="540" loading="lazy" decoding="async" data-v2-image />
               </figure>
-            ) : (
-              <span class="direction-type-card__graphic" aria-hidden="true"></span>
-            )}
+            ) : null}
             <div class="direction-type-card__body">
               <h3>{item.title}</h3>
               {item.text && <p>{item.text}</p>}

@@ -30,7 +30,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
   <HomeV2Header currentPath={Astro.url.pathname} catalogV2 />
 
   <main>
-    <section class="hv2-hero" aria-labelledby="home-v2-title" data-hv2-hero>
+    <section class="hv2-hero" aria-labelledby="home-v2-title" data-hv2-hero data-v2-hero-scroll>
       <span class="hv2-hero__header-sentinel" aria-hidden="true" data-home-v2-header-sentinel></span>
       <div class="hv2-hero__media" aria-hidden="true" data-reveal style="--hv2-reveal-delay: 220ms">
         <picture class="hv2-hero__poster">
@@ -50,7 +50,6 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
           loop
           playsinline
           preload="none"
-          poster={path(home.heroMediaPoster)}
           data-hv2-hero-video
           data-hv2-video-src={path(home.heroMediaVideo)}
         ></video>
@@ -68,7 +67,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
       </button>
 
       <div class="hv2-shell hv2-hero__content">
-        <div class="hv2-hero__copy">
+        <div class="hv2-hero__copy" data-v2-hero-scroll-copy>
           <p class="hv2-eyebrow hv2-eyebrow--light" data-reveal style="--hv2-reveal-delay: 0ms">{copy.heroKicker}</p>
           <h1 id="home-v2-title" data-reveal style="--hv2-reveal-delay: 60ms">{copy.heroTitle}</h1>
           <p class="hv2-hero__lead" data-reveal style="--hv2-reveal-delay: 120ms">{copy.heroDescription}</p>
@@ -200,9 +199,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
                   decoding="async"
                   style={`object-fit:${canopiesDirection.imageFit};object-position:${canopiesDirection.imagePosition};`}
                 /><span class="hv2-competency__veil"></span></>
-              ) : (
-                <span class="hv2-competency__drawing hv2-competency__drawing--canopy" aria-hidden="true"><i></i><i></i><i></i></span>
-              )}
+              ) : null}
               <span class="hv2-competency__body">
                 <span class="hv2-eyebrow">Конструкция под размеры</span>
                 <strong>{canopiesDirection.title}</strong>
@@ -226,9 +223,7 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
                   decoding="async"
                   style={`object-fit:${topiaryDirection.imageFit};object-position:${topiaryDirection.imagePosition};`}
                 /><span class="hv2-competency__veil"></span></>
-              ) : (
-                <span class="hv2-competency__drawing hv2-competency__drawing--topiary" aria-hidden="true"><i></i><i></i><i></i></span>
-              )}
+              ) : null}
               <span class="hv2-competency__body">
                 <span class="hv2-eyebrow">Для территории</span>
                 <strong>{topiaryDirection.title}</strong>
@@ -359,6 +354,8 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
 </div>
 
 <script>
+  import { waitForRevealMedia } from '../../../utils/v2ImageReady';
+
   const initHomeV2Page = () => {
     const root = document.querySelector<HTMLElement>('[data-home-v2-root]');
     if (!root || root.dataset.ready === 'true') return;
@@ -493,19 +490,28 @@ const constructionDirection = directionBySlug.get('stroitelstvo-i-remonty');
       }
     };
 
-    const initialPalette = documentRoot.dataset.homeV2Theme === 'steel' ? 'steel' : 'olive';
-    setPalette(initialPalette);
-    paletteButtons.forEach((button) => {
-      button.addEventListener('click', () => setPalette(button.dataset.hv2Palette === 'steel' ? 'steel' : 'olive'));
-    });
+    if (paletteButtons.length > 0) {
+      const initialPalette = documentRoot.dataset.homeV2Theme === 'steel' ? 'steel' : 'olive';
+      setPalette(initialPalette);
+      paletteButtons.forEach((button) => {
+        button.addEventListener('click', () => setPalette(button.dataset.hv2Palette === 'steel' ? 'steel' : 'olive'));
+      });
+    } else {
+      documentRoot.dataset.homeV2Theme = 'engineering';
+      themeColor?.setAttribute('content', '#101720');
+    }
 
     const revealElements = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
     let revealObserver: IntersectionObserver | undefined;
     let revealScanQueued = false;
     const revealElement = (element: HTMLElement) => {
-      element.classList.remove('hv2-reveal-pending');
-      element.classList.add('hv2-reveal-visible');
+      if (element.dataset.v2RevealQueued === 'true') return;
+      element.dataset.v2RevealQueued = 'true';
       revealObserver?.unobserve(element);
+      void waitForRevealMedia(element).then(() => {
+        element.classList.remove('hv2-reveal-pending');
+        element.classList.add('hv2-reveal-visible');
+      });
     };
     const revealReached = (viewportFactor = 0.94) => {
       revealScanQueued = false;

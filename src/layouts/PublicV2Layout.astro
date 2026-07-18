@@ -2,6 +2,7 @@
 import '../styles/v2/home-v2.css';
 import '../styles/v2/cookie-banner-v2.css';
 import '../styles/v2/visual-polish-v2.css';
+import finalArtDirectionUrl from '../styles/v2/final-art-direction-v2.css?url';
 import CookieBanner from '../components/CookieBanner.astro';
 import siteSettings from '../content/site-settings/global.json';
 import yandex from '../data/yandex.json';
@@ -83,7 +84,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
 ---
 
 <!doctype html>
-<html lang="ru" class="home-v2-html" data-home-v2-theme="olive">
+<html lang="ru" class="home-v2-html" data-home-v2-theme="engineering">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -100,14 +101,44 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={pageDescription} />
     {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
-    <meta name="theme-color" content="#F6F3ED" data-home-v2-theme-color />
+    <meta name="theme-color" content="#101720" data-home-v2-theme-color />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+      href="https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSvfedN4.woff2"
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      crossorigin
     />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional"
+      rel="preload"
+      as="style"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional"
+      rel="stylesheet"
+      media="print"
+      data-v2-font-stylesheet
+    />
+    <script is:inline>
+      (() => {
+        const stylesheet = document.querySelector('[data-v2-font-stylesheet]');
+        if (!(stylesheet instanceof HTMLLinkElement)) return;
+        const activate = () => { stylesheet.media = 'all'; };
+        if (stylesheet.sheet) activate();
+        else stylesheet.addEventListener('load', activate, { once: true });
+      })();
+    </script>
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional"
+        rel="stylesheet"
+      />
+    </noscript>
     <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
+    <link rel="preload" href={finalArtDirectionUrl} as="style" />
     <title>{pageTitle}</title>
     {isProduction && !noindex && (
       <script type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', '@graph': jsonLdGraph })} />
@@ -172,9 +203,67 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
         })();
       </script>
     )}
+    <link rel="stylesheet" href={finalArtDirectionUrl} data-final-art-direction />
   </head>
   <body class="home-v2-body">
     <slot />
     {isProduction && <CookieBanner />}
+    <script>
+      const initV2HeroScroll = () => {
+        if (document.documentElement.dataset.v2HeroScrollReady === 'true') return;
+        const heroes = Array.from(document.querySelectorAll<HTMLElement>('[data-v2-hero-scroll]'));
+        if (heroes.length === 0) return;
+        document.documentElement.dataset.v2HeroScrollReady = 'true';
+
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const desktopMotion = window.matchMedia('(min-width: 761px)');
+        let frame = 0;
+
+        const reset = () => {
+          heroes.forEach((hero) => {
+            hero.style.setProperty('--v2-hero-scroll-y', '0px');
+            hero.style.setProperty('--v2-hero-scroll-opacity', '1');
+          });
+        };
+
+        const sync = () => {
+          frame = 0;
+          if (reducedMotion.matches || !desktopMotion.matches) {
+            reset();
+            return;
+          }
+
+          heroes.forEach((hero) => {
+            const copy = hero.querySelector<HTMLElement>('[data-v2-hero-scroll-copy]');
+            if (!copy) return;
+            const rect = hero.getBoundingClientRect();
+            const height = Math.max(rect.height, 1);
+            const progress = Math.min(1, Math.max(0, -rect.top / height));
+            const travel = Math.min(150, height * 0.19) * progress;
+            const fadeProgress = Math.min(1, Math.max(0, (progress - 0.36) / 0.48));
+            hero.style.setProperty('--v2-hero-scroll-y', `${travel.toFixed(2)}px`);
+            hero.style.setProperty('--v2-hero-scroll-opacity', String(1 - fadeProgress));
+          });
+        };
+
+        const queue = () => {
+          if (frame) return;
+          frame = window.requestAnimationFrame(sync);
+        };
+
+        window.addEventListener('scroll', queue, { passive: true });
+        window.addEventListener('resize', queue);
+        reducedMotion.addEventListener('change', queue);
+        desktopMotion.addEventListener('change', queue);
+        if ('ResizeObserver' in window) {
+          const observer = new ResizeObserver(queue);
+          heroes.forEach((hero) => observer.observe(hero));
+        }
+        sync();
+      };
+
+      initV2HeroScroll();
+      document.addEventListener('astro:page-load', initV2HeroScroll);
+    </script>
   </body>
 </html>

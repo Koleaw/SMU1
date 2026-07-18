@@ -71,13 +71,9 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
 
       {hasMultiple && (
         <div class="v2-project-gallery__controls" aria-label="Переключение изображений">
-          <button type="button" aria-label="Предыдущее изображение" data-v2-project-gallery-prev>
-            <span aria-hidden="true">←</span>
-          </button>
+          <button type="button" aria-label="Назад" data-v2-project-gallery-prev>Назад</button>
           <p aria-live="polite" aria-atomic="true" data-v2-project-gallery-status>1 / {galleryImages.length}</p>
-          <button type="button" aria-label="Следующее изображение" data-v2-project-gallery-next>
-            <span aria-hidden="true">→</span>
-          </button>
+          <button type="button" aria-label="Далее" data-v2-project-gallery-next>Далее</button>
         </div>
       )}
     </div>
@@ -122,12 +118,8 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
           <div class="v2-project-lightbox__toolbar">
             {hasMultiple && (
               <div class="v2-project-lightbox__arrows" aria-label="Переключение полноэкранных изображений">
-                <button type="button" aria-label="Предыдущее изображение" data-v2-project-lightbox-prev>
-                  <span aria-hidden="true">←</span>
-                </button>
-                <button type="button" aria-label="Следующее изображение" data-v2-project-lightbox-next>
-                  <span aria-hidden="true">→</span>
-                </button>
+                <button type="button" aria-label="Назад" data-v2-project-lightbox-prev>Назад</button>
+                <button type="button" aria-label="Далее" data-v2-project-lightbox-next>Далее</button>
               </div>
             )}
             <button

@@ -66,6 +66,8 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
 </PublicV2Layout>
 
 <script>
+  import { waitForRevealMedia } from '../../utils/v2ImageReady';
+
   const initCatalogV2Enhancements = () => {
     const root = document.querySelector<HTMLElement>('[data-catalog-v2-root]');
     if (!root || root.dataset.enhancementsReady === 'true') return;
@@ -85,9 +87,13 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
     let observer: IntersectionObserver | undefined;
     let revealScanQueued = false;
     const revealElement = (element: HTMLElement) => {
-      element.classList.remove('hv2-reveal-pending');
-      element.classList.add('hv2-reveal-visible');
+      if (element.dataset.v2RevealQueued === 'true') return;
+      element.dataset.v2RevealQueued = 'true';
       observer?.unobserve(element);
+      void waitForRevealMedia(element).then(() => {
+        element.classList.remove('hv2-reveal-pending');
+        element.classList.add('hv2-reveal-visible');
+      });
     };
     const revealAll = () => revealItems.forEach(revealElement);
     const revealReached = (viewportFactor = 0.94) => {

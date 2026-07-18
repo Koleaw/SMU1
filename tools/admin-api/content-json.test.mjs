@@ -33,6 +33,36 @@ function staticPage(slug, overrides = {}) {
   };
 }
 
+function product(slug, overrides = {}) {
+  return {
+    title: `Товар ${slug}`,
+    slug,
+    productCategorySlug: 'lavochki-i-skameyki',
+    shortDescription: 'Краткое описание',
+    leadText: 'Описание изделия',
+    priceMode: 'on_request',
+    priceFrom: null,
+    currency: 'RUB',
+    image: '/placeholder.svg',
+    placeholderLabel: 'Фото',
+    order: 10,
+    isActive: true,
+    showInCatalog: true,
+    seoTitle: `Товар ${slug}`,
+    seoDescription: 'SEO описание',
+    ...overrides
+  };
+}
+
+function productCategory(slug = 'lavochki-i-skameyki') {
+  return {
+    title: 'Лавочки и скамейки', slug, parentSectionSlug: 'ulichnaya-mebel', shortDescription: 'Описание',
+    heroTitle: 'Лавочки и скамейки', heroDescription: 'Описание', order: 10, showInSectionGrid: true,
+    isActive: true, image: '/placeholder.svg', placeholderLabel: 'Фото', mode: 'catalog-list',
+    seoTitle: 'Лавочки и скамейки', seoDescription: 'Описание'
+  };
+}
+
 function siteSettings() {
   return {
     companyName: 'СМУ-1', companyShortName: 'СМУ-1', inn: '1', kpp: '2', ogrn: '3',
@@ -95,6 +125,54 @@ test('projects schema accepts legacy and expanded cases with flexible text field
   });
   assert.equal(contentSchemas.projects.safeParse(expanded).success, true);
   assert.equal(contentSchemas.projects.safeParse({ ...expanded, materials: 'металл', features: ['сложный рельеф'] }).success, true);
+});
+
+test('products schema defaults presentationType and validates premium presentation fields', () => {
+  const standard = contentSchemas.products.parse(product('standard-default'));
+  assert.equal(standard.presentationType, 'standard');
+
+  const premium = contentSchemas.products.parse(product('premium-solution', {
+    presentationType: 'premium',
+    solutionKicker: 'Архитектурно-инженерное решение',
+    applicationItems: ['Общественные пространства', 'Парки'],
+    executionVariants: ['С подсветкой', 'С индивидуальной геометрией']
+  }));
+  assert.equal(premium.presentationType, 'premium');
+  assert.deepEqual(premium.applicationItems, ['Общественные пространства', 'Парки']);
+  assert.equal(contentSchemas.products.safeParse(product('invalid-tier', { presentationType: 'featured' })).success, false);
+});
+
+test('product presentation fields survive import/export and legacy imports persist the standard default', async (t) => {
+  const f = await fixture();
+  t.after(f.cleanup);
+  await f.write('product-categories', 'lavochki-i-skameyki', productCategory());
+
+  const premium = product('premium-roundtrip', {
+    presentationType: 'premium',
+    solutionKicker: 'Решение для объекта',
+    applicationItems: ['Входная группа', 'Городская площадь'],
+    executionVariants: ['Оцинкованный каркас', 'Порошковая окраска']
+  });
+  await f.write('products', premium.slug, premium);
+  const premiumExport = await f.service.exportSingle('products', premium.slug);
+  assert.deepEqual(premiumExport.payload, premium);
+  const premiumPreview = await f.service.preview({ owner: 'admin', collection: 'products', scope: 'single', currentSlug: premium.slug, writeMode: 'merge', rawJson: JSON.stringify(premiumExport.payload) });
+  assert.equal(premiumPreview.result, 'ready');
+  assert.equal(premiumPreview.canApply, false);
+
+  const legacy = product('legacy-standard', { order: 20 });
+  const legacyPayload = { type: 'smu1_content_collection', version: 1, collection: 'products', items: [legacy] };
+  const legacyPreview = await f.service.preview({ owner: 'admin', collection: 'products', scope: 'collection', writeMode: 'merge', rawJson: JSON.stringify(legacyPayload) });
+  assert.equal(legacyPreview.result, 'ready');
+  assert.equal(legacyPreview.created, 1);
+  const applied = await f.service.apply({ owner: 'admin', operationId: legacyPreview.operationId });
+  assert.equal(applied.result, 'success');
+  assert.equal((await f.read('products', legacy.slug)).presentationType, 'standard');
+
+  const legacyExport = await f.service.exportSingle('products', legacy.slug);
+  const legacyRoundTrip = await f.service.preview({ owner: 'admin', collection: 'products', scope: 'single', currentSlug: legacy.slug, writeMode: 'merge', rawJson: JSON.stringify(legacyExport.payload) });
+  assert.equal(legacyRoundTrip.result, 'ready');
+  assert.equal(legacyRoundTrip.canApply, false);
 });
 
 test('single round-trip has no changes and malformed JSON is rejected with report', async (t) => {

@@ -45,15 +45,14 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
         </button>
       ) : null}
       <div class="v2-media-empty v2-product-gallery__empty" aria-hidden={hasImages} data-v2-gallery-empty>
-        <span></span><span></span><span></span>
         <p>Фотоматериалы {entityLabel} не указаны</p>
       </div>
     </div>
 
     {hasMultipleImages && (
       <div class="v2-product-gallery__arrows" aria-label="Переключение изображений">
-        <button type="button" aria-label="Предыдущее изображение" data-v2-gallery-prev><span aria-hidden="true">←</span></button>
-        <button type="button" aria-label="Следующее изображение" data-v2-gallery-next><span aria-hidden="true">→</span></button>
+        <button type="button" aria-label="Назад" data-v2-gallery-prev>Назад</button>
+        <button type="button" aria-label="Далее" data-v2-gallery-next>Далее</button>
       </div>
     )}
 
@@ -95,8 +94,8 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
           <div class="v2-product-lightbox__toolbar">
             {hasMultipleImages && (
               <div class="v2-product-lightbox__arrows" aria-label="Переключение полноэкранных изображений">
-                <button type="button" aria-label="Предыдущее изображение" data-v2-lightbox-prev><span aria-hidden="true">←</span></button>
-                <button type="button" aria-label="Следующее изображение" data-v2-lightbox-next><span aria-hidden="true">→</span></button>
+                <button type="button" aria-label="Назад" data-v2-lightbox-prev>Назад</button>
+                <button type="button" aria-label="Далее" data-v2-lightbox-next>Далее</button>
               </div>
             )}
             <button class="v2-product-lightbox__close" type="button" aria-label="Закрыть полноэкранную галерею" data-v2-lightbox-close>

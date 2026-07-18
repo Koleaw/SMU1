@@ -95,7 +95,10 @@ export const contentSchemas = {
   }).strict(),
   products: z.object({
     title: z.string(), slug: z.string(), productCategorySlug: z.string(), sku: z.string().optional(),
+    presentationType: z.enum(['standard', 'premium']).default('standard'),
     shortDescription: z.string(), leadText: z.string(), description: z.string().optional(),
+    solutionKicker: z.string().optional(), applicationItems: z.array(z.string()).optional(),
+    executionVariants: z.array(z.string()).optional(),
     materials: z.array(z.string()).optional(), colors: z.array(z.string()).optional(),
     dimensions: z.array(productSpecItemSchema).optional(), features: z.array(z.string()).optional(),
     priceMode: z.enum(['from', 'on_request', 'none']), priceFrom: z.number().nullable(), currency: z.string(), image: z.string(),

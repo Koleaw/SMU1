@@ -42,7 +42,7 @@ const meta = (project: { city?: string; year?: number }) => [project.city, proje
       <p>Готовый внешний результат и выполненные ремонтные задачи на реальных объектах.</p>
     </header>
 
-    <article class="project-proof__featured">
+    <article class="project-proof__featured" data-v2-project-card>
       <div class="project-proof__gallery" data-v2-reveal>
         <V2ProductGallery
           images={featured.images}
@@ -56,14 +56,20 @@ const meta = (project: { city?: string; year?: number }) => [project.city, proje
         <p class="project-proof__meta">{meta(featured)}</p>
         <h3>{featured.title}</h3>
         <p>{featured.description}</p>
-        <a href={withBase(featured.href)}>Открыть объект</a>
+        <span class="project-proof__link-label" aria-hidden="true">Открыть объект</span>
       </div>
+      <a
+        class="project-proof__stretched-link"
+        href={withBase(featured.href)}
+        aria-label={`Открыть объект «${featured.title}»`}
+        data-v2-project-link
+      >Открыть объект</a>
     </article>
 
     {supporting.length > 0 && (
       <div class="project-proof__supporting" role="list">
         {supporting.map((project) => (
-          <article class:list={['project-proof-card', { 'project-proof-card--no-media': !project.image }]} role="listitem" data-v2-reveal>
+          <article class:list={['project-proof-card', { 'project-proof-card--no-media': !project.image }]} role="listitem" data-v2-project-card data-v2-reveal>
             {project.image && (
               <figure data-v2-media>
                 <img src={withBase(project.image)} alt={project.imageAlt || project.title} width="960" height="720" loading="lazy" decoding="async" data-v2-image />
@@ -74,7 +80,13 @@ const meta = (project: { city?: string; year?: number }) => [project.city, proje
               <p class="project-proof__meta">{meta(project)}</p>
               <h3>{project.title}</h3>
               <p>{project.description}</p>
-              <a href={withBase(project.href)}>Открыть объект</a>
+              <span class="project-proof__link-label" aria-hidden="true">Открыть объект</span>
+              <a
+                class="project-proof__stretched-link"
+                href={withBase(project.href)}
+                aria-label={`Открыть объект «${project.title}»`}
+                data-v2-project-link
+              >Открыть объект</a>
             </div>
           </article>
         ))}

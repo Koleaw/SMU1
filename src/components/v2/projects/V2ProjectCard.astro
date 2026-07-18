@@ -34,31 +34,36 @@ const showMedia = variant === 'visual' && Boolean(media);
     { 'v2-project-card--media-rich': showMedia, 'v2-project-card--media-sparse': !showMedia }
   ]}
   data-v2-reveal
+  data-v2-project-card
 >
-  {showMedia && media && (
-    <figure
-      class="v2-project-card__media"
-      style={`--v2-project-card-position: ${mediaPosition};`}
-      data-v2-media
-    >
-      <img
-        src={withBase(media.src)}
-        alt={media.alt}
-        width="1200"
-        height="860"
-        loading={eager ? 'eager' : 'lazy'}
-        fetchpriority={eager ? 'high' : 'auto'}
-        decoding="async"
-        data-v2-image
-      />
-    </figure>
-  )}
-  <div class="v2-project-card__body">
-    <V2ProjectMeta location={location} year={project.year} />
-    <Heading>{project.title}</Heading>
-    <p class="v2-project-card__description">{project.shortDescription}</p>
-    <a class="v2-project-card__link" href={withBase(v2Route)}>
-      Открыть объект
-    </a>
-  </div>
+  <a
+    class="v2-project-card__card-link"
+    href={withBase(v2Route)}
+    aria-label={`Открыть объект «${project.title}»`}
+  >
+    {showMedia && media && (
+      <figure
+        class="v2-project-card__media"
+        style={`--v2-project-card-position: ${mediaPosition};`}
+        data-v2-media
+      >
+        <img
+          src={withBase(media.src)}
+          alt={media.alt}
+          width="1200"
+          height="860"
+          loading={eager ? 'eager' : 'lazy'}
+          fetchpriority={eager ? 'high' : 'auto'}
+          decoding="async"
+          data-v2-image
+        />
+      </figure>
+    )}
+    <div class="v2-project-card__body">
+      <V2ProjectMeta location={location} year={project.year} />
+      <Heading>{project.title}</Heading>
+      <p class="v2-project-card__description">{project.shortDescription}</p>
+      <span class="v2-project-card__link" aria-hidden="true">Открыть объект</span>
+    </div>
+  </a>
 </article>

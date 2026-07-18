@@ -4,8 +4,13 @@
   background: var(--hv2-background);
 }
 
-.place-direction-v2 :where(h1, h2, h3, p, li, a, strong) {
+.place-direction-v2 :where(p, li, a, strong) {
   overflow-wrap: anywhere;
+}
+
+.place-direction-v2 :where(h1, h2, h3) {
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .place-section-heading {
@@ -44,7 +49,7 @@
 
 .place-hero__frame {
   position: relative;
-  min-height: clamp(650px, 62vw, 840px);
+  min-height: clamp(560px, 56vw, 720px);
   overflow: hidden;
   color: #ffffff;
   background: var(--hv2-dark-olive, #20352b);
@@ -105,7 +110,7 @@
   position: relative;
   z-index: 3;
   display: flex;
-  min-height: clamp(650px, 62vw, 840px);
+  min-height: clamp(560px, 56vw, 720px);
   width: min(1060px, 86%);
   flex-direction: column;
   justify-content: flex-end;
@@ -158,7 +163,7 @@
 /* Positioning */
 
 .place-intro {
-  padding: clamp(86px, 10vw, 148px) 0;
+  padding: clamp(72px, 8vw, 112px) 0;
   border-bottom: 1px solid var(--hv2-border);
   background: var(--hv2-surface);
 }
@@ -169,17 +174,17 @@
 }
 
 .place-intro__heading {
-  grid-column: 1 / 6;
+  grid-column: 1 / 7;
 }
 
 .place-intro__heading h2 {
-  max-width: 650px;
+  max-width: 760px;
   margin-top: 14px;
-  font-size: clamp(42px, 5vw, 70px);
+  font-size: clamp(40px, 4.6vw, 64px);
 }
 
 .place-intro__copy {
-  grid-column: 7 / 13;
+  grid-column: 8 / 13;
   padding-top: 28px;
   border-top: 1px solid var(--hv2-border);
 }
@@ -199,7 +204,7 @@
 /* Confirmed scope as an editorial list */
 
 .place-scope {
-  padding: clamp(88px, 10vw, 144px) 0;
+  padding: clamp(72px, 8vw, 112px) 0;
   background: var(--hv2-background);
 }
 
@@ -211,8 +216,8 @@
 .place-scope__list li {
   display: grid;
   min-width: 0;
-  grid-template-columns: 72px minmax(220px, 0.78fr) minmax(280px, 1.22fr);
-  gap: 22px clamp(28px, 5vw, 76px);
+  grid-template-columns: minmax(220px, 0.78fr) minmax(280px, 1.22fr);
+  gap: 22px clamp(36px, 5vw, 76px);
   align-items: start;
   padding: clamp(26px, 3vw, 40px) 18px;
   border-bottom: 1px solid var(--hv2-border);
@@ -247,7 +252,7 @@
 /* Contexts */
 
 .place-contexts {
-  padding: clamp(86px, 10vw, 142px) 0;
+  padding: clamp(72px, 8vw, 112px) 0;
   color: var(--hv2-on-contrast);
   background: var(--hv2-dark-olive, #20352b);
 }
@@ -283,9 +288,9 @@
 
 .place-contexts__list li {
   display: grid;
-  min-height: 128px;
-  grid-template-columns: 36px minmax(0, 1fr);
-  gap: 14px;
+  min-height: 112px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
   align-items: center;
   padding: 22px 20px;
   border-right: 1px solid rgba(255, 255, 255, 0.26);
@@ -306,7 +311,7 @@
 /* Real projects */
 
 .place-projects {
-  padding: clamp(90px, 10vw, 148px) 0;
+  padding: clamp(78px, 8vw, 120px) 0;
   background: var(--hv2-secondary-surface);
 }
 
@@ -363,7 +368,7 @@
 }
 
 .place-projects__gallery .v2-product-gallery__stage {
-  min-height: clamp(500px, 50vw, 720px);
+  min-height: clamp(430px, 47vw, 640px);
   border-color: rgba(32, 53, 43, 0.35);
   background: var(--hv2-dark-olive, #20352b);
 }
@@ -392,7 +397,7 @@
 }
 
 .place-projects__supporting article {
-  min-height: 300px;
+  min-height: 230px;
   padding: clamp(24px, 3vw, 36px);
   border-right: 1px solid var(--hv2-border);
   border-bottom: 1px solid var(--hv2-border);
@@ -473,7 +478,7 @@
   }
 
   .place-scope__list li {
-    grid-template-columns: 56px minmax(200px, 0.9fr) minmax(240px, 1.1fr);
+    grid-template-columns: minmax(200px, 0.9fr) minmax(240px, 1.1fr);
   }
 
   .place-projects__story {
@@ -514,7 +519,7 @@
 
   .place-hero__frame,
   .place-hero__copy {
-    min-height: 700px;
+    min-height: clamp(520px, 72vw, 640px);
   }
 
   .place-hero__copy {
@@ -526,12 +531,12 @@
   }
 
   .place-scope__list li {
-    grid-template-columns: 46px minmax(0, 1fr);
-    gap: 14px 24px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
   }
 
   .place-scope__list p {
-    grid-column: 2;
+    grid-column: 1;
   }
 
   .place-contexts__heading {
@@ -696,7 +701,7 @@
   }
 
   .place-scope__list li {
-    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .place-brief__items {

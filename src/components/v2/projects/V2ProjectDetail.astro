@@ -7,6 +7,7 @@ import V2DirectContact from '../V2DirectContact.astro';
 import { projectTextItems } from './projectV2Data';
 import V2ProjectGallery from './V2ProjectGallery.astro';
 import V2ProjectMeta from './V2ProjectMeta.astro';
+import V2SectionNav from '../V2SectionNav.astro';
 import '../../../styles/v2/projects-v2.css';
 
 interface Props {
@@ -41,6 +42,14 @@ const additionalFacts = [
     ? { title: 'Особенности объекта', text: projectTextItems(project.features).join(', ') }
     : null
 ].filter((item): item is { title: string; text: string } => Boolean(item?.text));
+const sectionNavItems = [
+  { id: 'project-overview', label: 'Обзор' },
+  { id: 'project-work', label: 'Что выполнено' },
+  ...(additionalFacts.length > 0 ? [{ id: 'project-facts', label: 'Сведения' }] : []),
+  ...(publicGallery.length > 0 ? [{ id: 'project-gallery', label: 'Фотографии' }] : []),
+  ...(relatedDirections.length > 0 ? [{ id: 'project-directions', label: 'Направления' }] : []),
+  { id: 'contact', label: 'Обсудить задачу' }
+];
 ---
 
 <V2Breadcrumbs items={[
@@ -50,7 +59,7 @@ const additionalFacts = [
 ]} />
 
 <article class:list={['v2-project-detail', { 'v2-project-detail--media-sparse': isTextOnly }]}>
-  <header class="v2-project-detail__hero">
+  <header class="v2-project-detail__hero" id="project-overview">
     <div class="hv2-shell v2-project-detail__hero-grid">
       <div class="v2-project-detail__hero-copy" data-v2-reveal>
         <p class="hv2-eyebrow">{eyebrow}</p>
@@ -84,7 +93,9 @@ const additionalFacts = [
     </div>
   </header>
 
-  <section class="v2-project-detail__work" aria-labelledby="v2-project-work-title">
+  <V2SectionNav items={sectionNavItems} label="Разделы объекта" />
+
+  <section class="v2-project-detail__work" id="project-work" aria-labelledby="v2-project-work-title">
     <div class="hv2-shell v2-project-detail__work-grid">
       <div data-v2-reveal>
         <h2 id="v2-project-work-title">Что было выполнено</h2>
@@ -94,7 +105,7 @@ const additionalFacts = [
   </section>
 
   {additionalFacts.length > 0 && (
-    <section class="v2-project-detail__facts" aria-labelledby="v2-project-facts-title">
+    <section class="v2-project-detail__facts" id="project-facts" aria-labelledby="v2-project-facts-title">
       <div class="hv2-shell">
         <header data-v2-reveal>
           <p class="hv2-eyebrow">Сведения об объекте</p>
@@ -113,7 +124,7 @@ const additionalFacts = [
   )}
 
   {publicGallery.length > 0 && (
-    <section class="v2-project-detail__gallery" aria-labelledby="v2-project-gallery-title">
+    <section class="v2-project-detail__gallery" id="project-gallery" aria-labelledby="v2-project-gallery-title">
       <div class="hv2-shell">
         <header class="v2-project-detail__section-heading" data-v2-reveal>
           <p class="hv2-eyebrow">Фотографии объекта</p>
@@ -132,7 +143,7 @@ const additionalFacts = [
   )}
 
   {relatedDirections.length > 0 && (
-    <section class="v2-project-detail__directions" aria-labelledby="v2-project-directions-title">
+    <section class="v2-project-detail__directions" id="project-directions" aria-labelledby="v2-project-directions-title">
       <div class="hv2-shell">
         <header class="v2-project-detail__section-heading" data-v2-reveal>
           <p class="hv2-eyebrow">Связанные направления</p>

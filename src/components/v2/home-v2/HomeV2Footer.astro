@@ -43,7 +43,7 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
 
 <footer class="hv2-footer">
   <div class="hv2-shell hv2-footer__grid">
-    <div class="hv2-footer__brand">
+    <section class="hv2-footer__brand" aria-label="Реквизиты СМУ-1">
       <a href={path('/')} aria-label="СМУ-1 — на главную">
         <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="355" height="211" />
       </a>
@@ -51,9 +51,9 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
       <p>ИНН {settings.inn} · КПП {settings.kpp}</p>
       <p>ОГРН {settings.ogrn}</p>
       <p>Дата регистрации: {settings.registrationDate}</p>
-    </div>
+    </section>
 
-    <div class="hv2-footer__nav-group hv2-footer__nav-group--directions">
+    <section class="hv2-footer__nav-group hv2-footer__nav-group--directions" aria-label="Навигация по направлениям">
       <nav class="hv2-footer__directions hv2-footer__desktop-nav" aria-label="Направления СМУ-1">
         <p>Направления</p>
         {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
@@ -64,9 +64,9 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
           {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
         </nav>
       </details>
-    </div>
+    </section>
 
-    <div class="hv2-footer__nav-group hv2-footer__nav-group--company">
+    <section class="hv2-footer__nav-group hv2-footer__nav-group--company" aria-label="Навигация по компании">
       <nav class="hv2-footer__company hv2-footer__desktop-nav" aria-label="Работа и компания">
         <p>Работа и компания</p>
         {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
@@ -77,20 +77,20 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
           {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
         </nav>
       </details>
-    </div>
+    </section>
 
-    <div class="hv2-footer__contacts">
-      <p>Прямая связь</p>
+    <section class="hv2-footer__contacts" aria-labelledby="hv2-footer-contacts-title">
+      <p id="hv2-footer-contacts-title">Прямая связь</p>
       {catalogV2 && <a class="hv2-footer__mobile-cta" href={resolveHref(contactHref)}>{mobileCtaLabel}</a>}
       <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>{settings.phonePrimary}</a>
       <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`}>{settings.phoneSecondary}</a>
       <a href={settings.telegram} target="_blank" rel="noopener noreferrer">{telegramLabel} · Telegram</a>
       <a href={`mailto:${settings.email}`}>{settings.email}</a>
       <address>{settings.address}</address>
-    </div>
+    </section>
   </div>
 
-  <div class="hv2-shell hv2-footer__legal">
+  <div class="hv2-shell hv2-footer__legal" role="group" aria-label="Юридическая информация">
     <small>© ООО «СМУ 1», 2026</small>
     <small>Информация на сайте носит ознакомительный характер и не является публичной офертой.</small>
     <a href={path(additions.privacy.href)} aria-current={currentState(additions.privacy.href)}>{additions.privacy.label}</a>

@@ -19,6 +19,7 @@ import {
   approvedMediaUntilEdited,
   approvedUntilEdited
 } from '../directions/directionV2Presentation';
+import V2SectionNav from '../V2SectionNav.astro';
 
 const currentPath = Astro.url.pathname;
 const data = await loadDirectionV2Snapshot({
@@ -90,6 +91,13 @@ const related = [
     href: `/design-lab/v2/${landscaping.slug}/`
   } : null
 ].filter((item): item is NonNullable<typeof item> => Boolean(item));
+const sectionNavItems = [
+  ...(types.length > 0 ? [{ id: 'direction-types', label: 'Что изготавливаем' }] : []),
+  ...(galleryImages.length > 0 ? [{ id: 'direction-gallery', label: 'Примеры' }] : []),
+  ...(scope.length > 0 ? [{ id: 'direction-scope', label: 'Для каких объектов' }] : []),
+  ...(briefInputs.length > 0 ? [{ id: 'direction-brief', label: 'Исходные данные' }] : []),
+  { id: 'contact', label: 'Обсудить задачу' }
+];
 ---
 
 <DirectionV2Layout
@@ -117,6 +125,8 @@ const related = [
     secondaryHref="#direction-brief"
     secondaryLabel="Обсудить задачу"
   />
+
+  <V2SectionNav items={sectionNavItems} label="Разделы направления" />
 
   <DirectionV2Types
     eyebrow="Структура направления"

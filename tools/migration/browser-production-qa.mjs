@@ -434,18 +434,40 @@ try {
       palette: document.documentElement.dataset.homeV2Theme,
       paletteSwitches: document.querySelectorAll('.hv2-palette-switch').length,
       videoSources: Array.from(video.querySelectorAll('source')).map((source) => source.getAttribute('src')),
+      deferredVideoSrc: video.dataset.hv2VideoSrc,
       poster: video.getAttribute('poster'),
       initialScrolled: header.classList.contains('is-scrolled'),
       productionLinks: Array.from(document.querySelectorAll('a[href]')).every((link) => !new URL(link.href, location.href).pathname.startsWith('/design-lab/'))
     };
   })()`);
-  await evaluate('window.scrollTo(0, 900)');
+  await evaluate(`(() => {
+    document.documentElement.style.scrollBehavior = 'auto';
+    const hero = document.querySelector('[data-hv2-hero]');
+    window.scrollTo(0, Math.max(1200, (hero?.offsetHeight || 0) + 320));
+  })()`);
   await delay(180);
-  report.home.headerScrolled = await evaluate("document.querySelector('.hv2-header').classList.contains('is-scrolled')");
-  assert(report.home.palette === 'olive' && report.home.paletteSwitches === 0 && report.home.productionLinks
-    && report.home.headerScrolled && report.home.videoSources.includes(homeRecord.heroMediaVideo)
-    && report.home.videoSources.includes(homeRecord.heroMediaVideoMobile)
-    && report.home.poster === homeRecord.heroMediaPoster, 'Production home shell/video/header check failed.');
+  report.home.headerAfterDown = await evaluate(`(() => {
+    const header = document.querySelector('.hv2-header');
+    return {
+      solid: header.classList.contains('is-scrolled'),
+      hidden: header.classList.contains('is-hidden')
+    };
+  })()`);
+  await evaluate('window.scrollBy(0, -64)');
+  await delay(180);
+  report.home.headerAfterUp = await evaluate(`(() => {
+    const header = document.querySelector('.hv2-header');
+    return {
+      solid: header.classList.contains('is-scrolled'),
+      hidden: header.classList.contains('is-hidden')
+    };
+  })()`);
+  assert(report.home.palette === 'engineering' && report.home.paletteSwitches === 0 && report.home.productionLinks
+    && report.home.headerAfterDown.solid && report.home.headerAfterDown.hidden
+    && report.home.headerAfterUp.solid && !report.home.headerAfterUp.hidden
+    && report.home.deferredVideoSrc === homeRecord.heroMediaVideo
+    && !report.home.videoSources.includes(homeRecord.heroMediaVideoMobile)
+    && report.home.poster === null, 'Production home shell/video/header check failed.');
 
   await navigate(routes.categoryFilled, 120);
   report.navigation.dropdown = await evaluate(`(async () => {

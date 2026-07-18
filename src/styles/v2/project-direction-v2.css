@@ -157,7 +157,7 @@
 }
 
 .project-intro {
-  padding: clamp(74px, 8vw, 112px) 0;
+  padding: clamp(66px, 7vw, 96px) 0;
   border-bottom: 1px solid var(--hv2-border);
   background: var(--hv2-surface);
 }
@@ -167,7 +167,7 @@
 }
 
 .project-intro__heading {
-  grid-column: 1 / 5;
+  grid-column: 1 / 6;
 }
 
 .project-intro__heading h2,
@@ -176,13 +176,13 @@
 .project-proof__heading h2,
 .project-brief__heading h2 {
   margin-top: 14px;
-  font-size: clamp(39px, 4.8vw, 68px);
+  font-size: clamp(38px, 4.4vw, 62px);
   line-height: 1.04;
   letter-spacing: -0.043em;
 }
 
 .project-intro__copy {
-  grid-column: 6 / 13;
+  grid-column: 7 / 13;
   padding-top: 24px;
   border-top: 1px solid var(--hv2-border);
 }
@@ -315,7 +315,7 @@
 .project-proof-card {
   display: grid;
   min-width: 0;
-  min-height: 340px;
+  min-height: 280px;
   grid-template-columns: minmax(180px, 0.82fr) minmax(0, 1fr);
   background: var(--hv2-dark-olive, #20352b);
 }
@@ -343,6 +343,14 @@
 
 .project-proof-card--no-media {
   grid-template-columns: 1fr;
+}
+
+.project-proof__supporting > .project-proof-card:only-child {
+  grid-column: 1 / -1;
+}
+
+.project-proof__supporting > .project-proof-card--no-media:only-child > div {
+  max-width: 760px;
 }
 
 .project-proof-card--no-media > div {
