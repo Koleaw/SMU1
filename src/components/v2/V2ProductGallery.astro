@@ -25,6 +25,7 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
   id={galleryId}
   aria-label={`Галерея: ${title}`}
   data-v2-product-gallery
+  data-v2-gallery-current="0"
 >
   <div class="v2-product-gallery__stage" data-v2-gallery-context>
     <div class="v2-product-gallery__media" data-v2-media>
@@ -211,6 +212,7 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
 
       const setCurrent = (index: number, revealThumb = true) => {
         current = normalizedIndex(index);
+        gallery.dataset.v2GalleryCurrent = String(current);
         setImageState(mainImage, media, sources[current], altFor(current));
         thumbs.forEach((thumb, thumbIndex) => {
           const isCurrent = thumbIndex === current;

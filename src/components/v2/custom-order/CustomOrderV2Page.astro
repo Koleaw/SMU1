@@ -15,7 +15,6 @@ const { data } = Astro.props as Props;
 const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
 const emailHref = `mailto:${settings.email}`;
 const telegramLabel = getV2TelegramLabel(settings);
-const heroSourceMaterials = data.sourceMaterials.filter((item) => /фот|эскиз|черт|техническ/i.test(item)).slice(0, 4);
 ---
 
 <div class="custom-order-v2">
@@ -30,16 +29,10 @@ const heroSourceMaterials = data.sourceMaterials.filter((item) => /фот|эск
         <p class="hv2-eyebrow">{data.copy.heroKicker}</p>
         <h1 id="custom-order-title">{data.copy.heroTitle}</h1>
         <p class="custom-order-hero__lead">{data.copy.heroDescription}</p>
-        {heroSourceMaterials.length > 0 && (
-          <ul class="custom-order-hero__sources" aria-label="Подходящие исходные материалы">
-            {heroSourceMaterials.map((item) => <li>{item}</li>)}
-          </ul>
-        )}
         <div class="custom-order-hero__actions">
           <a class="hv2-button hv2-button--primary" href="#contact">Обсудить задачу</a>
           <a class="hv2-text-link" href={emailHref}>Отправить исходные данные</a>
         </div>
-        <p class="custom-order-hero__note">Можно начать с одного материала — недостающие размеры и условия уточним при обсуждении.</p>
       </div>
 
       <div class="custom-order-hero__media" aria-label="Примеры готовых результатов" data-v2-reveal>
@@ -63,21 +56,6 @@ const heroSourceMaterials = data.sourceMaterials.filter((item) => /фот|эск
     </div>
   </section>
 
-  <section class="custom-order-inputs" aria-labelledby="custom-order-inputs-title">
-    <div class="hv2-shell hv2-grid custom-order-inputs__grid">
-      <div class="custom-order-inputs__intro" data-v2-reveal>
-        <p class="hv2-eyebrow hv2-eyebrow--light">Первый шаг</p>
-        <h2 id="custom-order-inputs-title">Начните с того, что уже есть</h2>
-        <p>Не нужно готовить полный комплект документов. Пришлите один или несколько материалов — остальное уточним вместе.</p>
-      </div>
-      <ul class="custom-order-inputs__list" data-v2-reveal>
-        {data.sourceMaterials.map((item) => (
-          <li><strong>{item}</strong></li>
-        ))}
-      </ul>
-    </div>
-  </section>
-
   <section class="custom-order-changes" aria-labelledby="custom-order-changes-title">
     <div class="hv2-shell hv2-grid custom-order-changes__grid">
       <header data-v2-reveal>
@@ -88,6 +66,21 @@ const heroSourceMaterials = data.sourceMaterials.filter((item) => /фот|эск
       <ul class="custom-order-changes__list" data-v2-reveal>
         {data.changeOptions.map((item) => (
           <li><p>{item}</p></li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="custom-order-inputs" aria-labelledby="custom-order-inputs-title">
+    <div class="hv2-shell hv2-grid custom-order-inputs__grid">
+      <div class="custom-order-inputs__intro" data-v2-reveal>
+        <p class="hv2-eyebrow hv2-eyebrow--light">Исходные данные</p>
+        <h2 id="custom-order-inputs-title">Что можно прислать</h2>
+        <p>Не нужно готовить полный комплект документов. Пришлите один или несколько материалов — остальное уточним вместе.</p>
+      </div>
+      <ul class="custom-order-inputs__list" data-v2-reveal>
+        {data.sourceMaterials.map((item) => (
+          <li><strong>{item}</strong></li>
         ))}
       </ul>
     </div>

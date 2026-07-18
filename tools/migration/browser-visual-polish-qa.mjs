@@ -8,6 +8,7 @@ const distRoot = path.join(root, 'dist');
 const contentRoot = path.join(root, 'src', 'content');
 const docsRoot = path.join(root, 'docs', 'migration');
 const proofRoot = path.join(docsRoot, 'visual-polish');
+const ownerProofBase = path.join(root, 'docs', 'design', 'owner-visual-freeze');
 const argv = process.argv.slice(2);
 const hasFlag = (flag) => argv.includes(flag);
 const optionValue = (name) => {
@@ -23,10 +24,22 @@ const options = {
   screenshots: hasFlag('--screenshots') || process.env.V2_VISUAL_QA_SCREENSHOTS === '1',
   smoke: hasFlag('--smoke'),
   headful: hasFlag('--headful'),
+  ownerFreezePhase: (optionValue('--owner-freeze') || '').trim().toLowerCase(),
   externalOrigin: optionValue('--origin').trim().replace(/\/$/, ''),
   routeValues: optionValue('--routes').split(',').map((value) => value.trim()).filter(Boolean),
   viewportValues: optionValue('--viewports').split(',').map((value) => value.trim()).filter(Boolean)
 };
+options.ownerFiles = optionValue('--owner-files').split(',').map((value) => value.trim()).filter(Boolean);
+options.ownerFreeze = hasFlag('--owner-freeze') || Boolean(options.ownerFreezePhase);
+if (options.ownerFreeze && !['', 'before', 'final', 'mobile'].includes(options.ownerFreezePhase)) {
+  throw new Error(`Unknown --owner-freeze phase: ${options.ownerFreezePhase}. Use before, final or mobile.`);
+}
+if (options.ownerFreeze && !options.ownerFreezePhase) options.ownerFreezePhase = 'final';
+const ownerProofRoot = options.ownerFreezePhase === 'before'
+  ? path.join(ownerProofBase, 'before')
+  : options.ownerFreezePhase === 'mobile'
+    ? path.join(ownerProofBase, 'mobile')
+    : ownerProofBase;
 
 const usage = `
 Visual-polish browser QA (local only)
@@ -39,6 +52,9 @@ Visual-polish browser QA (local only)
 
   node tools/migration/browser-visual-polish-qa.mjs --screenshots
       Run complete QA and additionally create the proof PNG set in docs/migration/visual-polish.
+
+  node tools/migration/browser-visual-polish-qa.mjs --owner-freeze=before|final|mobile
+      Capture only the canonical owner visual-freeze evidence set. Reports stay under .astro.
 
   node tools/migration/browser-visual-polish-qa.mjs --origin=http://127.0.0.1:4321
       Run against an already running local Astro server instead of ./dist.
@@ -160,6 +176,7 @@ const topiaryRoute = routeOr('/topiarii/', 'direction');
 const furnitureRoute = routeOr('/ulichnaya-mebel/', 'direction');
 const fencesRoute = routeOr('/ograzhdeniya-i-zabory/', 'direction');
 const swingsCategoryRoute = routeOr('/ulichnaya-mebel/kacheli/', 'category');
+const benchesCategoryRoute = routeOr('/ulichnaya-mebel/lavochki-i-skameyki/', 'category');
 const swingProductRoute = routeOr('/ulichnaya-mebel/kacheli/kachel-duga/', 'product');
 const premiumPortalProductRoute = routeOr('/ulichnaya-mebel/kacheli/kachel-portal/', 'product');
 const standardBenchProductRoute = routeOr(
@@ -383,6 +400,70 @@ const screenshotPlan = [
   { file: 'vacancies-desktop.png', route: vacanciesRoute, viewport: '1440x900' }
 ];
 
+const ownerDesktopScreenshotPlan = [
+  { file: 'home-first-screen-1440.png', route: homeRoute, viewport: '1440x900' },
+  { file: 'home-final-screen-1440.png', route: homeRoute, viewport: '1440x900', action: 'footer' },
+  { file: 'home-final-screen-1920.png', route: homeRoute, viewport: '1920x1080', action: 'footer' },
+  { file: 'street-furniture-entry.png', route: furnitureRoute, viewport: '1440x900' },
+  { file: 'fences-entry.png', route: fencesRoute, viewport: '1440x900' },
+  { file: 'category-benches-entry.png', route: benchesCategoryRoute, viewport: '1440x900' },
+  { file: 'standard-product-entry.png', route: standardBenchProductRoute, viewport: '1440x900' },
+  { file: 'portal-entry-1440.png', route: premiumPortalProductRoute, viewport: '1440x900' },
+  { file: 'portal-entry-1920.png', route: premiumPortalProductRoute, viewport: '1920x1080' },
+  { file: 'portal-scrolled-hero.png', route: premiumPortalProductRoute, viewport: '1440x900', action: 'hero-mid' },
+  { file: 'portal-gallery.png', route: premiumPortalProductRoute, viewport: '1440x900', action: 'selector', selector: '#premium-gallery' },
+  { file: 'portal-adaptation.png', route: premiumPortalProductRoute, viewport: '1440x900', action: 'selector', selector: '#premium-adaptation' },
+  { file: 'portal-constructive.png', route: premiumPortalProductRoute, viewport: '1440x900', action: 'selector', selector: '#premium-technical' },
+  { file: 'canopies-entry.png', route: canopiesRoute, viewport: '1440x900' },
+  { file: 'topiary-entry.png', route: topiaryRoute, viewport: '1440x900' },
+  { file: 'topiary-grid.png', route: topiaryRoute, viewport: '1440x900', action: 'selector', selector: '#direction-types' },
+  { file: 'metalworks-entry.png', route: metalworksRoute, viewport: '1440x900' },
+  { file: 'metalworks-content.png', route: metalworksRoute, viewport: '1440x900', action: 'selector', selector: '#engineering-scope' },
+  { file: 'landscaping-content.png', route: landscapingRoute, viewport: '1440x900', action: 'selector', selector: '#landscaping-scope' },
+  { file: 'construction-content.png', route: constructionRoute, viewport: '1440x900', action: 'selector', selector: '#construction-scope' },
+  { file: 'custom-order-entry.png', route: customOrderRoute, viewport: '1440x900' },
+  { file: 'custom-order-directions.png', route: customOrderRoute, viewport: '1440x900', action: 'selector', selector: '.custom-order-directions' },
+  { file: 'projects-entry.png', route: projectsRoute, viewport: '1440x900' },
+  { file: 'projects-grid.png', route: projectsRoute, viewport: '1440x900', action: 'selector', selector: '.v2-project-archive__visual-grid' },
+  { file: 'company-entry.png', route: companyRoute, viewport: '1440x900' },
+  { file: 'contacts-entry.png', route: contactsRoute, viewport: '1440x900', waitForMap: true },
+  { file: 'vacancies-entry.png', route: vacanciesRoute, viewport: '1440x900' },
+  { file: 'sticky-navigation.png', route: metalworksRoute, viewport: '1440x900', action: 'selector', selector: '#engineering-scope' },
+  { file: 'footer-desktop.png', route: homeRoute, viewport: '1440x900', action: 'footer' },
+  { file: 'footer-mobile.png', route: homeRoute, viewport: '390x844', action: 'footer' },
+  { file: 'typography-editorial-section.png', route: companyRoute, viewport: '1440x900', action: 'selector', selector: '#company-intro-title' },
+  { file: 'royal-blue-white-section.png', route: premiumPortalProductRoute, viewport: '1440x900', action: 'selector', selector: '#premium-applications' },
+  { file: 'hero-handoff-mid-scroll.png', route: homeRoute, viewport: '1440x900', action: 'hero-mid' }
+];
+
+const ownerMobileScreenshotPlan = [
+  ['home-390.png', homeRoute],
+  ['street-furniture-390.png', furnitureRoute],
+  ['fences-390.png', fencesRoute],
+  ['category-benches-390.png', benchesCategoryRoute],
+  ['standard-product-390.png', standardBenchProductRoute],
+  ['portal-390.png', premiumPortalProductRoute],
+  ['canopies-390.png', canopiesRoute],
+  ['topiary-390.png', topiaryRoute],
+  ['metalworks-390.png', metalworksRoute],
+  ['landscaping-390.png', landscapingRoute],
+  ['construction-390.png', constructionRoute],
+  ['custom-order-390.png', customOrderRoute],
+  ['projects-390.png', projectsRoute],
+  ['company-390.png', companyRoute],
+  ['contacts-390.png', contactsRoute],
+  ['vacancies-390.png', vacanciesRoute]
+].map(([file, route]) => ({ file, route, viewport: '390x844', waitForMap: route === contactsRoute }));
+
+const ownerScreenshotPlanBase = options.ownerFreezePhase === 'mobile'
+  ? ownerMobileScreenshotPlan
+  : ownerDesktopScreenshotPlan;
+const unknownOwnerFiles = options.ownerFiles.filter((file) => !ownerScreenshotPlanBase.some((item) => item.file === file));
+if (unknownOwnerFiles.length) throw new Error(`Unknown --owner-files value(s): ${unknownOwnerFiles.join(', ')}`);
+const ownerScreenshotPlan = options.ownerFiles.length
+  ? ownerScreenshotPlanBase.filter((item) => options.ownerFiles.includes(item.file))
+  : ownerScreenshotPlanBase;
+
 if (options.plan) {
   process.stdout.write(`${JSON.stringify({
     canonicalRoutes: canonicalRoutes.length,
@@ -402,13 +483,13 @@ if (options.plan) {
 }
 
 const smokeRoot = path.join(root, '.astro');
-const reportPath = options.smoke || targetedMode
+const reportPath = options.smoke || targetedMode || options.ownerFreeze
   ? path.join(smokeRoot, 'browser-visual-polish-smoke.json')
   : path.join(docsRoot, 'v2-visual-polish-browser-qa.json');
-const scrollAuditPath = options.smoke || targetedMode
+const scrollAuditPath = options.smoke || targetedMode || options.ownerFreeze
   ? path.join(smokeRoot, 'v2-scroll-navigation-audit-smoke.csv')
   : path.join(docsRoot, 'v2-scroll-navigation-audit.csv');
-const motionAuditPath = options.smoke || targetedMode
+const motionAuditPath = options.smoke || targetedMode || options.ownerFreeze
   ? path.join(smokeRoot, 'v2-motion-audit-smoke.csv')
   : path.join(docsRoot, 'v2-motion-audit.csv');
 const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
@@ -604,7 +685,7 @@ const motionRows = [];
 const report = {
   startedAt: new Date().toISOString(),
   origin,
-  mode: targetedMode ? 'targeted' : options.smoke ? 'smoke' : 'full',
+  mode: options.ownerFreeze ? `owner-freeze-${options.ownerFreezePhase}` : targetedMode ? 'targeted' : options.smoke ? 'smoke' : 'full',
   screenshotsEnabled: options.screenshots,
   counts: {
     canonicalRoutes: canonicalRoutes.length,
@@ -894,19 +975,23 @@ const pageDiagnostics = async (viewportName = '') => evaluate(`(() => {
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     return style.position !== 'fixed' && (rect.left < -1 || rect.right > root.clientWidth + 1);
-  }).slice(0, 20).map((element) => {
+  }).slice(0, 60).map((element) => {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     return {
       tag: element.tagName,
       id: element.id || '',
       className: String(element.className || ''),
+      text: (element.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 96),
       left: Math.round(rect.left),
       right: Math.round(rect.right),
       width: Math.round(rect.width),
       scrollWidth: element.scrollWidth,
       clientWidth: element.clientWidth,
       overflowX: style.overflowX,
+      fontSize: style.fontSize,
+      minWidth: style.minWidth,
+      gridTemplateColumns: style.gridTemplateColumns,
       clippedByAncestor: clippedInline(element)
     };
   });
@@ -1729,6 +1814,9 @@ const runFunctionalInteractionAudits = async () => {
     const swipe = await evaluate(`(async () => {
       const stage = document.querySelector('.v2-product-gallery__stage');
       const status = document.querySelector('[data-v2-gallery-status]');
+      stage?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 140));
       const before = status?.textContent.trim() || '';
       const scrollBefore = scrollY;
       stage?.dispatchEvent(new PointerEvent('pointerdown', {
@@ -2019,6 +2107,7 @@ const captureViewport = async (target) => {
     if (!map?.ready) throw new Error(`Yandex map did not become ready for ${target.file}: ${JSON.stringify(map)}.`);
   }
   await prepareProofPage();
+  let geometry = null;
   if (target.action === 'footer') {
     await evaluate(`(async () => {
       document.documentElement.style.scrollBehavior = 'auto';
@@ -2027,6 +2116,74 @@ const captureViewport = async (target) => {
       await new Promise((resolve) => setTimeout(resolve, 220));
       return scrollY;
     })()`);
+    geometry = await evaluate(`(() => {
+      const footer = document.querySelector('.hv2-footer');
+      const ctaCandidates = [...document.querySelectorAll('.hv2-contact, .v2-direct-contact, .custom-order-contact, .practical-contacts__cta')];
+      const cta = ctaCandidates.at(-1) || null;
+      const grid = footer?.querySelector('.hv2-footer__grid');
+      const legal = footer?.querySelector('.hv2-footer__legal');
+      const metrics = (element) => element ? {
+        height: Math.round(element.getBoundingClientRect().height),
+        minHeight: getComputedStyle(element).minHeight,
+        paddingTop: getComputedStyle(element).paddingTop,
+        paddingBottom: getComputedStyle(element).paddingBottom
+      } : null;
+      return {
+        viewportHeight: innerHeight,
+        cta: metrics(cta),
+        footer: metrics(footer),
+        grid: metrics(grid),
+        legal: metrics(legal),
+        combinedHeight: Math.round((cta?.getBoundingClientRect().height || 0) + (footer?.getBoundingClientRect().height || 0))
+      };
+    })()`);
+  } else if (target.action === 'hero-mid') {
+    const moved = await evaluate(`(async () => {
+      const hero = document.querySelector('[data-v2-hero-scroll]');
+      if (!hero) return null;
+      const rect = hero.getBoundingClientRect();
+      const top = scrollY + rect.top;
+      window.scrollTo({ top: top + rect.height * 0.52, left: 0, behavior: 'instant' });
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 260));
+      return { scrollY, heroTop: top, heroHeight: rect.height };
+    })()`);
+    if (!moved) throw new Error(`Hero scroll target is missing for ${target.file}.`);
+  } else if (target.action === 'selector') {
+    const moved = await evaluate(`(async () => {
+      const element = document.querySelector(${JSON.stringify(target.selector || '')});
+      if (!element) return null;
+      const rect = element.getBoundingClientRect();
+      const offset = Math.max(84, Math.min(118, innerHeight * 0.11));
+      window.scrollTo({ top: Math.max(0, scrollY + rect.top - offset), left: 0, behavior: 'instant' });
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 260));
+      return { scrollY, selector: ${JSON.stringify(target.selector || '')} };
+    })()`);
+    if (!moved) throw new Error(`Selector ${target.selector} is missing for ${target.file}.`);
+  } else if (target.action === 'gallery-second') {
+    const moved = await evaluate(`(async () => {
+      const section = document.querySelector(${JSON.stringify(target.selector || '')});
+      const thumb = section?.querySelector('[data-v2-gallery-thumb][data-v2-gallery-index="1"]');
+      if (!section || !thumb) return null;
+      const rect = section.getBoundingClientRect();
+      const offset = Math.max(84, Math.min(118, innerHeight * 0.11));
+      window.scrollTo({ top: Math.max(0, scrollY + rect.top - offset), left: 0, behavior: 'instant' });
+      thumb.click();
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const image = section.querySelector('[data-v2-gallery-main]');
+      if (image && !image.complete) await Promise.race([
+        new Promise((resolve) => {
+          image.addEventListener('load', resolve, { once: true });
+          image.addEventListener('error', resolve, { once: true });
+        }),
+        new Promise((resolve) => setTimeout(resolve, 4000))
+      ]);
+      if (image?.decode && image.naturalWidth > 0) await image.decode().catch(() => {});
+      await new Promise((resolve) => setTimeout(resolve, 180));
+      return { current: section.querySelector('[data-v2-product-gallery]')?.dataset.v2GalleryCurrent || '' };
+    })()`);
+    if (!moved || moved.current !== '1') throw new Error(`Contextual gallery image did not open for ${target.file}.`);
   } else if (target.action === 'product-fullscreen') {
     const opened = await evaluate(`(async () => {
       const opener = document.querySelector('[data-v2-gallery-open]');
@@ -2050,21 +2207,114 @@ const captureViewport = async (target) => {
     const top = await evaluate('scrollY');
     if (Math.abs(top) > 2) throw new Error(`${target.file} is not at scrollY=0 (${top}).`);
   }
-  const screenshot = await cdp.send('Page.captureScreenshot', {
+  if (!geometry) {
+    geometry = await evaluate(`(() => {
+      const metrics = (selector) => {
+        if (!selector) return null;
+        const element = document.querySelector(selector);
+        if (!element) return null;
+        const rect = element.getBoundingClientRect();
+        return {
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width),
+          top: Math.round(rect.top),
+          bottom: Math.round(rect.bottom),
+          height: Math.round(rect.height),
+          transform: getComputedStyle(element).transform
+        };
+      };
+      return {
+        viewportWidth: innerWidth,
+        viewportHeight: innerHeight,
+        screenWidth: screen.width,
+        documentWidth: Math.max(document.documentElement.scrollWidth, document.body?.scrollWidth || 0),
+        viewportMeta: document.querySelector('meta[name="viewport"]')?.getAttribute('content') || '',
+        visualViewport: window.visualViewport ? {
+          width: Math.round(window.visualViewport.width),
+          height: Math.round(window.visualViewport.height),
+          scale: Number(window.visualViewport.scale.toFixed(3))
+        } : null,
+        widthCandidates: Array.from(document.querySelectorAll('body *')).map((element) => {
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return {
+            element: element.tagName.toLowerCase()
+              + (element.id ? '#' + element.id : '')
+              + (element.classList.length ? '.' + Array.from(element.classList).slice(0, 3).join('.') : ''),
+            width: Math.round(rect.width),
+            scrollWidth: element.scrollWidth,
+            clientWidth: element.clientWidth,
+            minWidth: style.minWidth,
+            whiteSpace: style.whiteSpace,
+            gridTemplateColumns: style.gridTemplateColumns
+          };
+        }).filter((entry) => entry.scrollWidth > screen.width + 1 || entry.width > screen.width + 1)
+          .sort((a, b) => Math.max(b.scrollWidth, b.width) - Math.max(a.scrollWidth, a.width))
+          .slice(0, 12),
+        scrollY: Math.round(scrollY),
+        header: metrics('.hv2-header'),
+        headerBrand: (() => {
+          const element = document.querySelector('.hv2-header__brand');
+          const image = element?.querySelector('img');
+          return element ? {
+            ...metrics('.hv2-header__brand'),
+            opacity: getComputedStyle(element).opacity,
+            visibility: getComputedStyle(element).visibility,
+            imageOpacity: image ? getComputedStyle(image).opacity : null,
+            imageFilter: image ? getComputedStyle(image).filter : null,
+            imageNaturalWidth: image?.naturalWidth || 0
+          } : null;
+        })(),
+        breadcrumbs: metrics('.v2-breadcrumbs-bar'),
+        hero: metrics('[data-v2-hero-scroll]'),
+        heroGrid: metrics('[data-v2-hero-scroll] .v2-catalog-hero__grid'),
+        heroCopy: metrics('[data-v2-hero-scroll-copy]'),
+        heroMedia: metrics('[data-v2-hero-scroll-media]'),
+        target: metrics(${JSON.stringify(target.selector || '')}),
+        galleryComposition: (() => {
+          const selector = ${JSON.stringify(target.selector || '')};
+          if (!selector) return null;
+          const section = document.querySelector(selector);
+          const heading = section?.querySelector('.v2-section-heading');
+          const thumbs = section?.querySelector('.v2-product-gallery__thumbs');
+          const stage = section?.querySelector('.v2-product-gallery__stage');
+          if (!section || !heading || !stage) return null;
+          const top = heading.getBoundingClientRect().top;
+          const bottom = (thumbs || stage).getBoundingClientRect().bottom;
+          return {
+            height: Math.round(bottom - top),
+            viewportRatio: Number(((bottom - top) / innerHeight).toFixed(3)),
+            stageHeight: Math.round(stage.getBoundingClientRect().height),
+            hasThumbs: Boolean(thumbs)
+          };
+        })()
+      };
+    })()`);
+  }
+  const screenshotOptions = {
     format: 'png',
     fromSurface: true,
     captureBeyondViewport: false
-  });
+  };
+  if (options.ownerFreeze) {
+    // The first headless surface read primes fixed/composited layers on image-
+    // heavy pages. Discard it and keep the stable second frame as proof.
+    await cdp.send('Page.captureScreenshot', screenshotOptions);
+    await delay(140);
+  }
+  const screenshot = await cdp.send('Page.captureScreenshot', screenshotOptions);
   const buffer = Buffer.from(screenshot.data, 'base64');
   if (buffer.length < 10_000) throw new Error(`${target.file} is unexpectedly small (${buffer.length} bytes).`);
-  const destination = path.join(proofRoot, target.file);
+  const destination = path.join(target.outputRoot || proofRoot, target.file);
   await writeFile(destination, buffer);
   report.screenshots.push({
     file: target.file,
     route: target.route,
     viewport: target.viewport,
     action: target.action || 'top',
-    bytes: buffer.length
+    bytes: buffer.length,
+    geometry
   });
 };
 
@@ -2177,6 +2427,36 @@ try {
     localNetworkErrors.push({ route: currentRoute, kind: 'loading-failed', errorText, type, requestId, url });
   });
 
+  if (options.ownerFreeze) {
+    progress(`capturing ${ownerScreenshotPlan.length} owner-freeze screenshots (${options.ownerFreezePhase})`);
+    await mkdir(ownerProofRoot, { recursive: true });
+    for (const target of ownerScreenshotPlan) {
+      try {
+        await captureViewport({ ...target, outputRoot: ownerProofRoot });
+        progress(`owner screenshot ${target.file}`);
+      } catch (error) {
+        fail('owner-screenshot', String(error), target);
+      }
+    }
+    for (const error of runtimeErrors) fail('console-runtime', error.text, error);
+    for (const error of localNetworkErrors) fail('local-network', error.errorText || `HTTP ${error.status}`, error);
+    report.screenshotBytes = report.screenshots.reduce((sum, item) => sum + item.bytes, 0);
+    report.finishedAt = new Date().toISOString();
+    report.result = failures.length ? 'fail' : 'pass';
+    await writeReports();
+    process.stdout.write(`${JSON.stringify({
+      result: report.result,
+      phase: options.ownerFreezePhase,
+      screenshots: report.screenshots.length,
+      screenshotBytes: report.screenshotBytes,
+      outputRoot: ownerProofRoot,
+      runtimeErrors: runtimeErrors.length,
+      localNetworkErrors: localNetworkErrors.length,
+      failures: failures.length,
+      reportPath
+    }, null, 2)}\n`);
+    if (failures.length) process.exitCode = 1;
+  } else {
   if (!targetedMode) {
     await auditHomeVideoInteraction('home-video-mobile', '390x844', 'mobile-poster');
     await auditHomeVideoInteraction('home-video-desktop', '1920x1080', 'desktop-video');
@@ -2408,6 +2688,7 @@ try {
     motionAuditPath
   }, null, 2)}\n`);
   if (failures.length) process.exitCode = 1;
+  }
 } catch (error) {
   report.finishedAt = new Date().toISOString();
   report.result = 'fail';

@@ -309,3 +309,65 @@ Content/admin изменения ограничены presentation switch: яв�
 ## 11. Итог
 
 Публичная визуальная система, Standard/Premium product rendering, Portal representative case, CMS presentation schema/API/export/browser round-trip, responsive/motion/footer behavior и canonical route integrity реализованы и проверены на одном production build. Полный visual run и admin browser QA завершены без runtime, local-network и assertion failures. Push, deployment и изменение публичного сайта в рамках этой работы не выполнялись.
+
+## 12. Owner visual freeze v2 — 2026-07-18
+
+Этот проход является последней крупной визуальной итерацией перед разработкой новой админки. Он не меняет product model, records, schema или production routing: работа ограничена layout, typography, color, media composition, motion handoff и плотностью существующих production pages.
+
+### 12.1. Research gate
+
+Существующие design/design-lab материалы дали конкретные ответы на 8 из 10 Skanska-вопросов. Дополнительное исследование было ограничено официальными Home и Construction Skanska и использовано только для уточнения движения hero layers и естественного закрытия hero следующей белой секцией. Итоговый mapping «наблюдение → решение СМУ-1 → route/component → acceptance» заморожен в `docs/design/SKANSKA_REFERENCE_DECISIONS.md`; новые компании, чужие assets, HTML/CSS и тексты не исследовались и не копировались.
+
+### 12.2. Реальные before/after изменения
+
+| Область | До freeze | После freeze |
+|---|---|---|
+| Typography и palette | Микротекст, слабые lead/body уровни, pale-blue полотна и последовательные navy screens | Body/lead/statements имеют уверенную B2B-иерархию; white доминирует, royal blue работает как сильный акцент, navy/near-black разделены белыми или photographic паузами |
+| Header, sticky nav, buttons | Смешение copy с прозрачным Header, слабый active, мелкая local navigation | Контекстный royal/white logo, читаемый active, 15–17 px semibold sticky nav с 3 px underline и корректным offset; royal primary и outline secondary без декоративных glyph |
+| Final CTA + Footer | Обрезанный CTA heading, рыхлые колонки, mobile address tower | CTA 495 px + Footer 405 px = 900 px на 1440×900; heading/actions/contacts/footer/legal видимы; mobile natural flow и legal links без clipping |
+| Home и catalog | Незавершённый hero handoff, pale entry canvases, слабые cards | Раздельный copy/media lag, white/royal rhythm; Street Furniture white/blue contain split, Fences contextual cover split, filled/sparse/no-media categories уплотнены, cards целиком кликабельны |
+| Standard product | Высокая media-zone, светло-голубые полосы, text towers и пустые cells | Компактный белый product first-screen с render, H1, lead, price, CTA, controls/thumbnails; параметры и technical content без fake engineering narrative |
+| Premium Portal | Тонированная media, разрозненная gallery, text/header overlap, длинные пустые rows | Цельная navy copy panel + neutral contain render; независимый media lag; gallery 680 px с stage/controls/counter/thumbs; application royal/white, adaptation/variants/technical компактны |
+| Directions | Узкие copy columns, хаотичные grids, пустые proof cells и oversized sections | Canopies/Topiary split heroes, deterministic Topiary 4×2 grid с royal reference tile; Metalworks/Landscaping/Construction proof, scope, brief и related blocks уплотнены без text towers |
+| Custom Order и practical pages | Неверный порядок, дублирующая source-table, giant gaps; поздние projects/contacts/vacancies | Literal flow hero → changes → inputs → directions → examples → CTA; один royal source block; Projects получают раннюю two-column proof grid; Company сохраняет два объекта; contacts/vacancies подняты выше |
+
+### 12.3. Дефекты, найденные после первой съёмки
+
+Первый PNG не считался финальным. После открытия evidence были исправлены и пересняты:
+
+- обрезанный Final CTA heading и mobile Footer address tower;
+- hero-copy, попадавший под прозрачный Header в середине handoff;
+- одиночная строка «и» и clipped CTA на Street Furniture;
+- ложная пустая media-half no-media category;
+- Portal active blue-on-blue и contextual gallery passport;
+- overlap/избыточная высота Topiary grid и related-card copy;
+- пустые Custom Order cells, clipped preceding copy и неверный нижний padding royal block;
+- пустая треть related Projects и перенос «Металлоконструкции» на одну букву;
+- mobile Canopies/Topiary text towers, clipped Metalworks H1, лишняя no-media height и Projects media overflow;
+- финальные 320 px overflow на Premium adaptation, project long-word H1 и 12-column Custom Order gaps.
+
+Для последних mobile corrections повторно сняты и открыты Portal и Custom Order. Product gallery swipe audit также исправлен: stage стабилизируется в viewport после same-route reload, горизонтальный жест меняет кадр, вертикальный — нет, document scroll остаётся неизменным.
+
+### 12.4. Visual acceptance и geometry
+
+- 33/33 desktop evidence и 16/16 mobile 390×844 evidence открыты вручную; затронутые frames после corrections пересняты и открыты повторно. PNG остаются локальным evidence и в commit не входят.
+- Major direct-load heroes занимают viewport без пикселей следующей секции; header/content overlap = 0.
+- Portal gallery composition: 680/900 px = 0.756 viewport; measured content sections находятся в пределах 188–985 px, причём верхние значения относятся к реальному proof/media content и остаются ниже 1.1 viewport.
+- Final screen: 495 + 405 = 900 px на 1440×900; на 1920×1080 весь CTA/Footer/legal также видим.
+- Targeted 320×700 regression по пяти исправленным routes: failures 0; финальный full responsive audit включает 320, 390, 768, 1024, 1280, 1440, 1706, 1920 и 200% reflow.
+
+Evidence: `docs/design/owner-visual-freeze/`. Канонические решения и статусы: `docs/design/SKANSKA_REFERENCE_DECISIONS.md` и `docs/design/FINAL_OWNER_VISUAL_FREEZE_CHECKLIST.md`.
+
+### 12.5. Финальный QA и preservation
+
+| Проверка | Результат |
+|---|---:|
+| `npm run check` | 186 files; 0 errors; 0 warnings; 33 existing hints |
+| `npm run build` | 227 pages |
+| `npm run qa:final:static` | 38/38; 107 routes; 9193 links; 2285 media; 59 Standard / 9 Premium |
+| `npm run test:admin-import` | 22/22 |
+| `npm run qa:admin-browser` | 29/29; production/git state unchanged |
+| Focused public browser QA | 17/17; runtime/network 0/0 |
+| Full browser QA | 107 direct, 24 clicks, 270 responsive, 124 motion, 22 Footer, 7 functional; failures/runtime/network 0/0/0 |
+
+`git diff` по `src/content`, `src/content.config.ts`, `src/pages/admin`, `tools/admin-api` и `public/assets` пуст. Поэтому records, schema, Standard/Premium classification, admin validation/import-export, исходные media, URLs, canonical/sitemap и deployment configuration сохранены. `.astro`, `dist`, `docs/migration`, PNG, logs и Design Lab artifacts исключены из task commit. Push и deployment не выполнялись; публичный сайт не изменён.
