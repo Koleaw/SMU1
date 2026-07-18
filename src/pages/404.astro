@@ -1,13 +1,19 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import { withBase } from '../utils/withBase';
+import CatalogV2Layout from '../components/v2/CatalogV2Layout.astro';
+import V2NotFoundPage from '../components/v2/not-found/V2NotFoundPage.astro';
 ---
-<BaseLayout title="Страница не найдена — СМУ-1" description="Запрашиваемая страница не найдена.">
-  <section class="section">
-    <div class="container card">
-      <h1>Страница не найдена</h1>
-      <p class="lead">Проверьте адрес или перейдите на главную страницу.</p>
-      <a class="btn btn-primary" href={withBase('/')}>На главную</a>
-    </div>
-  </section>
-</BaseLayout>
+
+<CatalogV2Layout
+  title="Страница не найдена — СМУ-1"
+  description="Запрошенная страница не найдена. Перейдите на главную, к направлениям или свяжитесь с СМУ-1."
+  canonicalPath=""
+  currentPath={Astro.url.pathname}
+  pageKind="section"
+  contactHref="#contact"
+  mobileCtaLabel="Связаться"
+  headerCtaLabel="Связаться"
+  noCanonical
+  noindex
+>
+  <V2NotFoundPage />
+</CatalogV2Layout>

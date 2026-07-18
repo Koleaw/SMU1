@@ -1,0 +1,496 @@
+---
+import { withBase } from '../../utils/withBase';
+import home from '../../content/static-pages/home.json';
+import customOrder from '../../content/static-pages/custom-order.json';
+import bench from '../../content/products/skamya-loft.json';
+import bin from '../../content/products/urna-kolonna.json';
+import canopy from '../../content/products/naves-terra.json';
+import embankment from '../../content/projects/blagoustroystvo-naberezhnoy-reki-tobol.json';
+import swings from '../../content/projects/gorodskie-kacheli-dlya-obshchestvennyh-territoriy.json';
+import settings from '../../content/site-settings/global.json';
+
+interface Props {
+  system: 'a' | 'b' | 'c';
+}
+
+const { system } = Astro.props as Props;
+const mobileNavId = `dl-mobile-nav-${system}`;
+const path = (value: string) => withBase(value);
+
+const navItems = [
+  { label: 'Каталог', href: '#catalog' },
+  { label: 'Услуги', href: '#services' },
+  { label: 'Объекты', href: '#objects' },
+  { label: 'О компании', href: '#company' },
+  { label: 'Контакты', href: '#contact' }
+];
+
+const catalogCategories = [
+  'Лавочки и скамейки',
+  'Урны',
+  'Вазоны',
+  'Велопарковки',
+  'Качели и перголы',
+  'Навесы'
+];
+
+const productRows = [
+  {
+    title: bin.title,
+    category: 'Урны',
+    description: bin.shortDescription,
+    image: bin.image,
+    materials: bin.materials.slice(0, 2).join(' · '),
+    href: '/ulichnaya-mebel/urny/urna-kolonna/'
+  },
+  {
+    title: canopy.title,
+    category: 'Навесы',
+    description: canopy.shortDescription,
+    image: canopy.image,
+    materials: canopy.materials.slice(0, 2).join(' · '),
+    href: '/ulichnaya-mebel/navesy/naves-terra/'
+  }
+];
+---
+
+<div class="dl-page" data-dl-root data-system={system}>
+  <section class="dl-hero" aria-labelledby={`dl-hero-title-${system}`}>
+    <div class="dl-hero__media" aria-hidden="true">
+      <picture class="dl-hero__poster">
+        <source media="(max-width: 700px)" srcset={path(home.heroMediaPosterMobile)} />
+        <img
+          src={path(home.heroMediaPoster)}
+          alt=""
+          width="1920"
+          height="1080"
+          loading="eager"
+          fetchpriority="high"
+        />
+      </picture>
+      <video
+        class="dl-hero__video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        poster={path(home.heroMediaPoster)}
+        data-dl-hero-video
+      >
+        <source src={path(home.heroMediaVideoMobile)} type="video/mp4" media="(max-width: 700px)" />
+        <source src={path(home.heroMediaVideo)} type="video/mp4" />
+      </video>
+      <div class="dl-hero__veil"></div>
+    </div>
+
+    <header class="dl-header">
+      <div class="dl-shell dl-header__inner">
+        <a class="dl-brand" href={path('/')} aria-label="СМУ-1, на главную">
+          <span class="dl-brand__mark">
+            <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="52" height="52" />
+          </span>
+        </a>
+
+        <nav class="dl-header__nav" aria-label="Основная навигация">
+          {navItems.map((item) => <a href={item.href}>{item.label}</a>)}
+        </nav>
+
+        <a class="dl-button dl-button--header" href="#contact">
+          <span>Получить расчёт</span>
+          <span aria-hidden="true">↗</span>
+        </a>
+
+        <button
+          class="dl-menu-button"
+          type="button"
+          aria-expanded="false"
+          aria-controls={mobileNavId}
+          data-dl-menu-button
+        >
+          Меню
+        </button>
+      </div>
+
+      <nav class="dl-mobile-nav" id={mobileNavId} aria-label="Мобильная навигация" hidden data-dl-mobile-nav>
+        {navItems.map((item) => <a href={item.href}>{item.label}</a>)}
+        <a class="dl-mobile-nav__cta" href="#contact">Получить расчёт <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+
+    <div class="dl-shell dl-hero__content">
+      <div class="dl-hero__copy">
+        <p class="dl-kicker dl-kicker--on-media">СМУ-1 · Курган</p>
+        <h1 id={`dl-hero-title-${system}`}>Изделия, конструкции и благоустройство для городских пространств</h1>
+        <p class="dl-hero__lead">
+          Подбираем формат, изготавливаем под задачу и сопровождаем работы на объекте.
+        </p>
+        <div class="dl-actions">
+          <a class="dl-button dl-button--primary" href="#contact">
+            <span>Получить расчёт</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+          <a class="dl-button dl-button--ghost" href="#objects">Смотреть объекты</a>
+        </div>
+      </div>
+
+      <p class="dl-hero__index" aria-label="Основные направления">
+        <span>Каталог изделий</span>
+        <span>Индивидуальные задачи</span>
+        <span>Работы на объекте</span>
+      </p>
+    </div>
+  </section>
+
+  <main>
+    <section class="dl-section dl-pathways" id="company" aria-labelledby={`dl-pathways-title-${system}`}>
+      <div class="dl-shell">
+        <div class="dl-section-head dl-section-head--split">
+          <div>
+            <p class="dl-kicker">Три сценария</p>
+            <h2 id={`dl-pathways-title-${system}`}>Одна система для разных задач объекта</h2>
+          </div>
+          <p>
+            Типовое изделие можно выбрать быстро. Нестандартную конструкцию — рассчитать по вводным.
+            Комплексную территорию — разобрать по составу работ и этапам.
+          </p>
+        </div>
+
+        <div class="dl-pathways__grid">
+          <article class="dl-pathway dl-pathway--catalog">
+            <div class="dl-pathway__media">
+              <img
+                src={path(bench.gallery[0])}
+                alt="Скамья Лофт в городской среде"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <div class="dl-pathway__body">
+              <p class="dl-pathway__number">01</p>
+              <p class="dl-kicker">Каталог изделий</p>
+              <h3>Выбрать направление и перейти к характеристикам</h3>
+              <p>Предметные изображения, ясные названия, материалы и честный статус цены.</p>
+              <a class="dl-text-link" href="#catalog">Перейти к изделиям <span aria-hidden="true">→</span></a>
+            </div>
+          </article>
+
+          <article class="dl-pathway dl-pathway--custom">
+            <p class="dl-pathway__number">02</p>
+            <p class="dl-kicker">Конструкции на заказ</p>
+            <h3>Отправить вводные для индивидуального решения</h3>
+            <p>{customOrder.heroDescription}</p>
+            <ul class="dl-plain-list">
+              <li>Фото или референс</li>
+              <li>Размеры и привязки</li>
+              <li>Эскиз или техническое задание</li>
+            </ul>
+            <a class="dl-text-link" href="#services">Как строится работа <span aria-hidden="true">→</span></a>
+          </article>
+
+          <article class="dl-pathway dl-pathway--site">
+            <div class="dl-pathway__site-copy">
+              <p class="dl-pathway__number">03</p>
+              <p class="dl-kicker dl-kicker--on-media">Комплексные работы</p>
+              <h3>Собрать территорию из изделий, конструкций и работ на объекте</h3>
+              <p>{embankment.shortDescription}</p>
+              <a class="dl-text-link dl-text-link--on-media" href="#objects">
+                Посмотреть результат <span aria-hidden="true">→</span>
+              </a>
+            </div>
+            <img
+              src={path(embankment.image)}
+              alt="Благоустроенная набережная реки Тобол"
+              loading="lazy"
+              decoding="async"
+            />
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="dl-section dl-catalog" id="catalog" aria-labelledby={`dl-catalog-title-${system}`}>
+      <div class="dl-shell">
+        <div class="dl-section-head dl-section-head--catalog">
+          <div>
+            <p class="dl-kicker">Каталог изделий</p>
+            <h2 id={`dl-catalog-title-${system}`}>Техническая ясность без визуального шума</h2>
+          </div>
+          <a class="dl-text-link" href={path('/ulichnaya-mebel/')}>Весь каталог <span aria-hidden="true">→</span></a>
+        </div>
+
+        <nav class="dl-category-rail" aria-label="Категории каталога">
+          {catalogCategories.map((category, index) => (
+            <a class={index === 0 ? 'is-active' : ''} href={index === 0 ? '#featured-product' : '#product-list'}>
+              {category}
+            </a>
+          ))}
+        </nav>
+
+        <article class="dl-product-feature" id="featured-product">
+          <div class="dl-product-feature__visual">
+            <p class="dl-product-feature__marker">01 / Лавочки и скамейки</p>
+            <img
+              src={path(bench.image)}
+              alt={bench.title}
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+
+          <div class="dl-product-feature__details">
+            <div>
+              <p class="dl-kicker">Лавочки и скамейки</p>
+              <h3>{bench.title}</h3>
+              <p class="dl-product-feature__description">{bench.shortDescription}</p>
+            </div>
+
+            <dl class="dl-specs">
+              <div>
+                <dt>Материалы</dt>
+                <dd>Стальной каркас, деревянное сиденье</dd>
+              </div>
+              <div>
+                <dt>Размеры</dt>
+                <dd>Под размеры объекта</dd>
+              </div>
+              <div>
+                <dt>Покрытие</dt>
+                <dd>Порошковая окраска, цвет по RAL</dd>
+              </div>
+              <div>
+                <dt>Поставка</dt>
+                <dd>Доставка по России</dd>
+              </div>
+            </dl>
+
+            <div class="dl-product-feature__buy">
+              <p><span>Стоимость</span><strong>Цена по запросу</strong></p>
+              <div class="dl-actions dl-actions--compact">
+                <a class="dl-button dl-button--primary" href="#contact">Запросить расчёт</a>
+                <a class="dl-button dl-button--secondary" href={path('/ulichnaya-mebel/lavochki-i-skameyki/skamya-loft/')}>
+                  Подробнее
+                </a>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <div class="dl-product-list" id="product-list">
+          {productRows.map((product, index) => (
+            <article class="dl-product-row">
+              <p class="dl-product-row__number">0{index + 2}</p>
+              <div class="dl-product-row__image">
+                <img src={path(product.image)} alt={product.title} loading="lazy" decoding="async" />
+              </div>
+              <div class="dl-product-row__copy">
+                <p class="dl-kicker">{product.category}</p>
+                <h3>{product.title}</h3>
+                <p>{product.description}</p>
+              </div>
+              <p class="dl-product-row__materials">{product.materials}</p>
+              <p class="dl-product-row__price">Цена по запросу</p>
+              <a class="dl-icon-link" href={path(product.href)} aria-label={`Открыть ${product.title}`}>↗</a>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="dl-section dl-object" id="objects" aria-labelledby={`dl-object-title-${system}`}>
+      <div class="dl-shell">
+        <div class="dl-object__heading">
+          <p class="dl-kicker dl-kicker--on-contrast">Выполненный объект</p>
+          <h2 id={`dl-object-title-${system}`}>{embankment.title}</h2>
+          <p class="dl-object__meta">{embankment.city} · {embankment.year}</p>
+        </div>
+
+        <figure class="dl-object__figure">
+          <img
+            class="dl-object__main-image"
+            src={path(embankment.gallery[0])}
+            alt="Набережная реки Тобол после благоустройства"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption>Пешеходная зона и лестничный участок · Курган, 2023</figcaption>
+        </figure>
+
+        <div class="dl-object__story">
+          <div class="dl-object__summary">
+            <p class="dl-kicker dl-kicker--on-contrast">Задача и результат</p>
+            <p>{embankment.whatWasDone}</p>
+            <a class="dl-text-link dl-text-link--on-contrast" href={path(`/vypolnennye-obekty/${embankment.slug}/`)}>
+              Открыть объект <span aria-hidden="true">→</span>
+            </a>
+          </div>
+
+          <ul class="dl-object__scope" aria-label="Состав работ">
+            <li><span>01</span> Асфальтирование участка</li>
+            <li><span>02</span> Ограждения</li>
+            <li><span>03</span> Лестничный участок</li>
+            <li><span>04</span> Лавочки и урны</li>
+          </ul>
+
+          <img
+            class="dl-object__detail-image"
+            src={path(embankment.image)}
+            alt="Ограждение вдоль набережной реки Тобол"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </div>
+    </section>
+
+    <section class="dl-section dl-service" id="services" aria-labelledby={`dl-service-title-${system}`}>
+      <div class="dl-shell dl-service__grid">
+        <div class="dl-service__intro">
+          <p class="dl-kicker">Проектная услуга</p>
+          <h2 id={`dl-service-title-${system}`}>{customOrder.heroTitle}</h2>
+          <p>{customOrder.heroDescription}</p>
+          <a class="dl-button dl-button--primary" href="#contact">Обсудить задачу <span aria-hidden="true">↗</span></a>
+        </div>
+
+        <figure class="dl-service__media">
+          <img
+            src={path(swings.gallery[3])}
+            alt="Городские качели из металла и дерева на объекте"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption>{swings.title} · {swings.city}, {swings.year}</figcaption>
+        </figure>
+
+        <div class="dl-service__brief">
+          <div>
+            <p class="dl-kicker">Что прислать</p>
+            <ul class="dl-plain-list dl-plain-list--numbered">
+              <li>Фото текущей ситуации</li>
+              <li>Размеры и привязки</li>
+              <li>Эскиз или пример</li>
+              <li>Условия эксплуатации</li>
+            </ul>
+          </div>
+          <div>
+            <p class="dl-kicker">Что получите</p>
+            <p>Рабочий вариант исполнения, уточнённый состав решения, расчёт и срок.</p>
+          </div>
+        </div>
+
+        <ol class="dl-process" aria-label="Этапы работы">
+          <li>
+            <span>01</span>
+            <strong>Разбираем задачу</strong>
+            <p>Проверяем вводные и уточняем недостающие данные.</p>
+          </li>
+          <li>
+            <span>02</span>
+            <strong>Предлагаем исполнение</strong>
+            <p>Согласуем формат, материалы и способ установки.</p>
+          </li>
+          <li>
+            <span>03</span>
+            <strong>Готовим расчёт</strong>
+            <p>Фиксируем состав решения, стоимость и срок.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="dl-final" id="contact" aria-labelledby={`dl-contact-title-${system}`}>
+      <div class="dl-shell dl-final__grid">
+        <p class="dl-kicker dl-kicker--on-contrast">Следующий шаг</p>
+        <h2 id={`dl-contact-title-${system}`}>Пришлите задачу — подготовим рабочий вариант и расчёт</h2>
+        <p>Можно отправить фото, размеры, эскиз, чертёж или краткое описание объекта.</p>
+        <div class="dl-actions">
+          <a class="dl-button dl-button--light" href="https://t.me/smu1build" target="_blank" rel="noopener noreferrer">
+            Написать в Telegram <span aria-hidden="true">↗</span>
+          </a>
+          <a class="dl-button dl-button--contrast-ghost" href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
+            {settings.phonePrimary}
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="dl-footer">
+    <div class="dl-shell dl-footer__grid">
+      <div class="dl-footer__brand">
+        <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="64" height="64" />
+        <p>{settings.companyName}</p>
+        <small>Курган · Изделия, конструкции и работы на объектах</small>
+      </div>
+
+      <nav class="dl-footer__nav" aria-label="Навигация в подвале">
+        {navItems.map((item) => <a href={item.href}>{item.label}</a>)}
+      </nav>
+
+      <div class="dl-footer__contacts">
+        <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>{settings.phonePrimary}</a>
+        <a href={`mailto:${settings.email}`}>{settings.email}</a>
+        <a href={settings.telegram} target="_blank" rel="noopener noreferrer">{settings.telegramLabel}</a>
+      </div>
+    </div>
+    <div class="dl-shell dl-footer__legal">
+      <small>© {settings.companyName}, 2026</small>
+      <small>Информация на сайте не является публичной офертой.</small>
+    </div>
+  </footer>
+</div>
+
+<script>
+  const initDesignLabPage = () => {
+    document.querySelectorAll('[data-dl-root]').forEach((root) => {
+      if (!(root instanceof HTMLElement) || root.dataset.ready === 'true') return;
+
+      const button = root.querySelector('[data-dl-menu-button]');
+      const nav = root.querySelector('[data-dl-mobile-nav]');
+
+      if (button instanceof HTMLButtonElement && nav instanceof HTMLElement) {
+        const setMenuState = (open: boolean) => {
+          button.setAttribute('aria-expanded', String(open));
+          nav.hidden = !open;
+          root.classList.toggle('is-menu-open', open);
+        };
+
+        button.addEventListener('click', () => {
+          setMenuState(button.getAttribute('aria-expanded') !== 'true');
+        });
+
+        nav.querySelectorAll('a').forEach((link) => {
+          link.addEventListener('click', () => setMenuState(false));
+        });
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') setMenuState(false);
+        });
+      }
+
+      const video = root.querySelector('[data-dl-hero-video]');
+      const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+      if (video instanceof HTMLVideoElement) {
+        const syncMotionPreference = () => {
+          if (motionQuery.matches) {
+            video.pause();
+            return;
+          }
+
+          video.muted = true;
+          const playPromise = video.play();
+          if (playPromise) playPromise.catch(() => undefined);
+        };
+
+        syncMotionPreference();
+        motionQuery.addEventListener?.('change', syncMotionPreference);
+      }
+
+      root.dataset.ready = 'true';
+    });
+  };
+
+  initDesignLabPage();
+  document.addEventListener('astro:page-load', initDesignLabPage);
+</script>

@@ -1,0 +1,33 @@
+---
+import { getCollection } from 'astro:content';
+import PracticalV2Layout from '../../../../components/v2/practical/PracticalV2Layout.astro';
+import V2CompanyPage from '../../../../components/v2/practical/V2CompanyPage.astro';
+import { loadPublishedV2ProjectPresentations } from '../../../../components/v2/projects/projectV2Data';
+
+const currentPath = '/design-lab/v2/o-nas/';
+const page = (await getCollection('static-pages')).find(({ data }) => data.slug === 'o-nas' && data.isActive !== false)?.data;
+if (!page) throw new Error('Company V2 requires the active o-nas static-page record.');
+
+const projectOrder = [
+  'kompleks-rabot-na-proizvodstvennoy-territorii',
+  'blagoustroystvo-naberezhnoy-reki-tobol',
+];
+const publishedProjects = await loadPublishedV2ProjectPresentations();
+const projects = projectOrder
+  .map((slug) => publishedProjects.find((item) => item.project.slug === slug))
+  .filter((item): item is NonNullable<typeof item> => Boolean(item));
+const ogImage = projects[0]?.publicGallery[0]?.src ?? projects[0]?.detailHeroMedia?.src;
+---
+
+<PracticalV2Layout
+  title={page.seoTitle}
+  description={page.seoDescription}
+  canonicalPath="/o-nas/"
+  currentPath={currentPath}
+  ogImage={ogImage}
+  kind="company"
+  contactHref="#contact"
+  ctaLabel="Получить расчёт"
+>
+  <V2CompanyPage page={page} projects={projects} />
+</PracticalV2Layout>

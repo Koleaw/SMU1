@@ -12,18 +12,21 @@ type Props = {
 };
 
 const { title, href, images, meta = '', workType = '', description = '' } = Astro.props;
-const hasImages = images.length > 0;
-const hasMultipleImages = images.length > 1;
+// A listing card is only a preview. Limiting it prevents a large project gallery
+// from creating dozens of full-size image nodes on the listing page.
+const cardImages = images.slice(0, 6);
+const hasImages = cardImages.length > 0;
+const hasMultipleImages = cardImages.length > 1;
 ---
 
 <article class="object-list-card object-case-card" data-object-card data-href={href} tabindex="0">
   <div class="object-card-carousel" data-object-carousel data-autoplay="5200" aria-label={`Фото объекта: ${title}`}>
     <div class="object-card-carousel__track">
       {hasImages ? (
-        images.map((image, index) => (
+        cardImages.map((image, index) => (
           <figure class={`object-card-carousel__slide ${index === 0 ? 'is-active' : ''}`} data-carousel-slide>
-            <img class="object-media-bg" src={withBase(image.src)} alt="" loading="lazy" aria-hidden="true" />
-            <img class="object-media-fg" src={withBase(image.src)} alt={image.alt || title} loading="lazy" />
+            <img class="object-media-bg" src={withBase(image.src)} alt="" loading="lazy" decoding="async" aria-hidden="true" />
+            <img class="object-media-fg" src={withBase(image.src)} alt={image.alt || title} loading="lazy" decoding="async" />
           </figure>
         ))
       ) : (
@@ -42,7 +45,7 @@ const hasMultipleImages = images.length > 1;
           <span aria-hidden="true">›</span>
         </button>
         <div class="object-carousel-dots" aria-label="Фото объекта">
-          {images.map((_, index) => (
+          {cardImages.map((_, index) => (
             <button
               class={`object-carousel-dot ${index === 0 ? 'is-active' : ''}`}
               type="button"

@@ -1,33 +1,20 @@
 ---
-import { getCollection } from 'astro:content';
-import BaseLayout from '../layouts/BaseLayout.astro';
-import Hero from '../components/Hero.astro';
-import Breadcrumbs from '../components/Breadcrumbs.astro';
-import DirectContactBlock from '../components/DirectContactBlock.astro';
-import PageBlocksRenderer from '../components/PageBlocksRenderer.astro';
-import { withBase } from '../utils/withBase';
+import CatalogV2Layout from '../components/v2/CatalogV2Layout.astro';
+import CustomOrderV2Page from '../components/v2/custom-order/CustomOrderV2Page.astro';
+import { loadCustomOrderV2Data } from '../components/v2/custom-order/customOrderV2Data';
 
-const page = (await getCollection('static-pages')).find(({ data }) => data.slug === 'custom-order')?.data;
-
-if (!page) {
-  throw new Error('static-pages collection must contain custom-order.json.');
-}
+const data = await loadCustomOrderV2Data();
 ---
-<BaseLayout title={page.seoTitle} description={page.seoDescription}>
-  <div class="breadcrumbs-bar">
-    <div class="container">
-      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: page.title }]} />
-    </div>
-  </div>
 
-  <Hero
-    kicker={page.heroKicker}
-    className="hero--service"
-    title={page.heroTitle}
-    description={page.heroDescription}
-  />
-
-  <PageBlocksRenderer pageBlocks={page.pageBlocks ?? []} />
-
-  <DirectContactBlock title={page.contactTitle} description={page.contactDescription} />
-</BaseLayout>
+<CatalogV2Layout
+  title={data.sourcePage.seoTitle}
+  description={data.sourcePage.seoDescription}
+  canonicalPath="/izgotovlenie-na-zakaz/"
+  currentPath={Astro.url.pathname}
+  ogImage={data.heroMedia[0]?.src}
+  contactHref="#contact"
+  mobileCtaLabel="Обсудить задачу"
+  headerCtaLabel="Обсудить задачу"
+>
+  <CustomOrderV2Page data={data} />
+</CatalogV2Layout>

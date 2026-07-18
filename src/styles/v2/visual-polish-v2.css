@@ -1,0 +1,531 @@
+:root {
+  --hv2-space-1: 4px;
+  --hv2-space-2: 8px;
+  --hv2-space-3: 12px;
+  --hv2-space-4: 16px;
+  --hv2-space-5: 24px;
+  --hv2-space-6: 32px;
+  --hv2-space-7: 48px;
+  --hv2-space-8: 64px;
+  --hv2-space-9: 96px;
+  --hv2-space-10: 128px;
+  --hv2-entry-catalog: clamp(42px, 5vw, 72px);
+  --hv2-entry-product: clamp(38px, 4.2vw, 62px);
+  --hv2-entry-editorial: clamp(42px, 5.2vw, 72px);
+  --hv2-entry-immersive: clamp(48px, 6.6vw, 96px);
+}
+
+.home-v2-html[data-home-v2-theme='olive'] {
+  --hv2-base: #f6f3ed;
+  --hv2-elevated: #fffdf8;
+  --hv2-warm-neutral: #e9e5dc;
+  --hv2-dark-olive: #20352b;
+  --hv2-graphite: #1d2421;
+  --hv2-text-primary: #18201c;
+  --hv2-text-secondary: #626761;
+  --hv2-border-neutral: #d2cfc6;
+  --hv2-accent: #285d47;
+  --hv2-accent-hover: #1e4938;
+
+  /* Compatibility aliases used by the migrated V2 components. */
+  --hv2-background: var(--hv2-base);
+  --hv2-surface: var(--hv2-elevated);
+  --hv2-secondary-surface: var(--hv2-warm-neutral);
+  --hv2-text: var(--hv2-text-primary);
+  --hv2-muted: var(--hv2-text-secondary);
+  --hv2-action: var(--hv2-accent);
+  --hv2-action-hover: var(--hv2-accent-hover);
+  --hv2-contrast: var(--hv2-dark-olive);
+  --hv2-border: var(--hv2-border-neutral);
+  --hv2-focus: var(--hv2-accent);
+  --hv2-graphic-line: #788078;
+  --hv2-on-action: #ffffff;
+  --hv2-on-contrast: #fffdf8;
+}
+
+.home-v2-body {
+  background: var(--hv2-base, var(--hv2-background));
+}
+
+.home-v2-body ::selection {
+  color: var(--hv2-on-contrast);
+  background: var(--hv2-accent, var(--hv2-action));
+}
+
+.hv2-header.is-scrolled {
+  background: color-mix(in srgb, var(--hv2-elevated, var(--hv2-surface)) 96%, transparent);
+}
+
+.hv2-footer,
+.v2-direct-contact,
+.practical-contact-strip {
+  background-color: var(--hv2-dark-olive, var(--hv2-contrast));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-v2-html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Final art direction system ------------------------------------------------ */
+
+.home-v2-html {
+  scroll-padding-top: calc(var(--hv2-header-height) + 24px);
+}
+
+.home-v2-body,
+.home-v2-body :where(h1, h2, h3, strong, button, input, textarea, select) {
+  font-family: 'Manrope', 'Segoe UI', Arial, sans-serif;
+}
+
+.home-v2-body :where(h1, h2, h3) {
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+.home-v2-body :where(p, li, dd) {
+  text-wrap: pretty;
+}
+
+.hv2-eyebrow {
+  letter-spacing: 0.08em;
+}
+
+.hv2-button {
+  min-height: 48px;
+  justify-content: center;
+  gap: 0;
+  padding-inline: clamp(20px, 2vw, 28px);
+  letter-spacing: -0.01em;
+}
+
+.hv2-text-link,
+.v2-card-link,
+.v2-project-card__link {
+  gap: 0;
+}
+
+/* Home: one clear entry and a quieter commercial sequence. */
+
+.hv2-hero__video-toggle {
+  position: absolute;
+  z-index: 4;
+  right: max(24px, calc((100vw - 1360px) / 2));
+  bottom: 24px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  color: #ffffff;
+  background: rgba(20, 31, 26, 0.58);
+  font-size: 12px;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+  transition:
+    border-color var(--hv2-motion-fast) var(--hv2-ease),
+    background-color var(--hv2-motion-fast) var(--hv2-ease);
+}
+
+.hv2-hero__video-toggle:hover,
+.hv2-hero__video-toggle:focus-visible {
+  border-color: #ffffff;
+  background: rgba(20, 31, 26, 0.84);
+}
+
+.hv2-section-head__summary {
+  display: grid;
+  gap: 16px;
+}
+
+.hv2-section-head__summary strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--hv2-text);
+  font-size: clamp(16px, 1.4vw, 20px);
+  line-height: 1.35;
+}
+
+.hv2-competencies {
+  padding-block: clamp(72px, 7vw, 104px) clamp(82px, 8vw, 116px);
+}
+
+.hv2-projects,
+.hv2-brief,
+.hv2-contact {
+  padding-block: clamp(76px, 7vw, 104px);
+}
+
+.hv2-contact__channels > :where(a, div),
+.v2-direct-contact__channels > a {
+  padding-right: 22px;
+}
+
+/* Numberless competence lists: hierarchy comes from type and rhythm. */
+
+.engineering-scope__list li,
+.direction-scope__list li {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.engineering-tasks__list li {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  min-height: 140px;
+  background: transparent;
+}
+
+.engineering-brief__items li,
+.direction-brief__items li,
+.place-brief__items li {
+  justify-content: flex-end;
+}
+
+.direction-types--engineering .direction-type-card__body,
+.direction-types--visual .direction-type-card__body {
+  justify-content: flex-end;
+}
+
+.engineering-scope,
+.engineering-tasks,
+.engineering-proof,
+.engineering-brief,
+.project-proof,
+.project-scope,
+.project-contexts,
+.project-brief,
+.place-scope,
+.place-contexts,
+.place-projects,
+.place-brief,
+.direction-types,
+.direction-gallery,
+.direction-scope,
+.direction-brief,
+.direction-related {
+  padding-block: clamp(68px, 7vw, 104px);
+}
+
+.direction-related__grid {
+  grid-template-columns: minmax(0, 1fr);
+  border-left: 0;
+}
+
+.direction-related__card,
+.direction-related--compact .direction-related__card {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(130px, 0.8fr) minmax(220px, 1.25fr) minmax(240px, 1.65fr);
+  gap: 20px clamp(24px, 4vw, 64px);
+  align-items: center;
+  padding: 24px 0;
+  border-right: 0;
+  background: transparent;
+}
+
+.direction-related__card:hover,
+.direction-related__card:focus-visible {
+  color: var(--hv2-action);
+  background: transparent;
+}
+
+.direction-related__card h3,
+.direction-related--compact .direction-related__card h3,
+.direction-related__card p,
+.direction-related--compact .direction-related__card p {
+  margin-top: 0;
+}
+
+.direction-related__card:hover > span,
+.direction-related__card:focus-visible > span,
+.direction-related__card:hover p,
+.direction-related__card:focus-visible p {
+  color: var(--hv2-muted);
+}
+
+.place-scope__list li {
+  grid-template-columns: minmax(220px, 0.78fr) minmax(280px, 1.22fr);
+}
+
+.place-contexts__list li {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.v2-customization-list li {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 64px;
+}
+
+.custom-order-changes__list,
+.custom-order-directions__grid {
+  border-left: 0;
+}
+
+.custom-order-changes__list li {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 88px;
+}
+
+.custom-order-directions__grid > a {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 150px;
+}
+
+.custom-order-inputs__list li {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.practical-company__direction-list a {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 82px;
+}
+
+.practical-contacts__brief ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--hv2-border);
+  border-left: 1px solid var(--hv2-border);
+  list-style: none;
+}
+
+.practical-contacts__brief ul li {
+  display: flex;
+  min-height: 92px;
+  align-items: flex-end;
+  padding: 18px;
+  border-right: 1px solid var(--hv2-border);
+  border-bottom: 1px solid var(--hv2-border);
+}
+
+.practical-contacts__brief ul strong {
+  font-size: clamp(16px, 1.4vw, 20px);
+  line-height: 1.3;
+}
+
+/* Product and category pages: sales page first, listing second. */
+
+.v2-product-list,
+.v2-category-examples {
+  padding-block: clamp(68px, 7vw, 104px);
+}
+
+.v2-category-examples + .v2-custom-cta,
+.v2-product-list + .v2-custom-cta,
+.v2-catalog-index + .v2-custom-cta {
+  background: var(--hv2-warm-neutral);
+}
+
+.v2-product-top__grid {
+  column-gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--hv2-border-neutral);
+  background: var(--hv2-elevated);
+}
+
+.v2-product-top__gallery {
+  align-self: stretch;
+  padding: clamp(14px, 1.8vw, 24px);
+  border-right: 1px solid var(--hv2-border-neutral);
+  background: var(--hv2-warm-neutral);
+}
+
+.v2-product-top .v2-product-gallery__stage {
+  border: 0;
+}
+
+.v2-product-summary {
+  align-self: stretch;
+  border: 0;
+}
+
+.v2-product-summary__meta dd {
+  font-size: clamp(14px, 1.2vw, 17px);
+}
+
+.v2-customization-list {
+  border-left: 0;
+}
+
+/* Projects: one editorial proof before the supporting archive. */
+
+.v2-project-archive__featured {
+  margin-bottom: clamp(30px, 4vw, 52px);
+}
+
+.v2-project-archive__featured .v2-project-card {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr);
+  border: 0;
+  color: var(--hv2-on-contrast);
+  background: var(--hv2-dark-olive);
+}
+
+.v2-project-archive__featured .v2-project-card__media {
+  min-height: clamp(460px, 38vw, 590px);
+  border: 0;
+  aspect-ratio: auto;
+}
+
+.v2-project-archive__featured .v2-project-card__body {
+  min-height: 100%;
+  justify-content: center;
+  padding: clamp(30px, 4vw, 58px);
+  border: 0;
+}
+
+.v2-project-archive__featured .v2-project-card h2 {
+  font-size: clamp(32px, 3.6vw, 54px);
+}
+
+.v2-project-archive__featured :where(.v2-project-card__description, .v2-project-meta) {
+  color: rgba(255, 253, 248, 0.72);
+}
+
+.v2-project-archive__featured .v2-project-card__link {
+  border-bottom-color: rgba(255, 253, 248, 0.62);
+  color: var(--hv2-on-contrast);
+}
+
+.v2-project-detail__hero {
+  background: var(--hv2-elevated);
+}
+
+.v2-project-detail__lead {
+  color: var(--hv2-text);
+  font-size: clamp(17px, 1.45vw, 21px);
+}
+
+/* Practical pages: factual, calm and less dashboard-like. */
+
+.practical-contacts__method-grid {
+  border-left: 0;
+}
+
+.practical-contact-card {
+  min-height: 108px;
+  padding: 22px;
+}
+
+.practical-company__tasks,
+.practical-contacts__details,
+.practical-vacancies__list {
+  background: var(--hv2-warm-neutral);
+}
+
+.practical-vacancy-card {
+  padding: clamp(24px, 3vw, 38px);
+  background: var(--hv2-elevated);
+}
+
+/* Motion: short staged entrances, no parallax and no hidden dependency. */
+
+.hv2-reveal-pending {
+  transform: translateY(14px);
+}
+
+.immersive-direction-hero [data-v2-reveal-stage='media'].hv2-reveal-visible {
+  transition-duration: 560ms;
+  transition-delay: 0ms;
+}
+
+.immersive-direction-hero [data-v2-reveal-stage='breadcrumbs'].hv2-reveal-visible,
+.immersive-direction-hero [data-v2-reveal-stage='eyebrow'].hv2-reveal-visible {
+  transition-delay: 0ms;
+}
+
+.immersive-direction-hero [data-v2-reveal-stage='title'].hv2-reveal-visible {
+  transition-delay: 60ms;
+}
+
+.immersive-direction-hero [data-v2-reveal-stage='description'].hv2-reveal-visible {
+  transition-delay: 120ms;
+}
+
+.immersive-direction-hero [data-v2-reveal-stage='actions'].hv2-reveal-visible {
+  transition-delay: 180ms;
+}
+
+@media (max-width: 900px) {
+  .v2-product-top__grid {
+    row-gap: 0;
+  }
+
+  .v2-product-summary {
+    border-bottom: 1px solid var(--hv2-border-neutral);
+  }
+
+  .v2-product-top__gallery {
+    border-right: 0;
+  }
+
+  .place-scope__list li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .place-scope__list p {
+    grid-column: auto;
+  }
+
+  .direction-related__card,
+  .direction-related--compact .direction-related__card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .v2-project-archive__featured .v2-project-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .v2-project-archive__featured .v2-project-card__media {
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+  }
+}
+
+@media (max-width: 700px) {
+  .hv2-hero__video-toggle {
+    display: none;
+  }
+
+  .hv2-competencies,
+  .hv2-projects,
+  .hv2-brief,
+  .hv2-contact,
+  .v2-product-list,
+  .v2-category-examples {
+    padding-block: 64px;
+  }
+
+  .engineering-tasks__list li {
+    min-height: 112px;
+  }
+
+  .practical-contacts__brief ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 360px) {
+  .hv2-competencies,
+  .hv2-projects,
+  .hv2-brief,
+  .hv2-contact,
+  .v2-product-list,
+  .v2-category-examples {
+    padding-block: 54px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hv2-hero__video-toggle {
+    display: none;
+  }
+
+  .hv2-reveal-pending,
+  .hv2-reveal-visible,
+  .immersive-direction-hero [data-v2-reveal-stage].hv2-reveal-pending,
+  .immersive-direction-hero [data-v2-reveal-stage].hv2-reveal-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

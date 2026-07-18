@@ -1,98 +1,36 @@
 ---
-import { getCollection } from 'astro:content';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import Hero from '../../components/Hero.astro';
-import Breadcrumbs from '../../components/Breadcrumbs.astro';
-import CategoryExamplesGallery from '../../components/CategoryExamplesGallery.astro';
-import DirectContactBlock from '../../components/DirectContactBlock.astro';
-import { withBase } from '../../utils/withBase';
+import CatalogCategoryV2 from '../../components/v2/CatalogCategoryV2.astro';
+import {
+  createCatalogV2Links,
+  getCategoryProducts,
+  loadCatalogV2Snapshot
+} from '../../components/v2/catalogV2Data';
 
 export async function getStaticPaths() {
-  const allCategories = await getCollection('product-categories');
-
-  return allCategories
-    .filter(({ data }) => data.parentSectionSlug === 'ulichnaya-mebel' && data.isActive)
-    .map(({ data }) => ({ params: { slug: data.slug }, props: { category: data } }));
+  const snapshot = await loadCatalogV2Snapshot();
+  return snapshot.categories
+    .filter((category) => category.parentSectionSlug === 'ulichnaya-mebel')
+    .map((category) => ({
+      params: { slug: category.slug },
+      props: { categorySlug: category.slug }
+    }));
 }
 
-const { category } = Astro.props;
-
-const products = (await getCollection('products'))
-  .map(({ data }) => data)
-  .filter((item) => item.productCategorySlug === category.slug && item.isActive && item.showInCatalog)
-  .sort((a, b) => a.order - b.order);
-
-const formatPrice = (item: (typeof products)[number]) => {
-  if (item.priceMode === 'from' && typeof item.priceFrom === 'number') {
-    return `от ${item.priceFrom.toLocaleString('ru-RU')} ₽`;
-  }
-
-  if (item.priceMode === 'on_request') return 'Цена по запросу';
-
-  return '';
-};
+const { categorySlug } = Astro.props as { categorySlug: string };
+const snapshot = await loadCatalogV2Snapshot();
+const section = snapshot.sections.find((item) => item.slug === 'ulichnaya-mebel');
+const category = snapshot.categories.find((item) => (
+  item.slug === categorySlug && item.parentSectionSlug === section?.slug
+));
+if (!section || !category) throw new Error(`Active street-furniture category route ${categorySlug} was not found.`);
+const products = getCategoryProducts(snapshot, category.slug);
+const links = createCatalogV2Links(snapshot, section.slug);
 ---
-<BaseLayout title={category.seoTitle} description={category.seoDescription}>
-  <div class="breadcrumbs-bar">
-    <div class="container">
-      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: 'Уличная мебель', href: withBase('/ulichnaya-mebel/') }, { title: category.title }]} />
-    </div>
-  </div>
 
-  <Hero
-    kicker="Подкатегория изделий"
-    title={category.heroTitle}
-    description={category.heroDescription}
-    className="hero--catalog hero--catalog-clean"
-    titleStyle={category.heroTitleStyle}
-    descriptionStyle={category.heroDescriptionStyle}
-    contentLayout={category.heroLayout}
-  />
-
-  {category.mode === 'catalog-list' ? (
-    <section id="products" class="section">
-      <div class="container">
-        <div class="section-heading">
-          <h2 class="section-title">Линейка изделий</h2>
-        </div>
-        <div class="product-catalog-grid">
-          {products.map((product) => (
-            <a class="product-showcase-card" href={withBase(`/ulichnaya-mebel/${category.slug}/${product.slug}/`)}>
-              <div class="product-showcase-card__media-wrap">
-                {product.image ? (
-                  <img class="product-showcase-card__media" src={withBase(product.image)} alt={product.title} loading="lazy" />
-                ) : (
-                  <div class="product-showcase-card__media product-showcase-card__media--empty">Фото будет добавлено позже</div>
-                )}
-              </div>
-              <div class="product-showcase-card__body">
-                <h3>{product.title}</h3>
-                <p class="product-showcase-card__descriptor">{product.shortDescription}</p>
-                {formatPrice(product) && <p class="product-showcase-card__price">{formatPrice(product)}</p>}
-                <span class="btn btn-secondary product-showcase-card__cta">Подробнее</span>
-              </div>
-            </a>
-          ))}
-        </div>
-      </div>
-    </section>
-  ) : (
-    <section class="section section--soft">
-      <div class="container">
-        <article class="card catalog-price-factors">
-          <h2>Категория под заказ</h2>
-          <p class="lead">{category.shortDescription}</p>
-        </article>
-      </div>
-    </section>
-  )}
-
-  <CategoryExamplesGallery
-    gallery={category.gallery}
-    fallbackImage={category.image}
-    fallbackAlt={category.title}
-    intro={category.galleryIntro}
-  />
-
-  <DirectContactBlock />
-</BaseLayout>
+<CatalogCategoryV2
+  section={section}
+  category={category}
+  products={products}
+  links={links}
+  currentPath={Astro.url.pathname}
+/>

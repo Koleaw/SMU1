@@ -1,72 +1,27 @@
 ---
-import { getCollection } from 'astro:content';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import Hero from '../../components/Hero.astro';
-import Breadcrumbs from '../../components/Breadcrumbs.astro';
-import { withBase } from '../../utils/withBase';
+import CatalogSectionV2 from '../../components/v2/CatalogSectionV2.astro';
+import {
+  createCatalogV2Links,
+  getActiveSectionCategories,
+  getCategoryProducts,
+  loadCatalogV2Snapshot
+} from '../../components/v2/catalogV2Data';
 
-const section = (await getCollection('product-sections')).find(
-  ({ data }) => data.slug === 'ulichnaya-mebel' && data.isActive
-);
-
-if (!section) {
-  throw new Error('Active section ulichnaya-mebel not found in content collection.');
-}
-
-const categories = (await getCollection('product-categories'))
-  .map(({ data }) => data)
-  .filter((item) => item.parentSectionSlug === section.data.slug && item.isActive && item.showInSectionGrid)
-  .sort((a, b) => (a.order - b.order) || a.title.localeCompare(b.title, 'ru'));
-
-const categoryDescriptionFallback = 'Типовые решения и адаптация под задачу объекта.';
+const snapshot = await loadCatalogV2Snapshot();
+const section = snapshot.sections.find((item) => item.slug === 'ulichnaya-mebel');
+if (!section) throw new Error('Active product section ulichnaya-mebel was not found.');
+const categories = getActiveSectionCategories(snapshot, section.slug);
+const categoryProductCounts = Object.fromEntries(categories.map((category) => [
+  category.slug,
+  getCategoryProducts(snapshot, category.slug).length
+]));
+const links = createCatalogV2Links(snapshot, section.slug);
 ---
-<BaseLayout title={section.data.seoTitle} description={section.data.seoDescription}>
-  <div class="breadcrumbs-bar">
-    <div class="container">
-      <Breadcrumbs items={[{ title: 'Главная', href: withBase('/') }, { title: section.data.title }]} />
-    </div>
-  </div>
 
-  <Hero
-    kicker="Каталог изделий"
-    title={section.data.heroTitle}
-    description={section.data.heroDescription}
-    className="hero--catalog hero--catalog-clean"
-    titleStyle={section.data.heroTitleStyle}
-    descriptionStyle={section.data.heroDescriptionStyle}
-    contentLayout={section.data.heroLayout}
-  />
-
-  <section id="categories" class="section section--soft">
-    <div class="container">
-      <div class="category-choice-grid">
-        {categories.map((category) => (
-          <a class="category-choice-card" href={withBase(`/ulichnaya-mebel/${category.slug}/`)}>
-              <div class="media-block placeholder placeholder--card">
-                <img class="media-thumb" src={withBase(category.image)} alt={category.title} loading="lazy" />
-              </div>
-              <div class="category-choice-card__body">
-                <h3>{category.title}</h3>
-                <p>{category.shortDescription?.trim() || categoryDescriptionFallback}</p>
-              <span class="btn btn-secondary">Открыть подкатегорию</span>
-            </div>
-          </a>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <section id="direct-contact" class="section">
-    <div class="container">
-      <article class="home-contact-card">
-        <h2 class="section-title">Не нашли, что искали?</h2>
-        <p class="lead">Если типовая категория не закрывает задачу, напишите нам. Подберем решение под объект, референс, ТЗ или чертеж.</p>
-        <div class="home-contact-actions">
-        <a class="btn btn-primary" href="https://t.me/smu1build" target="_blank" rel="noopener noreferrer">@smu1build · Написать в Telegram</a>
-          <a class="btn btn-secondary" href="mailto:smu1.kurgan@yandex.ru">smu1.kurgan@yandex.ru · Написать на почту</a>
-          <a class="btn btn-secondary" href="tel:+79129735006">+7 (912) 973-50-06 · Позвонить</a>
-        </div>
-      </article>
-    </div>
-  </section>
-</BaseLayout>
+<CatalogSectionV2
+  section={section}
+  categories={categories}
+  categoryProductCounts={categoryProductCounts}
+  links={links}
+  currentPath={Astro.url.pathname}
+/>

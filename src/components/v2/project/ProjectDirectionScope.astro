@@ -1,0 +1,30 @@
+---
+interface WorkItem {
+  title: string;
+}
+
+interface Props {
+  title: string;
+  description?: string;
+  items: WorkItem[];
+}
+
+const { title, description = '', items } = Astro.props as Props;
+---
+
+{items.length > 0 && (
+  <section class="project-scope" id="construction-scope" aria-labelledby="project-scope-title">
+    <div class="hv2-shell">
+      <header class="project-scope__heading hv2-grid" data-v2-reveal>
+        <div>
+          <p class="hv2-eyebrow">Виды работ</p>
+          <h2 id="project-scope-title">{title}</h2>
+        </div>
+        {description && <p>{description}</p>}
+      </header>
+      <ul class="project-scope__list" role="list">
+        {items.map((item) => <li data-v2-reveal><span aria-hidden="true"></span><h3>{item.title}</h3></li>)}
+      </ul>
+    </div>
+  </section>
+)}

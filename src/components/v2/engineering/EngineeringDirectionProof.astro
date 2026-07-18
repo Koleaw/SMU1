@@ -1,0 +1,44 @@
+---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import V2ProductGallery from '../V2ProductGallery.astro';
+
+interface Props {
+  title: string;
+  city?: string;
+  year?: number;
+  description: string;
+  href: string;
+  images: string[];
+}
+
+const { title, city = '', year, description, href, images } = Astro.props as Props;
+const facts = [city, year ? String(year) : ''].filter(Boolean).join(' · ');
+---
+
+{images.length > 0 && (
+  <section class="engineering-proof" id="engineering-proof" aria-labelledby="engineering-proof-title">
+    <div class="hv2-shell">
+      <header class="engineering-proof__heading hv2-grid" data-v2-reveal>
+        <div>
+          <p class="hv2-eyebrow hv2-eyebrow--light">Выполненный объект</p>
+          <h2 id="engineering-proof-title">{title}</h2>
+        </div>
+        <div class="engineering-proof__summary">
+          {facts && <p class="engineering-proof__facts">{facts}</p>}
+          <p>{description}</p>
+          <a href={withBase(href)}>Открыть объект</a>
+        </div>
+      </header>
+      <div class="engineering-proof__gallery" data-v2-reveal>
+        <V2ProductGallery
+          images={images}
+          title={title}
+          imageView={{ fit: 'contain', positionX: 50, positionY: 50, scale: 1 }}
+          caption="Внешние кадры опубликованного объекта."
+          entityLabel="объекта"
+        />
+      </div>
+    </div>
+  </section>
+)}

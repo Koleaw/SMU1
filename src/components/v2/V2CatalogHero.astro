@@ -1,0 +1,89 @@
+---
+import { v2Href as resolveV2Href } from '../../utils/v2Routes';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import {
+  catalogMediaPresentation,
+  imageViewStyle,
+  type CatalogMediaPresentation
+} from './catalogV2Data';
+
+interface Props {
+  kicker: string;
+  title: string;
+  description?: string;
+  supportingText?: string;
+  image?: string;
+  imageAlt?: string;
+  imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
+  variant?: 'section' | 'category';
+  mediaPresentation?: CatalogMediaPresentation;
+  countLabel?: string;
+  primaryHref?: string;
+  primaryLabel?: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
+}
+
+const {
+  kicker,
+  title,
+  description = '',
+  supportingText = '',
+  image = '',
+  imageAlt = '',
+  imageView,
+  variant = 'section',
+  mediaPresentation = catalogMediaPresentation(image, imageView),
+  countLabel = '',
+  primaryHref = '#catalog-grid',
+  primaryLabel = 'Смотреть каталог',
+  secondaryHref = '/design-lab/v2/izgotovlenie-na-zakaz/',
+  secondaryLabel = 'Изготовление по задаче'
+} = Astro.props as Props;
+
+const href = (value: string) => value.startsWith('#') ? value : withBase(value);
+const hasMedia = Boolean(image);
+---
+
+<section
+  class:list={[
+    'v2-catalog-hero',
+    `v2-catalog-hero--${variant}`,
+    `v2-catalog-hero--${mediaPresentation}`,
+    { 'v2-catalog-hero--no-media': !hasMedia }
+  ]}
+  aria-labelledby="v2-catalog-title"
+  data-v2-hero-scroll
+>
+  <div class="hv2-shell hv2-grid v2-catalog-hero__grid">
+    <div class="v2-catalog-hero__copy" data-v2-hero-scroll-copy>
+      <div class="v2-catalog-hero__topline" data-v2-reveal="entry-meta">
+        <p class="hv2-eyebrow">{kicker}</p>
+        {countLabel && <span>{countLabel}</span>}
+      </div>
+      <h1 id="v2-catalog-title" data-v2-reveal="entry-title">{title}</h1>
+      {description && <p class="v2-catalog-hero__lead" data-v2-reveal="entry-copy">{description}</p>}
+      {supportingText && <p class="v2-catalog-hero__support" data-v2-reveal="entry-support">{supportingText}</p>}
+      <div class="hv2-actions v2-catalog-hero__actions" data-v2-reveal="entry-actions">
+        <a class="hv2-button hv2-button--primary" href={href(primaryHref)}>{primaryLabel}</a>
+        {secondaryLabel && <a class="hv2-text-link" href={href(secondaryHref)}>{secondaryLabel}</a>}
+      </div>
+    </div>
+
+    {hasMedia && (
+      <figure class="v2-catalog-hero__media" data-v2-media data-v2-hero-scroll-media data-v2-reveal="entry-media">
+        <img
+          src={withBase(image)}
+          alt={imageAlt || title}
+          width="1200"
+          height="900"
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+          style={imageViewStyle(imageView)}
+          data-v2-image
+        />
+      </figure>
+    )}
+  </div>
+</section>

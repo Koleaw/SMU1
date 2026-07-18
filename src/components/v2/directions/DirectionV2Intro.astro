@@ -1,0 +1,30 @@
+---
+interface Props {
+  eyebrow?: string;
+  title: string;
+  lead: string;
+  text?: string;
+  variant?: 'engineering' | 'visual';
+}
+
+const {
+  eyebrow = 'О направлении',
+  title,
+  lead,
+  text = '',
+  variant = 'engineering'
+} = Astro.props as Props;
+---
+
+<section class:list={['direction-intro', `direction-intro--${variant}`]} aria-labelledby="direction-intro-title">
+  <div class="hv2-shell hv2-grid direction-intro__grid" data-v2-reveal>
+    <header class="direction-intro__heading">
+      <p class="hv2-eyebrow">{eyebrow}</p>
+      <h2 id="direction-intro-title">{title}</h2>
+    </header>
+    <div class="direction-intro__copy">
+      <p class="direction-intro__lead">{lead}</p>
+      {text && <p>{text}</p>}
+    </div>
+  </div>
+</section>

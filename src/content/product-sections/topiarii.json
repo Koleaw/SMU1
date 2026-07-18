@@ -8,7 +8,7 @@
   "showOnHome": true,
   "isActive": true,
   "mode": "custom-direction",
-  "image": "/assets/images/placeholders/landscaping.svg",
+  "image": "/uploads/chatgpt-image-5-2026-21-56-34-1783277800820.png",
   "placeholderLabel": "Рендер топиария будет добавлен позже",
   "seoTitle": "Топиарии под заказ для благоустройства и декора",
   "seoDescription": "Топиарии, декоративные зеленые фигуры и композиции под заказ для парков, входных групп, общественных пространств и коммерческих территорий.",
@@ -30,7 +30,14 @@
           "title": "Фигуры животных",
           "text": "Объемные декоративные фигуры для парков, дворов, баз отдыха и общественных пространств.",
           "order": 10,
-          "isActive": true
+          "isActive": true,
+          "image": "/uploads/chatgpt-image-5-2026-21-56-34-1783277823870.png",
+          "imageView": {
+            "fit": "cover",
+            "positionX": 49.43741037875792,
+            "positionY": 45.34234577900654,
+            "scale": 1
+          }
         },
         {
           "title": "Геометрические формы",
@@ -169,5 +176,11 @@
         "внешний вид и материалы согласуются под задачу объекта"
       ]
     }
-  ]
+  ],
+  "imageView": {
+    "fit": "cover",
+    "positionX": 53.83141913323832,
+    "positionY": 0,
+    "scale": 1
+  }
 }

@@ -1,4 +1,16 @@
 ---
-import { withBase } from '../utils/withBase';
-return Astro.redirect(withBase('/ulichnaya-mebel/urny/'), 301);
+import CatalogV2Layout from '../components/v2/CatalogV2Layout.astro';
+import LegacyV2Fallback from '../components/v2/LegacyV2Fallback.astro';
+const target = '/ulichnaya-mebel/urny/';
 ---
+<CatalogV2Layout
+  title="Урны — основной адрес"
+  description="Страница категории «Урны» доступна по основному адресу."
+  canonicalPath={target}
+  currentPath={Astro.url.pathname}
+  noindex
+  refreshTarget={target}
+  contactHref="/kontakty/"
+>
+  <LegacyV2Fallback title="Урны" target={target} />
+</CatalogV2Layout>

@@ -1,0 +1,36 @@
+---
+interface ScopeItem {
+  title: string;
+  text?: string;
+}
+
+interface Props {
+  title: string;
+  description?: string;
+  items: ScopeItem[];
+}
+
+const { title, description = '', items } = Astro.props as Props;
+---
+
+{items.length > 0 && (
+  <section class="place-scope" id="landscaping-scope" aria-labelledby="place-scope-title">
+    <div class="hv2-shell">
+      <header class="place-section-heading hv2-grid" data-v2-reveal>
+        <div>
+          <p class="hv2-eyebrow">Состав благоустройства</p>
+          <h2 id="place-scope-title">{title}</h2>
+        </div>
+        {description && <p>{description}</p>}
+      </header>
+      <ul class="place-scope__list">
+        {items.map((item) => (
+          <li data-v2-reveal>
+            <h3>{item.title}</h3>
+            {item.text && <p>{item.text}</p>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}

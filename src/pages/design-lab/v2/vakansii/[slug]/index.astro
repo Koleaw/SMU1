@@ -1,0 +1,30 @@
+---
+import PracticalV2Layout from '../../../../../components/v2/practical/PracticalV2Layout.astro';
+import V2VacancyDetail from '../../../../../components/v2/practical/V2VacancyDetail.astro';
+import {
+  loadActiveV2Jobs,
+  vacancyProductionRoute,
+  vacancyV2Route,
+  type V2JobRecord
+} from '../../../../../components/v2/practical/practicalV2Data';
+
+export async function getStaticPaths() {
+  const jobs = await loadActiveV2Jobs();
+  return jobs.map((job) => ({ params: { slug: job.slug }, props: { job } }));
+}
+
+const { job } = Astro.props as { job: V2JobRecord };
+const currentPath = vacancyV2Route(job);
+---
+
+<PracticalV2Layout
+  title={`${job.title} — вакансии СМУ-1`}
+  description={job.shortDescription}
+  canonicalPath={vacancyProductionRoute(job)}
+  currentPath={currentPath}
+  kind="vacancy"
+  contactHref="#vacancy-contact"
+  ctaLabel="Откликнуться"
+>
+  <V2VacancyDetail job={job} />
+</PracticalV2Layout>

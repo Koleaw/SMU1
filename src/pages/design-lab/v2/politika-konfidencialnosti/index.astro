@@ -1,0 +1,18 @@
+---
+import PracticalV2Layout from '../../../../components/v2/practical/PracticalV2Layout.astro';
+import V2PrivacyPolicy from '../../../../components/v2/practical/V2PrivacyPolicy.astro';
+
+const currentPath = '/design-lab/v2/politika-konfidencialnosti/';
+---
+
+<PracticalV2Layout
+  title="Политика конфиденциальности и обработки персональных данных — СМУ-1"
+  description="Политика конфиденциальности и обработки персональных данных ООО «СМУ 1»."
+  canonicalPath="/politika-konfidencialnosti/"
+  currentPath={currentPath}
+  kind="legal"
+  contactHref="/design-lab/v2/kontakty/"
+  ctaLabel="Связаться"
+>
+  <V2PrivacyPolicy />
+</PracticalV2Layout>

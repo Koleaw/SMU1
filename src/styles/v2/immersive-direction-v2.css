@@ -1,0 +1,465 @@
+.catalog-v2.catalog-v2--immersive main {
+  padding-top: 0;
+}
+
+.catalog-v2--immersive .hv2-header:not(.is-scrolled) .hv2-header__nav-link[aria-current],
+.catalog-v2--immersive .hv2-header:not(.is-scrolled) .hv2-header__nav-button[aria-current] {
+  color: #ffffff;
+}
+
+.immersive-direction-hero {
+  position: relative;
+  min-height: clamp(720px, 92svh, 1040px);
+  overflow: hidden;
+  isolation: isolate;
+  color: #ffffff;
+  background: var(--hv2-dark-olive, #20352b);
+}
+
+.immersive-direction-hero__sentinel {
+  position: absolute;
+  z-index: -1;
+  top: clamp(180px, 25svh, 270px);
+  left: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.immersive-direction-hero__inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: inherit;
+  flex-direction: column;
+}
+
+.immersive-direction-hero__breadcrumbs {
+  padding-top: calc(var(--hv2-header-height) + var(--hv2-space-3, 12px));
+}
+
+.immersive-direction-hero__breadcrumbs .v2-breadcrumbs-bar {
+  border: 0;
+  color: rgba(255, 255, 255, 0.76);
+  background: transparent;
+}
+
+.immersive-direction-hero__breadcrumbs .v2-breadcrumbs-bar > .hv2-shell {
+  width: 100%;
+  margin: 0;
+}
+
+.immersive-direction-hero__breadcrumbs .v2-breadcrumbs ol {
+  min-height: 40px;
+}
+
+.immersive-direction-hero__breadcrumbs .v2-breadcrumbs li,
+.immersive-direction-hero__breadcrumbs .v2-breadcrumbs span[aria-current='page'] {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.immersive-direction-hero__breadcrumbs .v2-breadcrumbs a:hover,
+.immersive-direction-hero__breadcrumbs .v2-breadcrumbs a:focus-visible,
+.immersive-direction-hero__breadcrumbs .v2-breadcrumbs span[aria-current='page'] {
+  color: #ffffff;
+}
+
+.immersive-direction-hero__breadcrumbs .v2-breadcrumbs i {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.immersive-direction-hero__composition {
+  display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  padding: clamp(50px, 7vh, 84px) 0 clamp(60px, 8vh, 96px);
+}
+
+.immersive-direction-hero__copy {
+  grid-column: 1 / 8;
+  max-width: 790px;
+}
+
+.immersive-direction-hero .hv2-eyebrow {
+  margin-bottom: clamp(16px, 2.5vh, 24px);
+}
+
+.immersive-direction-hero h1 {
+  max-width: 12ch;
+  margin: 0;
+  color: #ffffff;
+  font-size: var(--hv2-entry-immersive, clamp(48px, 6.6vw, 96px));
+  letter-spacing: -0.052em;
+  line-height: 0.98;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.immersive-direction-hero__lead {
+  max-width: 670px;
+  margin: clamp(22px, 3vh, 32px) 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: clamp(17px, 1.28vw, 21px);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.immersive-direction-hero__actions {
+  margin-top: clamp(28px, 4vh, 40px);
+}
+
+.immersive-direction-hero__actions .hv2-button--ghost {
+  border-color: rgba(255, 255, 255, 0.56);
+  color: #ffffff;
+  background: rgba(15, 23, 19, 0.18);
+}
+
+.immersive-direction-hero__actions .hv2-button--ghost:hover,
+.immersive-direction-hero__actions .hv2-button--ghost:focus-visible {
+  border-color: #ffffff;
+  color: var(--hv2-text-primary, #18201c);
+  background: #ffffff;
+}
+
+.immersive-direction-hero__media {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  overflow: hidden;
+  background: var(--hv2-graphite, #1d2421);
+}
+
+.immersive-direction-hero__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.immersive-direction-hero__media figcaption {
+  position: absolute;
+  z-index: 3;
+  right: max(24px, calc((100vw - 1360px) / 2));
+  bottom: 24px;
+  max-width: min(360px, 42vw);
+  padding: 8px 11px;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(12, 18, 15, 0.58);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.immersive-direction-hero__fallback {
+  position: absolute;
+  inset: 0;
+  display: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--hv2-graphite, #1d2421);
+}
+
+.immersive-direction-hero__media.is-broken .immersive-direction-hero__fallback,
+.immersive-direction-hero__fallback--standalone {
+  display: grid;
+}
+
+.immersive-direction-hero__fallback--standalone {
+  z-index: 0;
+}
+
+.immersive-direction-hero__veil {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Structural photography: the frame remains legible while the copy has a calm dark field. */
+.immersive-direction-hero--metalworks {
+  background: var(--hv2-graphite, #1d2421);
+}
+
+.immersive-direction-hero--metalworks .immersive-direction-hero__copy {
+  grid-column: 1 / 9;
+  max-width: 860px;
+}
+
+.immersive-direction-hero--metalworks h1 {
+  max-width: 16ch;
+  font-size: clamp(54px, 5.2vw, 84px);
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.immersive-direction-hero--metalworks .immersive-direction-hero__veil {
+  background:
+    linear-gradient(180deg, rgba(12, 18, 15, 0.78) 0%, rgba(12, 18, 15, 0.1) 34%, rgba(12, 18, 15, 0.42) 100%),
+    linear-gradient(90deg, rgba(12, 18, 15, 0.96) 0%, rgba(12, 18, 15, 0.82) 38%, rgba(12, 18, 15, 0.18) 74%, transparent 100%);
+}
+
+/* Landscaping keeps the wide riverbank visible and places copy in its quieter lower field. */
+.immersive-direction-hero--landscaping .immersive-direction-hero__copy {
+  grid-column: 1 / 8;
+}
+
+.immersive-direction-hero--landscaping .immersive-direction-hero__veil {
+  background:
+    linear-gradient(180deg, rgba(17, 28, 23, 0.7) 0%, rgba(17, 28, 23, 0.08) 34%, rgba(17, 28, 23, 0.58) 100%),
+    linear-gradient(90deg, rgba(17, 28, 23, 0.88) 0%, rgba(17, 28, 23, 0.55) 42%, rgba(17, 28, 23, 0.04) 78%);
+}
+
+/* Construction foregrounds a finished building and gives the offer a defined project panel. */
+.immersive-direction-hero--construction .immersive-direction-hero__copy {
+  grid-column: 1 / 7;
+  max-width: 700px;
+  padding: clamp(24px, 3vw, 38px);
+  border-left: 2px solid var(--hv2-accent, #285d47);
+  background: rgba(20, 28, 24, 0.82);
+  backdrop-filter: blur(3px);
+}
+
+.immersive-direction-hero--construction h1 {
+  font-size: clamp(46px, 5.6vw, 82px);
+}
+
+.immersive-direction-hero--construction .immersive-direction-hero__veil {
+  background:
+    linear-gradient(180deg, rgba(12, 18, 15, 0.76) 0%, rgba(12, 18, 15, 0.06) 38%, rgba(12, 18, 15, 0.34) 100%),
+    linear-gradient(90deg, rgba(12, 18, 15, 0.54) 0%, rgba(12, 18, 15, 0.14) 58%, transparent 88%);
+}
+
+/* Isolated renders become a deliberate edge-to-edge split, not a floating card. */
+.immersive-direction-hero--canopies,
+.immersive-direction-hero--topiary {
+  background: var(--hv2-dark-olive, #20352b);
+}
+
+.immersive-direction-hero--canopies .immersive-direction-hero__media {
+  left: 44%;
+  background: var(--hv2-elevated, #fffdf8);
+}
+
+.immersive-direction-hero--canopies .immersive-direction-hero__copy {
+  grid-column: 1 / 7;
+  max-width: 650px;
+}
+
+.immersive-direction-hero--canopies .immersive-direction-hero__veil {
+  background:
+    linear-gradient(180deg, rgba(15, 24, 20, 0.74) 0%, transparent 28%),
+    linear-gradient(90deg, var(--hv2-dark-olive, #20352b) 0%, var(--hv2-dark-olive, #20352b) 38%, rgba(32, 53, 43, 0.94) 45%, rgba(32, 53, 43, 0.2) 65%, transparent 78%);
+}
+
+.immersive-direction-hero--topiary {
+  background: var(--hv2-graphite, #1d2421);
+}
+
+.immersive-direction-hero--topiary .immersive-direction-hero__media {
+  left: 36%;
+  background: var(--hv2-elevated, #fffdf8);
+}
+
+.immersive-direction-hero--topiary .immersive-direction-hero__copy {
+  grid-column: 1 / 6;
+  max-width: 570px;
+}
+
+.immersive-direction-hero--topiary .immersive-direction-hero__veil {
+  background:
+    linear-gradient(180deg, rgba(15, 24, 20, 0.76) 0%, transparent 27%),
+    linear-gradient(90deg, var(--hv2-graphite, #1d2421) 0%, var(--hv2-graphite, #1d2421) 31%, rgba(29, 36, 33, 0.94) 39%, rgba(29, 36, 33, 0.18) 62%, transparent 76%);
+}
+
+/* Entry choreography: short, explicit stages and no hidden content without JS. */
+.immersive-direction-hero [data-v2-reveal-stage='media'].hv2-reveal-pending {
+  opacity: 0.52;
+  transform: scale(1.012);
+}
+
+.immersive-direction-hero [data-v2-reveal-stage='media'].hv2-reveal-visible {
+  transition-duration: 680ms;
+  transition-delay: 0ms;
+}
+
+.immersive-direction-hero [data-v2-reveal-stage='breadcrumbs'].hv2-reveal-visible {
+  transition-delay: 30ms;
+}
+
+.immersive-direction-hero [data-v2-reveal-stage='eyebrow'].hv2-reveal-visible {
+  transition-delay: 70ms;
+}
+
+.immersive-direction-hero [data-v2-reveal-stage='title'].hv2-reveal-visible {
+  transition-delay: 120ms;
+}
+
+.immersive-direction-hero [data-v2-reveal-stage='description'].hv2-reveal-visible {
+  transition-delay: 180ms;
+}
+
+.immersive-direction-hero [data-v2-reveal-stage='actions'].hv2-reveal-visible {
+  transition-delay: 240ms;
+}
+
+@media (max-width: 1100px) {
+  .immersive-direction-hero {
+    min-height: clamp(700px, 94svh, 920px);
+  }
+
+  .immersive-direction-hero__copy,
+  .immersive-direction-hero--landscaping .immersive-direction-hero__copy {
+    grid-column: 1 / 9;
+  }
+
+  .immersive-direction-hero--construction .immersive-direction-hero__copy {
+    grid-column: 1 / 8;
+  }
+
+  .immersive-direction-hero--canopies .immersive-direction-hero__media {
+    left: 39%;
+  }
+
+  .immersive-direction-hero--topiary .immersive-direction-hero__media {
+    left: 34%;
+  }
+}
+
+@media (max-width: 760px) {
+  .immersive-direction-hero {
+    min-height: max(700px, 100svh);
+  }
+
+  .immersive-direction-hero__breadcrumbs {
+    padding-top: calc(var(--hv2-header-height) + var(--hv2-space-2, 8px));
+  }
+
+  .immersive-direction-hero__breadcrumbs .v2-breadcrumbs ol {
+    min-height: 34px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .immersive-direction-hero__breadcrumbs .v2-breadcrumbs li:last-child,
+  .immersive-direction-hero__breadcrumbs .v2-breadcrumbs span[aria-current='page'] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .immersive-direction-hero__composition {
+    align-items: start;
+    padding: clamp(28px, 5vh, 44px) 0 38px;
+  }
+
+  .immersive-direction-hero__copy,
+  .immersive-direction-hero--landscaping .immersive-direction-hero__copy,
+  .immersive-direction-hero--construction .immersive-direction-hero__copy,
+  .immersive-direction-hero--canopies .immersive-direction-hero__copy,
+  .immersive-direction-hero--topiary .immersive-direction-hero__copy {
+    grid-column: 1 / -1;
+    max-width: 620px;
+  }
+
+  .immersive-direction-hero--construction .immersive-direction-hero__copy {
+    padding: 22px;
+    backdrop-filter: none;
+  }
+
+  .immersive-direction-hero h1,
+  .immersive-direction-hero--construction h1 {
+    max-width: 13ch;
+    font-size: clamp(42px, 12vw, 62px);
+    line-height: 1;
+  }
+
+  .immersive-direction-hero--metalworks h1 {
+    max-width: 16ch;
+    font-size: clamp(29px, 9vw, 38px);
+    line-height: 1.02;
+  }
+
+  .immersive-direction-hero__lead {
+    max-width: 580px;
+    margin-top: 20px;
+    font-size: clamp(15px, 4vw, 18px);
+    line-height: 1.46;
+  }
+
+  .immersive-direction-hero__actions {
+    margin-top: 26px;
+  }
+
+  .immersive-direction-hero__media figcaption {
+    display: none;
+  }
+
+  .immersive-direction-hero--metalworks .immersive-direction-hero__veil,
+  .immersive-direction-hero--landscaping .immersive-direction-hero__veil,
+  .immersive-direction-hero--construction .immersive-direction-hero__veil {
+    background:
+      linear-gradient(180deg, rgba(13, 21, 17, 0.88) 0%, rgba(13, 21, 17, 0.66) 58%, rgba(13, 21, 17, 0.24) 100%);
+  }
+
+  .immersive-direction-hero--metalworks .immersive-direction-hero__veil {
+    background:
+      linear-gradient(180deg, rgba(13, 21, 17, 0.94) 0%, rgba(13, 21, 17, 0.82) 68%, rgba(13, 21, 17, 0.42) 100%);
+  }
+
+  .immersive-direction-hero--canopies .immersive-direction-hero__media,
+  .immersive-direction-hero--topiary .immersive-direction-hero__media {
+    inset: 42% 0 0;
+  }
+
+  .immersive-direction-hero--canopies .immersive-direction-hero__veil,
+  .immersive-direction-hero--topiary .immersive-direction-hero__veil {
+    background:
+      linear-gradient(180deg, var(--hv2-dark-olive, #20352b) 0%, var(--hv2-dark-olive, #20352b) 43%, rgba(32, 53, 43, 0.94) 56%, rgba(32, 53, 43, 0.44) 76%, rgba(32, 53, 43, 0.08) 100%);
+  }
+}
+
+@media (max-width: 500px) {
+  .immersive-direction-hero__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .immersive-direction-hero__actions .hv2-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .immersive-direction-hero {
+    min-height: max(700px, 100svh);
+  }
+
+  .immersive-direction-hero .hv2-eyebrow {
+    margin-bottom: 13px;
+  }
+
+  .immersive-direction-hero h1,
+  .immersive-direction-hero--construction h1 {
+    font-size: clamp(38px, 12vw, 46px);
+  }
+
+  .immersive-direction-hero__lead {
+    margin-top: 16px;
+    font-size: 14px;
+  }
+
+  .immersive-direction-hero__actions {
+    margin-top: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .immersive-direction-hero [data-v2-reveal-stage].hv2-reveal-pending,
+  .immersive-direction-hero [data-v2-reveal-stage].hv2-reveal-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

@@ -1,0 +1,38 @@
+---
+import settings from '../../../content/site-settings/global.json';
+import V2DirectContact from '../V2DirectContact.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  primaryLabel?: string;
+  secondaryLabel?: string;
+  phoneChannelLabel?: string;
+  telegramChannelLabel?: string;
+  emailChannelLabel?: string;
+}
+
+const {
+  title,
+  description,
+  primaryLabel = 'Получить расчёт',
+  secondaryLabel = 'Обсудить задачу',
+  phoneChannelLabel = 'Основной телефон',
+  telegramChannelLabel = 'Telegram',
+  emailChannelLabel = 'Email'
+} = Astro.props as Props;
+const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
+---
+
+<V2DirectContact
+  eyebrow="Обсудить проект"
+  title={title}
+  description={description}
+  primaryLabel={primaryLabel}
+  primaryHref={settings.telegram}
+  secondaryLabel={secondaryLabel}
+  secondaryHref={phoneHref}
+  phoneChannelLabel={phoneChannelLabel}
+  telegramChannelLabel={telegramChannelLabel}
+  emailChannelLabel={emailChannelLabel}
+/>

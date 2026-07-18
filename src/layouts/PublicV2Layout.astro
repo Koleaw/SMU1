@@ -1,0 +1,275 @@
+---
+import '../styles/v2/home-v2.css';
+import '../styles/v2/cookie-banner-v2.css';
+import '../styles/v2/visual-polish-v2.css';
+import finalArtDirectionUrl from '../styles/v2/final-art-direction-v2.css?url';
+import CookieBanner from '../components/CookieBanner.astro';
+import siteSettings from '../content/site-settings/global.json';
+import yandex from '../data/yandex.json';
+import { withBase } from '../utils/withBase';
+import { getV2Scope, productionV2Path, type V2Scope } from '../utils/v2Routes';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+  ogImage?: string;
+  scope?: V2Scope;
+  robots?: string;
+  noindex?: boolean;
+  noCanonical?: boolean;
+  structuredData?: Record<string, unknown> | Record<string, unknown>[];
+  refreshTarget?: string;
+}
+
+const {
+  title,
+  description,
+  canonicalPath,
+  ogImage = '/assets/images/placeholders/og-default.svg',
+  scope = getV2Scope(Astro.url.pathname),
+  robots,
+  noindex = false,
+  noCanonical = false,
+  structuredData,
+  refreshTarget = ''
+} = Astro.props as Props;
+
+const isProduction = scope === 'production';
+const pageTitle = title?.trim() || 'СМУ-1';
+const pageDescription = description?.trim()
+  || 'СМУ-1: производство металлоконструкций, уличной мебели, ограждений и изделий для благоустройства.';
+const resolvedCanonicalPath = canonicalPath === undefined
+  ? productionV2Path(Astro.url.pathname)
+  : canonicalPath;
+const canonicalUrl = !noCanonical && resolvedCanonicalPath
+  ? new URL(withBase(resolvedCanonicalPath), Astro.site).toString()
+  : '';
+const robotsContent = robots || (!isProduction || noindex ? 'noindex, nofollow' : 'index, follow');
+const toAbsoluteUrl = (path: string) => /^https?:\/\//i.test(path)
+  ? path
+  : new URL(withBase(path), Astro.site).toString();
+const ogImageUrl = ogImage ? toAbsoluteUrl(ogImage) : '';
+
+const siteRoot = new URL(withBase('/'), Astro.site).toString();
+const isHomePage = isProduction && productionV2Path(Astro.url.pathname) === '/';
+const organizationData = {
+  '@type': 'LocalBusiness',
+  '@id': `${siteRoot}#organization`,
+  name: siteSettings.companyName || 'СМУ-1',
+  url: siteRoot,
+  telephone: siteSettings.phonePrimary,
+  email: siteSettings.email,
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: siteSettings.address || siteSettings.legalAddress,
+    addressLocality: siteSettings.city || 'Курган',
+    addressCountry: 'RU'
+  },
+  sameAs: [siteSettings.telegram].filter(Boolean)
+};
+const websiteData = isHomePage ? {
+  '@type': 'WebSite',
+  '@id': `${siteRoot}#website`,
+  name: siteSettings.companyName || 'СМУ-1',
+  url: siteRoot,
+  publisher: { '@id': `${siteRoot}#organization` }
+} : null;
+const extraStructuredData = Array.isArray(structuredData)
+  ? structuredData
+  : structuredData
+    ? [structuredData]
+    : [];
+const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filter(Boolean);
+---
+
+<!doctype html>
+<html lang="ru" class="home-v2-html" data-home-v2-theme="engineering">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content={robotsContent} />
+    <meta name="description" content={pageDescription} />
+    {refreshTarget && <meta http-equiv="refresh" content={`0;url=${withBase(refreshTarget)}`} />}
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+    {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+    <meta name="twitter:card" content={ogImageUrl ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
+    <meta name="theme-color" content="#101720" data-home-v2-theme-color />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSvfedN4.woff2"
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional"
+      rel="preload"
+      as="style"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional"
+      rel="stylesheet"
+      media="print"
+      data-v2-font-stylesheet
+    />
+    <script is:inline>
+      (() => {
+        const stylesheet = document.querySelector('[data-v2-font-stylesheet]');
+        if (!(stylesheet instanceof HTMLLinkElement)) return;
+        const activate = () => { stylesheet.media = 'all'; };
+        if (stylesheet.sheet) activate();
+        else stylesheet.addEventListener('load', activate, { once: true });
+      })();
+    </script>
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional"
+        rel="stylesheet"
+      />
+    </noscript>
+    <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
+    <link rel="preload" href={finalArtDirectionUrl} as="style" />
+    <title>{pageTitle}</title>
+    {isProduction && !noindex && (
+      <script type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', '@graph': jsonLdGraph })} />
+    )}
+    {scope === 'design-lab' && (
+      <script is:inline>
+        (() => {
+          const root = document.documentElement;
+          const requestedTheme = new URLSearchParams(window.location.search).get('palette');
+          let savedTheme = '';
+          try { savedTheme = window.localStorage.getItem('smu1-home-v2-palette') || ''; } catch { savedTheme = ''; }
+          root.dataset.homeV2Theme = requestedTheme === 'steel' || requestedTheme === 'olive'
+            ? requestedTheme
+            : savedTheme === 'steel' ? 'steel' : 'olive';
+        })();
+      </script>
+    )}
+    {isProduction && (
+      <script
+        is:inline
+        define:vars={{
+          metrikaCounterId: yandex.metrika.counterId,
+          metrikaScriptSrc: yandex.metrika.scriptSrc,
+          metrikaInit: yandex.metrika.init,
+          metrikaDelayMs: 7000
+        }}
+      >
+        (() => {
+          const stateKey = '__smu1MetrikaState';
+          window[stateKey] = window[stateKey] || { loaded: false, timer: null };
+          const state = window[stateKey];
+
+          const loadMetrika = () => {
+            if (state.loaded || !metrikaCounterId || !metrikaScriptSrc) return;
+            state.loaded = true;
+            (function(m, e, t, r, i, k, a) {
+              m[i] = m[i] || function() { (m[i].a = m[i].a || []).push(arguments); };
+              m[i].l = 1 * new Date();
+              for (let j = 0; j < document.scripts.length; j++) {
+                if (document.scripts[j].src === r) return;
+              }
+              k = e.createElement(t);
+              a = e.getElementsByTagName(t)[0];
+              k.async = 1;
+              k.src = r;
+              a.parentNode.insertBefore(k, a);
+            })(window, document, 'script', metrikaScriptSrc, 'ym');
+            window.ym(metrikaCounterId, 'init', { ...metrikaInit, referrer: document.referrer, url: location.href });
+          };
+
+          const scheduleMetrika = () => {
+            if (state.loaded || state.timer) return;
+            state.timer = window.setTimeout(() => { state.timer = null; loadMetrika(); }, metrikaDelayMs);
+          };
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', scheduleMetrika, { once: true });
+          } else {
+            scheduleMetrika();
+          }
+          document.addEventListener('astro:page-load', scheduleMetrika);
+        })();
+      </script>
+    )}
+    <link rel="stylesheet" href={finalArtDirectionUrl} data-final-art-direction />
+  </head>
+  <body class="home-v2-body">
+    <slot />
+    {isProduction && <CookieBanner />}
+    <script>
+      const initV2HeroScroll = () => {
+        if (document.documentElement.dataset.v2HeroScrollReady === 'true') return;
+        const heroes = Array.from(document.querySelectorAll<HTMLElement>('[data-v2-hero-scroll]'));
+        if (heroes.length === 0) return;
+        document.documentElement.dataset.v2HeroScrollReady = 'true';
+
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const desktopMotion = window.matchMedia('(min-width: 761px)');
+        let frame = 0;
+
+        const reset = () => {
+          heroes.forEach((hero) => {
+            hero.style.setProperty('--v2-hero-scroll-y', '0px');
+            hero.style.setProperty('--v2-hero-media-scroll-y', '0px');
+            hero.style.setProperty('--v2-hero-scroll-opacity', '1');
+          });
+        };
+
+        const sync = () => {
+          frame = 0;
+          if (reducedMotion.matches || !desktopMotion.matches) {
+            reset();
+            return;
+          }
+
+          heroes.forEach((hero) => {
+            const copy = hero.querySelector<HTMLElement>('[data-v2-hero-scroll-copy]');
+            const media = hero.querySelector<HTMLElement>('[data-v2-hero-scroll-media]');
+            if (!copy && !media) return;
+            const rect = hero.getBoundingClientRect();
+            const height = Math.max(rect.height, 1);
+            const progress = Math.min(1, Math.max(0, -rect.top / height));
+            const copyTravel = Math.min(180, height * 0.2) * progress;
+            const mediaTravel = Math.min(270, height * 0.3) * progress;
+            // Let the next section cover the media while the copy clears the
+            // persistent header before their visual layers can intersect.
+            const fadeProgress = Math.min(1, Math.max(0, (progress - 0.32) / 0.2));
+            hero.style.setProperty('--v2-hero-scroll-y', `${copyTravel.toFixed(2)}px`);
+            hero.style.setProperty('--v2-hero-media-scroll-y', `${mediaTravel.toFixed(2)}px`);
+            hero.style.setProperty('--v2-hero-scroll-opacity', String(1 - fadeProgress));
+          });
+        };
+
+        const queue = () => {
+          if (frame) return;
+          frame = window.requestAnimationFrame(sync);
+        };
+
+        window.addEventListener('scroll', queue, { passive: true });
+        window.addEventListener('resize', queue);
+        reducedMotion.addEventListener('change', queue);
+        desktopMotion.addEventListener('change', queue);
+        if ('ResizeObserver' in window) {
+          const observer = new ResizeObserver(queue);
+          heroes.forEach((hero) => observer.observe(hero));
+        }
+        sync();
+      };
+
+      initV2HeroScroll();
+      document.addEventListener('astro:page-load', initV2HeroScroll);
+    </script>
+  </body>
+</html>

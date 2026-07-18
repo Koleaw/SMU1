@@ -1,0 +1,28 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  items: string[];
+}
+
+const { title, description, items } = Astro.props as Props;
+---
+
+{items.length > 0 && (
+  <section class="engineering-brief" id="engineering-brief" aria-labelledby="engineering-brief-title">
+    <div class="hv2-shell">
+      <header class="engineering-brief__heading hv2-grid" data-v2-reveal>
+        <div>
+          <p class="hv2-eyebrow hv2-eyebrow--light">Для первого обсуждения</p>
+          <h2 id="engineering-brief-title">{title}</h2>
+        </div>
+        <p>{description}</p>
+      </header>
+      <ul class="engineering-brief__items" data-v2-reveal>
+        {items.map((item) => (
+          <li><strong>{item}</strong></li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}

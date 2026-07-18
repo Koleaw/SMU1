@@ -5,15 +5,28 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createContentJsonService } from './content-json.mjs';
+import {
+  buildProductImportPayload,
+  validateProductContentForWrite
+} from './product-presentation.mjs';
+import {
+  MAX_PROJECT_MEDIA_REQUEST_SIZE,
+  parseMultipartFiles,
+  saveProjectMediaFiles
+} from './project-media.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
+const contentRoot = process.env.ADMIN_TEST_CONTENT_ROOT
+  ? path.resolve(process.env.ADMIN_TEST_CONTENT_ROOT)
+  : path.join(repoRoot, 'src', 'content');
 const execFileAsync = promisify(execFile);
 
 const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ROUTE_SLUG_COLLECTIONS = new Set(['static-pages', 'product-sections', 'services']);
-const LOCKED_STATIC_PAGE_SLUGS = new Set(['home', 'custom-order']);
+const LOCKED_STATIC_PAGE_SLUGS = new Set(['home', 'custom-order', 'vypolnennye-obekty']);
 const RESERVED_TOP_LEVEL_SLUGS = new Set(['admin', 'izgotovlenie-na-zakaz', '404']);
 const DEV_DEFAULTS = {
   ADMIN_USERNAME: 'admin',
@@ -27,6 +40,7 @@ const DEV_DEFAULTS = {
   ADMIN_DEFAULT_DEPLOY_TARGET: 'test',
   ADMIN_GIT_REMOTE: 'origin',
   ADMIN_ALLOW_PRODUCTION_PUBLISH: 'false',
+  PRODUCTION_DEPLOY_ENABLED: 'false',
   SITE_URL: '',
   TEST_SITE_URL: '',
   GITHUB_REPOSITORY: '',
@@ -38,44 +52,49 @@ const COLLECTIONS = {
   'product-sections': {
     label: 'Страницы каталога',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/product-sections')
+    path: path.join(contentRoot, 'product-sections')
   },
   services: {
     label: 'Проектные страницы',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/services')
+    path: path.join(contentRoot, 'services')
   },
   'product-categories': {
     label: 'Подстраницы каталога',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/product-categories')
+    path: path.join(contentRoot, 'product-categories')
   },
   products: {
     label: 'Товары каталога',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/products')
+    path: path.join(contentRoot, 'products')
   },
   projects: {
     label: 'Выполненные объекты',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/projects')
+    path: path.join(contentRoot, 'projects')
   },
   jobs: {
     label: 'Вакансии',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/jobs')
+    path: path.join(contentRoot, 'jobs')
   },
   'site-settings': {
     label: 'Настройки сайта',
     type: 'single-file',
-    path: path.join(repoRoot, 'src/content/site-settings/global.json'),
+    path: path.join(contentRoot, 'site-settings', 'global.json'),
     slug: 'global'
   },
   'static-pages': {
     label: 'Страницы',
     type: 'directory',
-    path: path.join(repoRoot, 'src/content/static-pages')
+    path: path.join(contentRoot, 'static-pages')
   }
+};
+
+const DATA_SINGLETONS = {
+  navigation: { path: path.join(repoRoot, 'src/data/navigation.json') },
+  yandex: { path: path.join(repoRoot, 'src/data/yandex.json') }
 };
 
 const sessions = new Map();
@@ -104,6 +123,8 @@ const FULL_PUBLISH_PATHS = [
   'tsconfig.json'
 ];
 const DEPLOY_TARGETS = new Set(['test', 'production']);
+const MAX_JSON_IMPORT_BODY_SIZE = 12 * 1024 * 1024;
+const API_CAPABILITIES = { contentJson: 1, contentBundles: 1 };
 const PRODUCTION_NOT_READY_MESSAGE = 'Боевой домен пока не настроен. Используйте тестовую публикацию.';
 const REPORT_LOG_LINES = 200;
 const DEFAULT_PREVIEW_BRANCH = 'preview';
@@ -158,6 +179,7 @@ async function loadEnvConfig() {
     ADMIN_DEFAULT_DEPLOY_TARGET: merged.ADMIN_DEFAULT_DEPLOY_TARGET ?? DEV_DEFAULTS.ADMIN_DEFAULT_DEPLOY_TARGET,
     ADMIN_GIT_REMOTE: merged.ADMIN_GIT_REMOTE ?? DEV_DEFAULTS.ADMIN_GIT_REMOTE,
     ADMIN_ALLOW_PRODUCTION_PUBLISH: merged.ADMIN_ALLOW_PRODUCTION_PUBLISH ?? DEV_DEFAULTS.ADMIN_ALLOW_PRODUCTION_PUBLISH,
+    PRODUCTION_DEPLOY_ENABLED: merged.PRODUCTION_DEPLOY_ENABLED ?? DEV_DEFAULTS.PRODUCTION_DEPLOY_ENABLED,
     SITE_URL: merged.SITE_URL ?? DEV_DEFAULTS.SITE_URL,
     TEST_SITE_URL: merged.TEST_SITE_URL ?? DEV_DEFAULTS.TEST_SITE_URL,
     GITHUB_REPOSITORY: merged.GITHUB_REPOSITORY ?? DEV_DEFAULTS.GITHUB_REPOSITORY,
@@ -282,15 +304,111 @@ function branchKey(value) {
   return String(value || '').trim().replace(/^refs\/heads\//, '').toLowerCase();
 }
 
+function isProductionDeployEnabled() {
+  return String(config?.PRODUCTION_DEPLOY_ENABLED || '').trim().toLowerCase() === 'true';
+}
+
+function isSiteUrlConfigured() {
+  return Boolean(String(config?.SITE_URL || '').trim());
+}
+
+function getPublishConfigPayload() {
+  const productionBranch = safeBranchName(config.ADMIN_PRODUCTION_BRANCH, DEFAULT_PRODUCTION_BRANCH);
+  const previewCandidate = safeBranchName(config.ADMIN_PREVIEW_BRANCH, DEFAULT_PREVIEW_BRANCH);
+  const previewBranch = isProductionBranch(previewCandidate, productionBranch) ? DEFAULT_PREVIEW_BRANCH : previewCandidate;
+  const productionDeployEnabled = isProductionDeployEnabled();
+  const siteUrlConfigured = isSiteUrlConfigured();
+  return {
+    productionDeployEnabled,
+    siteUrlConfigured,
+    productionReady: productionDeployEnabled && siteUrlConfigured,
+    previewBranch,
+    productionBranch
+  };
+}
+
 function isProductionBranch(branch, productionBranch = config?.ADMIN_PRODUCTION_BRANCH) {
   const key = branchKey(branch);
   const productionKey = branchKey(productionBranch || DEFAULT_PRODUCTION_BRANCH);
   return key === productionKey || key === 'main' || key === 'master';
 }
 
-function inferWorkflowDeployTarget(event, branch, requestedTarget = 'test') {
-  if (event === 'workflow_dispatch') return normalizeDeployTarget(requestedTarget);
-  return isProductionBranch(branch) ? 'production' : 'test';
+function isTestBranch(branch) {
+  const key = branchKey(branch);
+  const previewKey = branchKey(config?.ADMIN_PREVIEW_BRANCH || DEFAULT_PREVIEW_BRANCH);
+  return key === previewKey || key === 'preview' || key === 'develop';
+}
+
+function inferWorkflowDeployMeta(event, branch, requestedTarget = 'test') {
+  const workflowEvent = String(event || '').trim();
+  const target = normalizeDeployTarget(requestedTarget);
+  const productionDeployEnabled = isProductionDeployEnabled();
+  const siteUrlConfigured = isSiteUrlConfigured();
+
+  if (workflowEvent === 'workflow_dispatch') {
+    if (target === 'production') {
+      if (productionDeployEnabled) {
+        return {
+          workflowDeployTarget: 'production',
+          productionCheckRan: true,
+          workflowDeployReason: 'workflow_dispatch requested production and PRODUCTION_DEPLOY_ENABLED=true.',
+          productionDeployEnabled,
+          siteUrlConfigured
+        };
+      }
+      return {
+        workflowDeployTarget: 'test',
+        productionCheckRan: false,
+        workflowDeployReason: 'workflow_dispatch requested production, but production deploy is disabled.',
+        productionDeployEnabled,
+        siteUrlConfigured
+      };
+    }
+    return {
+      workflowDeployTarget: 'test',
+      productionCheckRan: false,
+      workflowDeployReason: 'workflow_dispatch requested test.',
+      productionDeployEnabled,
+      siteUrlConfigured
+    };
+  }
+
+  if (isTestBranch(branch)) {
+    return {
+      workflowDeployTarget: 'test',
+      productionCheckRan: false,
+      workflowDeployReason: 'preview/develop branches always use test deployment.',
+      productionDeployEnabled,
+      siteUrlConfigured
+    };
+  }
+
+  if (isProductionBranch(branch)) {
+    if (productionDeployEnabled) {
+      return {
+        workflowDeployTarget: 'production',
+        productionCheckRan: true,
+        workflowDeployReason: 'main/master with PRODUCTION_DEPLOY_ENABLED=true.',
+        productionDeployEnabled,
+        siteUrlConfigured
+      };
+    }
+    return {
+      workflowDeployTarget: 'test',
+      productionCheckRan: false,
+      workflowDeployReason: 'main/master with production deploy disabled; running test build only.',
+      productionDeployEnabled,
+      siteUrlConfigured
+    };
+  }
+
+  return {
+    workflowDeployTarget: 'test',
+    productionCheckRan: false,
+    workflowDeployReason: 'Non-deploy branch; running test build only.',
+    productionDeployEnabled,
+    siteUrlConfigured
+  };
 }
 
 function getPublishBranch(target) {
@@ -302,10 +420,11 @@ function getPublishBranch(target) {
 }
 
 function assertProductionReady() {
-  if (config.ADMIN_ALLOW_PRODUCTION_PUBLISH === 'true') return;
-  if (String(config.SITE_URL || '').trim()) return;
+  if (isProductionDeployEnabled() && isSiteUrlConfigured()) return;
   const error = new Error(PRODUCTION_NOT_READY_MESSAGE);
   error.code = 'PRODUCTION_NOT_READY';
+  error.productionDeployEnabled = isProductionDeployEnabled();
+  error.siteUrlConfigured = isSiteUrlConfigured();
   throw error;
 }
 
@@ -327,20 +446,21 @@ async function publishPaths(paths, scope, options = {}) {
   const sourceBranch = await getCurrentBranch();
   const branch = getPublishBranch(target);
   const ref = `refs/heads/${branch}`;
+  const publishConfig = getPublishConfigPayload();
   const requestedTarget = options.target === undefined || options.target === null || String(options.target).trim() === ''
     ? 'test'
     : String(options.target).trim();
   const publishSource = String(options.source || '').trim();
   const pathspecs = await existingGitPathspecs(paths);
   if (!pathspecs.length) {
-    return { published: false, target, mode: target, requestedTarget, publishSource, branch, ref, sourceBranch, message: 'Нет путей для публикации.' };
+    return { published: false, target, mode: target, requestedTarget, publishSource, branch, ref, sourceBranch, ...publishConfig, message: 'Нет путей для публикации.' };
   }
 
   await runGit(['add', '-A', '--', ...pathspecs]);
 
   try {
     await runGit(['diff', '--cached', '--quiet', '--', ...pathspecs]);
-    return { published: false, target, mode: target, requestedTarget, publishSource, branch, ref, sourceBranch, message: 'Нет изменений для публикации.' };
+    return { published: false, target, mode: target, requestedTarget, publishSource, branch, ref, sourceBranch, ...publishConfig, message: 'Нет изменений для публикации.' };
   } catch {
     // git diff --quiet exits with 1 when there are staged changes.
   }
@@ -367,6 +487,7 @@ async function publishPaths(paths, scope, options = {}) {
     commit,
     commitSha,
     commitMessage,
+    ...publishConfig,
     ...githubInfo,
     message: target === 'production'
       ? `Опубликовано в GitHub: ${commit}. Production build запущен для ветки ${branch}.`
@@ -461,14 +582,14 @@ async function buildGitHubPublicationInfo(branch, commitSha, target = 'test') {
   const run = await findWorkflowRun({ branch, commitSha }).catch(() => null);
   const workflowEvent = run?.event || '';
   const workflowBranch = run?.head_branch || branch;
+  const workflowMeta = inferWorkflowDeployMeta(workflowEvent, workflowBranch, target);
   return {
     commitUrl,
     workflowRunId: run?.id ?? null,
     workflowRunUrl: run?.html_url ?? '',
     workflowEvent,
     workflowBranch,
-    workflowDeployTarget: inferWorkflowDeployTarget(workflowEvent, workflowBranch, target),
-    productionCheckRan: inferWorkflowDeployTarget(workflowEvent, workflowBranch, target) === 'production',
+    ...workflowMeta,
     status: normalizeRunStatus(run)
   };
 }
@@ -531,7 +652,7 @@ function explainFailure(logTail = '', statusError = '', context = {}) {
       probableCause: workflowTarget === 'production'
         ? `Workflow определил deploy target как production${workflowBranch ? ` для ветки ${workflowBranch}` : ''}${workflowEvent ? ` при событии ${workflowEvent}` : ''} и поэтому выполнил production settings check.`
         : 'Workflow потребовал SITE_URL, хотя публикация была выбрана как тестовая. Проверьте ветку публикации и deploy target в workflow.',
-      nextStep: 'Для текущей стадии используйте тестовую публикацию в ветку preview. Для боевой публикации задайте SITE_URL после подключения домена/хостинга.'
+      nextStep: 'Для текущей стадии используйте тестовую публикацию в ветку preview. Для боевой публикации задайте PRODUCTION_DEPLOY_ENABLED=true и SITE_URL после подключения домена/хостинга.'
     };
   }
 
@@ -564,6 +685,7 @@ async function getPublishStatus(params = {}) {
   }));
 
   if (!run || run.statusLookupError) {
+    const workflowMeta = inferWorkflowDeployMeta('', branch, target);
     return {
       target,
       mode: target,
@@ -576,8 +698,7 @@ async function getPublishStatus(params = {}) {
       commitUrl: resolvedCommitUrl,
       workflowEvent: '',
       workflowBranch: branch,
-      workflowDeployTarget: inferWorkflowDeployTarget('', branch, target),
-      productionCheckRan: inferWorkflowDeployTarget('', branch, target) === 'production',
+      ...workflowMeta,
       status: 'queued',
       statusError: run?.statusLookupError || 'GitHub Actions run еще не найден. Повторите проверку через несколько секунд.'
     };
@@ -587,9 +708,9 @@ async function getPublishStatus(params = {}) {
   const failureDetails = status === 'failure' ? await fetchRunFailureDetails(run.id) : {};
   const workflowEvent = run.event || '';
   const workflowBranch = run.head_branch || branch;
-  const workflowDeployTarget = inferWorkflowDeployTarget(workflowEvent, workflowBranch, target);
+  const workflowMeta = inferWorkflowDeployMeta(workflowEvent, workflowBranch, target);
   const failureInfo = status === 'failure'
-    ? explainFailure(failureDetails.logTail, '', { target, branch, workflowEvent, workflowBranch, workflowDeployTarget })
+    ? explainFailure(failureDetails.logTail, '', { target, branch, workflowEvent, workflowBranch, workflowDeployTarget: workflowMeta.workflowDeployTarget })
     : {};
   return {
     target,
@@ -607,8 +728,7 @@ async function getPublishStatus(params = {}) {
     workflowRunUrl: run.html_url || '',
     workflowEvent,
     workflowBranch,
-    workflowDeployTarget,
-    productionCheckRan: workflowDeployTarget === 'production',
+    ...workflowMeta,
     status,
     runConclusion: run.conclusion || '',
     runName: run.name || '',
@@ -622,21 +742,42 @@ async function getPublishStatus(params = {}) {
 function buildPublishReport(status, params = {}) {
   const now = new Date().toISOString();
   const target = normalizeDeployTarget(params.target || status.target);
+  const workflowEvent = status.workflowEvent || params.workflowEvent || '';
+  const workflowBranch = status.workflowBranch || params.workflowBranch || params.branch || status.branch || '';
+  const workflowMeta = inferWorkflowDeployMeta(workflowEvent, workflowBranch, target);
+  const detectedDeployTarget = status.workflowDeployTarget || params.workflowDeployTarget || workflowMeta.workflowDeployTarget;
+  const productionCheckRan = typeof status.productionCheckRan === 'boolean'
+    ? status.productionCheckRan
+    : workflowMeta.productionCheckRan;
+  const productionDeployEnabled = typeof status.productionDeployEnabled === 'boolean'
+    ? status.productionDeployEnabled
+    : workflowMeta.productionDeployEnabled;
+  const siteUrlConfigured = typeof status.siteUrlConfigured === 'boolean'
+    ? status.siteUrlConfigured
+    : workflowMeta.siteUrlConfigured;
+  const workflowDeployReason = status.workflowDeployReason || params.workflowDeployReason || workflowMeta.workflowDeployReason;
   const lines = [
     'SMU-1 publish/build error report',
     '',
     `Дата и время: ${now}`,
     `Кнопка/источник в админке: ${params.publishSource || status.publishSource || ''}`,
     `Target, отправленный админкой: ${params.requestedTarget || status.requestedTarget || target}`,
+    `Selected target: ${params.requestedTarget || status.requestedTarget || target}`,
     `Режим публикации: ${target}`,
     `Branch: ${params.branch || status.branch || ''}`,
+    `Event: ${workflowEvent}`,
     `Ref: ${params.ref || status.ref || ''}`,
     `Commit hash: ${params.commitSha || status.commitSha || params.commit || ''}`,
     `Commit message: ${params.commitMessage || status.commitMessage || ''}`,
-    `Workflow event: ${status.workflowEvent || params.workflowEvent || ''}`,
-    `Workflow branch: ${status.workflowBranch || params.workflowBranch || params.branch || status.branch || ''}`,
-    `Deploy target from workflow: ${status.workflowDeployTarget || params.workflowDeployTarget || target}`,
-    `Check production settings ran: ${status.productionCheckRan ? 'yes' : 'no'}`,
+    `Workflow event: ${workflowEvent}`,
+    `Workflow branch: ${workflowBranch}`,
+    `Deploy target from workflow: ${detectedDeployTarget}`,
+    `Detected DEPLOY_TARGET: ${detectedDeployTarget}`,
+    `PRODUCTION_DEPLOY_ENABLED: ${productionDeployEnabled ? 'true' : 'false'}`,
+    `SITE_URL configured: ${siteUrlConfigured ? 'yes' : 'no'}`,
+    `Check production settings ran: ${productionCheckRan ? 'yes' : 'no'}`,
+    `productionCheckRan: ${productionCheckRan ? 'true' : 'false'}`,
+    `Workflow decision: ${workflowDeployReason}`,
     `Workflow run URL: ${status.workflowRunUrl || params.workflowRunUrl || ''}`,
     `Run status: ${status.status || ''}${status.runConclusion ? ` (${status.runConclusion})` : ''}`,
     `Failed job: ${status.failedJob || ''}`,
@@ -661,16 +802,20 @@ function buildPublishReport(status, params = {}) {
   return lines.join('\n');
 }
 
-function readBody(req) {
+function readBody(req, maxBytes = 1_000_000) {
   return new Promise((resolve, reject) => {
-    let raw = '';
+    const chunks = [];
+    let size = 0;
     req.on('data', (chunk) => {
-      raw += chunk;
-      if (raw.length > 1_000_000) {
+      chunks.push(chunk);
+      size += chunk.length;
+      if (size > maxBytes) {
         reject(new Error('Payload too large'));
+        req.destroy();
       }
     });
     req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString('utf8');
       if (!raw) {
         resolve({});
         return;
@@ -702,7 +847,7 @@ function readRawBody(req, maxBytes = MAX_UPLOAD_SIZE + 1024) {
     req.on('data', (chunk) => {
       size += chunk.length;
       if (size > maxBytes) {
-        reject(new Error(`Файл слишком большой. Максимум ${formatUploadLimit(MAX_UPLOAD_SIZE)} MB.`));
+        reject(new Error(`Запрос слишком большой. Максимум ${formatUploadLimit(maxBytes)} MB.`));
         return;
       }
       chunks.push(chunk);
@@ -949,8 +1094,13 @@ async function buildCatalogExport() {
     },
     productCategories,
     products,
-    catalogPages
+    catalogPages,
+    productImport: buildProductImportPayload(products)
   };
+}
+
+function validateContentForWrite(collection, content) {
+  return collection === 'products' ? validateProductContentForWrite(content) : content;
 }
 
 async function assertSlugIsUnique(collection, slug, currentPath = null) {
@@ -1116,6 +1266,7 @@ function clearSessionCookie(res) {
 
 const { config, usingDevCredentials } = await loadEnvConfig();
 const allowedOrigins = buildAllowedOrigins(config.ADMIN_ALLOWED_ORIGIN);
+const contentJson = createContentJsonService({ repoRoot, collections: COLLECTIONS, singletons: DATA_SINGLETONS });
 
 if (usingDevCredentials) {
   console.warn('[admin-api] WARNING: используются dev credentials (admin/admin). Добавьте .env.local или .env.admin.local');
@@ -1156,7 +1307,7 @@ const server = http.createServer(async (req, res) => {
       const token = buildSessionToken(config.SESSION_SECRET, username);
       sessions.set(token, { username, createdAt: Date.now() });
       writeSessionCookie(res, token);
-      sendJson(res, 200, { ok: true, username });
+      sendJson(res, 200, { ok: true, username, publishConfig: getPublishConfigPayload(), capabilities: API_CAPABILITIES });
       return;
     }
 
@@ -1172,14 +1323,15 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/admin/me' && req.method === 'GET') {
       const username = getAuthUser(req);
       if (!username) {
-        sendJson(res, 200, { authenticated: false });
+        sendJson(res, 200, { authenticated: false, capabilities: API_CAPABILITIES });
         return;
       }
-      sendJson(res, 200, { authenticated: true, username });
+      sendJson(res, 200, { authenticated: true, username, publishConfig: getPublishConfigPayload(), capabilities: API_CAPABILITIES });
       return;
     }
 
-    if (!requireAuth(req, res)) {
+    const authUser = requireAuth(req, res);
+    if (!authUser) {
       return;
     }
 
@@ -1204,6 +1356,55 @@ const server = http.createServer(async (req, res) => {
       const payload = await buildCatalogExport();
       const filename = `smu1-catalog-export-${exportedAt.toISOString().slice(0, 10)}.json`;
       sendPrettyJson(res, 200, payload, filename);
+      return;
+    }
+
+    if (pathname === '/api/admin/json-export/full-site' && req.method === 'GET') {
+      const exported = await contentJson.exportFullSite();
+      sendPrettyJson(res, 200, exported.payload, exported.filename);
+      return;
+    }
+
+    const pageJsonExportMatch = pathname.match(/^\/api\/admin\/json-export\/page\/([a-z0-9-]+)\/([a-z0-9-]+)$/i);
+    if (pageJsonExportMatch && req.method === 'GET') {
+      const [, collection, slug] = pageJsonExportMatch;
+      const exported = await contentJson.exportPage(collection, slug);
+      sendPrettyJson(res, 200, exported.payload, exported.filename);
+      return;
+    }
+
+    const jsonExportMatch = pathname.match(/^\/api\/admin\/json-export\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?$/i);
+    if (jsonExportMatch && req.method === 'GET') {
+      const [, collection, slug] = jsonExportMatch;
+      const exported = slug
+        ? await contentJson.exportSingle(collection, slug)
+        : await contentJson.exportCollection(collection);
+      sendPrettyJson(res, 200, exported.payload, exported.filename);
+      return;
+    }
+
+    if (pathname === '/api/admin/json-import/preview' && req.method === 'POST') {
+      const body = await readBody(req, MAX_JSON_IMPORT_BODY_SIZE);
+      const preview = await contentJson.preview({
+        owner: authUser,
+        collection: body?.collection,
+        scope: body?.scope,
+        currentSlug: body?.currentSlug,
+        writeMode: body?.writeMode,
+        rawJson: body?.rawJson
+      });
+      sendJson(res, 200, preview);
+      return;
+    }
+
+    if (pathname === '/api/admin/json-import/apply' && req.method === 'POST') {
+      const body = await readBody(req);
+      const result = await contentJson.apply({
+        owner: authUser,
+        operationId: body?.operationId,
+        replaceConfirmed: body?.replaceConfirmed === true
+      });
+      sendJson(res, result.result === 'success' ? 200 : 409, result);
       return;
     }
 
@@ -1252,6 +1453,24 @@ const server = http.createServer(async (req, res) => {
       }));
       const filename = `smu1-publish-report-${new Date().toISOString().slice(0, 10)}.txt`;
       sendTextAttachment(res, 200, buildPublishReport(status, params), filename);
+      return;
+    }
+
+    if (pathname === '/api/admin/project-media-upload' && req.method === 'POST') {
+      const contentType = req.headers['content-type'] || '';
+      if (!String(contentType).includes('multipart/form-data')) {
+        sendJson(res, 400, { error: 'Ожидается multipart/form-data' });
+        return;
+      }
+      const raw = await readRawBody(req, MAX_PROJECT_MEDIA_REQUEST_SIZE + 1024 * 1024);
+      const parts = parseMultipartFiles(raw, contentType);
+      const result = await saveProjectMediaFiles(parts, { uploadsDir: UPLOADS_DIR });
+      sendJson(res, result.files.length ? 200 : 400, {
+        ok: result.files.length > 0,
+        files: result.files,
+        errors: result.errors,
+        ...(result.files.length ? {} : { error: result.errors.map((item) => `${item.name}: ${item.error}`).join('; ') || 'Файлы не загружены' })
+      });
       return;
     }
 
@@ -1342,8 +1561,9 @@ const server = http.createServer(async (req, res) => {
         // file does not exist yet
       }
 
+      const savedContent = validateContentForWrite(collection, { ...content, slug });
       await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, `${JSON.stringify({ ...content, slug }, null, 2)}\n`, 'utf8');
+      await fs.writeFile(filePath, `${JSON.stringify(savedContent, null, 2)}\n`, 'utf8');
       const saved = await readJsonFile(filePath);
       sendJson(res, 201, { ok: true, slug, content: saved });
       return;
@@ -1379,7 +1599,7 @@ const server = http.createServer(async (req, res) => {
 
       const previousSlug = sanitizeSlug(previousContent?.slug ?? slug);
       const nextSlug = await validateDirectoryContentSlug(collection, body, filePath, previousSlug);
-      const savedContent = { ...body, slug: nextSlug };
+      const savedContent = validateContentForWrite(collection, { ...body, slug: nextSlug });
       const nextPath = getDirectoryEntryPath(config, nextSlug);
 
       if (!isSamePath(filePath, nextPath)) {
@@ -1421,9 +1641,12 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 404, { error: 'Маршрут не найден' });
   } catch (error) {
     const message = error instanceof Error ? maskSecrets(error.message) : 'Неизвестная ошибка';
+    const isProductionNotReady = error?.code === 'PRODUCTION_NOT_READY';
     sendJson(res, error?.code === 'PRODUCTION_NOT_READY' ? 409 : 400, {
       error: message,
-      code: error?.code || 'ADMIN_API_ERROR'
+      code: error?.code || 'ADMIN_API_ERROR',
+      ...(Array.isArray(error?.validationIssues) ? { validationIssues: error.validationIssues } : {}),
+      ...(isProductionNotReady ? getPublishConfigPayload() : {})
     });
   }
 });

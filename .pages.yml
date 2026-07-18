@@ -345,12 +345,36 @@ content:
           - name: city
             type: string
             required: true
+          - name: category
+            type: string
+          - name: locationLabel
+            label: Место
+            type: string
+          - name: workTypes
+            label: Виды работ
+            type: string
+            list: true
           - name: shortDescription
             type: text
             required: true
           - name: whatWasDone
             type: text
             required: true
+          - name: scope
+            label: Объем работ
+            type: text
+          - name: materials
+            type: string
+            list: true
+          - name: features
+            label: Особенности объекта
+            type: string
+            list: true
+          - name: result
+            type: text
+          - name: clientVisibility
+            label: Видимость заказчика (служебное поле)
+            type: text
           - name: image
             type: image
           - name: gallery

@@ -1,0 +1,59 @@
+---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import type { DirectionCardItem } from './directionV2Data';
+
+interface Props {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  items: DirectionCardItem[];
+  variant?: 'engineering' | 'visual';
+  id?: string;
+}
+
+const {
+  eyebrow = 'Виды решений',
+  title,
+  description = '',
+  items,
+  variant = 'engineering',
+  id = 'direction-types'
+} = Astro.props as Props;
+---
+
+{items.length > 0 && (
+  <section class:list={['direction-types', `direction-types--${variant}`]} id={id} aria-labelledby={`${id}-title`}>
+    <div class="hv2-shell">
+      <header class="direction-section-heading" data-v2-reveal>
+        <div>
+          <p class:list={['hv2-eyebrow', { 'hv2-eyebrow--light': variant === 'engineering' }]}>{eyebrow}</p>
+          <h2 id={`${id}-title`}>{title}</h2>
+        </div>
+        {description && <p>{description}</p>}
+      </header>
+      <div class="direction-types__grid" role="list">
+        {items.map((item, index) => (
+          <article
+            class:list={[
+              'direction-type-card',
+              { 'direction-type-card--accent': variant === 'visual' && index === items.length - 1 }
+            ]}
+            role="listitem"
+            data-v2-reveal
+          >
+            {item.image ? (
+              <figure class="direction-type-card__media" data-v2-media>
+                <img src={withBase(item.image)} alt="" width="720" height="540" loading="lazy" decoding="async" data-v2-image />
+              </figure>
+            ) : null}
+            <div class="direction-type-card__body">
+              <h3>{item.title}</h3>
+              {item.text && <p>{item.text}</p>}
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+)}

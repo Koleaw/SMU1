@@ -1,0 +1,23 @@
+---
+interface Props {
+  eyebrow?: string;
+  title: string;
+  lead: string;
+  text?: string;
+}
+
+const { eyebrow = 'Задача объекта', title, lead, text = '' } = Astro.props as Props;
+---
+
+<section class="project-intro" aria-labelledby="project-intro-title">
+  <div class="hv2-shell hv2-grid project-intro__grid" data-v2-reveal>
+    <header class="project-intro__heading">
+      <p class="hv2-eyebrow">{eyebrow}</p>
+      <h2 id="project-intro-title">{title}</h2>
+    </header>
+    <div class="project-intro__copy">
+      <p class="project-intro__lead">{lead}</p>
+      {text && <p>{text}</p>}
+    </div>
+  </div>
+</section>

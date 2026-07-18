@@ -1,0 +1,26 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  items: string[];
+}
+
+const { title, description = '', items } = Astro.props as Props;
+---
+
+{items.length > 0 && (
+  <section class="place-contexts" id="landscaping-contexts" aria-labelledby="place-contexts-title">
+    <div class="hv2-shell hv2-grid place-contexts__grid">
+      <header class="place-contexts__heading" data-v2-reveal>
+        <p class="hv2-eyebrow hv2-eyebrow--light">Территории и объекты</p>
+        <h2 id="place-contexts-title">{title}</h2>
+        {description && <p>{description}</p>}
+      </header>
+      <ul class="place-contexts__list" role="list" data-v2-reveal>
+        {items.map((item) => (
+          <li><strong>{item}</strong></li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}

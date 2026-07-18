@@ -1,0 +1,27 @@
+---
+import CatalogV2Layout from '../CatalogV2Layout.astro';
+import '../../../styles/v2/projects-v2.css';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath: string;
+  currentPath: string;
+  ogImage?: string;
+}
+
+const { title, description, canonicalPath, currentPath, ogImage = '' } = Astro.props as Props;
+---
+
+<CatalogV2Layout
+  title={title}
+  description={description}
+  canonicalPath={canonicalPath}
+  currentPath={currentPath}
+  ogImage={ogImage}
+  pageKind="section"
+>
+  <div class="projects-v2" data-projects-v2-root>
+    <slot />
+  </div>
+</CatalogV2Layout>

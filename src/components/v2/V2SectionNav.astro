@@ -1,0 +1,197 @@
+---
+export interface V2SectionNavItem {
+  id: string;
+  label: string;
+}
+
+interface Props {
+  items: V2SectionNavItem[];
+  label?: string;
+}
+
+const {
+  items,
+  label = 'Навигация по странице'
+} = Astro.props as Props;
+const visibleItems = items.filter((item) => item.id.trim() && item.label.trim());
+---
+
+{visibleItems.length > 1 && (
+  <nav class="v2-section-nav" aria-label={label} data-v2-section-nav>
+    <div class="hv2-shell v2-section-nav__inner">
+      <ul class="v2-section-nav__list" role="list">
+        {visibleItems.map((item) => (
+          <li class="v2-section-nav__item">
+            <a class="v2-section-nav__link" href={`#${item.id}`} data-v2-section-nav-link>
+              {item.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </nav>
+)}
+
+<script>
+  const initV2SectionNav = () => {
+    document.querySelectorAll<HTMLElement>('[data-v2-section-nav]').forEach((nav) => {
+      if (nav.dataset.ready === 'true') return;
+      nav.dataset.ready = 'true';
+
+      const entries = Array.from(nav.querySelectorAll<HTMLAnchorElement>('[data-v2-section-nav-link]'))
+        .map((link) => {
+          const id = decodeURIComponent(link.hash.slice(1));
+          const target = id ? document.getElementById(id) : null;
+          return target ? { link, target } : null;
+        })
+        .filter((entry): entry is { link: HTMLAnchorElement; target: HTMLElement } => Boolean(entry));
+      const header = document.querySelector<HTMLElement>('[data-home-v2-header]');
+
+      nav.querySelectorAll<HTMLAnchorElement>('[data-v2-section-nav-link]').forEach((link) => {
+        if (!entries.some((entry) => entry.link === link)) link.closest('li')?.setAttribute('hidden', '');
+      });
+
+      if (entries.length < 2) {
+        nav.hidden = true;
+        return;
+      }
+
+      const setCurrent = (link: HTMLAnchorElement) => {
+        entries.forEach((entry) => {
+          const isCurrent = entry.link === link;
+          entry.link.classList.toggle('is-active', isCurrent);
+          if (isCurrent) entry.link.setAttribute('aria-current', 'location');
+          else entry.link.removeAttribute('aria-current');
+        });
+      };
+
+      type SectionNavEntry = (typeof entries)[number];
+      type PendingTarget = {
+        entry: SectionNavEntry;
+        settleTimer: number;
+        timeoutTimer: number;
+      };
+
+      const targetBandBefore = 48;
+      const targetBandAfter = 12;
+      const targetSettleDelay = 120;
+      const targetLockTimeout = 1800;
+      let pendingTarget: PendingTarget | null = null;
+      let frame = 0;
+
+      const anchorOffset = () => {
+        const headerOffset = header && !header.classList.contains('is-hidden') ? header.offsetHeight : 0;
+        return headerOffset + nav.offsetHeight + 24;
+      };
+
+      const clearPendingTarget = () => {
+        if (!pendingTarget) return;
+        window.clearTimeout(pendingTarget.settleTimer);
+        window.clearTimeout(pendingTarget.timeoutTimer);
+        pendingTarget = null;
+      };
+
+      const queueSync = () => {
+        if (frame) return;
+        frame = window.requestAnimationFrame(syncCurrent);
+      };
+
+      const releasePendingTarget = (entry: SectionNavEntry) => {
+        if (pendingTarget?.entry !== entry) return;
+        clearPendingTarget();
+        header?.classList.remove('is-hidden');
+        setCurrent(entry.link);
+        queueSync();
+      };
+
+      const beginPendingTarget = (entry: SectionNavEntry) => {
+        clearPendingTarget();
+        header?.classList.remove('is-hidden');
+        setCurrent(entry.link);
+
+        const target: PendingTarget = {
+          entry,
+          settleTimer: 0,
+          timeoutTimer: 0
+        };
+        target.timeoutTimer = window.setTimeout(() => releasePendingTarget(entry), targetLockTimeout);
+        pendingTarget = target;
+      };
+
+      const syncCurrent = () => {
+        frame = 0;
+        if (pendingTarget) {
+          // Anchor scrolling and the auto-hiding header both emit intermediate
+          // scroll positions. Keep the selected link stable until its section
+          // reaches the final sticky offset, then return to geometry tracking.
+          header?.classList.remove('is-hidden');
+          const pending = pendingTarget;
+          const targetTop = pending.entry.target.getBoundingClientRect().top;
+          const offset = anchorOffset();
+          const atPageStart = pending.entry === entries[0] && window.scrollY <= 1;
+          const atPageEnd = pending.entry === entries[entries.length - 1]
+            && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+          const reachedTarget = targetTop >= offset - targetBandBefore
+            && targetTop <= offset + targetBandAfter;
+
+          setCurrent(pending.entry.link);
+          window.clearTimeout(pending.settleTimer);
+          pending.settleTimer = 0;
+          if (reachedTarget || atPageStart || atPageEnd) {
+            pending.settleTimer = window.setTimeout(
+              () => releasePendingTarget(pending.entry),
+              targetSettleDelay
+            );
+          }
+          return;
+        }
+
+        const offset = anchorOffset();
+        let current = entries[0];
+
+        entries.forEach((entry) => {
+          if (entry.target.getBoundingClientRect().top <= offset + targetBandAfter) current = entry;
+        });
+
+        if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+          current = entries[entries.length - 1];
+        }
+
+        if (current) setCurrent(current.link);
+      };
+
+      const entryFromLocationHash = () => {
+        if (!window.location.hash) return null;
+        try {
+          const id = decodeURIComponent(window.location.hash.slice(1));
+          return entries.find((entry) => entry.target.id === id) ?? null;
+        } catch {
+          return null;
+        }
+      };
+
+      entries.forEach((entry) => {
+        entry.link.addEventListener('click', () => {
+          beginPendingTarget(entry);
+        });
+      });
+      window.addEventListener('scroll', queueSync, { passive: true });
+      window.addEventListener('resize', queueSync);
+      window.addEventListener('hashchange', () => {
+        const hashEntry = entryFromLocationHash();
+        if (hashEntry) beginPendingTarget(hashEntry);
+        else {
+          clearPendingTarget();
+          queueSync();
+        }
+      });
+
+      const initialHashEntry = entryFromLocationHash();
+      if (initialHashEntry) beginPendingTarget(initialHashEntry);
+      else syncCurrent();
+    });
+  };
+
+  initV2SectionNav();
+  document.addEventListener('astro:page-load', initV2SectionNav);
+</script>

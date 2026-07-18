@@ -1,0 +1,199 @@
+---
+import DirectionV2FinalCTA from '../directions/DirectionV2FinalCTA.astro';
+import ImmersiveDirectionHero from '../directions/ImmersiveDirectionHero.astro';
+import DirectionV2Related from '../directions/DirectionV2Related.astro';
+import {
+  extractConfirmedBriefInputs,
+  getDirectionCardItems,
+  getDirectionListItems
+} from '../directions/directionV2Data';
+import {
+  approvedMediaUntilEdited,
+  approvedUntilEdited
+} from '../directions/directionV2Presentation';
+import ProjectDirectionBrief from '../project/ProjectDirectionBrief.astro';
+import ProjectDirectionContexts from '../project/ProjectDirectionContexts.astro';
+import ProjectDirectionProof from '../project/ProjectDirectionProof.astro';
+import ProjectDirectionScope from '../project/ProjectDirectionScope.astro';
+import ProjectDirectionV2Layout from '../project/ProjectDirectionV2Layout.astro';
+import {
+  getProjectDirectionBlock,
+  loadProjectDirectionV2Snapshot,
+  selectProject
+} from '../project/projectDirectionV2Data';
+import { getV2ProjectPresentation, selectV2ProjectMedia } from '../mediaRoleAdapter';
+import V2SectionNav from '../V2SectionNav.astro';
+
+const currentPath = Astro.url.pathname;
+const data = await loadProjectDirectionV2Snapshot('stroitelstvo-i-remonty');
+const { service, projects, catalog } = data;
+const worksBlock = getProjectDirectionBlock(service, 'cardGrid');
+const contextsBlock = getProjectDirectionBlock(service, 'listPanel');
+const works = getDirectionCardItems(worksBlock).map(({ title, text }) => ({ title, text }));
+const contexts = getDirectionListItems(contextsBlock);
+const briefInputs = extractConfirmedBriefInputs([
+  service.contactDescription,
+  ...getDirectionCardItems(worksBlock).flatMap((item) => [item.title, item.text])
+]);
+
+const industrial = selectProject(projects, 'kompleks-rabot-na-proizvodstvennoy-territorii');
+const squareRepair = selectProject(projects, 'remont-skvera-na-ulitse-gogolya');
+const industrialPresentation = industrial ? getV2ProjectPresentation(industrial) : undefined;
+const approvedIndustrialHero = selectV2ProjectMedia(industrial, {
+  allOf: ['construction-building', 'finished-result', 'hero']
+})[0] || industrialPresentation?.detailHeroMedia?.src || industrialPresentation?.publicGallery[0]?.src || '';
+const selectedIndustrialProofMedia = selectV2ProjectMedia(industrial, {
+  allOf: ['construction-building', 'finished-result', 'proof']
+});
+const industrialProofMedia = selectedIndustrialProofMedia.length > 0
+  ? selectedIndustrialProofMedia
+  : (industrialPresentation?.publicGallery.map((item) => item.src) || []);
+const resolvedHeroMedia = approvedMediaUntilEdited(
+  service.image,
+  '/assets/images/placeholders/construction.svg',
+  approvedIndustrialHero
+);
+const industrialHero = resolvedHeroMedia.src;
+const directionTitle = approvedUntilEdited(service.title, 'Строительство', 'Строительство и ремонты');
+const heroKicker = approvedUntilEdited(service.heroKicker, undefined, 'Строительство и ремонты');
+const heroTitle = approvedUntilEdited(
+  service.heroTitle,
+  'Строительно-монтажные работы',
+  'Строительные и ремонтные работы'
+);
+const heroDescription = approvedUntilEdited(
+  service.heroDescription,
+  'Выполняем строительные и монтажные работы для частных, коммерческих и производственных объектов: подготовка площадок, основания, входные группы, хозяйственные зоны, монтаж конструкций и работы по ТЗ.',
+  'Выполняем комплекс строительных и ремонтных работ, когда заказчику важен готовый или преобразованный объект.'
+);
+const contactTitle = approvedUntilEdited(
+  service.contactTitle,
+  'Нужны строительные или монтажные работы на объекте?',
+  'Обсудим строительные и ремонтные работы на вашем объекте'
+);
+const contactDescription = approvedUntilEdited(
+  service.contactDescription,
+  'Напишите нам, и мы сориентируем по составу работ, материалам, конструкциям, монтажу и этапности. Можно отправить фото объекта, размеры, чертеж, ТЗ или описание задачи.',
+  'Кратко опишите объект и задачу, приложите имеющиеся исходные материалы — обсудим работы и подготовим расчёт.'
+);
+const telegramLabel = approvedUntilEdited(service.contactTelegramLabel, 'Написать в Telegram', 'Получить расчёт');
+const phoneLabel = approvedUntilEdited(service.contactPhoneLabel, 'Позвонить', 'Обсудить объект');
+const emailLabel = approvedUntilEdited(service.contactEmailLabel, 'Написать на почту', 'Email');
+const supportingProjects = [
+  squareRepair ? {
+    title: squareRepair.title,
+    city: squareRepair.city,
+    year: squareRepair.year,
+    description: squareRepair.shortDescription,
+    href: `/design-lab/v2/vypolnennye-obekty/${squareRepair.slug}/`
+  } : null
+].filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+const metalworks = catalog.sections.find((item) => item.slug === 'metallokonstruktsii-dlya-biznesa');
+const canopies = catalog.sections.find((item) => item.slug === 'navesy-i-kozyrki');
+const fences = catalog.sections.find((item) => item.slug === 'ograzhdeniya-i-zabory');
+const related = [
+  metalworks ? {
+    eyebrow: 'Нужна отдельная конструкция?',
+    title: metalworks.title,
+    description: 'Для задачи, которая ограничена металлическим каркасом или отдельной металлической частью объекта.',
+    href: '/design-lab/v2/metallokonstruktsii-dlya-biznesa/'
+  } : null,
+  canopies ? {
+    eyebrow: 'Входные и хозяйственные зоны',
+    title: 'Навесы и козырьки',
+    description: canopies.shortDescription,
+    href: '/design-lab/v2/navesy-i-kozyrki/'
+  } : null,
+  fences ? {
+    eyebrow: 'Территория объекта',
+    title: fences.title,
+    description: fences.shortDescription,
+    href: '/design-lab/v2/ograzhdeniya-i-zabory/'
+  } : null
+].filter((item): item is NonNullable<typeof item> => Boolean(item));
+const sectionNavItems = [
+  ...(industrial && industrialProofMedia.length > 0 ? [{ id: 'construction-proof', label: 'Объекты' }] : []),
+  ...(works.length > 0 ? [{ id: 'construction-scope', label: 'Что делаем' }] : []),
+  ...(contexts.length > 0 ? [{ id: 'construction-contexts', label: 'Для каких объектов' }] : []),
+  ...(briefInputs.length > 0 ? [{ id: 'construction-brief', label: 'Исходные данные' }] : []),
+  { id: 'contact', label: 'Обсудить задачу' }
+];
+---
+
+<ProjectDirectionV2Layout
+  title={service.seoTitle}
+  description={service.seoDescription}
+  canonicalPath={`/${service.slug}/`}
+  currentPath={currentPath}
+  ogImage={industrialHero}
+>
+  <ImmersiveDirectionHero
+    variant="construction"
+    breadcrumbs={[
+      { title: 'Главная', href: '/design-lab/home-v2/' },
+      { title: directionTitle }
+    ]}
+    eyebrow={heroKicker}
+    title={heroTitle}
+    description={heroDescription}
+    image={industrialHero}
+    imageAlt={resolvedHeroMedia.usesApprovedBaseline
+      ? 'Готовое обшитое здание на производственной территории'
+      : directionTitle}
+    imageView={resolvedHeroMedia.usesApprovedBaseline
+      ? { fit: 'cover', positionX: 50, positionY: 50, scale: 1 }
+      : service.imageView}
+    caption={resolvedHeroMedia.usesApprovedBaseline ? industrial?.title : directionTitle}
+    titleId="project-direction-title"
+    primaryLabel="Получить расчёт"
+    secondaryHref="#construction-brief"
+    secondaryLabel="Обсудить объект"
+  />
+
+  <V2SectionNav items={sectionNavItems} label="Разделы направления" />
+
+  {industrial && industrialProofMedia.length > 0 && (
+    <ProjectDirectionProof
+      title="Результат на реальных объектах"
+      featured={{
+        title: industrial.title,
+        city: industrial.city,
+        year: industrial.year,
+        description: industrial.whatWasDone?.trim() || industrial.shortDescription,
+        href: `/design-lab/v2/vypolnennye-obekty/${industrial.slug}/`,
+        images: industrialProofMedia
+      }}
+      supporting={supportingProjects}
+    />
+  )}
+
+  <ProjectDirectionScope
+    title={worksBlock?.title || 'Что делаем'}
+    description="Виды работ приведены на уровне опубликованных задач; конкретный состав зависит от объекта."
+    items={works}
+  />
+
+  <ProjectDirectionContexts
+    title={contextsBlock?.title || 'Для каких объектов'}
+    items={contexts}
+  />
+
+  <ProjectDirectionBrief
+    title="Что можно прислать для обсуждения"
+    description="Отправьте те исходные материалы, которые уже есть. Они помогут понять задачу на первом обсуждении, но не заменяют последующее уточнение."
+    items={briefInputs}
+  />
+
+  <DirectionV2Related title="Смежные направления" items={related} />
+
+  <DirectionV2FinalCTA
+    title={contactTitle}
+    description={contactDescription}
+    primaryLabel={telegramLabel}
+    secondaryLabel={phoneLabel}
+    telegramChannelLabel={approvedUntilEdited(service.contactTelegramLabel, 'Написать в Telegram', 'Telegram')}
+    phoneChannelLabel={approvedUntilEdited(service.contactPhoneLabel, 'Позвонить', 'Основной телефон')}
+    emailChannelLabel={emailLabel}
+  />
+</ProjectDirectionV2Layout>

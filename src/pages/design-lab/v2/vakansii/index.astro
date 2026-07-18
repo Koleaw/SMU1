@@ -1,0 +1,20 @@
+---
+import PracticalV2Layout from '../../../../components/v2/practical/PracticalV2Layout.astro';
+import V2VacanciesArchive from '../../../../components/v2/practical/V2VacanciesArchive.astro';
+import { loadActiveV2Jobs } from '../../../../components/v2/practical/practicalV2Data';
+
+const currentPath = '/design-lab/v2/vakansii/';
+const jobs = await loadActiveV2Jobs();
+---
+
+<PracticalV2Layout
+  title="Вакансии — СМУ-1"
+  description="Актуальные вакансии СМУ-1."
+  canonicalPath="/vakansii/"
+  currentPath={currentPath}
+  kind="vacancies"
+  contactHref="/design-lab/v2/kontakty/"
+  ctaLabel="Связаться"
+>
+  <V2VacanciesArchive jobs={jobs} />
+</PracticalV2Layout>

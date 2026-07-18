@@ -1,0 +1,112 @@
+---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
+import { imageViewStyle } from '../catalogV2Data';
+import V2Breadcrumbs from '../V2Breadcrumbs.astro';
+
+interface BreadcrumbItem {
+  title: string;
+  href?: string;
+}
+
+interface Props {
+  variant: 'metalworks' | 'landscaping' | 'construction' | 'canopies' | 'topiary';
+  breadcrumbs: BreadcrumbItem[];
+  eyebrow: string;
+  title: string;
+  description: string;
+  image?: string;
+  imageAlt: string;
+  imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
+  caption?: string;
+  titleId?: string;
+  primaryHref?: string;
+  primaryLabel?: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
+}
+
+const {
+  variant,
+  breadcrumbs,
+  eyebrow,
+  title,
+  description,
+  image = '',
+  imageAlt,
+  imageView,
+  caption = '',
+  titleId = 'immersive-direction-title',
+  primaryHref = '#contact',
+  primaryLabel = 'Получить расчёт',
+  secondaryHref = '#direction-brief',
+  secondaryLabel = 'Обсудить задачу'
+} = Astro.props as Props;
+
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : withBase(value);
+const mediaFit = imageView?.fit || 'cover';
+---
+
+<section
+  class:list={[
+    'immersive-direction-hero',
+    `immersive-direction-hero--${variant}`,
+    `immersive-direction-hero--media-${mediaFit}`,
+    { 'immersive-direction-hero--no-media': !image }
+  ]}
+  aria-labelledby={titleId}
+  data-immersive-direction-hero
+  data-v2-hero-scroll
+>
+  <span class="immersive-direction-hero__sentinel" aria-hidden="true" data-home-v2-header-sentinel></span>
+
+  <div class="hv2-shell immersive-direction-hero__inner">
+    <div class="immersive-direction-hero__breadcrumbs" data-v2-reveal data-v2-reveal-stage="breadcrumbs">
+      <V2Breadcrumbs items={breadcrumbs} />
+    </div>
+
+    <div class="immersive-direction-hero__composition">
+      <div class="immersive-direction-hero__copy" data-v2-hero-scroll-copy>
+        <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-reveal data-v2-reveal-stage="eyebrow">{eyebrow}</p>
+        <h1 id={titleId} data-v2-reveal data-v2-reveal-stage="title">{title}</h1>
+        <p class="immersive-direction-hero__lead" data-v2-reveal data-v2-reveal-stage="description">{description}</p>
+        <div class="hv2-actions immersive-direction-hero__actions" data-v2-reveal data-v2-reveal-stage="actions">
+          <a class="hv2-button hv2-button--primary" href={href(primaryHref)}>
+            {primaryLabel}
+          </a>
+          <a class="hv2-button hv2-button--ghost" href={href(secondaryHref)}>
+            {secondaryLabel}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {image ? (
+    <figure
+      class="immersive-direction-hero__media"
+      data-v2-media
+      data-v2-hero-scroll-media
+      data-v2-reveal
+      data-v2-reveal-stage="media"
+    >
+      <img
+        src={withBase(image)}
+        alt={imageAlt || title}
+        width="1920"
+        height="1280"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+        style={imageViewStyle(imageView)}
+        data-v2-image
+      />
+      <div class="immersive-direction-hero__fallback" aria-hidden="true"></div>
+      {caption && <figcaption>{caption}</figcaption>}
+    </figure>
+  ) : (
+    <div class="immersive-direction-hero__fallback immersive-direction-hero__fallback--standalone" aria-hidden="true"></div>
+  )}
+
+  <div class="immersive-direction-hero__veil" aria-hidden="true"></div>
+</section>

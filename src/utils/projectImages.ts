@@ -1,3 +1,5 @@
+import { normalizeProjectMediaItem } from './projectMedia.mjs';
+
 export type RawProjectImage =
   | string
   | {
@@ -28,20 +30,12 @@ function cleanText(value: unknown) {
 }
 
 function normalizeImage(value: RawProjectImage | undefined, title: string, fallbackCaption = ''): ProjectImage | null {
-  if (!value) return null;
-
-  if (typeof value === 'string') {
-    const src = cleanText(value);
-    return src ? { src, alt: title, caption: cleanText(fallbackCaption) || undefined } : null;
-  }
-
-  const src = cleanText(value.src) || cleanText(value.image) || cleanText(value.url);
-  if (!src) return null;
-
+  const normalized = normalizeProjectMediaItem(value, title);
+  if (!normalized) return null;
   return {
-    src,
-    alt: cleanText(value.alt) || title,
-    caption: cleanText(value.caption) || cleanText(fallbackCaption) || undefined
+    src: normalized.src,
+    alt: normalized.alt || title,
+    caption: normalized.caption || cleanText(fallbackCaption) || undefined
   };
 }
 
@@ -57,14 +51,24 @@ export function getProjectImages(project: ProjectImageSource): ProjectImage[] {
     result.push(image);
   };
 
-  add(normalizeImage(project.coverImage || project.image, title, captions[0]));
+  const cover = project.coverImage || project.image;
+  const normalizedCover = normalizeImage(cover, title, captions[0]);
+  if (cover !== undefined && !normalizedCover) console.warn(`[projects] ${title}: некорректное главное изображение пропущено.`);
+  add(normalizedCover);
 
   const gallery = Array.isArray(project.gallery) ? project.gallery : [];
-  gallery.forEach((image, index) => add(normalizeImage(image, title, captions[index + 1] || captions[index])));
+  gallery.forEach((image, index) => {
+    const normalized = normalizeImage(image, title, captions[index + 1] || captions[index]);
+    if (!normalized) console.warn(`[projects] ${title}: gallery[${index}] без строкового src пропущен.`);
+    add(normalized);
+  });
 
   const images = Array.isArray(project.images) ? project.images : [];
-  images.forEach((image, index) => add(normalizeImage(image, title, captions[index])));
+  images.forEach((image, index) => {
+    const normalized = normalizeImage(image, title, captions[index]);
+    if (!normalized) console.warn(`[projects] ${title}: images[${index}] без строкового src пропущен.`);
+    add(normalized);
+  });
 
   return result;
 }
-

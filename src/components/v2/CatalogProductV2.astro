@@ -1,0 +1,19 @@
+---
+import CatalogPremiumProductV2 from './CatalogPremiumProductV2.astro';
+import CatalogStandardProductV2 from './CatalogStandardProductV2.astro';
+import type { CatalogProductRoute, CatalogV2Links } from './catalogV2Data';
+
+interface Props {
+  route: CatalogProductRoute;
+  relatedProducts: CatalogProductRoute[];
+  links: CatalogV2Links;
+  currentPath: string;
+}
+
+const props = Astro.props as Props;
+const presentationType = props.route.product.presentationType === 'premium' ? 'premium' : 'standard';
+---
+
+{presentationType === 'premium'
+  ? <CatalogPremiumProductV2 {...props} />
+  : <CatalogStandardProductV2 {...props} />}

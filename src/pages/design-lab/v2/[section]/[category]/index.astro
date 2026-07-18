@@ -1,0 +1,37 @@
+---
+import CatalogCategoryV2 from '../../../../../components/v2/CatalogCategoryV2.astro';
+import {
+  createCatalogV2Links,
+  getCategoryProducts,
+  loadCatalogV2Snapshot
+} from '../../../../../components/v2/catalogV2Data';
+
+export async function getStaticPaths() {
+  const snapshot = await loadCatalogV2Snapshot();
+  const sectionsBySlug = new Map(snapshot.sections.map((section) => [section.slug, section]));
+
+  return snapshot.categories.flatMap((category) => {
+    const section = sectionsBySlug.get(category.parentSectionSlug);
+    if (!section) return [];
+    return [{
+      params: { section: section.slug, category: category.slug },
+      props: { sectionSlug: section.slug, categorySlug: category.slug }
+    }];
+  });
+}
+
+const { sectionSlug, categorySlug } = Astro.props as { sectionSlug: string; categorySlug: string };
+const snapshot = await loadCatalogV2Snapshot();
+const section = snapshot.sections.find((item) => item.slug === sectionSlug);
+const category = snapshot.categories.find((item) => (
+  item.slug === categorySlug && item.parentSectionSlug === section?.slug
+));
+if (!section || !category) throw new Error(`Active catalog category route ${sectionSlug}/${categorySlug} was not found.`);
+
+const products = getCategoryProducts(snapshot, category.slug);
+const links = createCatalogV2Links(snapshot, section.slug);
+const currentPath = links.categoryHrefs[category.slug];
+if (!currentPath) throw new Error(`V2 route was not created for category ${category.slug}.`);
+---
+
+<CatalogCategoryV2 section={section} category={category} products={products} links={links} currentPath={currentPath} />

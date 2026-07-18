@@ -1,0 +1,69 @@
+---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import type { V2ProjectMedia, V2ProjectPresentation } from '../mediaRoleAdapter';
+import V2ProjectMeta from './V2ProjectMeta.astro';
+import '../../../styles/v2/projects-v2.css';
+
+interface Props {
+  presentation: V2ProjectPresentation;
+  variant?: 'visual' | 'text';
+  headingLevel?: 'h2' | 'h3';
+  media?: V2ProjectMedia;
+  mediaPosition?: string;
+  eager?: boolean;
+}
+
+const {
+  presentation,
+  variant = 'visual',
+  headingLevel = 'h2',
+  media = presentation.archiveCoverMedia,
+  mediaPosition = presentation.archiveCoverPosition,
+  eager = false
+} = Astro.props as Props;
+const { project, location, v2Route } = presentation;
+const Heading = headingLevel;
+const showMedia = variant === 'visual' && Boolean(media);
+---
+
+<article
+  class:list={[
+    'v2-project-card',
+    `v2-project-card--${variant}`,
+    { 'v2-project-card--media-rich': showMedia, 'v2-project-card--media-sparse': !showMedia }
+  ]}
+  data-v2-reveal
+  data-v2-project-card
+>
+  <a
+    class="v2-project-card__card-link"
+    href={withBase(v2Route)}
+    aria-label={`Открыть объект «${project.title}»`}
+  >
+    {showMedia && media && (
+      <figure
+        class="v2-project-card__media"
+        style={`--v2-project-card-position: ${mediaPosition};`}
+        data-v2-media
+      >
+        <img
+          src={withBase(media.src)}
+          alt={media.alt}
+          width="1200"
+          height="860"
+          loading={eager ? 'eager' : 'lazy'}
+          fetchpriority={eager ? 'high' : 'auto'}
+          decoding="async"
+          data-v2-image
+        />
+      </figure>
+    )}
+    <div class="v2-project-card__body">
+      <V2ProjectMeta location={location} year={project.year} />
+      <Heading>{project.title}</Heading>
+      <p class="v2-project-card__description">{project.shortDescription}</p>
+      <span class="v2-project-card__link" aria-hidden="true">Открыть объект</span>
+    </div>
+  </a>
+</article>

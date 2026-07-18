@@ -1,0 +1,76 @@
+---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import { imageViewStyle } from '../catalogV2Data';
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  description: string;
+  image?: string;
+  imageAlt?: string;
+  imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
+  mediaCaption?: string;
+  primaryHref?: string;
+  secondaryHref?: string;
+}
+
+const {
+  eyebrow,
+  title,
+  description,
+  image = '',
+  imageAlt = '',
+  imageView,
+  mediaCaption = '',
+  primaryHref = '#contact',
+  secondaryHref = '#engineering-brief'
+} = Astro.props as Props;
+const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : withBase(value);
+---
+
+<section class:list={['engineering-hero', { 'engineering-hero--no-media': !image }]} aria-labelledby="engineering-direction-title">
+  <div class="hv2-shell">
+    <div class="engineering-hero__heading hv2-grid">
+      <div class="engineering-hero__title" data-v2-reveal>
+        <p class="hv2-eyebrow hv2-eyebrow--light">{eyebrow}</p>
+        <h1 id="engineering-direction-title">{title}</h1>
+      </div>
+      <div class="engineering-hero__offer" data-v2-reveal>
+        <p>{description}</p>
+        <div class="hv2-actions engineering-hero__actions">
+          <a class="hv2-button hv2-button--light" href={href(primaryHref)}>
+            Получить расчёт
+          </a>
+          <a class="hv2-button engineering-hero__secondary" href={href(secondaryHref)}>
+            Обсудить задачу
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {image ? (
+      <figure class="engineering-hero__media" data-v2-media data-v2-reveal>
+        <img
+          src={withBase(image)}
+          alt={imageAlt || title}
+          width="1920"
+          height="1200"
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+          style={imageViewStyle(imageView)}
+          data-v2-image
+        />
+        <div class="engineering-hero__media-fallback" aria-hidden="true">
+          <p>Изображение направления недоступно</p>
+        </div>
+        {mediaCaption && <figcaption>{mediaCaption}</figcaption>}
+      </figure>
+    ) : (
+      <div class="engineering-hero__media-gap" aria-label="Изображение направления пока не указано">
+        <span>Металлоконструкции под объект</span>
+      </div>
+    )}
+  </div>
+</section>

@@ -8,20 +8,19 @@ type Props = {
 };
 
 const { title, images } = Astro.props;
-const hasImages = images.length > 0;
+const initial = images[0];
+const hasImages = Boolean(initial);
 const hasMultipleImages = images.length > 1;
 ---
 
 <div class="object-gallery" data-object-gallery aria-label={`Галерея объекта: ${title}`}>
   <div class="object-gallery__stage">
     {hasImages ? (
-      images.map((image, index) => (
-        <figure class={`object-gallery__slide ${index === 0 ? 'is-active' : ''}`} data-gallery-slide>
-          <img class="object-media-bg" src={withBase(image.src)} alt="" loading={index === 0 ? 'eager' : 'lazy'} aria-hidden="true" />
-          <img class="object-media-fg" src={withBase(image.src)} alt={image.alt || title} loading={index === 0 ? 'eager' : 'lazy'} />
-          {image.caption && <figcaption>{image.caption}</figcaption>}
-        </figure>
-      ))
+      <figure class="object-gallery__active" data-gallery-active>
+        <img class="object-media-bg" data-gallery-bg src={withBase(initial.src)} alt="" loading="eager" decoding="async" aria-hidden="true" />
+        <img class="object-media-fg" data-gallery-image src={withBase(initial.src)} alt={initial.alt || title} loading="eager" decoding="async" fetchpriority="high" />
+        <figcaption data-gallery-caption hidden={!initial.caption}>{initial.caption || ''}</figcaption>
+      </figure>
     ) : (
       <div class="object-placeholder object-placeholder--gallery">
         <span>Фото объекта будет добавлено позже</span>
@@ -30,12 +29,8 @@ const hasMultipleImages = images.length > 1;
 
     {hasMultipleImages && (
       <>
-        <button class="object-gallery-arrow object-gallery-arrow--prev" type="button" data-gallery-prev aria-label="Предыдущее фото">
-          <span aria-hidden="true">‹</span>
-        </button>
-        <button class="object-gallery-arrow object-gallery-arrow--next" type="button" data-gallery-next aria-label="Следующее фото">
-          <span aria-hidden="true">›</span>
-        </button>
+        <button class="object-gallery-arrow object-gallery-arrow--prev" type="button" data-gallery-prev aria-label="Предыдущее фото"><span aria-hidden="true">‹</span></button>
+        <button class="object-gallery-arrow object-gallery-arrow--next" type="button" data-gallery-next aria-label="Следующее фото"><span aria-hidden="true">›</span></button>
       </>
     )}
   </div>
@@ -43,11 +38,16 @@ const hasMultipleImages = images.length > 1;
   {hasMultipleImages && (
     <div class="object-gallery__thumbs" aria-label="Миниатюры галереи">
       {images.map((image, index) => (
-        <button class={`object-gallery__thumb ${index === 0 ? 'is-active' : ''}`} type="button" data-gallery-thumb={index} aria-label={`Показать фото ${index + 1}`}>
-          <span class="object-gallery__thumb-bg" aria-hidden="true">
-            <img src={withBase(image.src)} alt="" loading="lazy" />
-          </span>
-          <img class="object-gallery__thumb-img" src={withBase(image.src)} alt="" loading="lazy" />
+        <button
+          class={`object-gallery__thumb ${index === 0 ? 'is-active' : ''}`}
+          type="button"
+          data-gallery-thumb={index}
+          data-gallery-src={withBase(image.src)}
+          data-gallery-alt={image.alt || title}
+          data-gallery-caption={image.caption || ''}
+          aria-label={`Показать фото ${index + 1}`}
+        >
+          <img class="object-gallery__thumb-img" src={withBase(image.src)} alt="" loading="lazy" decoding="async" />
         </button>
       ))}
     </div>
@@ -60,19 +60,31 @@ const hasMultipleImages = images.length > 1;
       if (!(gallery instanceof HTMLElement) || gallery.dataset.objectGalleryReady === 'true') return;
       gallery.dataset.objectGalleryReady = 'true';
 
-      const slides = Array.from(gallery.querySelectorAll<HTMLElement>('[data-gallery-slide]'));
       const thumbs = Array.from(gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-thumb]'));
+      const background = gallery.querySelector<HTMLImageElement>('[data-gallery-bg]');
+      const image = gallery.querySelector<HTMLImageElement>('[data-gallery-image]');
+      const caption = gallery.querySelector<HTMLElement>('[data-gallery-caption]');
       const prev = gallery.querySelector<HTMLButtonElement>('[data-gallery-prev]');
       const next = gallery.querySelector<HTMLButtonElement>('[data-gallery-next]');
       let index = 0;
 
       const show = (nextIndex: number) => {
-        if (!slides.length) return;
-        index = (nextIndex + slides.length) % slides.length;
-        slides.forEach((slide, slideIndex) => slide.classList.toggle('is-active', slideIndex === index));
-        thumbs.forEach((thumb, thumbIndex) => {
-          thumb.classList.toggle('is-active', thumbIndex === index);
-          thumb.setAttribute('aria-current', thumbIndex === index ? 'true' : 'false');
+        if (!thumbs.length || !background || !image) return;
+        index = (nextIndex + thumbs.length) % thumbs.length;
+        const thumb = thumbs[index];
+        const src = thumb.dataset.gallerySrc || '';
+        if (src && image.src !== new URL(src, window.location.href).href) {
+          background.src = src;
+          image.src = src;
+        }
+        image.alt = thumb.dataset.galleryAlt || '';
+        if (caption) {
+          caption.textContent = thumb.dataset.galleryCaption || '';
+          caption.hidden = !caption.textContent;
+        }
+        thumbs.forEach((item, thumbIndex) => {
+          item.classList.toggle('is-active', thumbIndex === index);
+          item.setAttribute('aria-current', thumbIndex === index ? 'true' : 'false');
         });
       };
 
@@ -83,7 +95,6 @@ const hasMultipleImages = images.length > 1;
     };
 
     const initGalleries = () => document.querySelectorAll('[data-object-gallery]').forEach(initGallery);
-
     initGalleries();
     document.addEventListener('astro:page-load', initGalleries);
   })();

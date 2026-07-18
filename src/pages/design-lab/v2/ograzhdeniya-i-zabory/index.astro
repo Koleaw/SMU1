@@ -1,0 +1,29 @@
+---
+import CatalogSectionV2 from '../../../../components/v2/CatalogSectionV2.astro';
+import {
+  createCatalogV2Links,
+  getActiveSectionCategories,
+  getCategoryProducts,
+  loadCatalogV2Snapshot
+} from '../../../../components/v2/catalogV2Data';
+
+const sectionSlug = 'ograzhdeniya-i-zabory';
+const snapshot = await loadCatalogV2Snapshot();
+const section = snapshot.sections.find((item) => item.slug === sectionSlug);
+if (!section) throw new Error(`Active product section ${sectionSlug} was not found.`);
+const categories = getActiveSectionCategories(snapshot, section.slug);
+const categoryProductCounts = Object.fromEntries(categories.map((category) => [
+  category.slug,
+  getCategoryProducts(snapshot, category.slug).length
+]));
+const links = createCatalogV2Links(snapshot, section.slug);
+const currentPath = links.sectionHref;
+---
+
+<CatalogSectionV2
+  section={section}
+  categories={categories}
+  categoryProductCounts={categoryProductCounts}
+  links={links}
+  currentPath={currentPath}
+/>

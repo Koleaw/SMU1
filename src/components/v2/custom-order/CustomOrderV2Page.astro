@@ -1,0 +1,158 @@
+---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
+import { getV2TelegramLabel } from '../../../utils/v2SiteSettings';
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import settings from '../../../content/site-settings/global.json';
+import V2Breadcrumbs from '../V2Breadcrumbs.astro';
+import type { CustomOrderV2Data } from './customOrderV2Data';
+import '../../../styles/v2/custom-order-v2.css';
+
+interface Props {
+  data: CustomOrderV2Data;
+}
+
+const { data } = Astro.props as Props;
+const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
+const emailHref = `mailto:${settings.email}`;
+const telegramLabel = getV2TelegramLabel(settings);
+---
+
+<div class="custom-order-v2">
+  <V2Breadcrumbs items={[
+    { title: 'Главная', href: '/design-lab/home-v2/' },
+    { title: data.sourcePage.title }
+  ]} />
+
+  <section class="custom-order-hero" aria-labelledby="custom-order-title" data-home-v2-header-sentinel>
+    <div class="hv2-shell hv2-grid custom-order-hero__grid">
+      <div class="custom-order-hero__copy" data-v2-reveal>
+        <p class="hv2-eyebrow">{data.copy.heroKicker}</p>
+        <h1 id="custom-order-title">{data.copy.heroTitle}</h1>
+        <p class="custom-order-hero__lead">{data.copy.heroDescription}</p>
+        <div class="custom-order-hero__actions">
+          <a class="hv2-button hv2-button--primary" href="#contact">Обсудить задачу</a>
+          <a class="hv2-text-link" href={emailHref}>Отправить исходные данные</a>
+        </div>
+      </div>
+
+      <div class="custom-order-hero__media" aria-label="Примеры готовых результатов" data-v2-reveal>
+        {data.heroMedia.map((media, index) => (
+          <figure class:list={['custom-order-hero__figure', index === 0 ? 'custom-order-hero__figure--main' : 'custom-order-hero__figure--support']} data-v2-media>
+            <img
+              src={withBase(media.src)}
+              alt={media.alt}
+              width="1600"
+              height="1200"
+              loading="eager"
+              decoding="async"
+              fetchpriority={index === 0 ? 'high' : 'auto'}
+              style={`object-fit:${media.fit};object-position:${media.position};`}
+              data-v2-image
+            />
+            <figcaption>{index === 0 ? 'Готовый объект' : 'Каталожное изделие'}</figcaption>
+          </figure>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="custom-order-changes" aria-labelledby="custom-order-changes-title">
+    <div class="hv2-shell hv2-grid custom-order-changes__grid">
+      <header data-v2-reveal>
+        <p class="hv2-eyebrow">Варианты исполнения</p>
+        <h2 id="custom-order-changes-title">Что можно изменить</h2>
+        <p>Набор параметров зависит от изделия и условий объекта. На старте фиксируем только то, что действительно влияет на исполнение.</p>
+      </header>
+      <ul class="custom-order-changes__list" data-v2-reveal>
+        {data.changeOptions.map((item) => (
+          <li><p>{item}</p></li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="custom-order-inputs" aria-labelledby="custom-order-inputs-title">
+    <div class="hv2-shell hv2-grid custom-order-inputs__grid">
+      <div class="custom-order-inputs__intro" data-v2-reveal>
+        <p class="hv2-eyebrow hv2-eyebrow--light">Исходные данные</p>
+        <h2 id="custom-order-inputs-title">Что можно прислать</h2>
+        <p>Не нужно готовить полный комплект документов. Пришлите один или несколько материалов — остальное уточним вместе.</p>
+      </div>
+      <ul class="custom-order-inputs__list" data-v2-reveal>
+        {data.sourceMaterials.map((item) => (
+          <li><strong>{item}</strong></li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="custom-order-directions" aria-labelledby="custom-order-directions-title">
+    <div class="hv2-shell">
+      <header class="custom-order-section-heading" data-v2-reveal>
+        <div>
+          <p class="hv2-eyebrow">Навигация по задачам</p>
+          <h2 id="custom-order-directions-title">Выберите близкое направление</h2>
+        </div>
+        <p>Если задача относится сразу к нескольким направлениям, не подбирайте раздел самостоятельно — передайте материалы, и мы уточним маршрут.</p>
+      </header>
+      <div class="custom-order-directions__grid" role="list">
+        {data.directions.map((direction) => (
+          <a href={withBase(direction.href)} role="listitem" data-v2-reveal>
+            <div><h3>{direction.title}</h3><p>{direction.description}</p></div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="custom-order-examples" aria-labelledby="custom-order-examples-title">
+    <div class="hv2-shell">
+      <header class="custom-order-section-heading" data-v2-reveal>
+        <div>
+          <p class="hv2-eyebrow">Ориентиры</p>
+          <h2 id="custom-order-examples-title">Готовые примеры</h2>
+        </div>
+        <p>Примеры показывают разные типы результата, но не являются перечнем всех возможных задач.</p>
+      </header>
+      <div class="custom-order-examples__grid" role="list">
+        {data.examples.map((example) => (
+          <a href={withBase(example.href)} role="listitem" data-v2-reveal>
+            <figure data-v2-media>
+              <img
+                src={withBase(example.src)}
+                alt={example.alt}
+                width="1600"
+                height="1200"
+                loading="lazy"
+                decoding="async"
+                style={`object-fit:${example.fit};object-position:${example.position};`}
+                data-v2-image
+              />
+            </figure>
+            <div>
+              <p class="hv2-eyebrow">{example.eyebrow}</p>
+              <h3>{example.title}</h3>
+              <p>{example.description}</p>
+              <span>Открыть пример</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="custom-order-contact" id="contact" aria-labelledby="custom-order-contact-title">
+    <div class="hv2-shell hv2-grid custom-order-contact__grid">
+      <div data-v2-reveal>
+        <p class="hv2-eyebrow hv2-eyebrow--light">Прямая связь</p>
+        <h2 id="custom-order-contact-title">{data.copy.contactTitle}</h2>
+        <p>{data.copy.contactDescription}</p>
+      </div>
+      <div class="custom-order-contact__channels" data-v2-reveal>
+        <a href={phoneHref}><span>Основной телефон</span><strong>{settings.phonePrimary}</strong></a>
+        <a href={settings.telegram} target="_blank" rel="noopener noreferrer"><span>Telegram</span><strong>{telegramLabel}</strong></a>
+        <a href={emailHref}><span>Email</span><strong>{settings.email}</strong></a>
+      </div>
+    </div>
+  </section>
+</div>

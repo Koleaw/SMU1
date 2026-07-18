@@ -1,0 +1,28 @@
+---
+import { v2Href } from '../../utils/v2Routes';
+
+interface Props {
+  title: string;
+  target: string;
+}
+
+const { title, target } = Astro.props as Props;
+const href = v2Href(target, 'production');
+---
+
+<section class="v2-legacy-fallback" aria-labelledby="legacy-fallback-title">
+  <div class="hv2-shell v2-legacy-fallback__inner">
+    <p class="hv2-eyebrow">Адрес страницы изменился</p>
+    <h1 id="legacy-fallback-title">{title}</h1>
+    <p>Содержимое доступно по основному адресу. Если переход не начался автоматически, используйте ссылку ниже.</p>
+    <a class="hv2-button hv2-button--primary" href={href}>Открыть основную страницу</a>
+  </div>
+</section>
+
+<style>
+  .v2-legacy-fallback { min-height: min(62svh, 680px); padding: clamp(7rem, 13vw, 11rem) 0 clamp(4rem, 9vw, 7rem); }
+  .v2-legacy-fallback__inner { display: grid; max-width: 760px; gap: 1.25rem; }
+  .v2-legacy-fallback h1 { max-width: 15ch; margin: 0; font-size: clamp(2.2rem, 5vw, 4.8rem); line-height: .96; }
+  .v2-legacy-fallback p { max-width: 60ch; margin: 0; }
+  .v2-legacy-fallback .hv2-button { width: fit-content; }
+</style>
