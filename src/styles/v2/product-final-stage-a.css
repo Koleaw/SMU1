@@ -1,6 +1,6 @@
-/* Stage A: opt-in prototype for the production street-furniture hub and
- * benches category only. Every rule is inert without the route-level data
- * attribute set by CatalogV2Layout. */
+/* Stage A/A.1: accepted opt-in hub and category profiles, extended to the
+ * Stage B routes. Every rule is inert without the route-level data attribute
+ * set by CatalogV2Layout. */
 
 .catalog-v2[data-catalog-v2-root][data-product-final-prototype] {
   overflow-x: clip;
@@ -392,6 +392,7 @@
   }
 
   .catalog-v2[data-catalog-v2-root][data-product-final-prototype] .product-final-handoff[data-product-final-handoff-ready] + * {
+    position: relative;
     z-index: 2;
     margin-top: calc(var(--product-final-scene-height) * -1);
   }
@@ -414,7 +415,7 @@
   }
 }
 
-/* Benches only: preserve the card component and 5:4 media while removing
+/* Category profile: preserve the card component and 5:4 media while removing
  * internal dead space. The grid continues to equalize every row. */
 .catalog-v2[data-catalog-v2-root][data-product-final-prototype='category'] .v2-section-nav {
   --hv2-section-nav-height: 44px;
