@@ -1,0 +1,426 @@
+---
+import settings from '../../../content/site-settings/global.json';
+import home from '../../../content/static-pages/home.json';
+import { v2Href } from '../../../utils/v2Routes';
+import { loadV2Directions } from '../../../utils/v2Directions';
+import { getV2Regions, getV2TelegramLabel } from '../../../utils/v2SiteSettings';
+import HomeV2Footer from '../home-v2/HomeV2Footer.astro';
+import HomeV2Header from '../home-v2/HomeV2Header.astro';
+import { getHomeV2Presentation } from '../home-v2/homeV2Presentation';
+import HomeFinalProjects from './HomeFinalProjects.astro';
+import '../../../styles/v2/home-final.css';
+
+const path = (value: string) => v2Href(value, Astro.url.pathname);
+const copy = getHomeV2Presentation(home);
+const projectsDescription = `${copy.projectsDescription.split('.')[0]?.trim()}.`;
+const regionLine = getV2Regions(settings).join(' · ');
+const telegramLabel = getV2TelegramLabel(settings);
+const directionBySlug = new Map(
+  (await loadV2Directions()).filter((item) => item.showOnHome).map((item) => [item.slug, item])
+);
+const directionCards = [
+  { direction: directionBySlug.get('stroitelstvo-i-remonty'), className: 'construction', kicker: 'Объектные работы' },
+  { direction: directionBySlug.get('metallokonstruktsii-dlya-biznesa'), className: 'metals', kicker: 'Конструкции под объект' },
+  { direction: directionBySlug.get('ulichnaya-mebel'), className: 'furniture', kicker: 'Каталог и адаптация' },
+  { direction: directionBySlug.get('ograzhdeniya-i-zabory'), className: 'fences', kicker: 'Под конкретный объект' }
+];
+const railDirections = [
+  { direction: directionBySlug.get('navesy-i-kozyrki'), kicker: 'Конструкция под размеры' },
+  { direction: directionBySlug.get('topiarii'), kicker: 'Для территории' }
+];
+const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
+---
+
+<div class="home-v2 home-final" data-home-v2-root data-home-final-root>
+  <HomeV2Header currentPath={Astro.url.pathname} catalogV2 />
+
+  <main>
+    <section class="hf-hero" aria-labelledby="home-final-title" data-hf-hero data-v2-hero-scroll>
+      <span class="hf-hero__header-sentinel" aria-hidden="true" data-home-v2-header-sentinel></span>
+
+      <div
+        class="hf-hero__media"
+        aria-hidden="true"
+        data-reveal
+        data-v2-hero-scroll-media
+        style="--hv2-reveal-delay: 220ms"
+      >
+        <picture class="hf-hero__poster">
+          <source media="(max-width: 760px)" srcset={path(home.heroMediaPosterMobile)} />
+          <img
+            src={path(home.heroMediaPoster)}
+            alt=""
+            width="1920"
+            height="1080"
+            loading="eager"
+            fetchpriority="high"
+          />
+        </picture>
+        <video
+          class="hf-hero__video"
+          muted
+          loop
+          playsinline
+          preload="none"
+          data-hf-hero-video
+          data-hf-desktop-src={path(home.heroMediaVideo)}
+          data-hf-mobile-src={path(home.heroMediaVideoMobile)}
+        ></video>
+        <div class="hf-hero__veil"></div>
+      </div>
+
+      <button
+        class="hf-hero__video-toggle"
+        type="button"
+        aria-label="Приостановить фоновое видео"
+        data-hf-video-toggle
+        hidden
+      >
+        <span data-hf-video-toggle-label>Пауза видео</span>
+      </button>
+
+      <div class="hf-shell hf-shell--editorial hf-hero__content">
+        <div class="hf-hero__copy" data-hf-hero-copy data-v2-hero-scroll-copy>
+          <p class="hf-eyebrow hf-eyebrow--light" data-reveal style="--hv2-reveal-delay: 0ms">{copy.heroKicker}</p>
+          <h1 id="home-final-title" data-reveal style="--hv2-reveal-delay: 60ms">{copy.heroTitle}</h1>
+          <p class="hf-hero__lead" data-reveal style="--hv2-reveal-delay: 120ms">{copy.heroDescription}</p>
+          <div class="hf-actions" data-reveal style="--hv2-reveal-delay: 180ms">
+            <a class="hf-button hf-button--primary" href="#contact">{copy.heroPrimaryLabel}</a>
+            <a class="hf-button hf-button--ghost" href={path('/design-lab/v2/vypolnennye-obekty/')}>
+              {copy.heroSecondaryLabel}
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="hf-directions" id="directions" aria-labelledby="home-final-directions-title">
+      <div class="hf-shell hf-shell--editorial">
+        <header class="hf-section-head" data-reveal>
+          <div>
+            <p class="hf-eyebrow">{copy.directionsEyebrow}</p>
+            <h2 id="home-final-directions-title">От предметного решения до строительного объекта</h2>
+          </div>
+          <div class="hf-section-head__summary">
+            <p><strong>{copy.positioningTitle}</strong> {copy.positioningSummary}</p>
+            <p>{copy.directionsDescription}</p>
+          </div>
+        </header>
+
+        <div class="hf-directions__layout">
+          {directionCards.map(({ direction, className, kicker }) => direction && (
+            <a class={`hf-direction hf-direction--${className}`} href={path(direction.href)} data-reveal>
+              {direction.image && <img
+                src={path(direction.image)}
+                alt=""
+                width="1920"
+                height="1200"
+                loading="lazy"
+                decoding="async"
+                style={`object-fit:${direction.imageFit};object-position:${direction.imagePosition};`}
+              />}
+              <span class="hf-direction__veil" aria-hidden="true"></span>
+              <span class="hf-direction__body">
+                <span class="hf-direction__meta">{kicker}</span>
+                <strong>{direction.title}</strong>
+                <span class="hf-direction__description">{direction.description}</span>
+              </span>
+            </a>
+          ))}
+
+          <div class="hf-direction-rail" aria-label="Специализированные направления">
+            {railDirections.map(({ direction, kicker }) => direction && (
+              <a class="hf-direction-rail__item" href={path(direction.href)} data-reveal>
+                <span class="hf-direction-rail__copy">
+                  <span class="hf-direction__meta">{kicker}</span>
+                  <strong>{direction.title}</strong>
+                  <span class="hf-direction__description">{direction.description}</span>
+                </span>
+              </a>
+            ))}
+          </div>
+
+          {landscapingDirection && <a
+            class="hf-direction hf-direction--landscaping"
+            href={path(landscapingDirection.href)}
+            data-reveal
+          >
+            {landscapingDirection.image && <img
+              src={path(landscapingDirection.image)}
+              alt=""
+              width="1920"
+              height="1200"
+              loading="lazy"
+              decoding="async"
+              style={`object-fit:${landscapingDirection.imageFit};object-position:${landscapingDirection.imagePosition};`}
+            />}
+            <span class="hf-direction__veil" aria-hidden="true"></span>
+            <span class="hf-direction__body">
+              <span class="hf-direction__meta">Комплекс территории</span>
+              <strong>{landscapingDirection.title}</strong>
+              <span class="hf-direction__description">{landscapingDirection.description}</span>
+            </span>
+          </a>}
+        </div>
+      </div>
+    </section>
+
+    <section class="hf-projects" id="projects" aria-labelledby="home-final-projects-title">
+      <div class="hf-shell hf-shell--editorial">
+        <header class="hf-projects__head" data-reveal>
+          <div>
+            <p class="hf-eyebrow hf-eyebrow--light">Реальные работы</p>
+            <h2 id="home-final-projects-title">{copy.projectsEyebrow}</h2>
+          </div>
+          <p>{projectsDescription}</p>
+        </header>
+        <HomeFinalProjects />
+      </div>
+    </section>
+
+    <section class="hf-intake" id="brief" aria-labelledby="home-final-intake-title">
+      <div class="hf-shell hf-shell--editorial hf-intake__layout">
+        <div class="hf-intake__intro" data-reveal>
+          <p class="hf-eyebrow hf-eyebrow--light">Как начать работу</p>
+          <h2 id="home-final-intake-title">Пришлите то, что уже есть</h2>
+          <p>
+            Для первого разговора не нужен готовый комплект документов. Опишите задачу и приложите доступные вводные —
+            по ним можно уточнить формат решения и расчёта.
+          </p>
+          <a class="hf-intake__link" href={path('/design-lab/v2/izgotovlenie-na-zakaz/')}>
+            <span>Изготовление на заказ</span>
+          </a>
+        </div>
+
+        <ol class="hf-intake__sequence" aria-label="Что можно прислать" data-reveal>
+          <li><strong>Описание задачи</strong><span class="hf-intake__format">Текст</span></li>
+          <li><strong>Фотографию</strong><span class="hf-intake__format">JPG / PNG</span></li>
+          <li><strong>Размеры</strong><span class="hf-intake__format">Габариты</span></li>
+          <li><strong>Эскиз</strong><span class="hf-intake__format">Идея</span></li>
+          <li><strong>Чертёж</strong><span class="hf-intake__format">Документ</span></li>
+          <li><strong>Техническое задание</strong><span class="hf-intake__format">ТЗ</span></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="hv2-contact" id="contact" aria-labelledby="home-final-contact-title">
+      <div class="hv2-shell hv2-contact__grid hv2-grid">
+        <div class="hv2-contact__intro" data-reveal>
+          <p class="hv2-eyebrow hv2-eyebrow--light">Прямая связь</p>
+          <h2 id="home-final-contact-title">{copy.contactTitle}</h2>
+          <p>{copy.contactDescription}</p>
+          <div class="hv2-actions">
+            <a class="hv2-button hv2-button--light" href={settings.telegram} target="_blank" rel="noopener noreferrer">
+              Написать в Telegram
+            </a>
+            <a class="hv2-button hv2-button--contrast" href={path('/design-lab/v2/kontakty/')}>Все контакты</a>
+          </div>
+        </div>
+
+        <div class="hv2-contact__channels" data-reveal>
+          <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
+            <span>Основной телефон</span><strong>{settings.phonePrimary}</strong>
+          </a>
+          <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`}>
+            <span>Дополнительный телефон</span><strong>{settings.phoneSecondary}</strong>
+          </a>
+          <a href={settings.telegram} target="_blank" rel="noopener noreferrer">
+            <span>Telegram</span><strong>{telegramLabel}</strong>
+          </a>
+          <a href={`mailto:${settings.email}`}>
+            <span>Электронная почта</span><strong>{settings.email}</strong>
+          </a>
+          <div>
+            <span>Адрес</span><strong>{settings.address}</strong>
+          </div>
+          {regionLine && <div>
+            <span>География</span><strong>{regionLine}</strong>
+          </div>}
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <HomeV2Footer currentPath={Astro.url.pathname} catalogV2 />
+</div>
+
+<script>
+  import { waitForRevealMedia } from '../../../utils/v2ImageReady';
+
+  const initializeHomeFinalHero = (root: HTMLElement) => {
+    const hero = root.querySelector<HTMLElement>('[data-hf-hero]');
+    const video = root.querySelector<HTMLVideoElement>('[data-hf-hero-video]');
+    const toggle = root.querySelector<HTMLButtonElement>('[data-hf-video-toggle]');
+    const toggleLabel = root.querySelector<HTMLElement>('[data-hf-video-toggle-label]');
+    const copy = root.querySelector<HTMLElement>('[data-hf-hero-copy]');
+    if (!hero || !video || !toggle || !toggleLabel || !copy) return;
+    if (root.dataset.hfHeroReady === 'true') return;
+    root.dataset.hfHeroReady = 'true';
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const initialMobile = window.matchMedia('(max-width: 760px)').matches;
+    const initialNarrow = window.matchMedia('(max-width: 359px)').matches;
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
+    const constrainedConnection = ['slow-2g', '2g'].includes(connection?.effectiveType ?? '');
+    const videoAllowed = !reducedMotion.matches
+      && !connection?.saveData
+      && !constrainedConnection
+      && !initialNarrow;
+    const selectedSource = initialMobile ? video.dataset.hfMobileSrc : video.dataset.hfDesktopSrc;
+
+    const setPlayingState = (playing: boolean) => {
+      hero.classList.toggle('is-video-playing', playing);
+      toggleLabel.textContent = playing ? 'Пауза видео' : 'Включить видео';
+      toggle.setAttribute('aria-label', playing ? 'Приостановить фоновое видео' : 'Включить фоновое видео');
+    };
+
+    const stopAndUnloadVideo = () => {
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      toggle.hidden = true;
+      setPlayingState(false);
+    };
+
+    if (videoAllowed && selectedSource) {
+      video.src = selectedSource;
+      video.defaultMuted = true;
+      video.muted = true;
+      setPlayingState(false);
+      toggle.hidden = false;
+      video.addEventListener('playing', () => setPlayingState(true));
+      video.addEventListener('pause', () => setPlayingState(false));
+      video.addEventListener('error', stopAndUnloadVideo);
+      video.load();
+      requestAnimationFrame(() => {
+        video.play().catch(() => setPlayingState(false));
+      });
+
+      toggle.addEventListener('click', () => {
+        if (video.paused) video.play().catch(() => setPlayingState(false));
+        else video.pause();
+      });
+    }
+
+    reducedMotion.addEventListener('change', (event) => {
+      if (event.matches) stopAndUnloadVideo();
+    });
+
+    const initialMode = initialMobile ? 'mobile' : 'desktop';
+    let modeInvalidated = false;
+    window.addEventListener('resize', () => {
+      if (modeInvalidated) return;
+      const currentMode = window.matchMedia('(max-width: 760px)').matches ? 'mobile' : 'desktop';
+      if (currentMode === initialMode) return;
+      modeInvalidated = true;
+      stopAndUnloadVideo();
+    }, { passive: true });
+
+    if (!initialMobile) return;
+    let ticking = false;
+    const updateMobileHandoff = () => {
+      ticking = false;
+      const header = root.querySelector<HTMLElement>('.hv2-header');
+      const headerBottom = header?.getBoundingClientRect().bottom ?? 72;
+      const copyTop = copy.getBoundingClientRect().top;
+      const start = headerBottom + 96;
+      const end = headerBottom + 24;
+      const progress = Math.min(1, Math.max(0, (start - copyTop) / (start - end)));
+      const opacity = reducedMotion.matches ? (copyTop <= end ? 0 : 1) : 1 - progress;
+      copy.style.setProperty('--hf-mobile-copy-opacity', String(opacity));
+      copy.style.setProperty('--hf-mobile-copy-shift', `${Math.round(progress * -18)}px`);
+    };
+    const requestMobileHandoff = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(updateMobileHandoff);
+    };
+    updateMobileHandoff();
+    window.addEventListener('scroll', requestMobileHandoff, { passive: true });
+    window.addEventListener('resize', requestMobileHandoff, { passive: true });
+  };
+
+  const initializeHomeFinalMotion = (root: HTMLElement) => {
+    if (root.dataset.hfMotionReady === 'true') return;
+    root.dataset.hfMotionReady = 'true';
+
+    const revealElements = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
+    if (revealElements.length === 0) return;
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let revealObserver: IntersectionObserver | undefined;
+    let revealScanQueued = false;
+
+    const makeVisible = (element: HTMLElement) => {
+      element.classList.remove('hv2-reveal-pending');
+      element.classList.add('hv2-reveal-visible');
+    };
+    const revealElement = (element: HTMLElement) => {
+      if (element.dataset.v2RevealQueued === 'true') return;
+      element.dataset.v2RevealQueued = 'true';
+      revealObserver?.unobserve(element);
+      try {
+        void waitForRevealMedia(element, 3500).then(
+          () => makeVisible(element),
+          () => makeVisible(element)
+        );
+      } catch {
+        makeVisible(element);
+      }
+    };
+    const revealReached = (viewportFactor = 0.94) => {
+      revealScanQueued = false;
+      revealElements.forEach((element) => {
+        if (!element.classList.contains('hv2-reveal-pending')) return;
+        if (element.getBoundingClientRect().top < window.innerHeight * viewportFactor) revealElement(element);
+      });
+    };
+    const queueRevealScan = () => {
+      if (revealScanQueued) return;
+      revealScanQueued = true;
+      requestAnimationFrame(() => revealReached());
+    };
+
+    if (reducedMotion.matches) {
+      revealElements.forEach(revealElement);
+    } else if ('IntersectionObserver' in window) {
+      try {
+        revealObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            revealElement(entry.target as HTMLElement);
+          });
+        }, { rootMargin: '0px 0px -9% 0px', threshold: 0.08 });
+
+        revealElements.forEach((element, index) => {
+          if (!element.style.getPropertyValue('--hv2-reveal-delay')) {
+            element.style.setProperty('--hv2-reveal-delay', `${Math.min((index % 4) * 55, 165)}ms`);
+          }
+          element.classList.add('hv2-reveal-pending');
+          revealObserver?.observe(element);
+        });
+
+        window.addEventListener('scroll', queueRevealScan, { passive: true });
+        window.addEventListener('resize', queueRevealScan);
+        requestAnimationFrame(() => requestAnimationFrame(() => revealReached()));
+        window.setTimeout(() => revealReached(1), 1600);
+      } catch {
+        revealElements.forEach(makeVisible);
+      }
+    } else {
+      revealElements.forEach(makeVisible);
+    }
+  };
+
+  const initializeHomeFinalPage = () => {
+    document.querySelectorAll<HTMLElement>('[data-home-final-root]').forEach((root) => {
+      initializeHomeFinalHero(root);
+      initializeHomeFinalMotion(root);
+    });
+  };
+
+  initializeHomeFinalPage();
+  document.addEventListener('astro:page-load', initializeHomeFinalPage);
+</script>

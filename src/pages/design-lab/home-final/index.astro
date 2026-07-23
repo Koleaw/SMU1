@@ -1,0 +1,17 @@
+---
+import { getCollection } from 'astro:content';
+import HomeFinal from '../../../components/v2/home-final/HomeFinal.astro';
+import PublicV2Layout from '../../../layouts/PublicV2Layout.astro';
+
+const homePage = (await getCollection('static-pages')).find(({ data }) => data.slug === 'home')?.data;
+if (!homePage) throw new Error('static-pages collection must contain home.json.');
+---
+
+<PublicV2Layout
+  title={homePage.seoTitle}
+  description={homePage.seoDescription}
+  canonicalPath="/"
+  ogImage={homePage.heroMediaPoster ?? homePage.image}
+>
+  <HomeFinal />
+</PublicV2Layout>
