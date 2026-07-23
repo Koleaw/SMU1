@@ -4,6 +4,7 @@ import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import V2Breadcrumbs from './V2Breadcrumbs.astro';
 import V2CatalogHero from './V2CatalogHero.astro';
+import V2HeroHandoff from './V2HeroHandoff.astro';
 import V2CategoryCard from './V2CategoryCard.astro';
 import V2DirectContact from './V2DirectContact.astro';
 import {
@@ -21,9 +22,22 @@ interface Props {
   categoryProductCounts: Record<string, number>;
   links: CatalogV2Links;
   currentPath: string;
+  productFinalPrototype?: 'hub';
 }
 
-const { section, categories, categoryProductCounts, links, currentPath } = Astro.props as Props;
+const {
+  section,
+  categories,
+  categoryProductCounts,
+  links,
+  currentPath,
+  productFinalPrototype
+} = Astro.props as Props;
+const productFinalEnabled = productFinalPrototype === 'hub';
+const productFinalBreadcrumbs = [
+  { title: 'Главная', href: '/design-lab/home-v2/' },
+  { title: section.title }
+];
 const categoryHref = (category: ProductCategoryData) =>
   links.categoryHrefs[category.slug] || catalogV2CategoryHref(section.slug, category.slug);
 const blocks = Array.isArray(section.pageBlocks)
@@ -62,14 +76,17 @@ const heroMediaPresentation = section.mode === 'catalog-hub' && section.image?.t
   canonicalPath={`/${section.slug}/`}
   currentPath={currentPath}
   ogImage={section.image}
+  productFinalPrototype={productFinalPrototype}
 >
-  <V2Breadcrumbs items={[
+  {!productFinalEnabled && <V2Breadcrumbs items={[
     { title: 'Главная', href: '/design-lab/home-v2/' },
     { title: section.title }
-  ]} />
+  ]} />}
 
+  <V2HeroHandoff enabled={productFinalEnabled}>
   <V2CatalogHero
     variant="section"
+    productFinalHandoff={productFinalEnabled}
     kicker="Каталог изделий"
     title={section.heroTitle}
     description={heroDescription}
@@ -83,7 +100,10 @@ const heroMediaPresentation = section.mode === 'catalog-hub' && section.image?.t
     primaryLabel="Выбрать категорию"
     secondaryHref="#contact"
     secondaryLabel="Обсудить задачу"
-  />
+  >
+    {productFinalEnabled && <V2Breadcrumbs slot="breadcrumbs" items={productFinalBreadcrumbs} />}
+  </V2CatalogHero>
+  </V2HeroHandoff>
 
   <section class="v2-catalog-index" id="catalog-grid" aria-labelledby="v2-category-grid-title">
     <div class="hv2-shell">

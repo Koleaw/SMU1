@@ -1,0 +1,18 @@
+---
+interface Props {
+  enabled?: boolean;
+}
+
+const { enabled = false } = Astro.props as Props;
+---
+
+{enabled ? (
+  <div class="product-final-handoff" data-product-final-handoff>
+    <div class="product-final-handoff__scene" data-product-final-handoff-scene>
+      <slot />
+    </div>
+    <span class="product-final-handoff__boundary" data-hv2-hero aria-hidden="true"></span>
+  </div>
+) : (
+  <slot />
+)}

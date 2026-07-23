@@ -1,6 +1,7 @@
 ---
 import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import V2Breadcrumbs from './V2Breadcrumbs.astro';
 import {
   catalogMediaPresentation,
   imageViewStyle,
@@ -22,6 +23,8 @@ interface Props {
   primaryLabel?: string;
   secondaryHref?: string;
   secondaryLabel?: string;
+  productFinalHandoff?: boolean;
+  breadcrumbs?: Array<{ title: string; href?: string }>;
 }
 
 const {
@@ -43,6 +46,9 @@ const {
 
 const href = (value: string) => value.startsWith('#') ? value : withBase(value);
 const hasMedia = Boolean(image);
+const productFinalHandoff = Astro.props.productFinalHandoff ?? false;
+const breadcrumbs = Astro.props.breadcrumbs ?? [];
+const hasBreadcrumbs = breadcrumbs.length > 0 || Astro.slots.has('breadcrumbs');
 ---
 
 <section
@@ -53,13 +59,30 @@ const hasMedia = Boolean(image);
     { 'v2-catalog-hero--no-media': !hasMedia }
   ]}
   aria-labelledby="v2-catalog-title"
-  data-v2-hero-scroll
+  data-v2-hero-scroll={!productFinalHandoff ? '' : undefined}
+  data-product-final-hero={productFinalHandoff ? '' : undefined}
 >
-  <div class="hv2-shell hv2-grid v2-catalog-hero__grid">
-    <div class="v2-catalog-hero__copy" data-v2-hero-scroll-copy>
+  <div
+    class="hv2-shell hv2-grid v2-catalog-hero__grid"
+    data-product-final-track={productFinalHandoff ? '' : undefined}
+  >
+    <div
+      class="v2-catalog-hero__copy"
+      data-v2-hero-scroll-copy={!productFinalHandoff ? '' : undefined}
+    >
+      <div class="v2-catalog-hero__meta">
+      {hasBreadcrumbs && (
+        <div class="v2-catalog-hero__breadcrumbs">
+          {breadcrumbs.length > 0
+            ? <V2Breadcrumbs items={breadcrumbs} />
+            : <slot name="breadcrumbs" />
+          }
+        </div>
+      )}
       <div class="v2-catalog-hero__topline" data-v2-reveal="entry-meta">
         <p class="hv2-eyebrow">{kicker}</p>
         {countLabel && <span>{countLabel}</span>}
+      </div>
       </div>
       <h1 id="v2-catalog-title" data-v2-reveal="entry-title">{title}</h1>
       {description && <p class="v2-catalog-hero__lead" data-v2-reveal="entry-copy">{description}</p>}
@@ -71,7 +94,12 @@ const hasMedia = Boolean(image);
     </div>
 
     {hasMedia && (
-      <figure class="v2-catalog-hero__media" data-v2-media data-v2-hero-scroll-media data-v2-reveal="entry-media">
+      <figure
+        class="v2-catalog-hero__media"
+        data-v2-media
+        data-v2-hero-scroll-media={!productFinalHandoff ? '' : undefined}
+        data-v2-reveal="entry-media"
+      >
         <img
           src={withBase(image)}
           alt={imageAlt || title}

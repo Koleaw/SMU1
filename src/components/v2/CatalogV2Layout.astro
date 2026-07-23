@@ -5,6 +5,7 @@ import HomeV2Footer from './home-v2/HomeV2Footer.astro';
 import V2PaletteSwitch from './V2PaletteSwitch.astro';
 import { getV2Scope } from '../../utils/v2Routes';
 import '../../styles/v2/catalog-v2.css';
+import '../../styles/v2/product-final-stage-a.css';
 
 interface Props {
   title: string;
@@ -22,6 +23,7 @@ interface Props {
   refreshTarget?: string;
   headerMode?: 'overlay' | 'light';
   rootClass?: string;
+  productFinalPrototype?: 'hub' | 'category';
 }
 
 const {
@@ -39,9 +41,12 @@ const {
   robots,
   refreshTarget = '',
   headerMode = 'light',
-  rootClass = ''
+  rootClass = '',
+  productFinalPrototype
 } = Astro.props as Props;
 const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
+const productFinalEnabled = productFinalPrototype === 'hub' || productFinalPrototype === 'category';
+const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
 ---
 
 <PublicV2Layout
@@ -54,9 +59,13 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
   robots={robots}
   refreshTarget={refreshTarget}
 >
-  <div class:list={['home-v2', 'catalog-v2', rootClass]} data-catalog-v2-root>
+  <div
+    class:list={['home-v2', 'catalog-v2', rootClass]}
+    data-catalog-v2-root
+    data-product-final-prototype={productFinalPrototype}
+  >
     <a class="v2-skip-link" href="#main-content">К основному содержанию</a>
-    <HomeV2Header mode={headerMode} currentPath={currentPath} catalogV2 contactHref={contactHref} ctaLabel={headerCtaLabel} />
+    <HomeV2Header mode={resolvedHeaderMode} currentPath={currentPath} catalogV2 contactHref={contactHref} ctaLabel={headerCtaLabel} />
     <main id="main-content" tabindex="-1">
       <slot />
     </main>
@@ -145,4 +154,95 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
 
   initCatalogV2Enhancements();
   document.addEventListener('astro:page-load', initCatalogV2Enhancements);
+</script>
+
+<script>
+  const initProductFinalHandoff = () => {
+    document.querySelectorAll<HTMLElement>(
+      '[data-catalog-v2-root][data-product-final-prototype]'
+    ).forEach((root) => {
+      if (root.dataset.productFinalControllerReady === 'true') return;
+
+      const handoff = root.querySelector<HTMLElement>('[data-product-final-handoff]');
+      const scene = handoff?.querySelector<HTMLElement>('[data-product-final-handoff-scene]');
+      const hero = scene?.querySelector<HTMLElement>('[data-product-final-hero]');
+      const track = scene?.querySelector<HTMLElement>('[data-product-final-track]');
+      if (!handoff || !scene || !hero || !track) return;
+
+      root.dataset.productFinalControllerReady = 'true';
+      const desktop = window.matchMedia('(min-width: 981px)');
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      let sceneHeight = 0;
+      let travel = 0;
+      let frame = 0;
+      let measureFrame = 0;
+
+      const reset = () => {
+        handoff.removeAttribute('data-product-final-handoff-ready');
+        root.removeAttribute('data-product-final-handoff-active');
+        handoff.style.removeProperty('--product-final-scene-height');
+        root.style.removeProperty('--product-final-scene-height');
+        track.style.removeProperty('transform');
+        track.style.removeProperty('--product-final-progress');
+        sceneHeight = 0;
+        travel = 0;
+      };
+
+      const sync = () => {
+        frame = 0;
+        if (!sceneHeight || !handoff.hasAttribute('data-product-final-handoff-ready')) return;
+        const progress = Math.min(1, Math.max(0, -handoff.getBoundingClientRect().top / sceneHeight));
+        root.toggleAttribute('data-product-final-handoff-active', window.scrollY <= sceneHeight + 1);
+        track.style.setProperty('--product-final-progress', progress.toFixed(4));
+        track.style.transform = `translate3d(0, ${(-travel * progress).toFixed(3)}px, 0)`;
+      };
+
+      const queueSync = () => {
+        if (frame) return;
+        frame = window.requestAnimationFrame(sync);
+      };
+
+      const measure = () => {
+        measureFrame = 0;
+        if (!desktop.matches || reducedMotion.matches) {
+          reset();
+          return;
+        }
+
+        const nextHeight = hero.getBoundingClientRect().height;
+        if (!Number.isFinite(nextHeight) || nextHeight <= 0) {
+          reset();
+          return;
+        }
+
+        sceneHeight = nextHeight;
+        travel = Math.min(72, Math.max(42, sceneHeight * 0.08));
+        handoff.style.setProperty('--product-final-scene-height', `${sceneHeight.toFixed(3)}px`);
+        root.style.setProperty('--product-final-scene-height', `${sceneHeight.toFixed(3)}px`);
+        handoff.setAttribute('data-product-final-handoff-ready', '');
+        queueSync();
+      };
+
+      const queueMeasure = () => {
+        if (measureFrame) return;
+        measureFrame = window.requestAnimationFrame(measure);
+      };
+
+      window.addEventListener('scroll', queueSync, { passive: true });
+      window.addEventListener('resize', queueMeasure);
+      desktop.addEventListener('change', queueMeasure);
+      reducedMotion.addEventListener('change', queueMeasure);
+      if ('ResizeObserver' in window) {
+        new ResizeObserver(queueMeasure).observe(hero);
+      }
+      hero.querySelectorAll<HTMLImageElement>('img').forEach((image) => {
+        if (!image.complete) image.addEventListener('load', queueMeasure, { once: true });
+      });
+
+      measure();
+    });
+  };
+
+  initProductFinalHandoff();
+  document.addEventListener('astro:page-load', initProductFinalHandoff);
 </script>

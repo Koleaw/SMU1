@@ -4,6 +4,7 @@ import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import V2Breadcrumbs from './V2Breadcrumbs.astro';
 import V2CatalogHero from './V2CatalogHero.astro';
+import V2HeroHandoff from './V2HeroHandoff.astro';
 import V2ProductCard from './V2ProductCard.astro';
 import V2ProductGallery from './V2ProductGallery.astro';
 import V2DirectContact from './V2DirectContact.astro';
@@ -26,9 +27,23 @@ interface Props {
   products: ProductData[];
   links: CatalogV2Links;
   currentPath: string;
+  productFinalPrototype?: 'category';
 }
 
-const { section, category, products, links, currentPath } = Astro.props as Props;
+const {
+  section,
+  category,
+  products,
+  links,
+  currentPath,
+  productFinalPrototype
+} = Astro.props as Props;
+const productFinalEnabled = productFinalPrototype === 'category';
+const productFinalBreadcrumbs = [
+  { title: 'Главная', href: '/design-lab/home-v2/' },
+  { title: section.title, href: links.sectionHref },
+  { title: category.title }
+];
 const productHref = (product: ProductData) =>
   links.productHrefs[product.slug] || catalogV2ProductHref(section.slug, category.slug, product.slug);
 const categoryMedia = categoryGalleryImages(category);
@@ -76,15 +91,19 @@ const sectionNavItems = [
   currentPath={currentPath}
   ogImage={categoryHeroImage}
   pageKind="category"
+  productFinalPrototype={productFinalPrototype}
 >
-  <V2Breadcrumbs items={[
+  {!productFinalEnabled && <V2Breadcrumbs items={[
     { title: 'Главная', href: '/design-lab/home-v2/' },
     { title: section.title, href: links.sectionHref },
     { title: category.title }
-  ]} />
+  ]} />}
 
+  <V2HeroHandoff enabled={productFinalEnabled}>
   <V2CatalogHero
     variant="category"
+    productFinalHandoff={productFinalEnabled}
+    breadcrumbs={productFinalEnabled ? productFinalBreadcrumbs : undefined}
     kicker="Категория изделий"
     title={category.heroTitle}
     description={heroDescription}
@@ -99,6 +118,8 @@ const sectionNavItems = [
     secondaryHref={hasProducts ? '#contact' : links.sectionHref}
     secondaryLabel={hasProducts ? 'Получить расчёт' : `Все ${section.title.toLocaleLowerCase('ru-RU')}`}
   />
+
+  </V2HeroHandoff>
 
   {hasProducts && <V2SectionNav items={sectionNavItems} label="Разделы категории" />}
 
