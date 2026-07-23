@@ -37,6 +37,12 @@ const vacanciesV2Root = '/vakansii/';
 const legalV2Root = '/politika-konfidencialnosti/';
 const customOrderV2Root = '/izgotovlenie-na-zakaz/';
 const { productLinks, primaryLinks, companyLinks, workAndCompanyLinks } = await getV2Navigation();
+const splitLeftPrimaryLinks = primaryLinks.filter(
+  (item) => item.href === metalworksV2Root || item.href === landscapingV2Root
+);
+const splitRightPrimaryLinks = primaryLinks.filter(
+  (item) => item.href !== metalworksV2Root && item.href !== landscapingV2Root
+);
 const telegramLabel = getV2TelegramLabel(settings);
 const companyV2Roots = [aboutV2Root, contactsV2Root, vacanciesV2Root, legalV2Root];
 const v2Roots = [
@@ -65,11 +71,16 @@ const mobileMenuId = 'home-v2-mobile-menu';
       href={path('/')}
       aria-label="СМУ-1 — на главную"
       aria-current={currentState('/')}
+      data-hv2-header-side="left"
     >
       <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="355" height="211" />
     </a>
 
     <nav class="hv2-header__nav" aria-label="Основная навигация">
+      <div
+        class="hv2-header__nav-group hv2-header__nav-group--left"
+        data-hv2-header-side="left"
+      >
       <div class="hv2-dropdown" data-hv2-dropdown>
         <button
           class="hv2-header__nav-button"
@@ -97,7 +108,14 @@ const mobileMenuId = 'home-v2-mobile-menu';
         </div>
       </div>
 
-      {primaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+      {splitLeftPrimaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+      </div>
+
+      <div
+        class="hv2-header__nav-group hv2-header__nav-group--right"
+        data-hv2-header-side="right"
+      >
+      {splitRightPrimaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
 
       <div class="hv2-dropdown" data-hv2-dropdown>
         <button
@@ -125,9 +143,10 @@ const mobileMenuId = 'home-v2-mobile-menu';
           </div>
         </div>
       </div>
+      </div>
     </nav>
 
-    <div class="hv2-header__actions" aria-label="Быстрые действия">
+    <div class="hv2-header__actions" aria-label="Быстрые действия" data-hv2-header-side="right">
       <a class="hv2-header__phone" href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
         {settings.phonePrimary}
       </a>
@@ -211,6 +230,12 @@ const mobileMenuId = 'home-v2-mobile-menu';
   </div>
 </div>
 
+<style>
+  .hv2-header__nav-group {
+    display: contents;
+  }
+</style>
+
 <script>
   const initHomeV2Header = () => {
     const header = document.querySelector<HTMLElement>('[data-home-v2-header]');
@@ -221,6 +246,9 @@ const mobileMenuId = 'home-v2-mobile-menu';
     if (!header || !menu || !menuOpen || !menuClose || header.dataset.ready === 'true') return;
     header.dataset.ready = 'true';
 
+    const compactMenuBreakpoint = header.closest(
+      '[data-catalog-v2-root][data-product-final-prototype]'
+    ) ? 1320 : 1180;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const dropdowns = Array.from(header.querySelectorAll<HTMLElement>('[data-hv2-dropdown]'));
     let closeTimer = 0;
@@ -456,7 +484,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
       if (event.key === 'Escape') closeAllDropdowns();
     });
     window.addEventListener('resize', () => {
-      if (window.innerWidth > 1180 && !menu.hidden) closeMobileMenu(false);
+      if (window.innerWidth > compactMenuBreakpoint && !menu.hidden) closeMobileMenu(false);
     });
   };
 

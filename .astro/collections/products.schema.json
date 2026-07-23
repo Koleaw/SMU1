@@ -16,6 +16,14 @@
         "sku": {
           "type": "string"
         },
+        "presentationType": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "premium"
+          ],
+          "default": "standard"
+        },
         "shortDescription": {
           "type": "string"
         },
@@ -24,6 +32,21 @@
         },
         "description": {
           "type": "string"
+        },
+        "solutionKicker": {
+          "type": "string"
+        },
+        "applicationItems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "executionVariants": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "materials": {
           "type": "array",
