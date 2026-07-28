@@ -11,6 +11,7 @@ import V2DirectContact from './V2DirectContact.astro';
 import V2CatalogSparseState from './V2CatalogSparseState.astro';
 import V2SectionNav from './V2SectionNav.astro';
 import {
+  catalogMediaPresentation,
   catalogV2ProductHref,
   categoryGalleryImages,
   isPlaceholderCatalogMedia,
@@ -53,16 +54,25 @@ const categoryHeroImage = rawCategoryImage && !isPlaceholderCatalogMedia(rawCate
   : categoryMedia[0] || '';
 const categoryGalleryMedia = categoryMedia.filter((image) => image !== categoryHeroImage);
 const hasProducts = products.length > 0;
+const fenceDirectionEnabled = productFinalEnabled && section.slug === 'ograzhdeniya-i-zabory';
 const heroDescription = publicCatalogCopy(category.heroDescription);
 const heroSupportingText = publicCatalogCopy(category.shortDescription);
 const supportingText = heroSupportingText !== heroDescription ? heroSupportingText : '';
 const galleryIntro = publicCatalogCopy(category.galleryIntro)
   || heroSupportingText
   || heroDescription;
-/* Published category covers are isolated studio renders even where migrated
- * records still carry a legacy `cover` crop. Keep that record untouched and
- * make the public presentation contain the full product silhouette. */
-const mediaPresentation = categoryHeroImage ? 'isolated' : 'none';
+/* Fence directions use their imageView as presentation metadata. Other
+ * accepted category routes retain the existing isolated-cover contract. */
+const mediaPresentation = fenceDirectionEnabled
+  ? catalogMediaPresentation(categoryHeroImage, category.imageView)
+  : categoryHeroImage
+    ? 'isolated'
+    : 'none';
+const rootClass = [
+  fenceDirectionEnabled ? 'catalog-v2--fence-direction' : '',
+  fenceDirectionEnabled && mediaPresentation === 'contextual' ? 'catalog-v2--fence-contextual' : '',
+  fenceDirectionEnabled && mediaPresentation === 'none' ? 'catalog-v2--fence-no-media' : ''
+].filter(Boolean).join(' ');
 const displayProducts = products.map((product) => ({
   ...product,
   leadText: publicCatalogCopy(product.leadText),
@@ -92,6 +102,7 @@ const sectionNavItems = [
   ogImage={categoryHeroImage}
   pageKind="category"
   productFinalPrototype={productFinalPrototype}
+  rootClass={rootClass}
 >
   {!productFinalEnabled && <V2Breadcrumbs items={[
     { title: 'Главная', href: '/design-lab/home-v2/' },

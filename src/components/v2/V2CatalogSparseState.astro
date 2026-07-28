@@ -17,15 +17,40 @@ interface Props {
 
 const { category, sectionTitle, sectionHref } = Astro.props as Props;
 const media = categoryGalleryImages(category);
-const showGallery = media.length > 1;
+const showGallery = media.length > 0;
 const categoryDescription = publicCatalogCopy(category.heroDescription)
   || publicCatalogCopy(category.shortDescription);
 const contactDescription = categoryDescription
   || 'Пришлите размеры, количество, фотографию места установки, эскиз или техническое задание.';
 ---
 
+{showGallery && (
+  <section
+    class="v2-category-examples v2-category-examples--sparse"
+    id="category-examples"
+    aria-labelledby="v2-sparse-examples-title"
+  >
+    <div class="hv2-shell">
+      <header class="v2-section-heading" data-v2-reveal>
+        <div>
+          <h2 id="v2-sparse-examples-title">Примеры решений</h2>
+        </div>
+        {categoryDescription && <p>{categoryDescription}</p>}
+      </header>
+      <div class="v2-category-examples__gallery" data-v2-reveal>
+        <V2ProductGallery
+          images={media}
+          title={category.title}
+          imageView={category.imageView}
+          entityLabel="категории"
+        />
+      </div>
+    </div>
+  </section>
+)}
+
 <section
-  class:list={['v2-sparse-state', { 'v2-sparse-state--with-media': showGallery, 'v2-sparse-state--text-only': !showGallery }]}
+  class="v2-sparse-state v2-sparse-state--text-only"
   aria-labelledby="v2-sparse-title"
 >
   <div class="hv2-shell">
@@ -34,22 +59,12 @@ const contactDescription = categoryDescription
         <p class="hv2-eyebrow">Изготовление по задаче</p>
         <h2 id="v2-sparse-title">Что можно прислать для расчёта</h2>
       </div>
-      {categoryDescription && <p>{categoryDescription}</p>}
+      {!showGallery && categoryDescription && <p>{categoryDescription}</p>}
     </header>
 
     <div class="hv2-grid v2-sparse-state__grid">
-      {showGallery && (
-        <div class="v2-sparse-state__media" data-v2-reveal="section-media">
-          <V2ProductGallery
-            images={media}
-            title={category.title}
-            imageView={category.imageView}
-            entityLabel="категории"
-          />
-        </div>
-      )}
       <div class="v2-sparse-state__content" data-v2-reveal>
-        <p class="v2-sparse-state__summary">Готовые модели этой категории пока не опубликованы. Конструкцию можно рассчитать по вашим вводным.</p>
+        <p class="v2-sparse-state__summary">Конструкцию можно рассчитать по вашим вводным.</p>
         <ul aria-label="Материалы для расчёта">
           <li>размеры и необходимое количество;</li>
           <li>фотографию места установки;</li>

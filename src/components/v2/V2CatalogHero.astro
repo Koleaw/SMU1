@@ -49,6 +49,12 @@ const hasMedia = Boolean(image);
 const productFinalHandoff = Astro.props.productFinalHandoff ?? false;
 const breadcrumbs = Astro.props.breadcrumbs ?? [];
 const hasBreadcrumbs = breadcrumbs.length > 0 || Astro.slots.has('breadcrumbs');
+const imagePresentationStyle = [
+  imageViewStyle(imageView),
+  `--v2-image-source-x:${imageView?.positionX ?? 50}%`,
+  `--v2-image-source-y:${imageView?.positionY ?? 50}%`,
+  `--v2-image-source-scale:${imageView?.scale ?? 1}`
+].join(';');
 ---
 
 <section
@@ -108,7 +114,7 @@ const hasBreadcrumbs = breadcrumbs.length > 0 || Astro.slots.has('breadcrumbs');
           loading="eager"
           fetchpriority="high"
           decoding="async"
-          style={imageViewStyle(imageView)}
+          style={imagePresentationStyle}
           data-v2-image
         />
       </figure>

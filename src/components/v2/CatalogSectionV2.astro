@@ -65,9 +65,15 @@ const displayCategories = categories.map((category) => ({
 const contactTitle = publicCatalogCopy(section.contactTitle) || 'Обсудим изделие и подготовим расчёт';
 const contactDescription = publicCatalogCopy(section.contactDescription)
   || 'Пришлите описание задачи, количество, размеры или материалы проекта удобным способом.';
-const heroMediaPresentation = section.mode === 'catalog-hub' && section.image?.trim()
+const fenceHubEnabled = productFinalEnabled && section.slug === 'ograzhdeniya-i-zabory';
+const heroMediaPresentation = fenceHubEnabled
+  ? 'contextual'
+  : section.mode === 'catalog-hub' && section.image?.trim()
   ? 'isolated'
   : catalogMediaPresentation(section.image || '', section.imageView);
+const rootClass = fenceHubEnabled
+  ? 'catalog-v2--fence-hub catalog-v2--fence-contextual'
+  : '';
 ---
 
 <CatalogV2Layout
@@ -77,6 +83,7 @@ const heroMediaPresentation = section.mode === 'catalog-hub' && section.image?.t
   currentPath={currentPath}
   ogImage={section.image}
   productFinalPrototype={productFinalPrototype}
+  rootClass={rootClass}
 >
   {!productFinalEnabled && <V2Breadcrumbs items={[
     { title: 'Главная', href: '/design-lab/home-v2/' },

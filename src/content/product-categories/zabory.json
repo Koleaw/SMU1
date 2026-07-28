@@ -10,10 +10,10 @@
   "isActive": true,
   "image": "/uploads/03ba6b83-ca31-468f-8c76-189dc4080572-1780248471243.jpeg",
   "imageView": {
-    "fit": "cover",
+    "fit": "contain",
     "positionX": 50,
     "positionY": 50,
-    "scale": 1
+    "scale": 1.04
   },
   "placeholderLabel": "Рендер будет добавлен позже",
   "mode": "custom-list",

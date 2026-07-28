@@ -25,6 +25,9 @@ const category = snapshot.categories.find((item) => (
 if (!section || !category) throw new Error(`Active catalog category route ${sectionSlug}/${categorySlug} was not found.`);
 const products = getCategoryProducts(snapshot, category.slug);
 const links = createCatalogV2Links(snapshot, section.slug);
+const productFinalPrototype = section.slug === 'ograzhdeniya-i-zabory'
+  ? 'category'
+  : undefined;
 ---
 
 <CatalogCategoryV2
@@ -33,4 +36,5 @@ const links = createCatalogV2Links(snapshot, section.slug);
   products={products}
   links={links}
   currentPath={Astro.url.pathname}
+  productFinalPrototype={productFinalPrototype}
 />

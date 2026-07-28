@@ -10,10 +10,10 @@
   "isActive": true,
   "image": "/uploads/chatgpt-image-may-28-2026-02-49-39-pm-1-6-1780248534908.png",
   "imageView": {
-    "fit": "cover",
+    "fit": "contain",
     "positionX": 50,
-    "positionY": 50,
-    "scale": 1
+    "positionY": 58,
+    "scale": 1.04
   },
   "placeholderLabel": "Рендер будет добавлен позже",
   "mode": "custom-list",
