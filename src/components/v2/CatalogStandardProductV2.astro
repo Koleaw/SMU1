@@ -7,6 +7,7 @@ import V2Breadcrumbs from './V2Breadcrumbs.astro';
 import V2ProductGallery from './V2ProductGallery.astro';
 import V2ProductCard from './V2ProductCard.astro';
 import V2DirectContact from './V2DirectContact.astro';
+import V2HeroHandoff from './V2HeroHandoff.astro';
 import V2SectionNav from './V2SectionNav.astro';
 import {
   catalogV2CategoryHref,
@@ -64,7 +65,7 @@ const textualSpecs = normalizedSpecs.flatMap((item) => {
 });
 const hasSpecifications = pairedSpecs.length > 0 || textualSpecs.length > 0;
 const productLead = publicCatalogCopy(product.leadText) || publicCatalogCopy(product.shortDescription);
-const description = publicCatalogCopy(product.description) || productLead;
+const description = publicCatalogCopy(product.description);
 const descriptionParagraphs = description.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
 const rawCaption = publicCatalogCopy(product.placeholderLabel);
 const isDefaultPhotoNotice = /фото\s+изделия\s+будут\s+добавлены\s+позже/i.test(rawCaption);
@@ -92,6 +93,19 @@ const displayRelatedProducts = relatedProducts.map((item) => ({
     shortDescription: publicCatalogCopy(item.product.shortDescription)
   }
 }));
+const isFenceProduct = section.slug === 'ograzhdeniya-i-zabory';
+const rootClass = [
+  'catalog-product',
+  'catalog-product--standard',
+  isFenceProduct ? 'catalog-v2--standard-fence' : '',
+  images.length === 0 ? 'catalog-v2--standard-no-media' : ''
+].filter(Boolean).join(' ');
+const productBreadcrumbs = [
+  { title: 'Главная', href: '/design-lab/home-v2/' },
+  { title: section.title, href: links.sectionHref },
+  { title: category.title, href: links.categoryHrefs[category.slug] || catalogV2CategoryHref(section.slug, category.slug) },
+  { title: product.title }
+];
 const sectionNavItems = [
   { id: 'product-overview', label: 'Обзор' },
   ...(descriptionParagraphs.length > 0 ? [{ id: 'product-description', label: 'Описание' }] : []),
@@ -111,16 +125,11 @@ const sectionNavItems = [
   currentPath={currentPath}
   ogImage={images[0] || product.image}
   pageKind="product"
-  rootClass="catalog-product catalog-product--standard"
+  rootClass={rootClass}
+  productFinalPrototype="standard-product"
 >
-  <div data-product-presentation="standard">
-  <V2Breadcrumbs items={[
-    { title: 'Главная', href: '/design-lab/home-v2/' },
-    { title: section.title, href: links.sectionHref },
-    { title: category.title, href: links.categoryHrefs[category.slug] || catalogV2CategoryHref(section.slug, category.slug) },
-    { title: product.title }
-  ]} />
-
+  <div class="v2-standard-product-page" data-product-presentation="standard">
+  <V2HeroHandoff enabled>
   <section
     class:list={[
       'v2-product-top',
@@ -128,19 +137,14 @@ const sectionNavItems = [
     ]}
     id="product-overview"
     data-product-media-count={images.length}
+    data-product-final-hero
     aria-labelledby="v2-product-title"
   >
-    <div class="hv2-shell hv2-grid v2-product-top__grid">
-      <div class="v2-product-top__gallery" data-v2-reveal="entry-media">
-        <V2ProductGallery
-          images={images}
-          title={product.title}
-          imageView={product.imageView}
-          caption={galleryCaption}
-        />
-      </div>
-
+    <div class="hv2-shell hv2-grid v2-product-top__grid" data-product-final-track>
       <article class="v2-product-summary">
+        <div class="v2-product-summary__breadcrumbs">
+          <V2Breadcrumbs items={productBreadcrumbs} />
+        </div>
         <p class="hv2-eyebrow" data-v2-reveal="entry-meta">{category.title}</p>
         <h1 id="v2-product-title" data-v2-reveal="entry-title">{product.title}</h1>
         {productLead && <p class="v2-product-summary__lead" data-v2-reveal="entry-copy">{productLead}</p>}
@@ -165,8 +169,20 @@ const sectionNavItems = [
           </a>
         </div>
       </article>
+
+      {images.length > 0 && (
+        <div class="v2-product-top__gallery" data-v2-reveal="entry-media">
+          <V2ProductGallery
+            images={images}
+            title={product.title}
+            imageView={product.imageView}
+            caption={galleryCaption}
+          />
+        </div>
+      )}
     </div>
   </section>
+  </V2HeroHandoff>
 
   <V2SectionNav items={sectionNavItems} label="Разделы изделия" />
 
