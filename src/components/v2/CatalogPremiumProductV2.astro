@@ -39,10 +39,12 @@ const { section, category, product } = route;
 const premium = product as typeof product & PremiumProductFields;
 const images = productGalleryImages(product);
 const primaryImage = images[0] || '';
+const primaryImageUrl = primaryImage ? withBase(primaryImage) : '';
 const imageVariableStyle = [
   `--v2-image-source-x:${product.imageView?.positionX ?? 50}%`,
   `--v2-image-source-y:${product.imageView?.positionY ?? 50}%`,
-  `--v2-image-source-scale:${product.imageView?.scale ?? 1}`
+  `--v2-image-source-scale:${product.imageView?.scale ?? 1}`,
+  `--v2-premium-hero-image:url("${primaryImageUrl}")`
 ].join(';');
 const imagePresentationStyle = [
   imageViewStyle(product.imageView),

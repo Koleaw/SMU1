@@ -1356,7 +1356,7 @@
   position: relative;
   display: grid;
   height: auto;
-  min-height: clamp(680px, 74svh, 800px);
+  min-height: clamp(520px, 37.5vw, 768px);
   overflow: hidden;
   color: #ffffff;
   background: var(--hv2-contrast);
@@ -1523,8 +1523,12 @@
   height: auto;
   overflow: hidden;
   place-items: center;
-  padding: clamp(8px, 1vw, 18px);
-  background: #ffffff;
+  padding: 0;
+  background-color: #ffffff;
+  background-image: var(--v2-premium-hero-image, none);
+  background-position: var(--v2-image-source-x, 50%) var(--v2-image-source-y, 50%);
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .catalog-v2[data-catalog-v2-root][data-product-final-prototype='premium-product'] .v2-premium-product-hero__media > img {
@@ -1732,10 +1736,10 @@
 
 .catalog-v2[data-catalog-v2-root][data-product-final-prototype='premium-product'] .v2-premium-gallery > .hv2-shell {
   display: grid;
-  grid-template-columns: minmax(260px, 0.32fr) minmax(0, 0.68fr);
+  grid-template-columns: minmax(280px, 0.26fr) minmax(0, 0.74fr);
   grid-template-rows: auto auto auto minmax(0, 1fr);
   align-items: start;
-  column-gap: clamp(36px, 4vw, 64px);
+  column-gap: clamp(32px, 3vw, 48px);
 }
 
 .catalog-v2[data-catalog-v2-root][data-product-final-prototype='premium-product'] .v2-premium-gallery h2 {
@@ -1803,9 +1807,9 @@
   grid-row: 2;
   min-width: 0;
   min-height: 0;
-  margin-top: clamp(22px, 2.5vw, 34px);
-  padding: 18px 0 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.24);
+  margin-top: 16px;
+  padding: 0;
+  border-top: 0;
   color: rgba(255, 255, 255, 0.76);
   background: transparent;
   font-size: 14px;
@@ -2218,11 +2222,12 @@
     position: relative;
     inset: auto;
     width: 100%;
-    height: clamp(330px, 56vw, 480px);
+    height: auto;
     min-height: 0;
     order: 2;
-    padding: clamp(8px, 2vw, 18px);
-    background: #ffffff;
+    aspect-ratio: 4 / 3;
+    padding: 0;
+    background-color: #ffffff;
   }
 
   .catalog-v2[data-catalog-v2-root][data-product-final-prototype='premium-product'] .hv2-header:not(.is-scrolled) {
@@ -2339,8 +2344,9 @@
   }
 
   .catalog-v2[data-catalog-v2-root][data-product-final-prototype='premium-product'] .v2-premium-product-hero__media {
-    height: clamp(300px, 78vw, 420px);
-    padding: 6px;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    padding: 0;
   }
 
   .catalog-v2[data-catalog-v2-root][data-product-final-prototype='premium-product'] .v2-premium-content-front :is(
