@@ -23,7 +23,7 @@ interface Props {
   refreshTarget?: string;
   headerMode?: 'overlay' | 'light';
   rootClass?: string;
-  productFinalPrototype?: 'hub' | 'category' | 'standard-product';
+  productFinalPrototype?: 'hub' | 'category' | 'standard-product' | 'premium-product';
 }
 
 const {
@@ -47,7 +47,8 @@ const {
 const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
 const productFinalEnabled = productFinalPrototype === 'hub'
   || productFinalPrototype === 'category'
-  || productFinalPrototype === 'standard-product';
+  || productFinalPrototype === 'standard-product'
+  || productFinalPrototype === 'premium-product';
 const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
 ---
 
