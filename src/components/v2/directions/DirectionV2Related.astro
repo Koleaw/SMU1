@@ -13,14 +13,28 @@ interface Props {
   title?: string;
   items: RelatedItem[];
   variant?: 'default' | 'compact';
+  presentation?: 'cards' | 'links';
 }
 
-const { title = 'Связанные направления', items, variant = 'default' } = Astro.props as Props;
+const {
+  title = 'Связанные направления',
+  items,
+  variant = 'default',
+  presentation = 'cards'
+} = Astro.props as Props;
 const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : withBase(value);
 ---
 
 {items.length > 0 && (
-  <section class:list={['direction-related', `direction-related--${variant}`]} aria-labelledby="direction-related-title">
+  <section
+    class:list={[
+      'direction-related',
+      `direction-related--${variant}`,
+      { 'direction-related--links': presentation === 'links' }
+    ]}
+    aria-labelledby="direction-related-title"
+    data-direction-related-count={presentation === 'links' ? items.length : undefined}
+  >
     <div class="hv2-shell">
       <header class="direction-section-heading direction-section-heading--compact" data-v2-reveal>
         <div>
@@ -28,15 +42,34 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
           <h2 id="direction-related-title">{title}</h2>
         </div>
       </header>
-      <div class="direction-related__grid" role="list">
-        {items.map((item) => (
-          <a class="direction-related__card" href={href(item.href)} role="listitem" data-v2-reveal>
-            <span>{item.eyebrow || 'Направление'}</span>
-            <h3>{item.title}</h3>
-            {item.description && <p>{item.description}</p>}
-          </a>
-        ))}
-      </div>
+      {presentation === 'cards' ? (
+        <div class="direction-related__grid" role="list">
+          {items.map((item) => (
+            <a class="direction-related__card" href={href(item.href)} role="listitem" data-v2-reveal>
+              <span>{item.eyebrow || 'Направление'}</span>
+              <h3>{item.title}</h3>
+              {item.description && <p>{item.description}</p>}
+            </a>
+          ))}
+        </div>
+      ) : (
+        <ul class="direction-related__links" data-v2-reveal>
+          {items.map((item) => (
+            <li>
+              <a class="direction-related__link" href={href(item.href)}>
+                <span class="direction-related__link-eyebrow">{item.eyebrow || 'Направление'}</span>
+                <span class="direction-related__link-copy">
+                  <strong>{item.title}</strong>
+                  {item.description && <span>{item.description}</span>}
+                </span>
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M4 12 12 4M6 4h6v6"></path>
+                </svg>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   </section>
 )}

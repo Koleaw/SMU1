@@ -8,6 +8,7 @@ interface Props {
   images: string[];
   galleryTitle: string;
   caption?: string;
+  presentation?: 'default' | 'media-led';
 }
 
 const {
@@ -16,12 +17,19 @@ const {
   description = '',
   images,
   galleryTitle,
-  caption = ''
+  caption = '',
+  presentation = 'default'
 } = Astro.props as Props;
 ---
 
 {images.length > 0 && (
-  <section class="direction-gallery" id="direction-gallery" aria-labelledby="direction-gallery-title" data-direction-gallery>
+  <section
+    class:list={['direction-gallery', { 'direction-gallery--media-led': presentation === 'media-led' }]}
+    id="direction-gallery"
+    aria-labelledby="direction-gallery-title"
+    data-direction-gallery
+    data-direction-gallery-count={presentation === 'media-led' ? images.length : undefined}
+  >
     <div class="hv2-shell">
       <header class="direction-section-heading direction-section-heading--light" data-v2-reveal>
         <div>

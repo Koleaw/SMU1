@@ -3662,9 +3662,9 @@
 
 .home-v2-body .immersive-direction-hero--canopies .immersive-direction-hero__media img,
 .home-v2-body .immersive-direction-hero--topiary .immersive-direction-hero__media img {
-  object-fit: contain !important;
-  object-position: 50% 50% !important;
-  transform: scale(1.08) !important;
+  object-fit: var(--direction-hero-image-fit, contain) !important;
+  object-position: var(--direction-hero-image-x, 50%) var(--direction-hero-image-y, 50%) !important;
+  transform: scale(var(--direction-hero-image-scale, 1.08)) !important;
 }
 
 .home-v2-body .immersive-direction-hero--canopies .immersive-direction-hero__copy,
@@ -4346,7 +4346,7 @@
 
   .home-v2-body .immersive-direction-hero--canopies .immersive-direction-hero__media img,
   .home-v2-body .immersive-direction-hero--topiary .immersive-direction-hero__media img {
-    transform: scale(1.03) !important;
+    transform: scale(var(--direction-hero-image-scale, 1.03)) !important;
   }
 
   .home-v2-body .immersive-direction-hero--canopies .immersive-direction-hero__veil,

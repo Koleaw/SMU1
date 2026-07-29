@@ -19,6 +19,7 @@ import {
   approvedMediaUntilEdited,
   approvedUntilEdited
 } from '../directions/directionV2Presentation';
+import V2HeroHandoff from '../V2HeroHandoff.astro';
 import V2SectionNav from '../V2SectionNav.astro';
 
 const currentPath = Astro.url.pathname;
@@ -92,8 +93,8 @@ const related = [
   } : null
 ].filter((item): item is NonNullable<typeof item> => Boolean(item));
 const sectionNavItems = [
-  ...(types.length > 0 ? [{ id: 'direction-types', label: 'Что изготавливаем' }] : []),
   ...(galleryImages.length > 0 ? [{ id: 'direction-gallery', label: 'Примеры' }] : []),
+  ...(types.length > 0 ? [{ id: 'direction-types', label: 'Что изготавливаем' }] : []),
   ...(scope.length > 0 ? [{ id: 'direction-scope', label: 'Для каких объектов' }] : []),
   ...(briefInputs.length > 0 ? [{ id: 'direction-brief', label: 'Исходные данные' }] : []),
   { id: 'contact', label: 'Обсудить задачу' }
@@ -107,33 +108,30 @@ const sectionNavItems = [
   currentPath={currentPath}
   ogImage={heroImage}
   variant="engineering-visual"
+  productFinalHandoff
 >
-  <ImmersiveDirectionHero
-    variant="canopies"
-    breadcrumbs={[
-      { title: 'Главная', href: '/design-lab/home-v2/' },
-      { title: directionTitle }
-    ]}
-    eyebrow={heroKicker}
-    title={heroTitle}
-    description={heroDescription}
-    image={heroImage}
-    imageAlt={directionTitle}
-    imageView={heroImageView}
-    titleId="direction-v2-title"
-    primaryLabel="Получить расчёт"
-    secondaryHref="#direction-brief"
-    secondaryLabel="Обсудить задачу"
-  />
+  <V2HeroHandoff enabled>
+    <ImmersiveDirectionHero
+      variant="canopies"
+      breadcrumbs={[
+        { title: 'Главная', href: '/design-lab/home-v2/' },
+        { title: directionTitle }
+      ]}
+      eyebrow={heroKicker}
+      title={heroTitle}
+      description={heroDescription}
+      image={heroImage}
+      imageAlt={directionTitle}
+      imageView={heroImageView}
+      titleId="direction-v2-title"
+      primaryLabel="Получить расчёт"
+      secondaryHref="#direction-brief"
+      secondaryLabel="Обсудить задачу"
+      productFinalHandoff
+    />
+  </V2HeroHandoff>
 
   <V2SectionNav items={sectionNavItems} label="Разделы направления" />
-
-  <DirectionV2Types
-    eyebrow="Структура направления"
-    title="Какие навесы и козырьки делаем"
-    items={types}
-    variant="engineering"
-  />
 
   <DirectionV2Gallery
     title="Примеры навесов и козырьков"
@@ -141,6 +139,15 @@ const sectionNavItems = [
     images={galleryImages}
     galleryTitle="Навесы и козырьки — примеры"
     caption="Изображения сохранены в исходном порядке опубликованных галерей."
+    presentation="media-led"
+  />
+
+  <DirectionV2Types
+    eyebrow="Структура направления"
+    title="Какие навесы и козырьки делаем"
+    items={types}
+    variant="engineering"
+    presentation="open"
   />
 
   <DirectionV2Scope
@@ -148,24 +155,26 @@ const sectionNavItems = [
     title={scopeBlock?.title || 'Для каких объектов'}
     items={scope}
     variant="engineering"
+    presentation="open"
   />
+
+  <DirectionV2Related items={related} presentation="links" />
 
   <DirectionV2Brief
     title="Что можно прислать"
     description="Для первоначального обсуждения отправьте те исходные материалы, которые уже есть."
     items={briefInputs}
     variant="engineering"
-  />
-
-  <DirectionV2Related items={related} />
-
-  <DirectionV2FinalCTA
-    title={contactTitle}
-    description={contactDescription}
-    primaryLabel={telegramLabel}
-    secondaryLabel={phoneLabel}
-    telegramChannelLabel={approvedUntilEdited(section.contactTelegramLabel, '@smu1build · Написать в Telegram', 'Telegram')}
-    phoneChannelLabel={approvedUntilEdited(section.contactPhoneLabel, undefined, 'Основной телефон')}
-    emailChannelLabel={emailLabel}
-  />
+    integrated
+  >
+    <DirectionV2FinalCTA
+      title={contactTitle}
+      description={contactDescription}
+      primaryLabel={telegramLabel}
+      secondaryLabel={phoneLabel}
+      telegramChannelLabel={approvedUntilEdited(section.contactTelegramLabel, '@smu1build · Написать в Telegram', 'Telegram')}
+      phoneChannelLabel={approvedUntilEdited(section.contactPhoneLabel, undefined, 'Основной телефон')}
+      emailChannelLabel={emailLabel}
+    />
+  </DirectionV2Brief>
 </DirectionV2Layout>

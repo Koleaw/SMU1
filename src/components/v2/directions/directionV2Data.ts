@@ -14,6 +14,7 @@ export interface DirectionCardItem {
   title: string;
   text?: string;
   image?: string;
+  imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
   order?: number;
   isActive?: boolean;
 }

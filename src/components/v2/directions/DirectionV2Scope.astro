@@ -5,6 +5,7 @@ interface Props {
   description?: string;
   items: string[];
   variant?: 'engineering' | 'visual';
+  presentation?: 'panel' | 'open';
   id?: string;
 }
 
@@ -14,23 +15,46 @@ const {
   description = '',
   items,
   variant = 'engineering',
+  presentation = 'panel',
   id = 'direction-scope'
 } = Astro.props as Props;
+
+const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
 ---
 
 {items.length > 0 && (
-  <section class:list={['direction-scope', `direction-scope--${variant}`]} id={id} aria-labelledby={`${id}-title`}>
+  <section
+    class:list={[
+      'direction-scope',
+      `direction-scope--${variant}`,
+      { 'direction-scope--open': presentation === 'open' }
+    ]}
+    id={id}
+    aria-labelledby={`${id}-title`}
+    data-direction-scope-count={presentation === 'open' ? items.length : undefined}
+  >
     <div class="hv2-shell hv2-grid direction-scope__grid">
       <header class="direction-scope__heading" data-v2-reveal>
         <p class="hv2-eyebrow">{eyebrow}</p>
         <h2 id={`${id}-title`}>{title}</h2>
         {description && <p>{description}</p>}
       </header>
-      <ul class="direction-scope__list" data-v2-reveal>
-        {items.map((item) => (
-          <li><p>{item}</p></li>
-        ))}
-      </ul>
+      {presentation === 'panel' ? (
+        <ul class="direction-scope__list" data-v2-reveal>
+          {items.map((item) => (
+            <li><p>{item}</p></li>
+          ))}
+        </ul>
+      ) : (
+        <ol class="direction-scope__open-list" data-v2-reveal>
+          {items.map((item, index) => (
+            <li>
+              <span aria-hidden="true">{indexLabel(index)}</span>
+              <p>{item}</p>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   </section>
 )}

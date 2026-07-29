@@ -5,6 +5,7 @@ interface Props {
   description: string;
   items: string[];
   variant?: 'engineering' | 'visual';
+  integrated?: boolean;
 }
 
 const {
@@ -12,12 +13,22 @@ const {
   title,
   description,
   items,
-  variant = 'engineering'
+  variant = 'engineering',
+  integrated = false
 } = Astro.props as Props;
 ---
 
 {items.length > 0 && (
-  <section class:list={['direction-brief', `direction-brief--${variant}`]} id="direction-brief" aria-labelledby="direction-brief-title">
+  <section
+    class:list={[
+      'direction-brief',
+      `direction-brief--${variant}`,
+      { 'direction-brief--integrated': integrated }
+    ]}
+    id="direction-brief"
+    aria-labelledby="direction-brief-title"
+    data-direction-brief-integrated={integrated ? '' : undefined}
+  >
     <div class="hv2-shell hv2-grid direction-brief__grid">
       <header class="direction-brief__heading" data-v2-reveal>
         <p class="hv2-eyebrow">{eyebrow}</p>
@@ -30,5 +41,6 @@ const {
         ))}
       </ul>
     </div>
+    <slot />
   </section>
 )}

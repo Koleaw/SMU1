@@ -17,6 +17,7 @@ import {
   approvedMediaUntilEdited,
   approvedUntilEdited
 } from '../directions/directionV2Presentation';
+import V2HeroHandoff from '../V2HeroHandoff.astro';
 import V2SectionNav from '../V2SectionNav.astro';
 
 const currentPath = Astro.url.pathname;
@@ -83,24 +84,28 @@ const sectionNavItems = [
   currentPath={currentPath}
   ogImage={heroMedia.src}
   variant="visual"
+  productFinalHandoff
 >
-  <ImmersiveDirectionHero
-    variant="topiary"
-    breadcrumbs={[
-      { title: 'Главная', href: '/design-lab/home-v2/' },
-      { title: directionTitle }
-    ]}
-    eyebrow={heroKicker}
-    title={heroTitle}
-    description={heroDescription}
-    image={heroMedia.src}
-    imageAlt={directionTitle}
-    imageView={heroImageView}
-    titleId="direction-v2-title"
-    primaryLabel="Получить расчёт"
-    secondaryHref="#direction-brief"
-    secondaryLabel="Обсудить задачу"
-  />
+  <V2HeroHandoff enabled>
+    <ImmersiveDirectionHero
+      variant="topiary"
+      breadcrumbs={[
+        { title: 'Главная', href: '/design-lab/home-v2/' },
+        { title: directionTitle }
+      ]}
+      eyebrow={heroKicker}
+      title={heroTitle}
+      description={heroDescription}
+      image={heroMedia.src}
+      imageAlt={directionTitle}
+      imageView={heroImageView}
+      titleId="direction-v2-title"
+      primaryLabel="Получить расчёт"
+      secondaryHref="#direction-brief"
+      secondaryLabel="Обсудить задачу"
+      productFinalHandoff
+    />
+  </V2HeroHandoff>
 
   <V2SectionNav items={sectionNavItems} label="Разделы направления" />
 
@@ -109,6 +114,7 @@ const sectionNavItems = [
     title={typesBlock?.title || 'Что изготавливаем'}
     items={types}
     variant="visual"
+    presentation="media-led-open"
   />
 
   <DirectionV2Scope
@@ -116,6 +122,14 @@ const sectionNavItems = [
     title={scopeBlock?.title || 'Где используют топиарии'}
     items={scope}
     variant="visual"
+    presentation="open"
+  />
+
+  <DirectionV2Related
+    title="Топиарии в благоустройстве"
+    items={related}
+    variant="compact"
+    presentation="links"
   />
 
   <DirectionV2Brief
@@ -124,17 +138,16 @@ const sectionNavItems = [
     description="Для первоначального обсуждения можно передать идею и те исходные материалы, которые уже есть."
     items={briefInputs}
     variant="visual"
-  />
-
-  <DirectionV2Related title="Топиарии в благоустройстве" items={related} variant="compact" />
-
-  <DirectionV2FinalCTA
-    title={contactTitle}
-    description={contactDescription}
-    primaryLabel={telegramLabel}
-    secondaryLabel={phoneLabel}
-    telegramChannelLabel={approvedUntilEdited(section.contactTelegramLabel, 'Написать в Telegram', 'Telegram')}
-    phoneChannelLabel={approvedUntilEdited(section.contactPhoneLabel, 'Позвонить', 'Основной телефон')}
-    emailChannelLabel={emailLabel}
-  />
+    integrated
+  >
+    <DirectionV2FinalCTA
+      title={contactTitle}
+      description={contactDescription}
+      primaryLabel={telegramLabel}
+      secondaryLabel={phoneLabel}
+      telegramChannelLabel={approvedUntilEdited(section.contactTelegramLabel, 'Написать в Telegram', 'Telegram')}
+      phoneChannelLabel={approvedUntilEdited(section.contactPhoneLabel, 'Позвонить', 'Основной телефон')}
+      emailChannelLabel={emailLabel}
+    />
+  </DirectionV2Brief>
 </DirectionV2Layout>
