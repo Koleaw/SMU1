@@ -14,6 +14,7 @@ export interface DirectionCardItem {
   title: string;
   text?: string;
   image?: string;
+  imageAlt?: string;
   imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
   order?: number;
   isActive?: boolean;
@@ -90,7 +91,13 @@ export const getDirectionBlock = (section: ProductSectionData, type: string, ind
 export const getDirectionCardItems = (block?: DirectionBlock) =>
   (Array.isArray(block?.items) ? block.items : [])
     .filter((item): item is DirectionCardItem => Boolean(item) && typeof item !== 'string' && item.isActive !== false)
-    .map((item) => ({ ...item, title: item.title.trim(), text: item.text?.trim() || '' }))
+    .map((item) => ({
+      ...item,
+      title: item.title.trim(),
+      text: item.text?.trim() || '',
+      image: item.image?.trim() || undefined,
+      imageAlt: item.imageAlt?.trim() || undefined
+    }))
     .filter((item) => Boolean(item.title))
     .sort(byOrderAndTitle);
 

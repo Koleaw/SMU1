@@ -11,7 +11,7 @@ interface Props {
   description?: string;
   items: DirectionCardItem[];
   variant?: 'engineering' | 'visual';
-  presentation?: 'cards' | 'open' | 'media-led-open';
+  presentation?: 'cards' | 'open' | 'editorial-sequence';
   id?: string;
 }
 
@@ -25,9 +25,10 @@ const {
   id = 'direction-types'
 } = Astro.props as Props;
 
-const featuredIndex = presentation === 'media-led-open'
-  ? items.findIndex((item) => Boolean(item.image))
-  : -1;
+const editorialMediaIndexes = presentation === 'editorial-sequence'
+  ? items.flatMap((item, index) => item.image ? [index] : [])
+  : [];
+const editorialMediaOrdinal = new Map(editorialMediaIndexes.map((itemIndex, mediaIndex) => [itemIndex, mediaIndex]));
 const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
 ---
 
@@ -38,12 +39,13 @@ const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
       `direction-types--${variant}`,
       {
         'direction-types--open': presentation === 'open',
-        'direction-types--media-led-open': presentation === 'media-led-open'
+        'direction-types--editorial-sequence': presentation === 'editorial-sequence'
       }
     ]}
     id={id}
     aria-labelledby={`${id}-title`}
     data-direction-type-count={presentation === 'cards' ? undefined : items.length}
+    data-direction-type-media-count={presentation === 'editorial-sequence' ? editorialMediaIndexes.length : undefined}
   >
     <div class="hv2-shell">
       <header class="direction-section-heading" data-v2-reveal>
@@ -97,36 +99,54 @@ const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
           ))}
         </ol>
       ) : (
-        <ol class="direction-types__story-list" data-v2-reveal>
-          {items.map((item, index) => index === featuredIndex ? (
-            <li class="direction-type-story" data-direction-type-media-led>
-              <figure class="direction-type-story__media" data-v2-media>
-                <img
-                  src={withBase(item.image || '')}
-                  alt={item.title}
-                  width="720"
-                  height="540"
-                  loading="lazy"
-                  decoding="async"
-                  style={imageViewStyle(item.imageView)}
-                  data-v2-image
-                />
-              </figure>
-              <div class="direction-type-story__body">
-                <span class="direction-type-entry__index" aria-hidden="true">{indexLabel(index)}</span>
-                <h3>{item.title}</h3>
-                {item.text && <p>{item.text}</p>}
-              </div>
-            </li>
-          ) : (
-            <li class="direction-type-entry">
-              <span class="direction-type-entry__index" aria-hidden="true">{indexLabel(index)}</span>
-              <div class="direction-type-entry__body">
-                <h3>{item.title}</h3>
-                {item.text && <p>{item.text}</p>}
-              </div>
-            </li>
-          ))}
+        <ol class="direction-types__editorial-sequence" data-v2-reveal>
+          {items.map((item, index) => {
+            const hasMedia = Boolean(item.image);
+            const mediaOrdinal = editorialMediaOrdinal.get(index);
+            const isFeatured = hasMedia && editorialMediaIndexes.length === 1;
+            const mediaAtEnd = hasMedia && !isFeatured && mediaOrdinal !== undefined && mediaOrdinal % 2 === 1;
+
+            return (
+              <li
+                class:list={[
+                  'direction-type-editorial',
+                  {
+                    'direction-type-editorial--has-media': hasMedia,
+                    'direction-type-editorial--no-media': !hasMedia,
+                    'direction-type-editorial--featured': isFeatured,
+                    'direction-type-editorial--media-end': mediaAtEnd
+                  }
+                ]}
+                data-direction-type-index={indexLabel(index)}
+                data-direction-type-state={hasMedia ? 'has-media' : 'no-media'}
+                data-direction-type-featured={isFeatured ? 'true' : undefined}
+                data-direction-type-media-order={mediaOrdinal === undefined ? undefined : mediaOrdinal + 1}
+              >
+                {item.image ? (
+                  <figure class="direction-type-editorial__media" data-v2-media>
+                    <img
+                      src={withBase(item.image)}
+                      alt={item.imageAlt || item.title}
+                      width="720"
+                      height="540"
+                      loading="lazy"
+                      decoding="async"
+                      style={imageViewStyle(item.imageView)}
+                      data-direction-type-media-fit={item.imageView?.fit || 'cover'}
+                      data-v2-image
+                    />
+                  </figure>
+                ) : null}
+                <div class="direction-type-editorial__body">
+                  <span class="direction-type-entry__index" aria-hidden="true">{indexLabel(index)}</span>
+                  <div class="direction-type-editorial__copy">
+                    <h3>{item.title}</h3>
+                    {item.text && <p>{item.text}</p>}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
         </ol>
       )}
     </div>
