@@ -70,6 +70,7 @@ const visibleItems = items.filter((item) => item.id.trim() && item.label.trim())
         entry: SectionNavEntry;
         settleTimer: number;
         timeoutTimer: number;
+        corrected: boolean;
       };
 
       const targetBandBefore = 48;
@@ -97,7 +98,33 @@ const visibleItems = items.filter((item) => item.id.trim() && item.label.trim())
       };
 
       const releasePendingTarget = (entry: SectionNavEntry) => {
-        if (pendingTarget?.entry !== entry) return;
+        const pending = pendingTarget;
+        if (pending?.entry !== entry) return;
+
+        const targetTop = entry.target.getBoundingClientRect().top;
+        const offset = anchorOffset();
+        const atPageStart = entry === entries[0] && window.scrollY <= 1;
+        const atPageEnd = entry === entries[entries.length - 1]
+          && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+        const correction = targetTop - offset;
+
+        if (!pending.corrected && !atPageStart && !atPageEnd && Math.abs(correction) > targetBandAfter) {
+          pending.corrected = true;
+          window.clearTimeout(pending.settleTimer);
+          window.clearTimeout(pending.timeoutTimer);
+          pending.settleTimer = 0;
+          pending.timeoutTimer = window.setTimeout(
+            () => releasePendingTarget(entry),
+            targetLockTimeout
+          );
+          header?.classList.remove('is-hidden');
+          window.scrollBy({
+            top: correction,
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+          });
+          return;
+        }
+
         clearPendingTarget();
         header?.classList.remove('is-hidden');
         setCurrent(entry.link);
@@ -112,7 +139,8 @@ const visibleItems = items.filter((item) => item.id.trim() && item.label.trim())
         const target: PendingTarget = {
           entry,
           settleTimer: 0,
-          timeoutTimer: 0
+          timeoutTimer: 0,
+          corrected: false
         };
         target.timeoutTimer = window.setTimeout(() => releasePendingTarget(entry), targetLockTimeout);
         pendingTarget = target;
