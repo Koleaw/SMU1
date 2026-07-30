@@ -3905,118 +3905,420 @@
   line-height: 1.5;
 }
 
-/* Metalworks: larger proof, compact commercial lists, one blue brief. */
+/* Metalworks F.1: full-bleed structural Hero and an editorial B2B evidence flow. */
 
-.home-v2-body .engineering-direction-v2 .engineering-proof,
-.home-v2-body .engineering-direction-v2 .engineering-scope,
-.home-v2-body .engineering-direction-v2 .engineering-tasks,
-.home-v2-body .engineering-direction-v2 .engineering-brief {
-  padding: clamp(64px, 6vw, 82px) 0;
+html:has(.engineering-direction-v2--metalworks),
+body.home-v2-body:has(.engineering-direction-v2--metalworks) {
+  min-width: 0;
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-proof {
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks {
+  min-height: 100svh;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__copy {
+  grid-column: 1 / 10;
+  max-width: 980px;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks h1 {
+  max-width: 18ch;
+  font-size: clamp(52px, 5vw, 80px);
+  line-height: 0.98;
+  letter-spacing: -0.052em;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__lead {
+  max-width: 72ch;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__veil {
+  background:
+    linear-gradient(180deg, rgba(7, 15, 25, 0.74) 0%, rgba(7, 15, 25, 0.08) 34%, rgba(7, 15, 25, 0.48) 100%),
+    linear-gradient(90deg, rgba(7, 15, 25, 0.92) 0%, rgba(7, 15, 25, 0.72) 38%, rgba(7, 15, 25, 0.18) 72%, transparent 100%);
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof,
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope,
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks,
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-brief {
+  padding: clamp(64px, 6vw, 88px) 0;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof {
   color: #ffffff;
   background: var(--hv2-contrast);
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-proof__heading {
-  margin-bottom: 36px;
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__heading {
+  margin-bottom: clamp(34px, 4vw, 52px);
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-proof__summary > p:not(.engineering-proof__facts) {
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__summary > p:not(.engineering-proof__facts) {
   font-size: 16px;
-  line-height: 1.55;
+  line-height: 1.58;
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-proof__gallery .v2-product-gallery__stage {
-  height: 430px;
-  min-height: 0;
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__media {
+  display: grid;
+  gap: 12px;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__feature,
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__sequence figure {
+  margin: 0;
+  overflow: hidden;
   background: #07172b;
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-proof__gallery .v2-product-gallery__open > img {
-  object-fit: cover !important;
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__feature {
+  aspect-ratio: 4 / 3;
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-scope {
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__sequence {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__sequence figure {
+  aspect-ratio: 4 / 3;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__feature img,
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__sequence img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks {
   background: #ffffff;
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-scope__heading {
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__heading {
+  margin-bottom: clamp(34px, 4vw, 48px);
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__heading > p {
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list {
+  display: block;
+  border-top: 1px solid var(--hv2-border);
+  border-left: 0;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list li {
+  min-height: 0;
+  padding: clamp(22px, 2.2vw, 30px) 0;
+  border-right: 0;
+  border-bottom: 1px solid var(--hv2-border);
+  background: transparent;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list li > div {
+  display: grid;
+  grid-template-columns: minmax(260px, 5fr) minmax(0, 7fr);
+  gap: clamp(28px, 5vw, 88px);
+  align-items: start;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list li:first-child {
+  padding: clamp(34px, 4vw, 52px) 0;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list h3 {
+  max-width: 24ch;
+  font-size: clamp(22px, 2.1vw, 30px);
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list li:first-child h3 {
+  max-width: 19ch;
+  font-size: clamp(34px, 3.6vw, 52px);
+  line-height: 1.02;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list p {
+  max-width: 58ch;
+  margin-top: 0;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list li:first-child p {
+  max-width: 52ch;
+  font-size: 17px;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope {
+  background: var(--hv2-secondary-surface);
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope__heading {
   grid-column: 1 / 6;
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-scope__heading > p:last-child {
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope__heading > p:last-child {
   max-width: 48ch;
   font-size: 16px;
   line-height: 1.55;
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-scope__list {
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope__list {
   display: grid;
   grid-column: 6 / 13;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-left: 1px solid var(--hv2-border);
+  gap: 0 clamp(22px, 3vw, 42px);
+  border-top: 1px solid var(--hv2-border);
+  border-left: 0;
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-scope__list li {
-  min-height: 78px;
-  padding: 18px 20px;
-  border-right: 1px solid var(--hv2-border);
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope__list li {
+  min-height: 0;
+  padding: 15px 0;
+  border-right: 0;
   border-bottom: 1px solid var(--hv2-border);
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-scope__list li:last-child:nth-child(odd) {
-  grid-column: 1 / -1;
-}
-
-.home-v2-body .engineering-direction-v2 .engineering-scope__list p {
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope__list p {
   padding: 0;
   font-size: 16px;
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-tasks {
-  background: #ffffff;
-}
-
-.home-v2-body .engineering-direction-v2 .engineering-tasks__heading > p {
-  font-size: 16px;
-  line-height: 1.55;
-}
-
-.home-v2-body .engineering-direction-v2 .engineering-tasks__list {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.home-v2-body .engineering-direction-v2 .engineering-tasks__list li {
-  min-height: 188px;
-  padding: 24px;
-  background: #ffffff;
-}
-
-.home-v2-body .engineering-direction-v2 .engineering-tasks__list h3 {
-  max-width: none;
-  font-size: clamp(23px, 2vw, 30px);
-}
-
-.home-v2-body .engineering-direction-v2 .engineering-tasks__list p {
-  max-width: 45ch;
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-.home-v2-body .engineering-direction-v2 .engineering-brief {
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-brief {
   color: #ffffff;
   background: var(--hv2-action);
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-brief__items {
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-brief__items {
   margin-top: 34px;
 }
 
-.home-v2-body .engineering-direction-v2 .engineering-brief__items li {
-  min-height: 94px;
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-brief__items li {
+  min-height: 0;
   padding: 18px 20px;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related--links {
+  padding: clamp(44px, 5vw, 66px) 0;
+  border: 0;
+  color: var(--hv2-text);
+  background: #ffffff;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related--links.direction-related--compact .hv2-shell {
+  display: block;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related--links .direction-section-heading {
+  margin-bottom: 20px;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related--links .direction-section-heading h2 {
+  font-size: clamp(30px, 3vw, 42px);
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related__links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 clamp(28px, 4vw, 54px);
+  margin: 0;
+  list-style: none;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related__link {
+  display: block;
+  min-height: 0;
+  padding: 18px 0;
+  border-top: 1px solid var(--hv2-border);
+  color: var(--hv2-text);
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related__link-eyebrow {
+  display: block;
+  color: var(--hv2-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related__link-copy {
+  display: block;
+  margin-top: 10px;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related__link-copy strong {
+  display: block;
+  font-size: clamp(20px, 1.8vw, 26px);
+  line-height: 1.18;
+  letter-spacing: -0.025em;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related__link-copy > span {
+  display: block;
+  max-width: 62ch;
+  margin-top: 8px;
+  color: var(--hv2-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related__link svg {
+  display: none;
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related__link:is(:hover, :focus-visible) {
+  color: var(--hv2-action);
+}
+
+.home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related__link:focus-visible {
+  outline: 3px solid var(--hv2-action);
+  outline-offset: 5px;
+}
+
+@media (max-width: 900px) {
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__copy {
+    grid-column: 1 / -1;
+    max-width: 820px;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__heading,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__heading,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope__grid,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-brief__heading {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 30px;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__heading > div:first-child,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__summary,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__heading > div,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__heading > p,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope__heading,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope__list,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-brief__heading > div,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-brief__heading > p {
+    grid-column: 1;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope__list {
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks {
+    display: block;
+    min-height: max(700px, 100svh);
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__inner {
+    min-height: max(700px, 100svh);
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__composition {
+    align-items: start;
+    padding: clamp(18px, 3.5vh, 30px) 0 28px;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    flex: none;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks h1 {
+    max-width: 100%;
+    font-size: clamp(34px, 9.2vw, 40px);
+    line-height: 1.01;
+    letter-spacing: -0.05em;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__lead {
+    margin-top: 17px;
+    font-size: clamp(14px, 3.8vw, 16px);
+    line-height: 1.42;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__actions {
+    margin-top: 20px;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__veil {
+    display: block;
+    background:
+      linear-gradient(180deg, rgba(7, 15, 25, 0.84) 0%, rgba(7, 15, 25, 0.62) 52%, rgba(7, 15, 25, 0.34) 100%),
+      linear-gradient(90deg, rgba(7, 15, 25, 0.52) 0%, rgba(7, 15, 25, 0.14) 100%);
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-brief {
+    padding: 58px 0;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__feature {
+    aspect-ratio: 4 / 3;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof__sequence {
+    gap: 6px;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list li > div {
+    display: block;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list h3,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list li:first-child h3 {
+    max-width: 26ch;
+    font-size: clamp(24px, 7.4vw, 32px);
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list p,
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-tasks__list li:first-child p {
+    max-width: 58ch;
+    margin-top: 12px;
+    font-size: 15px;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-scope__list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .direction-related__links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 360px) {
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks h1 {
+    font-size: 28px;
+  }
+
+  .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__lead {
+    font-size: 13.5px;
+  }
 }
 
 /* Landscaping: project proof first, then compact white scope and navy use. */

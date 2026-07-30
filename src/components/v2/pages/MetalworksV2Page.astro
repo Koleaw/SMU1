@@ -3,7 +3,6 @@ import DirectionV2FinalCTA from '../directions/DirectionV2FinalCTA.astro';
 import ImmersiveDirectionHero from '../directions/ImmersiveDirectionHero.astro';
 import DirectionV2Related from '../directions/DirectionV2Related.astro';
 import {
-  extractConfirmedBriefInputs,
   getDirectionBlock,
   getDirectionCardItems,
   getDirectionListItems,
@@ -19,7 +18,7 @@ import EngineeringDirectionScope from '../engineering/EngineeringDirectionScope.
 import EngineeringDirectionTasks from '../engineering/EngineeringDirectionTasks.astro';
 import EngineeringDirectionV2Layout from '../engineering/EngineeringDirectionV2Layout.astro';
 import { loadEngineeringDirectionV2Snapshot } from '../engineering/engineeringDirectionV2Data';
-import { getV2ProjectPresentation, selectV2ProjectMedia } from '../mediaRoleAdapter';
+import { selectV2ProjectMedia } from '../mediaRoleAdapter';
 import V2SectionNav from '../V2SectionNav.astro';
 
 const currentPath = Astro.url.pathname;
@@ -32,23 +31,19 @@ const { section, catalog, services, proofProject } = data;
 const typesBlock = getDirectionBlock(section, 'cardGrid');
 const scopeBlock = getDirectionBlock(section, 'listPanel');
 const inputBlock = getDirectionBlock(section, 'process');
+const getBlockIntro = (block: { intro?: unknown; text?: string } | undefined) => {
+  const intro = typeof block?.intro === 'string' ? block.intro.trim() : '';
+  return intro || block?.text?.trim() || '';
+};
 const tasks = getDirectionCardItems(typesBlock).map(({ title, text }) => ({ title, text }));
 const scope = getDirectionListItems(scopeBlock);
-const briefInputs = extractConfirmedBriefInputs([
-  section.contactDescription,
-  ...getDirectionStepItems(inputBlock),
-  ...getDirectionCardItems(typesBlock).flatMap((item) => [item.title, item.text])
-]);
-const proofPresentation = proofProject ? getV2ProjectPresentation(proofProject) : undefined;
+const briefInputs = getDirectionStepItems(inputBlock);
 const approvedHeroImage = selectV2ProjectMedia(proofProject, {
   allOf: ['metalworks', 'hero']
-})[0] || proofPresentation?.detailHeroMedia?.src || proofPresentation?.publicGallery[0]?.src || '';
-const selectedProofImages = selectV2ProjectMedia(proofProject, {
+})[0] || '';
+const proofImages = selectV2ProjectMedia(proofProject, {
   allOf: ['metalworks', 'proof']
 });
-const proofImages = selectedProofImages.length > 0
-  ? selectedProofImages
-  : (proofPresentation?.publicGallery.map((item) => item.src) || []);
 const heroMedia = approvedMediaUntilEdited(
   section.image,
   '/uploads/chatgpt-image-5-2026-22-01-29-1783278108067.png',
@@ -59,56 +54,60 @@ const heroImageView = heroMedia.usesApprovedBaseline
   ? { fit: 'cover' as const, positionX: 50, positionY: 48, scale: 1 }
   : (section.imageView || { fit: 'cover' as const, positionX: 50, positionY: 50, scale: 1 });
 const directionTitle = approvedUntilEdited(section.title, 'Металлоконструкции', 'Металлоконструкции');
-const heroKicker = approvedUntilEdited(section.heroKicker, undefined, 'Металлоконструкции');
+const heroKicker = approvedUntilEdited(section.heroKicker, undefined, 'Изготовление и монтаж');
 const heroTitle = approvedUntilEdited(
   section.heroTitle,
   'Металлоконструкции под заказ',
-  'Металлоконструкции под объект'
+  'Металлоконструкции для цехов, складов и других объектов'
 );
 const heroDescription = approvedUntilEdited(
   section.heroDescription,
   'Проектируем, изготавливаем и монтируем металлоконструкции для хозяйственных, коммерческих, производственных и частных объектов: каркасы, рамы, площадки, лестницы, опорные элементы и конструкции по чертежам.',
-  'Изготавливаем и монтируем конкретную металлоконструкцию или металлическую часть объекта — под задачу и исходные данные заказчика.'
+  'Изготавливаем и монтируем каркасы зданий, фермы, рамы, площадки обслуживания, лестницы, опоры, закладные и нестандартные конструкции по чертежам или исходным данным заказчика.'
 );
-const scopeDescription = approvedUntilEdited(
-  section.shortDescription,
-  'Металлоконструкции под задачу: каркасы, рамы, площадки, лестницы, опорные элементы и нестандартные конструкции.',
-  'Состав конструкции определяется назначением и исходными данными конкретного объекта.'
-);
+const tasksDescription = getBlockIntro(typesBlock) || 'От металлокаркаса здания до отдельного узла';
+const scopeDescription = getBlockIntro(scopeBlock)
+  || 'Компактный перечень объектов, где нужна металлическая часть конструкции.';
+const briefDescription = getBlockIntro(inputBlock)
+  || 'Для первого обращения достаточно тех исходных данных, которые уже есть. Полный комплект документации на этом этапе не требуется.';
 const contactTitle = approvedUntilEdited(
   section.contactTitle,
   'Нужна металлоконструкция под задачу?',
-  'Обсудим металлоконструкции для вашего объекта'
+  'Рассчитаем металлоконструкцию для вашего объекта'
 );
 const contactDescription = approvedUntilEdited(
   section.contactDescription,
   'Напишите нам, и мы сориентируем по изготовлению, материалу, покрытию, монтажу и срокам. Можно отправить чертеж, эскиз, размеры или описание задачи.',
-  'Пришлите имеющиеся исходные материалы и кратко опишите задачу — обсудим решение и подготовим расчёт.'
+  'Пришлите чертёж, КМ/КМД, эскиз, размеры, фотографии площадки или краткое описание задачи. Уточним состав конструкции, изготовление и монтаж.'
 );
 const telegramLabel = approvedUntilEdited(section.contactTelegramLabel, 'Написать в Telegram', 'Получить расчёт');
-const phoneLabel = approvedUntilEdited(section.contactPhoneLabel, 'Позвонить', 'Обсудить задачу');
+const phoneLabel = approvedUntilEdited(section.contactPhoneLabel, 'Позвонить', 'Позвонить');
 const emailLabel = approvedUntilEdited(section.contactEmailLabel, 'Написать на почту', 'Email');
+const telegramChannelLabel = ['Написать в Telegram', 'Получить расчёт'].includes(section.contactTelegramLabel || '')
+  ? 'Telegram'
+  : (section.contactTelegramLabel || 'Telegram');
 const canopies = catalog.sections.find((item) => item.slug === 'navesy-i-kozyrki');
 const construction = services.find((item) => item.slug === 'stroitelstvo-i-remonty');
 const related = [
   canopies ? {
     eyebrow: 'Смежное направление',
     title: 'Навесы и козырьки',
+    description: 'Отдельное направление для навесных конструкций и входных групп.',
     href: '/design-lab/v2/navesy-i-kozyrki/'
   } : null,
   construction ? {
     eyebrow: 'Нужен более широкий комплекс?',
-    title: construction.heroTitle || construction.title,
-    description: 'Для задачи, где важен готовый результат на объекте, а не отдельная металлическая конструкция.',
+    title: 'Строительство и ремонты',
+    description: 'Если задача включает не только металлический каркас, но и подготовку площадки, основания, обшивку и другие работы до готового результата, смотрите направление «Строительство и ремонты».',
     href: `/design-lab/v2/${construction.slug}/`
   } : null
 ].filter((item): item is NonNullable<typeof item> => Boolean(item));
 const sectionNavItems = [
-  ...(proofProject && proofImages.length > 0 ? [{ id: 'engineering-proof', label: 'Объекты' }] : []),
-  ...(scope.length > 0 ? [{ id: 'engineering-scope', label: 'Для каких объектов' }] : []),
+  ...(proofProject && proofImages.length > 0 ? [{ id: 'engineering-proof', label: 'Выполненный объект' }] : []),
   ...(tasks.length > 0 ? [{ id: 'engineering-tasks', label: 'Что изготавливаем' }] : []),
-  ...(briefInputs.length > 0 ? [{ id: 'engineering-brief', label: 'Исходные данные' }] : []),
-  { id: 'contact', label: 'Обсудить задачу' }
+  ...(scope.length > 0 ? [{ id: 'engineering-scope', label: 'Для каких объектов' }] : []),
+  ...(briefInputs.length > 0 ? [{ id: 'engineering-brief', label: 'С чем обратиться' }] : []),
+  { id: 'contact', label: 'Получить расчёт' }
 ];
 ---
 
@@ -118,6 +117,7 @@ const sectionNavItems = [
   canonicalPath={`/${section.slug}/`}
   currentPath={currentPath}
   ogImage={heroImage}
+  variant="metalworks"
 >
   <ImmersiveDirectionHero
     variant="metalworks"
@@ -131,11 +131,10 @@ const sectionNavItems = [
     image={heroImage}
     imageAlt={heroMedia.usesApprovedBaseline ? 'Металлический каркас на производственной территории' : directionTitle}
     imageView={heroImageView}
-    caption={heroMedia.usesApprovedBaseline ? (proofProject?.title || directionTitle) : directionTitle}
     titleId="engineering-direction-title"
     primaryLabel="Получить расчёт"
-    secondaryHref="#engineering-brief"
-    secondaryLabel="Обсудить задачу"
+    secondaryHref="#engineering-proof"
+    secondaryLabel="Смотреть выполненный объект"
   />
 
   <V2SectionNav items={sectionNavItems} label="Разделы направления" />
@@ -148,8 +147,15 @@ const sectionNavItems = [
       description={proofProject.whatWasDone?.trim() || proofProject.shortDescription}
       href={`/design-lab/v2/vypolnennye-obekty/${proofProject.slug}/`}
       images={proofImages}
+      featureIndex={1}
     />
   )}
+
+  <EngineeringDirectionTasks
+    title={typesBlock?.title || 'Что изготавливаем'}
+    description={tasksDescription}
+    items={tasks}
+  />
 
   <EngineeringDirectionScope
     title={scopeBlock?.title || 'Для каких объектов'}
@@ -157,26 +163,25 @@ const sectionNavItems = [
     items={scope}
   />
 
-  <EngineeringDirectionTasks
-    title={typesBlock?.title || 'Что изготавливаем'}
-    description="От каркасов и рам до конструкций по чертежам — состав задачи уточняется для конкретного объекта."
-    items={tasks}
-  />
-
   <EngineeringDirectionBrief
-    title="Что можно прислать"
-    description="Для первоначального обсуждения отправьте те исходные материалы, которые уже есть. Они помогут точнее понять задачу, но не заменяют последующее уточнение."
+    title={inputBlock?.title || 'С чем можно обратиться'}
+    description={briefDescription}
     items={briefInputs}
   />
 
-  <DirectionV2Related title="Смежные направления" items={related} />
+  <DirectionV2Related
+    title="Смежные направления"
+    items={related}
+    variant="compact"
+    presentation="links"
+  />
 
   <DirectionV2FinalCTA
     title={contactTitle}
     description={contactDescription}
     primaryLabel={telegramLabel}
     secondaryLabel={phoneLabel}
-    telegramChannelLabel={approvedUntilEdited(section.contactTelegramLabel, 'Написать в Telegram', 'Telegram')}
+    telegramChannelLabel={telegramChannelLabel}
     phoneChannelLabel={approvedUntilEdited(section.contactPhoneLabel, 'Позвонить', 'Основной телефон')}
     emailChannelLabel={emailLabel}
   />

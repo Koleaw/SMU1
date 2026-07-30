@@ -1,7 +1,6 @@
 ---
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
-import V2ProductGallery from '../V2ProductGallery.astro';
 
 interface Props {
   title: string;
@@ -10,10 +9,23 @@ interface Props {
   description: string;
   href: string;
   images: string[];
+  featureIndex?: number;
 }
 
-const { title, city = '', year, description, href, images } = Astro.props as Props;
+const {
+  title,
+  city = '',
+  year,
+  description,
+  href,
+  images,
+  featureIndex = 0
+} = Astro.props as Props;
 const facts = [city, year ? String(year) : ''].filter(Boolean).join(' · ');
+const safeFeatureIndex = featureIndex >= 0 && featureIndex < images.length ? featureIndex : 0;
+const featureImage = images[safeFeatureIndex];
+const sequenceImages = images
+  .filter((_, index) => index !== safeFeatureIndex);
 ---
 
 {images.length > 0 && (
@@ -27,17 +39,36 @@ const facts = [city, year ? String(year) : ''].filter(Boolean).join(' · ');
         <div class="engineering-proof__summary">
           {facts && <p class="engineering-proof__facts">{facts}</p>}
           <p>{description}</p>
-          <a href={withBase(href)}>Открыть объект</a>
+          <a href={withBase(href)}>Смотреть объект полностью</a>
         </div>
       </header>
-      <div class="engineering-proof__gallery" data-v2-reveal>
-        <V2ProductGallery
-          images={images}
-          title={title}
-          imageView={{ fit: 'contain', positionX: 50, positionY: 50, scale: 1 }}
-          caption="Внешние кадры опубликованного объекта."
-          entityLabel="объекта"
-        />
+      <div class="engineering-proof__media" data-v2-reveal>
+        <figure class="engineering-proof__feature">
+          <img
+            src={withBase(featureImage)}
+            alt={`${title} — кадр 1 из ${images.length}, рабочий кадр`}
+            width="1600"
+            height="1200"
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+        {sequenceImages.length > 0 && (
+          <div class="engineering-proof__sequence" aria-label="Последовательность кадров объекта">
+            {sequenceImages.map((src, index) => (
+              <figure>
+                <img
+                  src={withBase(src)}
+                  alt={`${title} — кадр ${index + 2} из ${images.length}`}
+                  width="800"
+                  height="600"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </figure>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   </section>

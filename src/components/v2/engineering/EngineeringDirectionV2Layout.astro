@@ -8,9 +8,17 @@ interface Props {
   canonicalPath: string;
   currentPath: string;
   ogImage?: string;
+  variant?: 'metalworks';
 }
 
-const { title, description, canonicalPath, currentPath, ogImage = '' } = Astro.props as Props;
+const {
+  title,
+  description,
+  canonicalPath,
+  currentPath,
+  ogImage = '',
+  variant
+} = Astro.props as Props;
 ---
 
 <DirectionV2Layout
@@ -21,7 +29,13 @@ const { title, description, canonicalPath, currentPath, ogImage = '' } = Astro.p
   ogImage={ogImage}
   variant="engineering-commercial"
 >
-  <div class="engineering-direction-v2" data-engineering-direction-v2>
+  <div
+    class:list={[
+      'engineering-direction-v2',
+      { 'engineering-direction-v2--metalworks': variant === 'metalworks' }
+    ]}
+    data-engineering-direction-v2
+  >
     <slot />
   </div>
 </DirectionV2Layout>
