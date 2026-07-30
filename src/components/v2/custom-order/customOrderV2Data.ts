@@ -1,19 +1,13 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
-import {
-  catalogV2ProductHref,
-  loadCatalogV2Snapshot,
-  type CatalogV2Snapshot,
-  type ProductData
-} from '../catalogV2Data';
+import { loadCatalogV2Snapshot } from '../catalogV2Data';
 import { getV2ProjectPresentation } from '../mediaRoleAdapter';
-import { loadV2Directions } from '../../../utils/v2Directions';
+import { loadV2Directions, type V2DirectionSlug } from '../../../utils/v2Directions';
 
 type ProjectData = CollectionEntry<'projects'>['data'];
 type StaticPageData = CollectionEntry<'static-pages'>['data'];
 
 export interface CustomOrderDirection {
   title: string;
-  description: string;
   href: string;
 }
 
@@ -22,13 +16,12 @@ export interface CustomOrderMedia {
   alt: string;
   fit: 'cover' | 'contain';
   position: string;
+  mobilePosition: string;
 }
 
-export interface CustomOrderExample extends CustomOrderMedia {
-  eyebrow: string;
+export interface CustomOrderChangeTheme {
   title: string;
-  description: string;
-  href: string;
+  items: string[];
 }
 
 export interface CustomOrderV2Data {
@@ -42,9 +35,8 @@ export interface CustomOrderV2Data {
   };
   directions: CustomOrderDirection[];
   heroMedia: CustomOrderMedia[];
-  changeOptions: string[];
+  changeThemes: CustomOrderChangeTheme[];
   sourceMaterials: string[];
-  examples: CustomOrderExample[];
 }
 
 const required = <T>(value: T | undefined, message: string): T => {
@@ -52,34 +44,19 @@ const required = <T>(value: T | undefined, message: string): T => {
   return value;
 };
 
-const isUsableMedia = (value: string | undefined) => Boolean(
-  value?.trim() && !value.includes('/assets/images/placeholders/')
-);
+const relatedDirectionSlugs = new Set<V2DirectionSlug>([
+  'ulichnaya-mebel',
+  'ograzhdeniya-i-zabory',
+  'navesy-i-kozyrki',
+  'metallokonstruktsii-dlya-biznesa'
+]);
 
-const productHref = (snapshot: CatalogV2Snapshot, product: ProductData) => {
-  const route = snapshot.productRoutes.find((item) => item.product.slug === product.slug);
-  return route ? catalogV2ProductHref(route.section.slug, route.category.slug, product.slug) : '';
-};
-
-const productExample = (
-  snapshot: CatalogV2Snapshot,
-  product: ProductData | undefined,
-  eyebrow: string
-): CustomOrderExample | undefined => {
-  if (!product || !isUsableMedia(product.image)) return undefined;
-  const href = productHref(snapshot, product);
-  if (!href) return undefined;
-  return {
-    eyebrow,
-    title: product.title,
-    description: product.shortDescription || product.leadText || '',
-    href,
-    src: product.image!.trim(),
-    alt: product.title,
-    fit: product.imageView?.fit === 'contain' ? 'contain' : 'cover',
-    position: `${product.imageView?.positionX ?? 50}% ${product.imageView?.positionY ?? 50}%`
-  };
-};
+const customOrderHero = {
+  projectSlug: 'gorodskie-kacheli-dlya-obshchestvennyh-territoriy',
+  src: '/uploads/project-05c77513c1a391e5a71a7dee.jpg',
+  position: '50% 64%',
+  mobilePosition: '50% 58%'
+} as const;
 
 export const loadCustomOrderV2Data = async (): Promise<CustomOrderV2Data> => {
   const [snapshot, staticEntries, projectEntries, activeDirections] = await Promise.all([
@@ -94,7 +71,9 @@ export const loadCustomOrderV2Data = async (): Promise<CustomOrderV2Data> => {
     'Custom order V2 requires the current custom-order static-page record.'
   );
   const projects = projectEntries.map(({ data }) => data).filter((item) => item.isActive);
-  const directions = activeDirections.map(({ title, href, description }) => ({ title, href, description }));
+  const directions = activeDirections
+    .filter(({ slug }) => relatedDirectionSlugs.has(slug))
+    .map(({ title, href }) => ({ title, href }));
   const approvedUntilEdited = (current: string | undefined, legacy: string, approved: string) => {
     const value = current?.trim() ?? '';
     return value === legacy ? approved : (value || approved);
@@ -116,78 +95,62 @@ export const loadCustomOrderV2Data = async (): Promise<CustomOrderV2Data> => {
   };
 
   const publicProducts = snapshot.products.filter((product) => product.showInCatalog !== false);
-  const usableProducts = publicProducts.filter((product) => isUsableMedia(product.image) && Boolean(productHref(snapshot, product)));
-  const pickProduct = (preferredSlugs: string[], excluded = new Set<string>()) => (
-    preferredSlugs
-      .map((slug) => usableProducts.find((product) => product.slug === slug && !excluded.has(product.slug)))
-      .find(Boolean)
-    ?? usableProducts.find((product) => !excluded.has(product.slug))
-  );
   const projectPresentations = projects
     .map((project) => getV2ProjectPresentation(project as ProjectData))
     .filter((item) => item.hasMedia);
-  const pickProject = (preferredSlug: string, role: 'hero' | 'cover') => (
-    projectPresentations.find((item) => item.project.slug === preferredSlug
-      && Boolean(role === 'hero' ? item.detailHeroMedia : item.archiveCoverMedia))
-    ?? projectPresentations.find((item) => Boolean(role === 'hero' ? item.detailHeroMedia : item.archiveCoverMedia))
+  const heroProject = projectPresentations.find(
+    (item) => item.project.slug === customOrderHero.projectSlug
   );
-
-  const heroProject = pickProject('gorodskie-kacheli-dlya-obshchestvennyh-territoriy', 'hero');
-  const heroProjectMedia = heroProject?.detailHeroMedia;
-  const heroProduct = pickProduct(['naves-terra']);
+  const heroProjectMedia = heroProject?.media.find(
+    (item) => item.src === customOrderHero.src
+      && item.roles.includes('finished-result')
+      && item.roles.includes('hero')
+  );
+  const heroMedia: CustomOrderMedia[] = [required(
+    heroProjectMedia ? {
+      src: heroProjectMedia.src,
+      alt: heroProjectMedia.alt,
+      fit: 'cover',
+      position: customOrderHero.position,
+      mobilePosition: customOrderHero.mobilePosition
+    } : undefined,
+    'Custom order V2 requires the approved finished-result swings Hero media.'
+  )];
 
   // Capabilities are derived from every currently public product. If an editor removes
-  // the supporting records or text, the option disappears instead of becoming a claim.
+  // the supporting records or text, that granular claim and any empty theme disappear.
   const evidenceText = publicProducts
     .flatMap((product) => product.customizationItems || [])
     .join(' · ')
     .toLocaleLowerCase('ru');
-  const evidence = (pattern: RegExp, label: string) => pattern.test(evidenceText) ? label : undefined;
-  const changeOptions = [
-    evidence(/размер|габарит/, 'Размеры и габариты'),
-    evidence(/форму|наклон/, 'Форма и геометрия отдельных элементов'),
-    evidence(/цвет металла/, 'Цвет металлических элементов'),
-    evidence(/оттенок дерева/, 'Оттенок деревянных элементов'),
-    evidence(/способ крепления/, 'Способ крепления'),
-    evidence(/количество стоек|расстояние между стойками/, 'Количество и расстояние между стойками в составном решении'),
-    evidence(/логотип/, 'Добавление логотипа')
-  ].filter((item): item is string => Boolean(item));
-
-  const heroMedia: CustomOrderMedia[] = [
-    heroProjectMedia && heroProject ? {
-      src: heroProjectMedia.src,
-      alt: heroProjectMedia.alt,
-      fit: 'cover',
-      position: heroProject.detailHeroPosition
-    } : undefined,
-    heroProduct && isUsableMedia(heroProduct.image) ? {
-      src: heroProduct.image!.trim(),
-      alt: heroProduct.title,
-      fit: heroProduct.imageView?.fit === 'contain' ? 'contain' : 'cover',
-      position: `${heroProduct.imageView?.positionX ?? 50}% ${heroProduct.imageView?.positionY ?? 50}%`
-    } : undefined
-  ].filter((item): item is CustomOrderMedia => Boolean(item)).slice(0, 2);
-
-  const usedProductSlugs = new Set<string>();
-  const productExampleRecord = pickProduct(['skamya-loft']);
-  if (productExampleRecord) usedProductSlugs.add(productExampleRecord.slug);
-  const constructionExampleRecord = pickProduct(['ekran-s-navesom'], usedProductSlugs);
-  const exampleProject = pickProject('blagoustroystvo-naberezhnoy-reki-tobol', 'cover');
-  const exampleProjectMedia = exampleProject?.archiveCoverMedia;
-  const examples = [
-    productExample(snapshot, productExampleRecord, 'Изделие'),
-    productExample(snapshot, constructionExampleRecord, 'Конструкция'),
-    exampleProject && exampleProjectMedia ? {
-      eyebrow: 'Выполненный объект',
-      title: exampleProject.project.title,
-      description: exampleProject.project.shortDescription,
-      href: exampleProject.productionRoute,
-      src: exampleProjectMedia.src,
-      alt: exampleProjectMedia.alt,
-      fit: 'cover',
-      position: exampleProject.archiveCoverPosition
-    } satisfies CustomOrderExample : undefined
-  ].filter((item): item is CustomOrderExample => Boolean(item)).slice(0, 3);
+  const supported = (pattern: RegExp, label: string) =>
+    pattern.test(evidenceText) ? label : undefined;
+  const theme = (title: string, items: Array<string | undefined>) => ({
+    title,
+    items: items.filter((item): item is string => Boolean(item))
+  });
+  const changeThemes = [
+    theme('Размеры', [
+      supported(/размер|габарит/, 'Размеры и габариты')
+    ]),
+    theme('Форма и конструктив', [
+      supported(/форму|наклон/, 'Форма и геометрия отдельных элементов'),
+      supported(
+        /количество стоек|расстояние между стойками/,
+        'Количество и расстояние между стойками в составном решении'
+      )
+    ]),
+    theme('Цвет металла и дерева', [
+      supported(/цвет металла/, 'Цвет металлических элементов'),
+      supported(/оттенок дерева/, 'Оттенок деревянных элементов')
+    ]),
+    theme('Комплектация и крепление', [
+      supported(/способ крепления/, 'Способ крепления')
+    ]),
+    theme('Дополнительные элементы', [
+      supported(/логотип/, 'Добавление логотипа')
+    ])
+  ].filter((item) => item.items.length > 0);
 
   const approvedSourceMaterials = [
     'Фотография или референс',
@@ -221,8 +184,7 @@ export const loadCustomOrderV2Data = async (): Promise<CustomOrderV2Data> => {
     copy,
     directions,
     heroMedia,
-    changeOptions,
+    changeThemes,
     sourceMaterials,
-    examples
   };
 };

@@ -23,7 +23,7 @@ interface Props {
   refreshTarget?: string;
   headerMode?: 'overlay' | 'light';
   rootClass?: string;
-  productFinalPrototype?: 'hub' | 'category' | 'standard-product' | 'premium-product' | 'direction';
+  productFinalPrototype?: 'hub' | 'category' | 'standard-product' | 'premium-product' | 'direction' | 'custom';
 }
 
 const {
@@ -49,7 +49,8 @@ const productFinalEnabled = productFinalPrototype === 'hub'
   || productFinalPrototype === 'category'
   || productFinalPrototype === 'standard-product'
   || productFinalPrototype === 'premium-product'
-  || productFinalPrototype === 'direction';
+  || productFinalPrototype === 'direction'
+  || productFinalPrototype === 'custom';
 const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
 ---
 
