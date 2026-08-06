@@ -3,7 +3,6 @@ import DirectionV2FinalCTA from '../directions/DirectionV2FinalCTA.astro';
 import ImmersiveDirectionHero from '../directions/ImmersiveDirectionHero.astro';
 import DirectionV2Related from '../directions/DirectionV2Related.astro';
 import {
-  extractConfirmedBriefInputs,
   getDirectionCardItems,
   getDirectionListItems
 } from '../directions/directionV2Data';
@@ -18,36 +17,39 @@ import ProjectDirectionScope from '../project/ProjectDirectionScope.astro';
 import ProjectDirectionV2Layout from '../project/ProjectDirectionV2Layout.astro';
 import {
   getProjectDirectionBlock,
+  getProjectDirectionBlocks,
   loadProjectDirectionV2Snapshot,
   selectProject
 } from '../project/projectDirectionV2Data';
-import { getV2ProjectPresentation, selectV2ProjectMedia } from '../mediaRoleAdapter';
+import {
+  selectV2ProjectMedia,
+  selectV2ProjectMediaItems
+} from '../mediaRoleAdapter';
 import V2SectionNav from '../V2SectionNav.astro';
 
 const currentPath = Astro.url.pathname;
 const data = await loadProjectDirectionV2Snapshot('stroitelstvo-i-remonty');
-const { service, projects, catalog } = data;
-const worksBlock = getProjectDirectionBlock(service, 'cardGrid');
-const contextsBlock = getProjectDirectionBlock(service, 'listPanel');
+const { service, projects, catalog, services } = data;
+const pageBlocks = getProjectDirectionBlocks(service);
+const blockSectionId = (block: unknown) => (block as { sectionId?: string } | undefined)?.sectionId;
+const blockIntro = (block: unknown) => (block as { intro?: string } | undefined)?.intro?.trim() || '';
+const worksBlock = pageBlocks.find((block) => blockSectionId(block) === 'construction-scope')
+  || getProjectDirectionBlock(service, 'cardGrid');
+const contextsBlock = pageBlocks.find((block) => blockSectionId(block) === 'construction-contexts')
+  || getProjectDirectionBlock(service, 'listPanel');
+const briefBlock = pageBlocks.find((block) => blockSectionId(block) === 'construction-brief');
 const works = getDirectionCardItems(worksBlock).map(({ title, text }) => ({ title, text }));
 const contexts = getDirectionListItems(contextsBlock);
-const briefInputs = extractConfirmedBriefInputs([
-  service.contactDescription,
-  ...getDirectionCardItems(worksBlock).flatMap((item) => [item.title, item.text])
-]);
+const briefInputs = getDirectionListItems(briefBlock);
 
 const industrial = selectProject(projects, 'kompleks-rabot-na-proizvodstvennoy-territorii');
 const squareRepair = selectProject(projects, 'remont-skvera-na-ulitse-gogolya');
-const industrialPresentation = industrial ? getV2ProjectPresentation(industrial) : undefined;
 const approvedIndustrialHero = selectV2ProjectMedia(industrial, {
   allOf: ['construction-building', 'finished-result', 'hero']
-})[0] || industrialPresentation?.detailHeroMedia?.src || industrialPresentation?.publicGallery[0]?.src || '';
-const selectedIndustrialProofMedia = selectV2ProjectMedia(industrial, {
+})[0] || '';
+const industrialProofMedia = selectV2ProjectMediaItems(industrial, {
   allOf: ['construction-building', 'finished-result', 'proof']
 });
-const industrialProofMedia = selectedIndustrialProofMedia.length > 0
-  ? selectedIndustrialProofMedia
-  : (industrialPresentation?.publicGallery.map((item) => item.src) || []);
 const resolvedHeroMedia = approvedMediaUntilEdited(
   service.image,
   '/assets/images/placeholders/construction.svg',
@@ -59,65 +61,69 @@ const heroKicker = approvedUntilEdited(service.heroKicker, undefined, 'Стро�
 const heroTitle = approvedUntilEdited(
   service.heroTitle,
   'Строительно-монтажные работы',
-  'Строительные и ремонтные работы'
+  'Строительство и ремонты для производственных, коммерческих и частных объектов'
 );
 const heroDescription = approvedUntilEdited(
   service.heroDescription,
   'Выполняем строительные и монтажные работы для частных, коммерческих и производственных объектов: подготовка площадок, основания, входные группы, хозяйственные зоны, монтаж конструкций и работы по ТЗ.',
-  'Выполняем комплекс строительных и ремонтных работ, когда заказчику важен готовый или преобразованный объект.'
+  'Выполняем подготовку площадок, основания и фундаменты, сборку и обшивку каркасных зданий, устройство входных и хозяйственных зон, монтаж и ремонтные работы по ТЗ.'
 );
 const contactTitle = approvedUntilEdited(
   service.contactTitle,
   'Нужны строительные или монтажные работы на объекте?',
-  'Обсудим строительные и ремонтные работы на вашем объекте'
+  'Рассчитаем работы для вашего объекта'
 );
 const contactDescription = approvedUntilEdited(
   service.contactDescription,
   'Напишите нам, и мы сориентируем по составу работ, материалам, конструкциям, монтажу и этапности. Можно отправить фото объекта, размеры, чертеж, ТЗ или описание задачи.',
-  'Кратко опишите объект и задачу, приложите имеющиеся исходные материалы — обсудим работы и подготовим расчёт.'
+  'Пришлите фотографии объекта или площадки, размеры, план, эскиз, чертёж, ТЗ или краткое описание задачи. Уточним состав строительных, ремонтных и монтажных работ.'
 );
 const telegramLabel = approvedUntilEdited(service.contactTelegramLabel, 'Написать в Telegram', 'Получить расчёт');
-const phoneLabel = approvedUntilEdited(service.contactPhoneLabel, 'Позвонить', 'Обсудить объект');
+const phoneLabel = approvedUntilEdited(service.contactPhoneLabel, 'Позвонить', 'Позвонить');
 const emailLabel = approvedUntilEdited(service.contactEmailLabel, 'Написать на почту', 'Email');
+const telegramChannelLabel = ['Написать в Telegram', 'Получить расчёт'].includes(service.contactTelegramLabel || '')
+  ? 'Telegram'
+  : (service.contactTelegramLabel || 'Telegram');
 const supportingProjects = [
   squareRepair ? {
     title: squareRepair.title,
     city: squareRepair.city,
     year: squareRepair.year,
-    description: squareRepair.shortDescription,
+    description: squareRepair.whatWasDone?.trim() || squareRepair.shortDescription,
     href: `/design-lab/v2/vypolnennye-obekty/${squareRepair.slug}/`
   } : null
 ].filter((item): item is NonNullable<typeof item> => Boolean(item));
 
 const metalworks = catalog.sections.find((item) => item.slug === 'metallokonstruktsii-dlya-biznesa');
 const canopies = catalog.sections.find((item) => item.slug === 'navesy-i-kozyrki');
-const fences = catalog.sections.find((item) => item.slug === 'ograzhdeniya-i-zabory');
+const landscaping = services.find((item) => item.slug === 'blagoustroystvo-territoriy');
 const related = [
   metalworks ? {
-    eyebrow: 'Нужна отдельная конструкция?',
+    eyebrow: 'Металлическая часть объекта',
     title: metalworks.title,
-    description: 'Для задачи, которая ограничена металлическим каркасом или отдельной металлической частью объекта.',
+    description: 'Если задача ограничена металлическим каркасом, конструкцией или отдельным узлом, смотрите направление «Металлоконструкции».',
     href: '/design-lab/v2/metallokonstruktsii-dlya-biznesa/'
   } : null,
-  canopies ? {
-    eyebrow: 'Входные и хозяйственные зоны',
-    title: 'Навесы и козырьки',
-    description: canopies.shortDescription,
-    href: '/design-lab/v2/navesy-i-kozyrki/'
+  landscaping ? {
+    eyebrow: 'Организация территории',
+    title: approvedUntilEdited(landscaping.title, 'Благоустройство', 'Благоустройство территорий'),
+    description: 'Если главным результатом должна стать организованная территория с МАФ, ограждениями, входными, хозяйственными или зонами отдыха, смотрите направление «Благоустройство территорий».',
+    href: `/design-lab/v2/${landscaping.slug}/`
   } : null,
-  fences ? {
-    eyebrow: 'Территория объекта',
-    title: fences.title,
-    description: fences.shortDescription,
-    href: '/design-lab/v2/ograzhdeniya-i-zabory/'
+  canopies ? {
+    eyebrow: 'Отдельная конструкция',
+    title: approvedUntilEdited(canopies.title, 'Навесы', 'Навесы и козырьки'),
+    description: 'Навесы и козырьки как самостоятельная задача для входной, хозяйственной или технической зоны.',
+    href: '/design-lab/v2/navesy-i-kozyrki/'
   } : null
 ].filter((item): item is NonNullable<typeof item> => Boolean(item));
+const constructionFeatureIndex = industrialProofMedia.findIndex((item) => item.src === approvedIndustrialHero);
 const sectionNavItems = [
-  ...(industrial && industrialProofMedia.length > 0 ? [{ id: 'construction-proof', label: 'Объекты' }] : []),
+  ...(industrial && industrialProofMedia.length > 0 ? [{ id: 'construction-proof', label: 'Реальный объект' }] : []),
   ...(works.length > 0 ? [{ id: 'construction-scope', label: 'Что делаем' }] : []),
   ...(contexts.length > 0 ? [{ id: 'construction-contexts', label: 'Для каких объектов' }] : []),
-  ...(briefInputs.length > 0 ? [{ id: 'construction-brief', label: 'Исходные данные' }] : []),
-  { id: 'contact', label: 'Обсудить задачу' }
+  ...(briefInputs.length > 0 ? [{ id: 'construction-brief', label: 'С чем обратиться' }] : []),
+  { id: 'contact', label: 'Контакты' }
 ];
 ---
 
@@ -127,6 +133,7 @@ const sectionNavItems = [
   canonicalPath={`/${service.slug}/`}
   currentPath={currentPath}
   ogImage={industrialHero}
+  variant="construction"
 >
   <ImmersiveDirectionHero
     variant="construction"
@@ -142,13 +149,12 @@ const sectionNavItems = [
       ? 'Готовое обшитое здание на производственной территории'
       : directionTitle}
     imageView={resolvedHeroMedia.usesApprovedBaseline
-      ? { fit: 'cover', positionX: 50, positionY: 50, scale: 1 }
+      ? { fit: 'cover', positionX: 50, positionY: 48, scale: 1 }
       : service.imageView}
-    caption={resolvedHeroMedia.usesApprovedBaseline ? industrial?.title : directionTitle}
     titleId="project-direction-title"
     primaryLabel="Получить расчёт"
-    secondaryHref="#construction-brief"
-    secondaryLabel="Обсудить объект"
+    secondaryHref="#construction-proof"
+    secondaryLabel="Смотреть выполненный объект"
   />
 
   <V2SectionNav items={sectionNavItems} label="Разделы направления" />
@@ -162,7 +168,8 @@ const sectionNavItems = [
         year: industrial.year,
         description: industrial.whatWasDone?.trim() || industrial.shortDescription,
         href: `/design-lab/v2/vypolnennye-obekty/${industrial.slug}/`,
-        images: industrialProofMedia
+        images: industrialProofMedia,
+        featureIndex: constructionFeatureIndex >= 0 ? constructionFeatureIndex : 0
       }}
       supporting={supportingProjects}
     />
@@ -170,8 +177,9 @@ const sectionNavItems = [
 
   <ProjectDirectionScope
     title={worksBlock?.title || 'Что делаем'}
-    description="Виды работ приведены на уровне опубликованных задач; конкретный состав зависит от объекта."
+    description={blockIntro(worksBlock) || 'От подготовки площадки до готового или преобразованного объекта'}
     items={works}
+    featuredFirst
   />
 
   <ProjectDirectionContexts
@@ -180,19 +188,24 @@ const sectionNavItems = [
   />
 
   <ProjectDirectionBrief
-    title="Что можно прислать для обсуждения"
-    description="Отправьте те исходные материалы, которые уже есть. Они помогут понять задачу на первом обсуждении, но не заменяют последующее уточнение."
+    title={briefBlock?.title || 'С чем можно обратиться'}
+    description={blockIntro(briefBlock) || 'Для первого обращения достаточно тех материалов, которые уже есть. По ним можно понять площадку, состояние объекта и состав задачи.'}
     items={briefInputs}
   />
 
-  <DirectionV2Related title="Смежные направления" items={related} />
+  <DirectionV2Related
+    title="Смежные направления"
+    items={related}
+    variant="compact"
+    presentation="links"
+  />
 
   <DirectionV2FinalCTA
     title={contactTitle}
     description={contactDescription}
     primaryLabel={telegramLabel}
     secondaryLabel={phoneLabel}
-    telegramChannelLabel={approvedUntilEdited(service.contactTelegramLabel, 'Написать в Telegram', 'Telegram')}
+    telegramChannelLabel={telegramChannelLabel}
     phoneChannelLabel={approvedUntilEdited(service.contactPhoneLabel, 'Позвонить', 'Основной телефон')}
     emailChannelLabel={emailLabel}
   />

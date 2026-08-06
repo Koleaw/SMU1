@@ -19,6 +19,7 @@ import PlaceDirectionScope from '../place/PlaceDirectionScope.astro';
 import PlaceDirectionV2Layout from '../place/PlaceDirectionV2Layout.astro';
 import {
   getProjectDirectionBlock,
+  getProjectDirectionBlocks,
   loadProjectDirectionV2Snapshot,
   selectProject
 } from '../project/projectDirectionV2Data';
@@ -27,23 +28,27 @@ import V2SectionNav from '../V2SectionNav.astro';
 const currentPath = Astro.url.pathname;
 const data = await loadProjectDirectionV2Snapshot('blagoustroystvo-territoriy');
 const { service, projects, catalog, services } = data;
-const scopeBlock = getProjectDirectionBlock(service, 'cardGrid');
-const contextsBlock = getProjectDirectionBlock(service, 'listPanel');
+const pageBlocks = getProjectDirectionBlocks(service);
+const blockSectionId = (block: unknown) => (block as { sectionId?: string } | undefined)?.sectionId;
+const blockIntro = (block: unknown) => (block as { intro?: string } | undefined)?.intro?.trim() || '';
+const scopeBlock = pageBlocks.find((block) => blockSectionId(block) === 'landscaping-scope')
+  || getProjectDirectionBlock(service, 'cardGrid');
+const contextsBlock = pageBlocks.find((block) => blockSectionId(block) === 'landscaping-contexts')
+  || getProjectDirectionBlock(service, 'listPanel');
+const briefBlock = pageBlocks.find((block) => blockSectionId(block) === 'landscaping-brief');
 const scopeItems = getDirectionCardItems(scopeBlock).map(({ title, text }) => ({ title, text }));
 const contexts = getDirectionListItems(contextsBlock);
+const briefInputs = getDirectionListItems(briefBlock);
 
 const embankment = selectProject(projects, 'blagoustroystvo-naberezhnoy-reki-tobol');
 const squareRepair = selectProject(projects, 'remont-skvera-na-ulitse-gogolya');
-const embankmentPresentation = embankment ? getV2ProjectPresentation(embankment) : undefined;
 const approvedHeroImage = selectV2ProjectMedia(embankment, {
   allOf: ['landscaping', 'finished-result', 'hero']
-})[0] || embankmentPresentation?.detailHeroMedia?.src || embankmentPresentation?.publicGallery[0]?.src || '';
+})[0] || '';
 const selectedProofMedia = selectV2ProjectMediaItems(embankment, {
   allOf: ['landscaping', 'finished-result', 'proof']
 });
-const proofMedia = selectedProofMedia.length > 0
-  ? selectedProofMedia
-  : (embankmentPresentation?.publicGallery || []);
+const proofMedia = selectedProofMedia;
 const resolvedHeroMedia = approvedMediaUntilEdited(
   service.image,
   '/assets/images/placeholders/landscaping.svg',
@@ -51,7 +56,7 @@ const resolvedHeroMedia = approvedMediaUntilEdited(
 );
 const heroImage = resolvedHeroMedia.src;
 const directionTitle = approvedUntilEdited(service.title, 'Благоустройство', 'Благоустройство территорий');
-const heroKicker = approvedUntilEdited(service.heroKicker, undefined, 'Территория как единое пространство');
+const heroKicker = approvedUntilEdited(service.heroKicker, undefined, 'Благоустройство под задачу');
 const heroTitle = approvedUntilEdited(
   service.heroTitle,
   'Благоустройство территорий',
@@ -60,21 +65,24 @@ const heroTitle = approvedUntilEdited(
 const heroDescription = approvedUntilEdited(
   service.heroDescription,
   'Выполняем работы по благоустройству частных, коммерческих и общественных территорий: от отдельных элементов и МАФ до обустройства дворов, входных групп, зон отдыха и хозяйственных площадок.',
-  'Благоустраиваем частные, коммерческие и общественные территории — от отдельных элементов до цельного результата для конкретного пространства.'
+  'Выполняем благоустройство общественных, коммерческих, производственных и частных территорий — от отдельных элементов и МАФ до комплекса работ на площадке.'
 );
 const contactTitle = approvedUntilEdited(
   service.contactTitle,
   'Нужно благоустроить территорию?',
-  'Обсудим благоустройство вашей территории'
+  'Рассчитаем благоустройство вашей территории'
 );
 const contactDescription = approvedUntilEdited(
   service.contactDescription,
   'Напишите нам, и мы сориентируем по составу работ, изделиям, материалам, монтажу и этапности. Можно отправить фото территории, ТЗ, чертеж, дизайн-проект или описание задачи.',
-  'Пришлите описание задачи и имеющиеся материалы — обсудим подходящий состав работ и подготовим расчёт.'
+  'Пришлите фотографии территории, размеры, план, эскиз, дизайн-проект, ТЗ или краткое описание задачи. Уточним состав работ, изделия и монтаж.'
 );
 const telegramLabel = approvedUntilEdited(service.contactTelegramLabel, 'Написать в Telegram', 'Получить расчёт');
-const phoneLabel = approvedUntilEdited(service.contactPhoneLabel, 'Позвонить', 'Обсудить территорию');
+const phoneLabel = approvedUntilEdited(service.contactPhoneLabel, 'Позвонить', 'Позвонить');
 const emailLabel = approvedUntilEdited(service.contactEmailLabel, 'Написать на почту', 'Email');
+const telegramChannelLabel = ['Написать в Telegram', 'Получить расчёт'].includes(service.contactTelegramLabel || '')
+  ? 'Telegram'
+  : (service.contactTelegramLabel || 'Telegram');
 
 const streetFurniture = catalog.sections.find((item) => item.slug === 'ulichnaya-mebel');
 const fences = catalog.sections.find((item) => item.slug === 'ograzhdeniya-i-zabory');
@@ -82,27 +90,27 @@ const canopies = catalog.sections.find((item) => item.slug === 'navesy-i-kozyrki
 const construction = services.find((item) => item.slug === 'stroitelstvo-i-remonty');
 const related = [
   streetFurniture ? {
-    eyebrow: 'Элементы для пространства',
+    eyebrow: 'Изделия для территории',
     title: streetFurniture.title,
-    description: 'Лавочки, урны, вазоны и велопарковки для конкретной территории.',
+    description: 'Лавочки, урны, вазоны, велопарковки и другие изделия для организации пространства.',
     href: '/design-lab/v2/ulichnaya-mebel/'
   } : null,
   fences ? {
-    eyebrow: 'Зонирование территории',
+    eyebrow: 'Границы и зонирование',
     title: fences.title,
-    description: 'Ограждения и заборы как отдельное направление для объекта.',
+    description: 'Отдельное направление для ограждений, заборов и элементов зонирования территории.',
     href: '/design-lab/v2/ograzhdeniya-i-zabory/'
   } : null,
   canopies ? {
-    eyebrow: 'Защищённые зоны',
-    title: 'Навесы и козырьки',
-    description: 'Конструкции для входных, хозяйственных и других зон объекта.',
+    eyebrow: 'Защищённые пространства',
+    title: approvedUntilEdited(canopies.title, 'Навесы', 'Навесы и козырьки'),
+    description: 'Навесы и козырьки для входных, хозяйственных и других зон объекта.',
     href: '/design-lab/v2/navesy-i-kozyrki/'
   } : null,
   construction ? {
-    eyebrow: 'Более широкий комплекс',
-    title: construction.heroTitle || construction.title,
-    description: 'Для задачи, где главным результатом становится готовый или преобразованный объект.',
+    eyebrow: 'Работы на объекте',
+    title: approvedUntilEdited(construction.title, 'Строительство', 'Строительство и ремонты'),
+    description: 'Более широкий комплекс строительных, ремонтных и монтажных работ на площадке.',
     href: `/design-lab/v2/${construction.slug}/`
   } : null
 ].filter((item): item is NonNullable<typeof item> => Boolean(item));
@@ -111,13 +119,13 @@ const proofProjects = [embankment, squareRepair]
   .filter((project): project is NonNullable<typeof project> => Boolean(project))
   .map(getV2ProjectPresentation);
 const proofMediaBySlug = embankment ? { [embankment.slug]: proofMedia } : {};
-const briefInputs = ['Описание задачи', 'Фотография территории', 'Размеры', 'Эскиз', 'Чертёж', 'ТЗ'];
+const landscapingFeatureIndex = proofMedia.findIndex((item) => item.src === approvedHeroImage);
 const sectionNavItems = [
-  ...(proofProjects.length > 0 ? [{ id: 'landscaping-proof', label: 'Объекты' }] : []),
-  ...(scopeItems.length > 0 ? [{ id: 'landscaping-scope', label: 'Что делаем' }] : []),
-  ...(contexts.length > 0 ? [{ id: 'landscaping-contexts', label: 'Для каких объектов' }] : []),
-  ...(briefInputs.length > 0 ? [{ id: 'landscaping-brief', label: 'Исходные данные' }] : []),
-  { id: 'contact', label: 'Обсудить задачу' }
+  ...(proofProjects.length > 0 ? [{ id: 'landscaping-proof', label: 'Реальный объект' }] : []),
+  ...(scopeItems.length > 0 ? [{ id: 'landscaping-scope', label: 'Что благоустраиваем' }] : []),
+  ...(contexts.length > 0 ? [{ id: 'landscaping-contexts', label: 'Для каких территорий' }] : []),
+  ...(briefInputs.length > 0 ? [{ id: 'landscaping-brief', label: 'С чем обратиться' }] : []),
+  { id: 'contact', label: 'Контакты' }
 ];
 ---
 
@@ -127,6 +135,7 @@ const sectionNavItems = [
   canonicalPath={`/${service.slug}/`}
   currentPath={currentPath}
   ogImage={heroImage}
+  variant="landscaping"
 >
   <ImmersiveDirectionHero
     variant="landscaping"
@@ -144,47 +153,52 @@ const sectionNavItems = [
     imageView={resolvedHeroMedia.usesApprovedBaseline
       ? { fit: 'cover', positionX: 50, positionY: 52, scale: 1 }
       : service.imageView}
-    caption={resolvedHeroMedia.usesApprovedBaseline ? embankment?.title : directionTitle}
     titleId="place-direction-title"
     primaryLabel="Получить расчёт"
-    secondaryHref="#landscaping-brief"
-    secondaryLabel="Обсудить территорию"
+    secondaryHref="#landscaping-proof"
+    secondaryLabel="Смотреть выполненный объект"
   />
 
   <V2SectionNav items={sectionNavItems} label="Разделы направления" />
 
   <PlaceDirectionProjects
-    title="Примеры благоустройства"
+    title="Благоустройство на реальном объекте"
     projects={proofProjects}
     mediaBySlug={proofMediaBySlug}
+    featureIndex={landscapingFeatureIndex >= 0 ? landscapingFeatureIndex : 0}
   />
 
   <PlaceDirectionScope
-    title={scopeBlock?.title || 'Что делаем'}
-    description="Состав благоустройства может включать один или несколько видов работ — в зависимости от территории и задачи."
+    title={scopeBlock?.title || 'Что благоустраиваем'}
+    description={blockIntro(scopeBlock) || 'От отдельных элементов до связанного пространства'}
     items={scopeItems}
   />
 
   <PlaceDirectionContexts
-    title={contextsBlock?.title || 'Для каких объектов'}
-    description="Частные, коммерческие и общественные пространства, где важен цельный и аккуратный результат."
+    title={contextsBlock?.title || 'Для каких территорий'}
+    description={blockIntro(contextsBlock) || 'Компактно показываем, где выполняется благоустройство и какой контекст территории учитываем.'}
     items={contexts}
   />
 
   <PlaceDirectionBrief
-    title="Что можно прислать"
-    description="Для первого разговора достаточно тех материалов, которые уже есть. Они помогут предметно обсудить территорию и задачу."
+    title={briefBlock?.title || 'С чем можно обратиться'}
+    description={blockIntro(briefBlock) || 'Для первого обсуждения достаточно тех материалов, которые уже есть. По ним можно понять территорию, состав задачи и предметно обсудить дальнейшие работы.'}
     items={briefInputs}
   />
 
-  <DirectionV2Related title="Смежные направления" items={related} variant="compact" />
+  <DirectionV2Related
+    title="Смежные направления"
+    items={related}
+    variant="compact"
+    presentation="links"
+  />
 
   <DirectionV2FinalCTA
     title={contactTitle}
     description={contactDescription}
     primaryLabel={telegramLabel}
     secondaryLabel={phoneLabel}
-    telegramChannelLabel={approvedUntilEdited(service.contactTelegramLabel, 'Написать в Telegram', 'Telegram')}
+    telegramChannelLabel={telegramChannelLabel}
     phoneChannelLabel={approvedUntilEdited(service.contactPhoneLabel, 'Позвонить', 'Основной телефон')}
     emailChannelLabel={emailLabel}
   />

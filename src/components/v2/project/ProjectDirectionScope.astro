@@ -1,15 +1,17 @@
 ---
 interface WorkItem {
   title: string;
+  text?: string;
 }
 
 interface Props {
   title: string;
   description?: string;
   items: WorkItem[];
+  featuredFirst?: boolean;
 }
 
-const { title, description = '', items } = Astro.props as Props;
+const { title, description = '', items, featuredFirst = false } = Astro.props as Props;
 ---
 
 {items.length > 0 && (
@@ -22,8 +24,13 @@ const { title, description = '', items } = Astro.props as Props;
         </div>
         {description && <p>{description}</p>}
       </header>
-      <ul class="project-scope__list" role="list">
-        {items.map((item) => <li data-v2-reveal><span aria-hidden="true"></span><h3>{item.title}</h3></li>)}
+      <ul class:list={['project-scope__list', { 'project-scope__list--featured-first': featuredFirst }]} role="list">
+        {items.map((item, index) => (
+          <li class:list={{ 'project-scope__item--featured': featuredFirst && index === 0 }} data-v2-reveal>
+            <h3>{item.title}</h3>
+            {item.text && <p>{item.text}</p>}
+          </li>
+        ))}
       </ul>
     </div>
   </section>

@@ -1,20 +1,90 @@
 ---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 import type { V2ProjectMedia, V2ProjectPresentation } from '../mediaRoleAdapter';
-import V2ProjectProof from '../projects/V2ProjectProof.astro';
 
 interface Props {
   title: string;
   projects: V2ProjectPresentation[];
   mediaBySlug?: Record<string, V2ProjectMedia[]>;
+  featureIndex?: number;
 }
 
-const { title, projects, mediaBySlug = {} } = Astro.props as Props;
+const { title, projects, mediaBySlug = {}, featureIndex = 0 } = Astro.props as Props;
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+const featured = projects[0];
+const supporting = projects.slice(1);
+const media = featured ? (mediaBySlug[featured.project.slug] || []) : [];
+const safeFeatureIndex = Math.max(0, Math.min(featureIndex, media.length - 1));
+const featureMedia = media[safeFeatureIndex];
+const evidenceMedia = media.find((_, index) => index !== safeFeatureIndex);
+const meta = (project: V2ProjectPresentation) => [project.project.city, project.project.year]
+  .filter(Boolean)
+  .join(' · ');
+const description = (project: V2ProjectPresentation) =>
+  project.project.whatWasDone?.trim() || project.project.shortDescription;
 ---
 
-<V2ProjectProof
-  id="landscaping-proof"
-  eyebrow="Выполненные территории"
-  title={title}
-  projects={projects}
-  mediaBySlug={mediaBySlug}
-/>
+{featured && (
+  <section class="place-projects" id="landscaping-proof" aria-labelledby="place-projects-title">
+    <div class="hv2-shell">
+      <header class="place-section-heading place-projects__heading hv2-grid" data-v2-reveal>
+        <div>
+          <p class="hv2-eyebrow">Выполненная территория</p>
+          <h2 id="place-projects-title">{title}</h2>
+        </div>
+        <p>Реальный объект показывает благоустройство как связанную работу с территорией, а не набор отдельных изделий.</p>
+      </header>
+
+      <article class:list={['place-projects__featured', { 'place-projects__featured--text-only': !featureMedia }]}>
+        <div class="place-projects__story" data-v2-reveal>
+          <p class="place-projects__meta">{meta(featured)}</p>
+          <h3>{featured.project.title}</h3>
+          <p>{description(featured)}</p>
+          <a href={withBase(featured.v2Route)}>Смотреть полный объект</a>
+        </div>
+
+        {featureMedia && (
+          <div class="place-projects__media" data-v2-reveal>
+            <figure class="place-projects__feature" data-v2-media>
+              <img
+                src={withBase(featureMedia.src)}
+                alt={featureMedia.alt || featured.project.title}
+                width="1920"
+                height="1080"
+                loading="eager"
+                decoding="async"
+                data-v2-image
+              />
+            </figure>
+            {evidenceMedia && (
+              <figure class="place-projects__evidence" data-v2-media>
+                <img
+                  src={withBase(evidenceMedia.src)}
+                  alt={evidenceMedia.alt || featured.project.title}
+                  width="1920"
+                  height="1080"
+                  loading="lazy"
+                  decoding="async"
+                  data-v2-image
+                />
+              </figure>
+            )}
+          </div>
+        )}
+      </article>
+
+      {supporting.length > 0 && (
+        <div class="place-projects__supporting" role="list">
+          {supporting.map((project) => (
+            <article role="listitem" data-v2-reveal>
+              <p class="place-projects__meta">{meta(project)}</p>
+              <h3>{project.project.title}</h3>
+              <p>{description(project)}</p>
+              <a href={withBase(project.v2Route)}>Смотреть объект</a>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+)}

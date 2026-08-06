@@ -5452,3 +5452,806 @@ body.home-v2-body:has(.engineering-direction-v2--metalworks) {
     font-size: 34px;
   }
 }
+
+/* Stage F.2: Landscaping and Construction share the accepted immersive Hero,
+   then diverge into spatial and technical editorial evidence flows. */
+
+html:has(.place-direction-v2--landscaping),
+html:has(.project-direction-v2--construction),
+body.home-v2-body:has(.place-direction-v2--landscaping),
+body.home-v2-body:has(.project-direction-v2--construction) {
+  min-width: 0;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero--landscaping,
+.home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction {
+  min-height: 100svh;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero__media,
+.home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero--landscaping .immersive-direction-hero__copy {
+  grid-column: 1 / 8;
+  max-width: 790px;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero--landscaping h1 {
+  max-width: 14ch;
+  font-size: clamp(52px, 5vw, 80px);
+  line-height: 0.98;
+  letter-spacing: -0.052em;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero--landscaping .immersive-direction-hero__lead {
+  max-width: 66ch;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero--landscaping .immersive-direction-hero__veil {
+  background:
+    linear-gradient(180deg, rgba(7, 15, 25, 0.64) 0%, rgba(7, 15, 25, 0.04) 34%, rgba(7, 15, 25, 0.3) 100%),
+    linear-gradient(90deg, rgba(7, 15, 25, 0.8) 0%, rgba(7, 15, 25, 0.52) 34%, rgba(7, 15, 25, 0.1) 62%, transparent 82%);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction .immersive-direction-hero__copy {
+  grid-column: 1 / 10;
+  max-width: 1040px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction h1 {
+  max-width: 18ch;
+  font-size: clamp(48px, 4.3vw, 74px);
+  line-height: 0.98;
+  letter-spacing: -0.052em;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction .immersive-direction-hero__lead {
+  max-width: 72ch;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction .immersive-direction-hero__veil {
+  background:
+    linear-gradient(180deg, rgba(7, 15, 25, 0.7) 0%, rgba(7, 15, 25, 0.06) 35%, rgba(7, 15, 25, 0.36) 100%),
+    linear-gradient(90deg, rgba(7, 15, 25, 0.92) 0%, rgba(7, 15, 25, 0.68) 40%, rgba(7, 15, 25, 0.18) 72%, transparent 100%);
+}
+
+/* Landscaping: open white sequences, one spatial proof and one compact contrast band. */
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects,
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope,
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-contexts,
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-brief {
+  padding: clamp(64px, 6vw, 90px) 0;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects,
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope,
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-brief {
+  background: #ffffff;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__heading {
+  margin-bottom: clamp(34px, 4vw, 52px);
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__featured {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 32px clamp(28px, 4vw, 60px);
+  align-items: start;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__story {
+  grid-column: 1 / 5;
+  padding-top: 20px;
+  border-top: 1px solid var(--hv2-border);
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__featured--text-only .place-projects__story {
+  grid-column: 1 / 9;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__story h3,
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__supporting h3 {
+  margin-top: 14px;
+  font-size: clamp(27px, 2.9vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__story > p:not(.place-projects__meta),
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__supporting article > p:not(.place-projects__meta) {
+  margin-top: 20px;
+  color: var(--hv2-muted);
+  font-size: 16px;
+  line-height: 1.58;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__meta {
+  color: var(--hv2-action);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects :where(.place-projects__story, .place-projects__supporting article) > a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 24px;
+  border-bottom: 1px solid var(--hv2-action);
+  color: var(--hv2-text);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects :where(.place-projects__story, .place-projects__supporting article) > a:is(:hover, :focus-visible) {
+  color: var(--hv2-action);
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__media {
+  display: grid;
+  min-width: 0;
+  grid-column: 5 / 13;
+  gap: 12px;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__media figure {
+  margin: 0;
+  overflow: hidden;
+  background: #eaf0f6;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__feature {
+  aspect-ratio: 16 / 9;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__evidence {
+  width: 62%;
+  aspect-ratio: 16 / 9;
+  margin-left: auto;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 52%;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__supporting {
+  width: min(76%, 980px);
+  margin-top: clamp(42px, 5vw, 64px);
+  margin-left: auto;
+  border-top: 1px solid var(--hv2-border);
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__supporting article {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.45fr) minmax(220px, 0.9fr) minmax(280px, 1.45fr) auto;
+  gap: 16px clamp(22px, 3vw, 42px);
+  align-items: center;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--hv2-border);
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__supporting article :where(h3, p, a) {
+  margin-top: 0;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__supporting h3 {
+  font-size: clamp(21px, 1.8vw, 27px);
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope__list {
+  display: block;
+  border: 0;
+  border-top: 1px solid var(--hv2-border);
+  background: transparent;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope__list li {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(240px, 5fr) minmax(0, 7fr);
+  gap: 18px clamp(32px, 5vw, 82px);
+  align-items: start;
+  padding: clamp(22px, 2.4vw, 32px) 0;
+  border: 0;
+  border-bottom: 1px solid var(--hv2-border);
+  background: transparent;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope__list li:first-child {
+  padding-block: clamp(32px, 3.7vw, 48px);
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope__list h3 {
+  max-width: 24ch;
+  font-size: clamp(23px, 2vw, 30px);
+  line-height: 1.12;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope__list li:first-child h3 {
+  max-width: 20ch;
+  font-size: clamp(32px, 3.3vw, 46px);
+  line-height: 1.04;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope__list p {
+  max-width: 62ch;
+  margin-top: 0;
+  color: var(--hv2-muted);
+  font-size: 15px;
+  line-height: 1.58;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-contexts {
+  color: #ffffff;
+  background: var(--hv2-contrast);
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-contexts__heading {
+  grid-column: 1 / 5;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-contexts__list {
+  grid-column: 5 / 13;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-contexts__list li {
+  min-height: 74px;
+  padding: 16px 18px;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-contexts__list strong {
+  font-size: clamp(16px, 1.35vw, 20px);
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-brief__heading > p:last-child:not(.hv2-eyebrow) {
+  font-size: 16px;
+  line-height: 1.58;
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-brief__items {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 clamp(22px, 3vw, 40px);
+  border: 0;
+  border-top: 1px solid var(--hv2-border);
+}
+
+.home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-brief__items li {
+  min-height: 74px;
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 1px solid var(--hv2-border);
+}
+
+/* Construction: a graphite proof and a featured building-scale technical index. */
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof,
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope,
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-contexts,
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-brief {
+  padding: clamp(64px, 6vw, 90px) 0;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof {
+  color: #ffffff;
+  background: var(--hv2-contrast);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__heading {
+  margin-bottom: clamp(34px, 4vw, 52px);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__featured {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 30px clamp(28px, 4vw, 60px);
+  align-items: start;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__media {
+  display: grid;
+  min-width: 0;
+  grid-column: 1 / 9;
+  gap: 12px;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__feature,
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__sequence figure {
+  margin: 0;
+  overflow: hidden;
+  background: #07172b;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__feature {
+  aspect-ratio: 16 / 9;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__sequence {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.72fr) minmax(0, 1.28fr);
+  gap: 12px;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__sequence figure {
+  height: clamp(230px, 21vw, 320px);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__story {
+  grid-column: 9 / 13;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__story > p:not(.project-proof__meta),
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof-card > div > p:not(.project-proof__meta) {
+  font-size: 16px;
+  line-height: 1.58;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__story a,
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof-card a {
+  min-height: 44px;
+  align-items: center;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__supporting {
+  display: block;
+  margin-top: clamp(34px, 4vw, 52px);
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
+  background: transparent;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof-card,
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof-card--no-media {
+  display: block;
+  min-height: 0;
+  background: transparent;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof-card > div {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(110px, 0.42fr) minmax(220px, 0.9fr) minmax(300px, 1.45fr) auto;
+  gap: 16px clamp(22px, 3vw, 40px);
+  align-items: center;
+  padding: 22px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof-card > div :where(h3, p, a) {
+  margin-top: 0;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof-card h3 {
+  font-size: clamp(21px, 1.8vw, 27px);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope {
+  color: var(--hv2-text);
+  background: #ffffff;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__heading {
+  margin-bottom: clamp(34px, 4vw, 48px);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__list {
+  display: block;
+  border: 0;
+  border-top: 1px solid var(--hv2-border);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__list li {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(250px, 5fr) minmax(0, 7fr);
+  gap: 18px clamp(32px, 5vw, 82px);
+  align-items: start;
+  padding: clamp(22px, 2.4vw, 32px) 0;
+  border: 0;
+  border-bottom: 1px solid var(--hv2-border);
+  background: transparent;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__list h3 {
+  max-width: 24ch;
+  font-size: clamp(23px, 2vw, 30px);
+  line-height: 1.12;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__list p {
+  max-width: 62ch;
+  color: var(--hv2-muted);
+  font-size: 15px;
+  line-height: 1.58;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__list--featured-first .project-scope__item--featured {
+  padding-block: clamp(36px, 4.2vw, 56px);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__list--featured-first .project-scope__item--featured h3 {
+  max-width: 19ch;
+  font-size: clamp(36px, 3.8vw, 54px);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__list--featured-first .project-scope__item--featured p {
+  max-width: 54ch;
+  font-size: 17px;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-contexts {
+  color: #ffffff;
+  background: var(--hv2-action);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-contexts__heading {
+  grid-column: 1 / 5;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-contexts__list {
+  display: grid;
+  grid-column: 5 / 13;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 clamp(24px, 3vw, 42px);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-contexts__list li {
+  min-height: 68px;
+  font-size: clamp(15px, 1.3vw, 18px);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-brief {
+  background: #ffffff;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-brief__heading > p:last-child {
+  font-size: 16px;
+  line-height: 1.58;
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-brief__items {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 clamp(22px, 3vw, 40px);
+  border: 0;
+  border-top: 1px solid var(--hv2-border);
+}
+
+.home-v2-body .project-direction-v2.project-direction-v2--construction .project-brief__items li {
+  min-height: 70px;
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 1px solid var(--hv2-border);
+}
+
+/* Shared compact closing transitions for the two F.2 directions. */
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related--links {
+  padding: clamp(44px, 5vw, 64px) 0;
+  border: 0;
+  color: var(--hv2-text);
+  background: #ffffff;
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related--links.direction-related--compact .hv2-shell {
+  display: block;
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related--links .direction-section-heading {
+  margin-bottom: 18px;
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related--links .direction-section-heading h2 {
+  font-size: clamp(30px, 3vw, 42px);
+}
+
+.home-v2-body .place-direction-v2--landscaping .direction-related__links {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.home-v2-body .project-direction-v2--construction .direction-related__links {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related__links {
+  display: grid;
+  gap: 0 clamp(28px, 4vw, 54px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related__link {
+  display: block;
+  min-height: 0;
+  padding: 18px 0;
+  border-top: 1px solid var(--hv2-border);
+  color: var(--hv2-text);
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related__link-eyebrow {
+  display: block;
+  color: var(--hv2-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related__link-copy {
+  display: block;
+  margin-top: 10px;
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related__link-copy strong {
+  display: block;
+  font-size: clamp(20px, 1.8vw, 26px);
+  line-height: 1.18;
+  letter-spacing: -0.025em;
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related__link-copy > span {
+  display: block;
+  max-width: 62ch;
+  margin-top: 8px;
+  color: var(--hv2-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related__link svg {
+  display: none;
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related__link:is(:hover, :focus-visible) {
+  color: var(--hv2-action);
+}
+
+.home-v2-body :is(.place-direction-v2--landscaping, .project-direction-v2--construction) .direction-related__link:focus-visible {
+  outline: 3px solid var(--hv2-action);
+  outline-offset: 5px;
+}
+
+@media (max-width: 980px) {
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping #landscaping-proof.place-projects .place-projects__featured,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction #construction-proof.project-proof .project-proof__featured {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping #landscaping-proof.place-projects .place-projects__story,
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping #landscaping-proof.place-projects .place-projects__media,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction #construction-proof.project-proof .project-proof__media,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction #construction-proof.project-proof .project-proof__story {
+    grid-column: 1 / -1;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__story,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__story {
+    max-width: 760px;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__media,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__media {
+    order: -1;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__supporting,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__supporting {
+    width: 100%;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__supporting article,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof-card > div {
+    grid-template-columns: minmax(110px, 0.42fr) minmax(220px, 0.9fr) minmax(0, 1.35fr);
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__supporting article > a,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof-card a {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 760px) {
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero--landscaping,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction {
+    display: block;
+    min-height: max(700px, 100svh);
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero__inner,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero__inner {
+    min-height: max(700px, 100svh);
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero__composition,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero__composition {
+    align-items: start;
+    padding: clamp(16px, 3vh, 28px) 0 28px;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero--landscaping .immersive-direction-hero__copy,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction .immersive-direction-hero__copy {
+    grid-column: 1 / -1;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero--landscaping h1 {
+    max-width: 100%;
+    font-size: clamp(35px, 9.8vw, 42px);
+    line-height: 1.01;
+  }
+
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction h1 {
+    max-width: 100%;
+    font-size: clamp(30px, 8.2vw, 37px);
+    line-height: 1.01;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero__lead,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero__lead {
+    max-width: 58ch;
+    margin-top: 17px;
+    font-size: clamp(14px, 3.8vw, 16px);
+    line-height: 1.42;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero__actions,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero__actions {
+    margin-top: 20px;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero__veil {
+    background:
+      linear-gradient(180deg, rgba(7, 15, 25, 0.84) 0%, rgba(7, 15, 25, 0.58) 60%, rgba(7, 15, 25, 0.12) 100%),
+      linear-gradient(90deg, rgba(7, 15, 25, 0.36) 0%, transparent 100%);
+  }
+
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero__veil {
+    background:
+      linear-gradient(180deg, rgba(7, 15, 25, 0.92) 0%, rgba(7, 15, 25, 0.74) 66%, rgba(7, 15, 25, 0.28) 100%),
+      linear-gradient(90deg, rgba(7, 15, 25, 0.44) 0%, transparent 100%);
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects,
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope,
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-contexts,
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-brief,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-contexts,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-brief {
+    padding: 58px 0;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__evidence {
+    width: 72%;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__supporting article,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof-card > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 22px 0;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__supporting article > a,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof-card a {
+    grid-column: 1;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope__list li,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__list li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope__list h3,
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-scope__list li:first-child h3,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__list h3,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__list--featured-first .project-scope__item--featured h3 {
+    max-width: 26ch;
+    font-size: clamp(25px, 7.5vw, 33px);
+  }
+
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-scope__list--featured-first .project-scope__item--featured p {
+    font-size: 15px;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-contexts__grid,
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-brief__grid,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-contexts__grid,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-brief__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping #landscaping-contexts .place-contexts__heading,
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping #landscaping-contexts .place-contexts__list,
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping #landscaping-brief .place-brief__heading,
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping #landscaping-brief .place-brief__items,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction #construction-contexts .project-contexts__heading,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction #construction-contexts .project-contexts__list,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction #construction-brief .project-brief__heading,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction #construction-brief .project-brief__items {
+    grid-column: 1 / -1;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping #landscaping-proof .place-projects__heading > div,
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping #landscaping-proof .place-projects__heading > p,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction #construction-proof .project-proof__heading > div,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction #construction-proof .project-proof__heading > p {
+    grid-column: 1 / -1;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-contexts__list,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-contexts__list,
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-brief__items,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-brief__items,
+  .home-v2-body .place-direction-v2--landscaping .direction-related__links,
+  .home-v2-body .project-direction-v2--construction .direction-related__links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__sequence {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .project-proof__sequence figure {
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
+}
+
+@media (max-width: 360px) {
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero--landscaping h1 {
+    font-size: 32px;
+  }
+
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction h1 {
+    font-size: 27px;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero__lead,
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero__lead {
+    font-size: 13.5px;
+  }
+
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects__evidence {
+    width: 100%;
+  }
+}

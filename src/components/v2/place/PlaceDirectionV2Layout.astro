@@ -8,9 +8,10 @@ interface Props {
   canonicalPath: string;
   currentPath: string;
   ogImage?: string;
+  variant?: 'landscaping';
 }
 
-const { title, description, canonicalPath, currentPath, ogImage = '' } = Astro.props as Props;
+const { title, description, canonicalPath, currentPath, ogImage = '', variant } = Astro.props as Props;
 ---
 
 <DirectionV2Layout
@@ -21,7 +22,10 @@ const { title, description, canonicalPath, currentPath, ogImage = '' } = Astro.p
   ogImage={ogImage}
   variant="place-commercial"
 >
-  <div class="place-direction-v2" data-place-direction-v2>
+  <div
+    class:list={['place-direction-v2', variant && `place-direction-v2--${variant}`]}
+    data-place-direction-v2
+  >
     <slot />
   </div>
 </DirectionV2Layout>
