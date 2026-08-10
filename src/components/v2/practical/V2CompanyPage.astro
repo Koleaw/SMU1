@@ -4,7 +4,8 @@ import settings from '../../../content/site-settings/global.json';
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 import { loadV2Directions } from '../../../utils/v2Directions';
 import { getV2Regions } from '../../../utils/v2SiteSettings';
-import type { V2MediaRole, V2ProjectMedia, V2ProjectPresentation } from '../mediaRoleAdapter';
+import type { V2ProjectPresentation } from '../mediaRoleAdapter';
+import V2ProjectArchiveGateway from '../projects/V2ProjectArchiveGateway.astro';
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import V2DirectContact from '../V2DirectContact.astro';
 import V2SectionNav from '../V2SectionNav.astro';
@@ -68,39 +69,8 @@ const coverageRegions = regions.filter((region) => region !== settings.city);
 const productionProject = projects.find(
   (item) => item.project.slug === 'kompleks-rabot-na-proizvodstvennoy-territorii'
 );
-const tobolProject = projects.find(
-  (item) => item.project.slug === 'blagoustroystvo-naberezhnoy-reki-tobol'
-);
 const heroMedia = productionProject?.detailHeroMedia;
 const heroPosition = productionProject?.detailHeroPosition ?? '50% 48%';
-
-const selectProofMedia = (
-  presentation: V2ProjectPresentation | undefined,
-  requiredRoles: readonly V2MediaRole[],
-  preferredSource: string,
-  excludedSources: readonly string[] = []
-): V2ProjectMedia | undefined => {
-  const candidates = presentation?.media.filter((media) => (
-    requiredRoles.every((role) => media.roles.includes(role))
-    && !media.roles.includes('excluded')
-    && !media.roles.includes('process')
-    && !media.roles.includes('metalworks')
-    && !excludedSources.includes(media.src)
-  )) ?? [];
-  return candidates.find((media) => media.src === preferredSource) ?? candidates[0];
-};
-
-const productionProofMedia = selectProofMedia(
-  productionProject,
-  ['construction-building', 'finished-result', 'proof'],
-  '/uploads/img-20250724-133811-1783272616313.jpg',
-  heroMedia ? [heroMedia.src] : []
-);
-const tobolProofMedia = selectProofMedia(
-  tobolProject,
-  ['landscaping', 'finished-result', 'proof'],
-  '/uploads/project-248f17177df30b29ab9b231a.jpg'
-);
 
 const sectionNavItems = [
   { id: 'company-overview', label: 'О компании' },
@@ -110,9 +80,12 @@ const sectionNavItems = [
   { id: 'contact', label: 'Контакты' }
 ];
 const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
-const projectsEyebrow = contentValue(proofBlock?.intro, 'Выполненные объекты');
-const projectsTitle = contentValue(proofBlock?.title, 'Реальные объекты показывают широту работы');
-const projectsArchiveLabel = contentValue(proofBlock?.buttonLabel, 'Все выполненные объекты');
+const projectsTitle = contentValue(proofBlock?.title, 'Работы на реальных объектах');
+const projectsDescription = contentValue(
+  proofBlock?.text,
+  'Фотографии и состав выполненных работ собраны в отдельном разделе.'
+);
+const projectsArchiveLabel = contentValue(proofBlock?.buttonLabel, 'Перейти к объектам');
 const directionsEyebrow = contentValue(directionsBlock?.intro, 'Направления');
 const directionsTitle = contentValue(directionsBlock?.title, 'Выберите направление по задаче объекта');
 const detailsEyebrow = contentValue(detailsBlock?.intro, 'География и доверие');
@@ -215,89 +188,14 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
     </div>
   </section>
 
-  {(productionProject || tobolProject) && (
-    <section class="practical-company__projects" id="company-projects" aria-labelledby="company-projects-title">
-      <div class="hv2-shell">
-        <header class="practical-company__section-heading practical-company__section-heading--projects">
-          <div>
-            <p class="hv2-eyebrow">{projectsEyebrow}</p>
-            <h2 id="company-projects-title">{projectsTitle}</h2>
-          </div>
-          <a class="hv2-text-link" href={withBase('/vypolnennye-obekty/')}>{projectsArchiveLabel}</a>
-        </header>
-
-        {productionProject && (
-          <article class:list={[
-            'practical-company__project-story',
-            'practical-company__project-story--production',
-            { 'practical-company__project-story--without-media': !productionProofMedia }
-          ]}>
-            {productionProofMedia && (
-              <a
-                class="practical-company__project-visual practical-company__project-visual--portrait"
-                href={withBase(productionProject.productionRoute)}
-                aria-label={`Открыть объект «${productionProject.project.title}»`}
-                data-v2-media
-              >
-                <img
-                  src={withBase(productionProofMedia.src)}
-                  alt={productionProofMedia.alt}
-                  width="3072"
-                  height="4096"
-                  loading="lazy"
-                  decoding="async"
-                  data-v2-image
-                />
-              </a>
-            )}
-            <div class="practical-company__project-copy">
-              <p class="practical-company__project-meta">
-                {[productionProject.location, productionProject.project.year].filter(Boolean).join(' · ')}
-              </p>
-              <h3>{productionProject.project.title}</h3>
-              <p>{productionProject.project.whatWasDone}</p>
-              <a class="hv2-text-link" href={withBase(productionProject.productionRoute)}>Открыть объект</a>
-            </div>
-          </article>
-        )}
-
-        {tobolProject && (
-          <article class:list={[
-            'practical-company__project-story',
-            'practical-company__project-story--tobol',
-            { 'practical-company__project-story--without-media': !tobolProofMedia }
-          ]}>
-            <div class="practical-company__project-copy">
-              <p class="practical-company__project-meta">
-                {[tobolProject.location, tobolProject.project.year].filter(Boolean).join(' · ')}
-              </p>
-              <h3>{tobolProject.project.title}</h3>
-              <p>{tobolProject.project.whatWasDone}</p>
-              <a class="hv2-text-link" href={withBase(tobolProject.productionRoute)}>Открыть объект</a>
-            </div>
-            {tobolProofMedia && (
-              <a
-                class="practical-company__project-visual practical-company__project-visual--landscape"
-                href={withBase(tobolProject.productionRoute)}
-                aria-label={`Открыть объект «${tobolProject.project.title}»`}
-                data-v2-media
-              >
-                <img
-                  src={withBase(tobolProofMedia.src)}
-                  alt={tobolProofMedia.alt}
-                  width="4096"
-                  height="3072"
-                  loading="lazy"
-                  decoding="async"
-                  data-v2-image
-                />
-              </a>
-            )}
-          </article>
-        )}
-      </div>
-    </section>
-  )}
+  <V2ProjectArchiveGateway
+    variant="company"
+    sectionId="company-projects"
+    title={projectsTitle}
+    description={projectsDescription}
+    ctaLabel={projectsArchiveLabel}
+    excludeSources={heroMedia ? [heroMedia.src] : []}
+  />
 
   <section class="practical-company__directions" id="company-directions" aria-labelledby="company-directions-title">
     <div class="hv2-shell">

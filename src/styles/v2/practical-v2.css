@@ -225,7 +225,6 @@ body.home-v2-body:has(:is(.catalog-v2--company, .practical-v2--contacts, .practi
 }
 
 .practical-company__overview,
-.practical-company__projects,
 .practical-company__directions,
 .practical-company__details {
   scroll-margin-top: calc(var(--hv2-header-height) + var(--hv2-section-nav-height) + 20px);
@@ -329,11 +328,6 @@ body.home-v2-body:has(:is(.catalog-v2--company, .practical-v2--contacts, .practi
   line-height: 1.6;
 }
 
-.practical-company__projects {
-  padding-block: clamp(82px, 9vw, 128px);
-  background: var(--hv2-steel-surface, var(--hv2-secondary-surface));
-}
-
 .practical-company__section-heading {
   max-width: 900px;
   margin-bottom: clamp(46px, 6vw, 78px);
@@ -341,117 +335,6 @@ body.home-v2-body:has(:is(.catalog-v2--company, .practical-v2--contacts, .practi
 
 .practical-company__section-heading .hv2-eyebrow {
   margin-bottom: 14px;
-}
-
-.practical-company__section-heading--projects {
-  display: flex;
-  max-width: none;
-  align-items: end;
-  justify-content: space-between;
-  gap: 36px;
-}
-
-.practical-company__section-heading--projects > div {
-  min-width: 0;
-}
-
-.practical-company__project-story {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  column-gap: 24px;
-  align-items: center;
-}
-
-.practical-company__project-story--production .practical-company__project-visual {
-  grid-column: 1 / 6;
-}
-
-.practical-company__project-story--production .practical-company__project-copy {
-  grid-column: 7 / 13;
-}
-
-.practical-company__project-story--tobol {
-  margin-top: clamp(72px, 9vw, 122px);
-  padding-top: clamp(62px, 7vw, 92px);
-  border-top: 1px solid var(--hv2-border);
-}
-
-.practical-company__project-story--tobol .practical-company__project-copy {
-  grid-column: 1 / 6;
-}
-
-.practical-company__project-story--tobol .practical-company__project-visual {
-  grid-column: 7 / 13;
-}
-
-.practical-company__project-story--without-media .practical-company__project-copy {
-  max-width: 850px;
-  grid-column: 1 / -1;
-}
-
-.practical-company__project-visual {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  color: inherit;
-  background: var(--hv2-contrast);
-}
-
-.practical-company__project-visual--portrait {
-  aspect-ratio: 3 / 4;
-}
-
-.practical-company__project-visual--landscape {
-  aspect-ratio: 4 / 3;
-}
-
-.practical-company__project-visual img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform var(--hv2-motion-standard) var(--hv2-ease);
-}
-
-.practical-company__project-visual:hover img,
-.practical-company__project-visual:focus-visible img {
-  transform: scale(1.018);
-}
-
-.practical-company__project-visual:focus-visible {
-  outline: 3px solid var(--hv2-action);
-  outline-offset: 4px;
-}
-
-.practical-company__project-copy {
-  min-width: 0;
-}
-
-.practical-company__project-meta {
-  color: var(--hv2-action);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.practical-company__project-copy h3 {
-  max-width: 16ch;
-  margin-top: 16px;
-  font-size: clamp(32px, 3.6vw, 50px);
-  line-height: 1.08;
-}
-
-.practical-company__project-copy > p:not(.practical-company__project-meta) {
-  max-width: 650px;
-  margin-top: 24px;
-  color: var(--hv2-text);
-  font-size: clamp(16px, 1.35vw, 19px);
-  line-height: 1.68;
-}
-
-.practical-company__project-copy .hv2-text-link {
-  margin-top: 26px;
 }
 
 .practical-company__directions {
@@ -600,7 +483,7 @@ body.home-v2-body:has(:is(.catalog-v2--company, .practical-v2--contacts, .practi
 }
 
 .home-v2-body .practical-v2--company
-  :where(.practical-company__fact-rail dd, .practical-company__requisites dd, .practical-company__project-copy p) {
+  :where(.practical-company__fact-rail dd, .practical-company__requisites dd) {
   overflow-wrap: anywhere;
 }
 
@@ -635,22 +518,6 @@ body.home-v2-body:has(:is(.catalog-v2--company, .practical-v2--contacts, .practi
 
   .practical-company__fact-rail > div:nth-child(3) {
     padding-left: 0;
-  }
-
-  .practical-company__project-story {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 38px;
-  }
-
-  .practical-company__project-story--production .practical-company__project-visual,
-  .practical-company__project-story--production .practical-company__project-copy,
-  .practical-company__project-story--tobol .practical-company__project-copy,
-  .practical-company__project-story--tobol .practical-company__project-visual {
-    grid-column: 1;
-  }
-
-  .practical-company__project-story--production .practical-company__project-visual {
-    width: min(72vw, 560px);
   }
 
   .practical-company__direction-index a {
@@ -713,7 +580,6 @@ body.home-v2-body:has(:is(.catalog-v2--company, .practical-v2--contacts, .practi
   }
 
   .practical-company__overview,
-  .practical-company__projects,
   .practical-company__directions,
   .practical-company__details {
     padding-block: 62px;
@@ -769,38 +635,6 @@ body.home-v2-body:has(:is(.catalog-v2--company, .practical-v2--contacts, .practi
 
   .practical-company__section-heading {
     margin-bottom: 38px;
-  }
-
-  .practical-company__section-heading--projects {
-    display: grid;
-    align-items: start;
-    gap: 18px;
-  }
-
-  .practical-company__project-story {
-    gap: 28px;
-  }
-
-  .practical-company__project-story--production .practical-company__project-visual {
-    width: 100%;
-  }
-
-  .practical-company__project-story--tobol {
-    margin-top: 60px;
-    padding-top: 50px;
-  }
-
-  .practical-company__project-copy h3 {
-    max-width: none;
-    margin-top: 12px;
-    font-size: 28px;
-    line-height: 1.13;
-    hyphens: auto;
-  }
-
-  .practical-company__project-copy > p:not(.practical-company__project-meta) {
-    margin-top: 18px;
-    font-size: 16px;
   }
 
   .practical-company__direction-index li.practical-company__direction-break {
@@ -861,13 +695,9 @@ body.home-v2-body:has(:is(.catalog-v2--company, .practical-v2--contacts, .practi
     font-size: 14px;
   }
 
-  .practical-company__project-copy h3 {
-    font-size: 26px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .practical-company__project-visual img,
   .practical-company__direction-index a,
   .practical-company__direction-index a::after {
     transition: none;

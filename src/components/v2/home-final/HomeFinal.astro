@@ -7,12 +7,11 @@ import { getV2Regions, getV2TelegramLabel } from '../../../utils/v2SiteSettings'
 import HomeV2Footer from '../home-v2/HomeV2Footer.astro';
 import HomeV2Header from '../home-v2/HomeV2Header.astro';
 import { getHomeV2Presentation } from '../home-v2/homeV2Presentation';
-import HomeFinalProjects from './HomeFinalProjects.astro';
+import V2ProjectArchiveGateway from '../projects/V2ProjectArchiveGateway.astro';
 import '../../../styles/v2/home-final.css';
 
 const path = (value: string) => v2Href(value, Astro.url.pathname);
 const copy = getHomeV2Presentation(home);
-const projectsDescription = `${copy.projectsDescription.split('.')[0]?.trim()}.`;
 const regionLine = getV2Regions(settings).join(' · ');
 const telegramLabel = getV2TelegramLabel(settings);
 const directionBySlug = new Map(
@@ -165,18 +164,13 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
       </div>
     </section>
 
-    <section class="hf-projects" id="projects" aria-labelledby="home-final-projects-title">
-      <div class="hf-shell hf-shell--editorial">
-        <header class="hf-projects__head" data-reveal>
-          <div>
-            <p class="hf-eyebrow hf-eyebrow--light">Реальные работы</p>
-            <h2 id="home-final-projects-title">{copy.projectsEyebrow}</h2>
-          </div>
-          <p>{projectsDescription}</p>
-        </header>
-        <HomeFinalProjects />
-      </div>
-    </section>
+    <V2ProjectArchiveGateway
+      variant="home"
+      sectionId="projects"
+      title={copy.projectsEyebrow}
+      description={copy.projectsDescription}
+      ctaLabel="Смотреть все объекты"
+    />
 
     <section class="hf-intake" id="brief" aria-labelledby="home-final-intake-title">
       <div class="hf-shell hf-shell--editorial hf-intake__layout">

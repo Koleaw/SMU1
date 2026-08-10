@@ -84,7 +84,7 @@ export const getHomeV2Presentation = (source: HomeV2Source) => {
     projectsDescription: approvedUntilEdited(
       source.trustText,
       legacy.trustText,
-      'Городской объект, отдельная конструкция и подтверждённый строительный результат. В каждой карточке сохранён просмотр нескольких кадров.'
+      'Реальные работы СМУ-1 на общественных, коммерческих и производственных площадках собраны в отдельном разделе.'
     ),
     contactTitle: approvedUntilEdited(source.contactTitle, legacy.contactTitle, 'Обсудим ваш объект или конструкцию'),
     contactDescription: approvedUntilEdited(
