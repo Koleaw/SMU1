@@ -9,20 +9,22 @@
   "menuTitle": "О нас",
   "showBadge": true,
   "heroKicker": "О компании",
-  "heroTitle": "СМУ-1 делает прикладные решения под задачу объекта",
-  "heroDescription": "Изготавливаем изделия, металлоконструкции и элементы благоустройства, подбираем конструктив под условия площадки и сопровождаем реализацию на объекте.",
+  "heroTitle": "Соединяем производство, конструкции и работу на объекте",
+  "heroDescription": "СМУ-1 изготавливает изделия и металлоконструкции, выполняет благоустройство, строительные и монтажные работы для коммерческих, общественных и производственных объектов.",
+  "heroPrimaryLabel": "Смотреть выполненные объекты",
+  "heroSecondaryLabel": "Обсудить задачу",
   "image": "/assets/images/placeholders/metal-business.svg",
   "heroMediaPoster": "/assets/images/placeholders/metal-business.svg",
   "heroMediaVideo": "",
   "heroMediaVideoMobile": "",
   "heroOverlayOpacity": 62,
-  "contactTitle": "Нужна команда под задачу объекта?",
-  "contactDescription": "Напишите нам, и мы уточним исходные данные, состав работ и подготовим понятный следующий шаг.",
+  "contactTitle": "Обсудим задачу для вашего объекта",
+  "contactDescription": "Пришлите фотографию, размеры, эскиз, чертёж, ТЗ или краткое описание задачи. Уточним исходные данные и состав работ.",
   "pageBlocks": [
     {
       "type": "whoWeAre",
-      "sectionId": "about-who",
-      "title": "Кто мы",
+      "sectionId": "company-overview",
+      "title": "Работаем на стыке цеха и площадки",
       "text": "СМУ-1 работает на стыке производства, металлоконструкций, благоустройства и прикладных работ на объектах. Мы не ограничиваемся одной товарной линейкой: подбираем решение под назначение площадки, размеры, основание, внешний вид и условия эксплуатации.",
       "theme": "light",
       "media": "/assets/images/placeholders/construction.svg",
@@ -34,17 +36,17 @@
     },
     {
       "type": "directionCards",
-      "sectionId": "about-do",
-      "title": "Что делаем",
-      "intro": "Берем задачи, где важны конструктив, изготовление и практичная реализация на объекте.",
+      "sectionId": "company-capabilities",
+      "title": "Основные возможности компании",
+      "intro": "Производство и работа на площадке соединяются в составе конкретной задачи объекта.",
       "theme": "light",
       "grid": "3",
       "isActive": true,
       "order": 20,
       "items": [
         {
-          "title": "Изделия и МАФ",
-          "text": "Лавки, урны, вазоны, велопарковки, перголы и другие элементы благоустройства.",
+          "title": "Изготовление",
+          "text": "Изделия и элементы благоустройства по типовым решениям и под исходные данные конкретного объекта.",
           "image": "/assets/images/placeholders/street-furniture.svg",
           "buttonLabel": "Смотреть направления",
           "buttonHref": "/ulichnaya-mebel/",
@@ -52,8 +54,8 @@
           "isActive": true
         },
         {
-          "title": "Металлоконструкции",
-          "text": "Каркасы, рамы, опоры, площадки, лестницы и нестандартные конструкции по задаче.",
+          "title": "Конструкции",
+          "text": "Металлические каркасы, рамы, ограждения, навесы и отдельные узлы — в согласованном составе.",
           "image": "/assets/images/placeholders/metal-business.svg",
           "buttonLabel": "Подробнее",
           "buttonHref": "/metallokonstruktsii-dlya-biznesa/",
@@ -61,8 +63,8 @@
           "isActive": true
         },
         {
-          "title": "Благоустройство и монтаж",
-          "text": "Комплектуем территории, входные группы, хозяйственные зоны и общественные пространства.",
+          "title": "Работы на площадке",
+          "text": "Благоустройство, монтаж, строительные и ремонтные работы в рамках конкретной задачи.",
           "image": "/assets/images/placeholders/landscaping.svg",
           "buttonLabel": "Подробнее",
           "buttonHref": "/blagoustroystvo-territoriy/",
@@ -70,6 +72,31 @@
           "isActive": true
         }
       ]
+    },
+    {
+      "type": "companyProof",
+      "sectionId": "company-projects",
+      "title": "Реальные объекты показывают широту работы",
+      "intro": "Выполненные объекты",
+      "buttonLabel": "Все выполненные объекты",
+      "isActive": true,
+      "order": 21
+    },
+    {
+      "type": "companyDirections",
+      "sectionId": "company-directions",
+      "title": "Выберите направление по задаче объекта",
+      "intro": "Направления",
+      "isActive": true,
+      "order": 22
+    },
+    {
+      "type": "companyDetails",
+      "sectionId": "company-details",
+      "title": "География и реквизиты",
+      "intro": "География и доверие",
+      "isActive": true,
+      "order": 23
     },
     {
       "type": "process",
@@ -109,7 +136,8 @@
       "title": "Обсудим задачу?",
       "text": "Свяжемся, уточним задачу и подготовим расчет.",
       "theme": "light",
-      "buttonLabel": "Перейти к контактам",
+      "buttonLabel": "Получить расчёт",
+      "secondaryButtonLabel": "Позвонить",
       "buttonHref": "/kontakty/",
       "isActive": true,
       "order": 40

@@ -274,11 +274,6 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-.practical-company__direction-list a {
-  grid-template-columns: minmax(0, 1fr);
-  min-height: 82px;
-}
-
 .practical-contacts__brief ul {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -405,7 +400,6 @@
   padding: 22px;
 }
 
-.practical-company__tasks,
 .practical-contacts__details,
 .practical-vacancies__list {
   background: var(--hv2-warm-neutral);

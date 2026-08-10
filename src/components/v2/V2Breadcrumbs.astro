@@ -9,9 +9,10 @@ interface BreadcrumbItem {
 
 interface Props {
   items: BreadcrumbItem[];
+  variant?: 'default' | 'overlay';
 }
 
-const { items } = Astro.props as Props;
+const { items, variant = 'default' } = Astro.props as Props;
 const publicItems = items.map((item) => ({
   ...item,
   title: item.title === 'Главная V2' ? 'Главная' : item.title
@@ -29,8 +30,8 @@ const schema = {
 };
 ---
 
-<div class="v2-breadcrumbs-bar">
-  <div class="hv2-shell">
+<div class:list={['v2-breadcrumbs-bar', { 'v2-breadcrumbs-bar--overlay': variant === 'overlay' }]}>
+  <div class={variant === 'default' ? 'hv2-shell' : undefined}>
     <nav class="v2-breadcrumbs" aria-label="Хлебные крошки">
       <ol>
         {publicItems.map((item, index) => (

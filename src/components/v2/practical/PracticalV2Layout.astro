@@ -11,6 +11,8 @@ interface Props {
   kind: 'company' | 'contacts' | 'vacancies' | 'vacancy' | 'legal';
   contactHref?: string;
   ctaLabel?: string;
+  headerMode?: 'overlay' | 'light';
+  catalogRootClass?: string;
 }
 
 const {
@@ -21,7 +23,9 @@ const {
   ogImage = '',
   kind,
   contactHref = '/design-lab/v2/kontakty/',
-  ctaLabel = 'Связаться'
+  ctaLabel = 'Связаться',
+  headerMode = 'light',
+  catalogRootClass = ''
 } = Astro.props as Props;
 ---
 
@@ -35,6 +39,8 @@ const {
   contactHref={contactHref}
   mobileCtaLabel={ctaLabel}
   headerCtaLabel={ctaLabel}
+  headerMode={headerMode}
+  rootClass={catalogRootClass}
 >
   <div class:list={['practical-v2', `practical-v2--${kind}`]} data-practical-v2-root>
     <slot />

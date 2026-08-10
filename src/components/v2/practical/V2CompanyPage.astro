@@ -4,10 +4,10 @@ import settings from '../../../content/site-settings/global.json';
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 import { loadV2Directions } from '../../../utils/v2Directions';
 import { getV2Regions } from '../../../utils/v2SiteSettings';
-const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
-import type { V2ProjectPresentation } from '../mediaRoleAdapter';
+import type { V2MediaRole, V2ProjectMedia, V2ProjectPresentation } from '../mediaRoleAdapter';
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import V2DirectContact from '../V2DirectContact.astro';
+import V2SectionNav from '../V2SectionNav.astro';
 
 interface Props {
   page: CollectionEntry<'static-pages'>['data'];
@@ -21,206 +21,340 @@ type AboutCard = {
   isActive?: boolean;
 };
 
-const { page, projects } = Astro.props as Props;
-const approvedUntilEdited = (current: string | undefined, legacy: string, approved: string) => {
-  const value = current?.trim() ?? '';
-  return value === legacy ? approved : (value || approved);
+type AboutBlock = AboutCard & {
+  type: string;
+  intro?: string;
+  buttonLabel?: string;
+  secondaryButtonLabel?: string;
+  items?: unknown[];
 };
-const companyHeroTitle = approvedUntilEdited(
+
+const { page, projects } = Astro.props as Props;
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+const contentValue = (value: string | undefined, fallback: string) => value?.trim() || fallback;
+
+const heroKicker = contentValue(page.heroKicker, 'О компании');
+const heroTitle = contentValue(
   page.heroTitle,
-  'СМУ-1 делает прикладные решения под задачу объекта',
-  'Изделия, конструкции и работы под задачу объекта'
+  'Соединяем производство, конструкции и работу на объекте'
 );
-const companyContactTitle = approvedUntilEdited(
-  page.contactTitle,
-  'Нужна команда под задачу объекта?',
-  'Обсудим задачу и подготовим расчёт'
+const heroDescription = contentValue(
+  page.heroDescription,
+  'СМУ-1 изготавливает изделия и металлоконструкции, выполняет благоустройство, строительные и монтажные работы для коммерческих, общественных и производственных объектов.'
 );
-const companyContactDescription = approvedUntilEdited(
+const heroPrimaryLabel = contentValue(page.heroPrimaryLabel, 'Смотреть выполненные объекты');
+const heroSecondaryLabel = contentValue(page.heroSecondaryLabel, 'Обсудить задачу');
+const contactTitle = contentValue(page.contactTitle, 'Обсудим задачу для вашего объекта');
+const contactDescription = contentValue(
   page.contactDescription,
-  'Напишите нам, и мы уточним исходные данные, состав работ и подготовим понятный следующий шаг.',
-  'Напишите или позвоните: уточним исходные данные и подходящий следующий шаг.'
+  'Пришлите фотографию, размеры, эскиз, чертёж, ТЗ или краткое описание задачи. Уточним исходные данные и состав работ.'
 );
-const whoBlock = page.pageBlocks?.find((block) => block.type === 'whoWeAre' && block.isActive !== false);
-const directionsBlock = page.pageBlocks?.find((block) => block.type === 'directionCards' && block.isActive !== false);
-const aboutCards = ((directionsBlock?.items ?? []) as AboutCard[])
+
+const pageBlocks = (page.pageBlocks ?? []) as AboutBlock[];
+const whoBlock = pageBlocks.find((block) => block.type === 'whoWeAre' && block.isActive !== false);
+const capabilitiesBlock = pageBlocks.find((block) => block.type === 'directionCards' && block.isActive !== false);
+const proofBlock = pageBlocks.find((block) => block.type === 'companyProof' && block.isActive !== false);
+const directionsBlock = pageBlocks.find((block) => block.type === 'companyDirections' && block.isActive !== false);
+const detailsBlock = pageBlocks.find((block) => block.type === 'companyDetails' && block.isActive !== false);
+const contactBlock = pageBlocks.find((block) => block.type === 'cta' && block.isActive !== false);
+const capabilities = ((capabilitiesBlock?.items ?? []) as AboutCard[])
   .filter((item) => item.isActive !== false && item.title?.trim() && item.text?.trim())
   .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-const directionLinks = (await loadV2Directions()).map((item) => ({ label: item.title, href: item.href }));
+const directions = await loadV2Directions();
 const regions = getV2Regions(settings);
+const coverageRegions = regions.filter((region) => region !== settings.city);
 
-const visibleProjects = projects.filter((item) => item.detailHeroMedia).slice(0, 2);
-const heroFrames = visibleProjects.map((item) => ({
-  media: item.detailHeroMedia!,
-  position: item.detailHeroPosition
-}));
+const productionProject = projects.find(
+  (item) => item.project.slug === 'kompleks-rabot-na-proizvodstvennoy-territorii'
+);
+const tobolProject = projects.find(
+  (item) => item.project.slug === 'blagoustroystvo-naberezhnoy-reki-tobol'
+);
+const heroMedia = productionProject?.detailHeroMedia;
+const heroPosition = productionProject?.detailHeroPosition ?? '50% 48%';
+
+const selectProofMedia = (
+  presentation: V2ProjectPresentation | undefined,
+  requiredRoles: readonly V2MediaRole[],
+  preferredSource: string,
+  excludedSources: readonly string[] = []
+): V2ProjectMedia | undefined => {
+  const candidates = presentation?.media.filter((media) => (
+    requiredRoles.every((role) => media.roles.includes(role))
+    && !media.roles.includes('excluded')
+    && !media.roles.includes('process')
+    && !media.roles.includes('metalworks')
+    && !excludedSources.includes(media.src)
+  )) ?? [];
+  return candidates.find((media) => media.src === preferredSource) ?? candidates[0];
+};
+
+const productionProofMedia = selectProofMedia(
+  productionProject,
+  ['construction-building', 'finished-result', 'proof'],
+  '/uploads/img-20250724-133811-1783272616313.jpg',
+  heroMedia ? [heroMedia.src] : []
+);
+const tobolProofMedia = selectProofMedia(
+  tobolProject,
+  ['landscaping', 'finished-result', 'proof'],
+  '/uploads/project-248f17177df30b29ab9b231a.jpg'
+);
+
+const sectionNavItems = [
+  { id: 'company-overview', label: 'О компании' },
+  { id: 'company-projects', label: 'Выполненные объекты' },
+  { id: 'company-directions', label: 'Направления' },
+  { id: 'company-details', label: 'Реквизиты' },
+  { id: 'contact', label: 'Контакты' }
+];
+const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
+const projectsEyebrow = contentValue(proofBlock?.intro, 'Выполненные объекты');
+const projectsTitle = contentValue(proofBlock?.title, 'Реальные объекты показывают широту работы');
+const projectsArchiveLabel = contentValue(proofBlock?.buttonLabel, 'Все выполненные объекты');
+const directionsEyebrow = contentValue(directionsBlock?.intro, 'Направления');
+const directionsTitle = contentValue(directionsBlock?.title, 'Выберите направление по задаче объекта');
+const detailsEyebrow = contentValue(detailsBlock?.intro, 'География и доверие');
+const detailsTitle = contentValue(detailsBlock?.title, 'География и реквизиты');
+const contactPrimaryLabel = contentValue(contactBlock?.buttonLabel, 'Получить расчёт');
+const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, 'Позвонить');
 ---
 
-<V2Breadcrumbs items={[
-  { title: 'Главная', href: '/design-lab/home-v2/' },
-  { title: 'О компании' }
-]} />
-
 <article class="practical-company">
-  <header class="practical-hero practical-company__hero">
-    <div class="hv2-shell practical-hero__grid">
-      <div class="practical-hero__copy" data-v2-reveal>
-        <p class="hv2-eyebrow">{page.heroKicker || 'О компании'}</p>
-        <h1>{companyHeroTitle}</h1>
-        {page.heroDescription && <p class="practical-hero__lead">{page.heroDescription}</p>}
-        <a class="hv2-text-link" href="#company-directions">
-          Перейти к направлениям
-        </a>
+  <header
+    class="practical-company__hero"
+    data-hv2-hero
+    style={`--company-hero-position: ${heroPosition};`}
+  >
+    {heroMedia && (
+      <img
+        class="practical-company__hero-image"
+        src={withBase(heroMedia.src)}
+        alt={heroMedia.alt}
+        width="4096"
+        height="3072"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+        data-v2-image
+      />
+    )}
+    <div class="practical-company__hero-edge" aria-hidden="true"></div>
+
+    <div class="hv2-shell practical-company__hero-inner">
+      <div class="practical-company__breadcrumbs">
+        <V2Breadcrumbs
+          variant="overlay"
+          items={[
+            { title: 'Главная', href: '/design-lab/home-v2/' },
+            { title: 'О компании' }
+          ]}
+        />
       </div>
 
-      {heroFrames.length > 0 && (
-        <div class="practical-company__hero-media" data-v2-reveal>
-          {heroFrames.map((frame, index) => (
-            <figure class:list={['practical-company__hero-frame', { 'practical-company__hero-frame--secondary': index === 1 }]} data-v2-media>
-              <img
-                src={withBase(frame.media.src)}
-                alt={frame.media.alt}
-                width="1600"
-                height="1200"
-                loading="eager"
-                fetchpriority={index === 0 ? 'high' : 'auto'}
-                decoding="async"
-                style={`object-position: ${frame.position};`}
-                data-v2-image
-              />
-            </figure>
-          ))}
+      <div class="practical-company__hero-copy">
+        <p class="hv2-eyebrow hv2-eyebrow--light">{heroKicker}</p>
+        <h1>{heroTitle}</h1>
+        <p class="practical-company__hero-lead">{heroDescription}</p>
+        <div class="hv2-actions practical-company__hero-actions">
+          <a class="hv2-button hv2-button--light" href="#company-projects">
+            {heroPrimaryLabel}
+          </a>
+          <a class="hv2-button hv2-button--ghost" href="#contact">
+            {heroSecondaryLabel}
+          </a>
         </div>
-      )}
+      </div>
     </div>
   </header>
 
-  <section class="practical-company__intro" aria-labelledby="company-intro-title">
-    <div class="hv2-shell practical-company__intro-grid">
-      <div data-v2-reveal>
-        <p class="hv2-eyebrow">{whoBlock?.title || page.title}</p>
-        <h2 id="company-intro-title">Изделия, конструкции и работы для объекта</h2>
-      </div>
-      <div class="practical-company__intro-copy" data-v2-reveal>
-        {whoBlock?.text && <p>{whoBlock.text}</p>}
-        <p>{page.seoDescription}</p>
-      </div>
-    </div>
-  </section>
+  <V2SectionNav items={sectionNavItems} label="Навигация по странице о компании" />
 
-  <section class="practical-company__directions" id="company-directions" aria-labelledby="company-directions-title">
+  <section class="practical-company__overview" id="company-overview" aria-labelledby="company-overview-title">
     <div class="hv2-shell">
-      <header class="practical-section-heading" data-v2-reveal>
-        <p class="hv2-eyebrow">Основные направления</p>
-        <h2 id="company-directions-title">Выбрать раздел по задаче</h2>
-        <p>Каталог изделий, конструкции под объект, благоустройство и строительные работы собраны в отдельных разделах.</p>
-      </header>
-      <nav class="practical-company__direction-list" aria-label="Направления СМУ-1">
-        {directionLinks.map((item) => (
-          <a href={withBase(item.href)} data-v2-reveal>
-            <strong>{item.label}</strong>
-          </a>
-        ))}
-      </nav>
-    </div>
-  </section>
+      <div class="practical-company__overview-intro">
+        <h2 id="company-overview-title">
+          {contentValue(whoBlock?.title, 'Работаем на стыке цеха и площадки')}
+        </h2>
+        <p>{contentValue(
+          whoBlock?.text,
+          'СМУ-1 работает на стыке производства, металлоконструкций, благоустройства и прикладных работ на объектах. Мы не ограничиваемся одной товарной линейкой: подбираем решение под назначение площадки, размеры, основание, внешний вид и условия эксплуатации.'
+        )}</p>
+      </div>
 
-  {(aboutCards.length > 0 || regions.length > 0) && (
-    <section class="practical-company__tasks" aria-labelledby="company-tasks-title">
-      <div class="hv2-shell">
-        <header class="practical-section-heading" data-v2-reveal>
-          <p class="hv2-eyebrow">Задачи и территория работ</p>
-          <h2 id="company-tasks-title">С чем можно обратиться</h2>
-        </header>
-        <div class="practical-company__task-grid">
-          {aboutCards.map((item) => (
-            <article data-v2-reveal>
+      <dl class="practical-company__fact-rail" aria-label="Проверенные сведения о компании">
+        <div>
+          <dt>Компания</dt>
+          <dd>{settings.companyName}</dd>
+        </div>
+        <div>
+          <dt>Город</dt>
+          <dd>{settings.city}</dd>
+        </div>
+        <div>
+          <dt>Регистрация</dt>
+          <dd>Зарегистрировано {settings.registrationDate}</dd>
+        </div>
+        <div>
+          <dt>География</dt>
+          <dd>{coverageRegions.join(' · ')}</dd>
+        </div>
+      </dl>
+
+      {capabilities.length > 0 && (
+        <div class="practical-company__capabilities" aria-label="Основные возможности компании">
+          {capabilities.map((item) => (
+            <article>
               <h3>{item.title}</h3>
               <p>{item.text}</p>
             </article>
           ))}
-          <article class="practical-company__regions" data-v2-reveal>
-            <h3>География</h3>
-            <ul>
-              {regions.map((region) => <li>{region}</li>)}
-            </ul>
-          </article>
         </div>
-      </div>
-    </section>
-  )}
+      )}
+    </div>
+  </section>
 
-  {visibleProjects.length > 0 && (
-    <section class="practical-company__projects" aria-labelledby="company-projects-title">
+  {(productionProject || tobolProject) && (
+    <section class="practical-company__projects" id="company-projects" aria-labelledby="company-projects-title">
       <div class="hv2-shell">
-        <header class="practical-section-heading practical-section-heading--split" data-v2-reveal>
+        <header class="practical-company__section-heading practical-company__section-heading--projects">
           <div>
-            <p class="hv2-eyebrow">Выполненные объекты</p>
-            <h2 id="company-projects-title">Результат можно посмотреть в деталях</h2>
+            <p class="hv2-eyebrow">{projectsEyebrow}</p>
+            <h2 id="company-projects-title">{projectsTitle}</h2>
           </div>
-          <a class="hv2-text-link" href={withBase('/design-lab/v2/vypolnennye-obekty/')}>
-            Все объекты
-          </a>
+          <a class="hv2-text-link" href={withBase('/vypolnennye-obekty/')}>{projectsArchiveLabel}</a>
         </header>
-        <div class="practical-company__project-grid">
-          {visibleProjects.map((item) => (
-            <article data-v2-project-card data-v2-reveal>
+
+        {productionProject && (
+          <article class:list={[
+            'practical-company__project-story',
+            'practical-company__project-story--production',
+            { 'practical-company__project-story--without-media': !productionProofMedia }
+          ]}>
+            {productionProofMedia && (
               <a
-                class="practical-company__project-link"
-                href={withBase(item.v2Route)}
-                aria-label={`Открыть объект «${item.project.title}»`}
+                class="practical-company__project-visual practical-company__project-visual--portrait"
+                href={withBase(productionProject.productionRoute)}
+                aria-label={`Открыть объект «${productionProject.project.title}»`}
+                data-v2-media
               >
-                <div class="practical-company__project-media" data-v2-media>
-                  <img
-                    src={withBase(item.detailHeroMedia!.src)}
-                    alt={item.detailHeroMedia!.alt}
-                    width="1200"
-                    height="800"
-                    loading="eager"
-                    decoding="async"
-                    style={`object-position: ${item.detailHeroPosition};`}
-                    data-v2-image
-                  />
-                </div>
-                <div class="practical-company__project-copy">
-                  <p>{[item.location, item.project.year].filter(Boolean).join(' · ')}</p>
-                  <h3>{item.project.title}</h3>
-                  <span>{item.project.shortDescription}</span>
-                </div>
+                <img
+                  src={withBase(productionProofMedia.src)}
+                  alt={productionProofMedia.alt}
+                  width="3072"
+                  height="4096"
+                  loading="lazy"
+                  decoding="async"
+                  data-v2-image
+                />
               </a>
-            </article>
-          ))}
-        </div>
+            )}
+            <div class="practical-company__project-copy">
+              <p class="practical-company__project-meta">
+                {[productionProject.location, productionProject.project.year].filter(Boolean).join(' · ')}
+              </p>
+              <h3>{productionProject.project.title}</h3>
+              <p>{productionProject.project.whatWasDone}</p>
+              <a class="hv2-text-link" href={withBase(productionProject.productionRoute)}>Открыть объект</a>
+            </div>
+          </article>
+        )}
+
+        {tobolProject && (
+          <article class:list={[
+            'practical-company__project-story',
+            'practical-company__project-story--tobol',
+            { 'practical-company__project-story--without-media': !tobolProofMedia }
+          ]}>
+            <div class="practical-company__project-copy">
+              <p class="practical-company__project-meta">
+                {[tobolProject.location, tobolProject.project.year].filter(Boolean).join(' · ')}
+              </p>
+              <h3>{tobolProject.project.title}</h3>
+              <p>{tobolProject.project.whatWasDone}</p>
+              <a class="hv2-text-link" href={withBase(tobolProject.productionRoute)}>Открыть объект</a>
+            </div>
+            {tobolProofMedia && (
+              <a
+                class="practical-company__project-visual practical-company__project-visual--landscape"
+                href={withBase(tobolProject.productionRoute)}
+                aria-label={`Открыть объект «${tobolProject.project.title}»`}
+                data-v2-media
+              >
+                <img
+                  src={withBase(tobolProofMedia.src)}
+                  alt={tobolProofMedia.alt}
+                  width="4096"
+                  height="3072"
+                  loading="lazy"
+                  decoding="async"
+                  data-v2-image
+                />
+              </a>
+            )}
+          </article>
+        )}
       </div>
     </section>
   )}
 
-  <section class="practical-company__legal" aria-labelledby="company-legal-title">
-    <div class="hv2-shell practical-company__legal-grid">
-      <div data-v2-reveal>
-        <p class="hv2-eyebrow">Юридическая информация</p>
-        <h2 id="company-legal-title">{settings.companyName}</h2>
-        <a class="hv2-text-link" href={withBase('/design-lab/v2/politika-konfidencialnosti/')}>
-          Политика конфиденциальности
-        </a>
+  <section class="practical-company__directions" id="company-directions" aria-labelledby="company-directions-title">
+    <div class="hv2-shell">
+      <header class="practical-company__section-heading">
+        <p class="hv2-eyebrow">{directionsEyebrow}</p>
+        <h2 id="company-directions-title">{directionsTitle}</h2>
+      </header>
+      <nav class="practical-company__direction-index" aria-label="Направления работы СМУ-1">
+        <ul role="list">
+          {directions.map((item, index) => (
+            <li class:list={{ 'practical-company__direction-break': index === 5 }}>
+              <a href={withBase(item.href)}>
+                <strong>{item.title}</strong>
+                <span>{item.description}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  </section>
+
+  <section class="practical-company__details" id="company-details" aria-labelledby="company-details-title">
+    <div class="hv2-shell practical-company__details-grid">
+      <div class="practical-company__details-intro">
+        <p class="hv2-eyebrow">{detailsEyebrow}</p>
+        <h2 id="company-details-title">{detailsTitle}</h2>
+        <p class="practical-company__details-company">{settings.companyName}</p>
+        <p>{settings.city}</p>
+        <address>{settings.address}</address>
+        <ul aria-label="Регионы работы">
+          {coverageRegions.map((region) => <li>{region}</li>)}
+        </ul>
+        <div class="practical-company__details-links">
+          <a class="hv2-text-link" href={withBase('/kontakty/')}>Контакты</a>
+          <a class="hv2-text-link" href={withBase('/politika-konfidencialnosti/')}>Политика конфиденциальности</a>
+        </div>
       </div>
-      <dl data-v2-reveal>
+
+      <dl class="practical-company__requisites">
+        <div><dt>Компания</dt><dd>{settings.companyName}</dd></div>
         <div><dt>ИНН</dt><dd>{settings.inn}</dd></div>
         <div><dt>КПП</dt><dd>{settings.kpp}</dd></div>
         <div><dt>ОГРН</dt><dd>{settings.ogrn}</dd></div>
         <div><dt>Дата регистрации</dt><dd>{settings.registrationDate}</dd></div>
         <div><dt>Юридический адрес</dt><dd>{settings.legalAddress}</dd></div>
+        <div><dt>Контактный адрес</dt><dd>{settings.address}</dd></div>
       </dl>
     </div>
   </section>
 
   <V2DirectContact
     eyebrow="Прямая связь"
-    title={companyContactTitle}
-    description={companyContactDescription}
-    primaryLabel="Получить расчёт"
-    secondaryLabel="Связаться с нами"
-    secondaryHref="/design-lab/v2/kontakty/"
+    title={contactTitle}
+    description={contactDescription}
+    primaryLabel={contactPrimaryLabel}
+    secondaryLabel={contactSecondaryLabel}
+    secondaryHref={phoneHref}
   />
 </article>

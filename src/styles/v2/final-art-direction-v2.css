@@ -897,11 +897,6 @@
   grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr);
 }
 
-.practical-company__project-link {
-  display: block;
-  height: 100%;
-}
-
 .project-proof__featured,
 .project-proof-card,
 .hv2-project {
@@ -917,26 +912,20 @@
 
 .v2-project-card__body,
 .v2-project-card__media,
-.hv2-project__gallery,
-.practical-company__project-copy,
-.practical-company__project-media {
+.hv2-project__gallery {
   position: relative;
 }
 
 .v2-project-card__body,
 .v2-project-card__media,
-.hv2-project__body,
-.practical-company__project-copy,
-.practical-company__project-media {
+.hv2-project__body {
   pointer-events: none;
 }
 
 .v2-project-card__body :where(a, button),
 .v2-project-card__media :where(a, button),
 .hv2-project__body :where(a, button),
-.hv2-project__gallery :where(a, button),
-.practical-company__project-copy :where(a, button),
-.practical-company__project-media :where(a, button) {
+.hv2-project__gallery :where(a, button) {
   position: relative;
   z-index: 4;
   pointer-events: auto;
@@ -1033,28 +1022,9 @@
   word-break: normal;
 }
 
-.practical-company__hero {
-  min-height: clamp(480px, 56svh, 620px);
-  display: grid;
-  align-items: center;
-  background: linear-gradient(90deg, #ffffff 0 52%, var(--hv2-steel-surface) 52% 100%);
-}
-
 .practical-hero h1,
 .practical-vacancy__hero h1 {
   font-size: clamp(50px, 5.45vw, 80px);
-}
-
-.practical-company__task-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.practical-company__task-grid article {
-  min-height: 0;
-}
-
-.practical-company__project-grid article {
-  position: relative;
 }
 
 .practical-contacts__method-grid {
@@ -1090,7 +1060,6 @@
 }
 
 .practical-contacts__details,
-.practical-company__tasks,
 .practical-vacancies__list {
   background: var(--hv2-steel-surface);
 }
@@ -1812,12 +1781,6 @@
     aspect-ratio: 16 / 10;
   }
 
-  .practical-company__hero {
-    min-height: clamp(420px, 55svh, 520px);
-    background: #ffffff;
-  }
-
-  .practical-company__task-grid,
   .practical-vacancies__cards--single .practical-vacancy-card {
     grid-template-columns: 1fr;
   }
@@ -5080,106 +5043,6 @@ body.home-v2-body:has(.projects-v2--archive) {
   max-width: none;
 }
 
-/* Company: retain both objects, remove the washed-out media field. */
-
-.home-v2-body .practical-v2--company .practical-company__hero {
-  min-height: 600px;
-  background: linear-gradient(90deg, #ffffff 0 52%, var(--hv2-contrast) 52% 100%);
-}
-
-.home-v2-body .practical-v2--company .practical-company__hero .practical-hero__grid {
-  min-height: 600px;
-  padding-block: 42px;
-}
-
-.home-v2-body .practical-v2--company .practical-company__hero h1 {
-  max-width: 11.5ch;
-  font-size: clamp(50px, 4.9vw, 70px);
-}
-
-.home-v2-body .practical-v2--company .practical-company__hero-media {
-  display: grid;
-  height: 510px;
-  grid-template-columns: minmax(0, 3fr) minmax(130px, 1fr);
-  gap: 12px;
-  align-content: stretch;
-}
-
-.home-v2-body .practical-v2--company .practical-company__hero-frame,
-.home-v2-body .practical-v2--company .practical-company__hero-frame--secondary {
-  width: auto;
-  height: 100%;
-  margin: 0;
-  border: 0;
-  background: var(--hv2-contrast);
-}
-
-.home-v2-body .practical-v2--company .practical-company__hero-frame img {
-  height: 100%;
-  aspect-ratio: auto;
-  object-fit: cover;
-}
-
-.home-v2-body .practical-v2--company .practical-company__intro,
-.home-v2-body .practical-v2--company .practical-company__directions,
-.home-v2-body .practical-v2--company .practical-company__tasks,
-.home-v2-body .practical-v2--company .practical-company__projects,
-.home-v2-body .practical-v2--company .practical-company__legal {
-  padding-block: clamp(56px, 5.5vw, 76px);
-  background: #ffffff;
-}
-
-.home-v2-body .practical-v2--company .practical-company__intro-copy {
-  color: var(--hv2-text);
-  font-size: clamp(17px, 1.4vw, 20px);
-  line-height: 1.55;
-}
-
-.home-v2-body .practical-v2--company .practical-company__direction-list a {
-  min-height: 84px;
-}
-
-.home-v2-body .practical-v2--company .practical-company__direction-list a::after {
-  display: none;
-}
-
-.home-v2-body .practical-v2--company .practical-company__task-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.home-v2-body .practical-v2--company .practical-company__task-grid article {
-  min-height: 164px;
-  padding: 24px;
-  background: #ffffff;
-}
-
-.home-v2-body .practical-v2--company .practical-company__task-grid p,
-.home-v2-body .practical-v2--company .practical-company__task-grid li {
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-.home-v2-body .practical-v2--company .practical-company__task-grid .practical-company__regions {
-  min-height: 0;
-  padding: 28px;
-  color: #ffffff;
-  background: var(--hv2-action);
-}
-
-.home-v2-body .practical-v2--company .practical-company__regions li {
-  color: rgba(255, 255, 255, 0.86);
-}
-
-.home-v2-body .practical-v2--company .practical-company__project-media img {
-  height: 330px;
-  aspect-ratio: auto;
-}
-
-.home-v2-body .practical-v2--company .practical-company__project-copy > span {
-  font-size: 15px;
-  line-height: 1.5;
-}
-
 /* Contacts: direct methods sit high; map remains the main contextual proof. */
 
 .home-v2-body .practical-v2--contacts .practical-contacts__hero {
@@ -5275,13 +5138,8 @@ body.home-v2-body:has(.projects-v2--archive) {
 @media (max-width: 1180px) and (min-width: 761px) {
   .home-v2-body .custom-order-v2 .custom-order-changes__list,
   .home-v2-body .custom-order-v2 .custom-order-inputs__list,
-  .home-v2-body .custom-order-v2 .custom-order-directions__grid,
-  .home-v2-body .practical-v2--company .practical-company__task-grid {
+  .home-v2-body .custom-order-v2 .custom-order-directions__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .home-v2-body .practical-v2--company .practical-company__task-grid .practical-company__regions {
-    grid-column: 1 / -1;
   }
 }
 
@@ -5324,8 +5182,7 @@ body.home-v2-body:has(.projects-v2--archive) {
   .home-v2-body .custom-order-v2 .custom-order-changes__list,
   .home-v2-body .custom-order-v2 .custom-order-inputs__list,
   .home-v2-body .custom-order-v2 .custom-order-directions__grid,
-  .home-v2-body .custom-order-v2 .custom-order-examples__grid,
-  .home-v2-body .practical-v2--company .practical-company__task-grid {
+  .home-v2-body .custom-order-v2 .custom-order-examples__grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -5384,31 +5241,6 @@ body.home-v2-body:has(.projects-v2--archive) {
   }
 
   .home-v2-body .projects-v2 .v2-project-detail__direction-grid:has(> a:nth-child(2):last-child) {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .home-v2-body .practical-v2--company .practical-company__hero {
-    min-height: 0;
-    background: #ffffff;
-  }
-
-  .home-v2-body .practical-v2--company .practical-company__hero .practical-hero__grid {
-    min-height: 0;
-    padding-block: 38px;
-  }
-
-  .home-v2-body .practical-v2--company .practical-company__hero-media {
-    height: 390px;
-    grid-template-columns: minmax(0, 2.5fr) minmax(90px, 1fr);
-    padding: 12px;
-    background: var(--hv2-contrast);
-  }
-
-  .home-v2-body .practical-v2--company .practical-company__task-grid .practical-company__regions {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .home-v2-body .practical-v2--company .practical-company__regions ul {
     grid-template-columns: minmax(0, 1fr);
   }
 
