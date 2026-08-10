@@ -1,0 +1,59 @@
+---
+import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
+import type { V2ProjectPresentation } from '../mediaRoleAdapter';
+import V2ProjectMeta from './V2ProjectMeta.astro';
+
+interface Props {
+  presentation: V2ProjectPresentation;
+  index: number;
+  eager?: boolean;
+}
+
+const { presentation, index, eager = false } = Astro.props as Props;
+const { project, location, productionRoute, archiveCoverMedia, archiveCoverPosition, archiveCoverOrientation } = presentation;
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+const showMedia = !presentation.isTextOnly && Boolean(archiveCoverMedia);
+const mediaPlacement = index % 2 === 0 ? 'media-start' : 'media-end';
+const description = project.whatWasDone?.trim() || project.shortDescription;
+---
+
+<article
+  class:list={[
+    'v2-project-archive-row',
+    showMedia ? 'v2-project-archive-row--visual' : 'v2-project-archive-row--text-only',
+    index === 0 && 'v2-project-archive-row--featured',
+    showMedia && `v2-project-archive-row--${mediaPlacement}`,
+    showMedia && `v2-project-archive-row--${archiveCoverOrientation}`
+  ]}
+  data-v2-project-card
+  data-v2-reveal
+>
+  <a class="v2-project-archive-row__link" href={withBase(productionRoute)}>
+    {showMedia && archiveCoverMedia && (
+      <figure
+        class="v2-project-archive-row__media"
+        style={`--v2-project-archive-position: ${archiveCoverPosition};`}
+        data-v2-media
+      >
+        <img
+          class="v2-project-archive-row__image"
+          src={withBase(archiveCoverMedia.src)}
+          alt={archiveCoverMedia.alt}
+          width={archiveCoverOrientation === 'portrait' ? 900 : 1200}
+          height={archiveCoverOrientation === 'portrait' ? 1200 : 900}
+          loading={eager ? 'eager' : 'lazy'}
+          fetchpriority={eager ? 'high' : 'auto'}
+          decoding="async"
+          data-v2-image
+        />
+      </figure>
+    )}
+
+    <div class="v2-project-archive-row__copy">
+      <V2ProjectMeta location={location} year={project.year} />
+      <h3>{project.title}</h3>
+      <p class="v2-project-archive-row__description">{description}</p>
+      <span class="v2-project-archive-row__cta" aria-hidden="true">Смотреть объект</span>
+    </div>
+  </a>
+</article>

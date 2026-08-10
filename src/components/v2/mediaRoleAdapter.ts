@@ -35,6 +35,8 @@ export interface V2ProjectDirection {
   context: string;
 }
 
+export type V2ArchiveCoverOrientation = 'landscape' | 'portrait';
+
 export interface V2ProjectPresentation {
   project: V2ProjectRecord;
   productionRoute: string;
@@ -49,6 +51,7 @@ export interface V2ProjectPresentation {
   archiveCoverMedia?: V2ProjectMedia;
   detailHeroMedia?: V2ProjectMedia;
   archiveCoverPosition: string;
+  archiveCoverOrientation: V2ArchiveCoverOrientation;
   detailHeroPosition: string;
   /** Backwards-compatible alias used by existing V2 callers. */
   heroMedia?: V2ProjectMedia;
@@ -62,6 +65,7 @@ interface V2ProjectPresentationConfig {
   detailHeroMedia?: string;
   publicGallery?: readonly string[];
   archiveCoverPosition?: string;
+  archiveCoverOrientation?: V2ArchiveCoverOrientation;
   detailHeroPosition?: string;
   relatedDirections: readonly V2ProjectDirection[];
   altOverrides?: Readonly<Record<string, string>>;
@@ -147,6 +151,7 @@ const projectPresentations = {
   },
   'gorodskie-kacheli-dlya-obshchestvennyh-territoriy': {
     archiveCoverMedia: '/uploads/project-05c77513c1a391e5a71a7dee.jpg',
+    archiveCoverOrientation: 'portrait',
     detailHeroMedia: '/uploads/project-05c77513c1a391e5a71a7dee.jpg',
     publicGallery: [
       '/uploads/project-05c77513c1a391e5a71a7dee.jpg',
@@ -290,6 +295,7 @@ export const getV2ProjectPresentation = (project: V2ProjectRecord): V2ProjectPre
     archiveCoverMedia,
     detailHeroMedia,
     archiveCoverPosition: config?.archiveCoverPosition ?? '50% 50%',
+    archiveCoverOrientation: config?.archiveCoverOrientation ?? 'landscape',
     detailHeroPosition: config?.detailHeroPosition ?? '50% 50%',
     heroMedia: detailHeroMedia,
     relatedDirections: [...(config?.relatedDirections ?? [])],

@@ -1,0 +1,73 @@
+---
+import { getCollection } from 'astro:content';
+import settings from '../../../content/site-settings/global.json';
+import V2Breadcrumbs from '../V2Breadcrumbs.astro';
+import V2DirectContact from '../V2DirectContact.astro';
+import V2ProjectArchive from './V2ProjectArchive.astro';
+import V2ProjectsLayout from './V2ProjectsLayout.astro';
+import { loadPublishedV2ProjectPresentations } from './projectV2Data';
+
+const [projects, staticPages] = await Promise.all([
+  loadPublishedV2ProjectPresentations(),
+  getCollection('static-pages')
+]);
+const page = staticPages.find(({ data }) => data.slug === 'vypolnennye-obekty')?.data;
+if (!page) throw new Error('Published projects V2 requires the existing vypolnennye-obekty static-page record.');
+
+const nonEmpty = (value: string | undefined, fallback: string) => value?.trim() || fallback;
+const heroKicker = nonEmpty(page.heroKicker, 'Работы СМУ-1');
+const heroTitle = nonEmpty(page.heroTitle, page.title);
+const heroDescription = nonEmpty(
+  page.heroDescription,
+  'Показываем реальные объекты: где работали, в каком году и что именно было выполнено.'
+);
+const archiveTitle = nonEmpty(page.trustTitle, 'Реальные работы — в деталях');
+const archiveDescription = nonEmpty(
+  page.trustText,
+  'Открывайте объект, чтобы посмотреть опубликованный состав работ и доступные фотографии.'
+);
+const contactTitle = nonEmpty(page.contactTitle, 'Обсудим задачу для вашего объекта');
+const contactDescription = nonEmpty(
+  page.contactDescription,
+  'Пришлите фотографии, размеры, эскиз, чертёж, ТЗ или краткое описание задачи. Уточним состав работ и подготовим расчёт.'
+);
+const showKicker = page.showBadge !== false && Boolean(heroKicker);
+const ogImage = projects.find((project) => project.archiveCoverMedia)?.archiveCoverMedia?.src;
+const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
+---
+
+<V2ProjectsLayout
+  title={page.seoTitle}
+  description={page.seoDescription}
+  canonicalPath="/vypolnennye-obekty/"
+  currentPath={Astro.url.pathname}
+  ogImage={ogImage}
+  variant="archive"
+>
+  <V2Breadcrumbs items={[
+    { title: 'Главная', href: '/' },
+    { title: page.title }
+  ]} />
+
+  <header class="v2-project-archive-hero">
+    <div class="hv2-shell v2-project-archive-hero__grid">
+      <div data-v2-reveal>
+        {showKicker && <p class="hv2-eyebrow">{heroKicker}</p>}
+        <h1>{heroTitle}</h1>
+      </div>
+      <p data-v2-reveal>{heroDescription}</p>
+    </div>
+  </header>
+
+  <V2ProjectArchive projects={projects} title={archiveTitle} description={archiveDescription} />
+
+  <V2DirectContact
+    eyebrow="Прямая связь"
+    title={contactTitle}
+    description={contactDescription}
+    primaryLabel="Написать в Telegram"
+    primaryHref={settings.telegram}
+    secondaryLabel="Позвонить"
+    secondaryHref={phoneHref}
+  />
+</V2ProjectsLayout>

@@ -8,9 +8,17 @@ interface Props {
   canonicalPath: string;
   currentPath: string;
   ogImage?: string;
+  variant?: 'default' | 'archive';
 }
 
-const { title, description, canonicalPath, currentPath, ogImage = '' } = Astro.props as Props;
+const {
+  title,
+  description,
+  canonicalPath,
+  currentPath,
+  ogImage = '',
+  variant = 'default'
+} = Astro.props as Props;
 ---
 
 <CatalogV2Layout
@@ -21,7 +29,10 @@ const { title, description, canonicalPath, currentPath, ogImage = '' } = Astro.p
   ogImage={ogImage}
   pageKind="section"
 >
-  <div class="projects-v2" data-projects-v2-root>
+  <div
+    class:list={['projects-v2', { 'projects-v2--archive': variant === 'archive' }]}
+    data-projects-v2-root
+  >
     <slot />
   </div>
 </CatalogV2Layout>
