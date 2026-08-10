@@ -514,7 +514,7 @@
 
 @media (min-width: 1800px) {
   .catalog-v2[data-catalog-v2-root][data-product-final-prototype='custom'] .custom-order-hero__grid {
-    width: min(calc(100% - 160px), 2080px);
+    width: var(--hv2-main-shell-width);
   }
 
   .catalog-v2[data-catalog-v2-root][data-product-final-prototype='custom'] .custom-order-hero h1 {

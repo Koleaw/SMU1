@@ -139,7 +139,7 @@
 .immersive-direction-hero__media figcaption {
   position: absolute;
   z-index: 3;
-  right: max(24px, calc((100vw - 1360px) / 2));
+  right: var(--hv2-main-shell-inset, 24px);
   bottom: 24px;
   max-width: min(360px, 42vw);
   padding: 8px 11px;

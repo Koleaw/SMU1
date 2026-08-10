@@ -16,6 +16,20 @@ interface Props {
 type GatewayFrame = {
   src: string;
   position: string;
+  webpSrcset?: string;
+};
+
+const FRAME_INTERVAL_MS = 3000;
+const CROSSFADE_MS = 700;
+const GATEWAY_IMAGE_WIDTHS = [768, 1360, 1600, 2080, 3200] as const;
+const GATEWAY_MEDIA_STEMS: Readonly<Record<string, string>> = {
+  '/uploads/project-da0872c68d9a09f0a7d2f995.jpg': 'project-da0872c68d9a09f0a7d2f995',
+  '/uploads/img-20250724-134235-1783272745917.jpg': 'img-20250724-134235-1783272745917',
+  '/uploads/project-05c77513c1a391e5a71a7dee.jpg': 'project-05c77513c1a391e5a71a7dee',
+  '/uploads/project-248f17177df30b29ab9b231a.jpg': 'project-248f17177df30b29ab9b231a',
+  '/uploads/img-20231102-142552-1783272745634.jpg': 'img-20231102-142552-1783272745634',
+  '/uploads/img-20231223-222338-1783272745821.jpg': 'img-20231223-222338-1783272745821',
+  '/uploads/img-20250724-133811-1783272616313.jpg': 'img-20250724-133811-1783272616313'
 };
 
 const {
@@ -79,10 +93,34 @@ while (selectedFrames.length < MAX_FRAMES && addedFrame) {
 const orderedFrames = variant === 'company' && selectedFrames.length > 1
   ? [...selectedFrames.slice(1), selectedFrames[0]]
   : selectedFrames;
-const frames = orderedFrames.map((frame) => ({
-  ...frame,
-  src: v2Href(frame.src, Astro.url.pathname)
-}));
+const responsiveSizes = variant === 'home'
+  ? [
+      '(min-width: 2200px) min(2080px, calc(100vw - 160px))',
+      '(min-width: 1600px) min(1600px, calc(100vw - 96px))',
+      '(min-width: 761px) min(1360px, calc(100vw - 64px))',
+      '(min-width: 360px) calc(100vw - 32px)',
+      'calc(100vw - 24px)'
+    ].join(', ')
+  : [
+      '(min-width: 2200px) min(2080px, calc(100vw - 160px))',
+      '(min-width: 1600px) min(1600px, calc(100vw - 96px))',
+      '(min-width: 1101px) min(1360px, calc(100vw - 64px))',
+      '(min-width: 701px) min(980px, calc(100vw - 40px))',
+      '(min-width: 361px) calc(100vw - 32px)',
+      'calc(100vw - 24px)'
+    ].join(', ');
+const frames = orderedFrames.map((frame): GatewayFrame => {
+  const derivativeStem = GATEWAY_MEDIA_STEMS[frame.src];
+  return {
+    ...frame,
+    src: v2Href(frame.src, Astro.url.pathname),
+    webpSrcset: derivativeStem
+      ? GATEWAY_IMAGE_WIDTHS
+          .map((width) => `${v2Href(`/assets/images/gateway/${derivativeStem}-w${width}.webp`, Astro.url.pathname)} ${width}w`)
+          .join(', ')
+      : undefined
+  };
+});
 const firstFrame = frames[0];
 const archiveHref = v2Href('/vypolnennye-obekty/', Astro.url.pathname);
 const titleId = `${sectionId}-gateway-title`;
@@ -101,6 +139,10 @@ const canRotate = frames.length > 1;
   aria-labelledby={titleId}
   data-v2-project-archive-gateway
   data-gateway-frames={JSON.stringify(frames)}
+  data-gateway-frame-interval-ms={FRAME_INTERVAL_MS}
+  data-gateway-crossfade-ms={CROSSFADE_MS}
+  data-gateway-sizes={responsiveSizes}
+  style={`--gateway-crossfade-duration: ${CROSSFADE_MS}ms;`}
 >
   <div class:list={[
     'v2-project-archive-gateway__shell',
@@ -116,17 +158,27 @@ const canRotate = frames.length > 1;
       >
         {firstFrame && (
           <span class="v2-project-archive-gateway__media" aria-hidden="true" data-gateway-media>
-            <img
-              class="v2-project-archive-gateway__image is-current"
-              src={firstFrame.src}
-              alt=""
-              width="1920"
-              height="1200"
-              loading="lazy"
-              decoding="async"
-              style={`object-position: ${firstFrame.position};`}
-              data-gateway-current-image
-            />
+            <picture class="v2-project-archive-gateway__picture" data-gateway-current-picture>
+              {firstFrame.webpSrcset && (
+                <source
+                  type="image/webp"
+                  srcset={firstFrame.webpSrcset}
+                  sizes={responsiveSizes}
+                  data-gateway-current-source
+                />
+              )}
+              <img
+                class="v2-project-archive-gateway__image is-current"
+                src={firstFrame.src}
+                alt=""
+                width="1920"
+                height="1200"
+                loading="lazy"
+                decoding="async"
+                style={`object-position: ${firstFrame.position};`}
+                data-gateway-current-image
+              />
+            </picture>
           </span>
         )}
         {hasMedia && <span class="v2-project-archive-gateway__gradient" aria-hidden="true"></span>}
@@ -164,10 +216,15 @@ const canRotate = frames.length > 1;
 </section>
 
 <script>
-  type GatewayFrame = { src: string; position: string };
+  type GatewayFrame = { src: string; position: string; webpSrcset?: string };
+  type GatewaySlot = {
+    picture: HTMLPictureElement;
+    source: HTMLSourceElement | null;
+    image: HTMLImageElement;
+  };
 
-  const FRAME_INTERVAL_MS = 7000;
-  const CROSSFADE_MS = 900;
+  const DEFAULT_FRAME_INTERVAL_MS = 3000;
+  const DEFAULT_CROSSFADE_MS = 700;
 
   const initializeProjectArchiveGateway = (root: HTMLElement) => {
     if (root.dataset.gatewayReady === 'true') return;
@@ -175,11 +232,14 @@ const canRotate = frames.length > 1;
 
     const link = root.querySelector<HTMLAnchorElement>('[data-gateway-link]');
     const media = root.querySelector<HTMLElement>('[data-gateway-media]');
+    const initialPicture = root.querySelector<HTMLPictureElement>('[data-gateway-current-picture]');
+    const initialSource = root.querySelector<HTMLSourceElement>('[data-gateway-current-source]');
     const initialImage = root.querySelector<HTMLImageElement>('[data-gateway-current-image]');
     const toggle = root.querySelector<HTMLButtonElement>('[data-gateway-toggle]');
     const pauseIcon = root.querySelector<SVGElement>('[data-gateway-pause-icon]');
     const playIcon = root.querySelector<SVGElement>('[data-gateway-play-icon]');
-    if (!link || !media || !initialImage || !toggle || !pauseIcon || !playIcon) return;
+    if (!link || !media || !initialPicture || !initialImage || !toggle || !pauseIcon || !playIcon) return;
+    const mediaElement = media;
 
     let frames: GatewayFrame[] = [];
     try {
@@ -190,6 +250,10 @@ const canRotate = frames.length > 1;
           && frame !== null
           && typeof (frame as GatewayFrame).src === 'string'
           && typeof (frame as GatewayFrame).position === 'string'
+          && (
+            (frame as GatewayFrame).webpSrcset === undefined
+            || typeof (frame as GatewayFrame).webpSrcset === 'string'
+          )
         ));
       }
     } catch {
@@ -197,44 +261,65 @@ const canRotate = frames.length > 1;
     }
     if (frames.length < 2) return;
 
+    const parsedFrameInterval = Number(root.dataset.gatewayFrameIntervalMs);
+    const parsedCrossfade = Number(root.dataset.gatewayCrossfadeMs);
+    const frameIntervalMs = Number.isFinite(parsedFrameInterval) && parsedFrameInterval > 0
+      ? parsedFrameInterval
+      : DEFAULT_FRAME_INTERVAL_MS;
+    const crossfadeMs = Number.isFinite(parsedCrossfade) && parsedCrossfade >= 0
+      ? parsedCrossfade
+      : DEFAULT_CROSSFADE_MS;
+    const responsiveSizes = root.dataset.gatewaySizes || '100vw';
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const connection = (navigator as Navigator & {
-      connection?: { saveData?: boolean };
+      connection?: EventTarget & { saveData?: boolean };
     }).connection;
-    if (reducedMotion.matches || connection?.saveData) {
-      root.dataset.gatewayRotation = 'static';
-      return;
-    }
 
-    const incomingImage = document.createElement('img');
-    incomingImage.className = 'v2-project-archive-gateway__image';
-    incomingImage.alt = '';
-    incomingImage.width = 1920;
-    incomingImage.height = 1200;
-    incomingImage.loading = 'eager';
-    incomingImage.decoding = 'async';
-    incomingImage.setAttribute('aria-hidden', 'true');
-    incomingImage.src = frames[0].src;
-    incomingImage.style.objectPosition = frames[0].position;
-    media.append(incomingImage);
+    const standbyPicture = document.createElement('picture');
+    standbyPicture.className = 'v2-project-archive-gateway__picture';
+    standbyPicture.setAttribute('aria-hidden', 'true');
+    const standbySource = document.createElement('source');
+    standbySource.type = 'image/webp';
+    standbySource.setAttribute('sizes', responsiveSizes);
+    const standbyImage = document.createElement('img');
+    standbyImage.className = 'v2-project-archive-gateway__image';
+    standbyImage.alt = '';
+    standbyImage.width = 1920;
+    standbyImage.height = 1200;
+    standbyImage.loading = 'eager';
+    standbyImage.decoding = 'async';
+    standbyImage.setAttribute('aria-hidden', 'true');
+    standbyPicture.append(standbySource, standbyImage);
 
-    let currentImage = initialImage;
-    let nextImage = incomingImage;
+    let currentSlot: GatewaySlot = {
+      picture: initialPicture,
+      source: initialSource,
+      image: initialImage
+    };
+    let standbySlot: GatewaySlot = {
+      picture: standbyPicture,
+      source: standbySource,
+      image: standbyImage
+    };
     let currentIndex = 0;
     let timer = 0;
     let transitionTimer = 0;
     let transitionToken = 0;
+    let preparationToken = 0;
+    let preparingIndex = -1;
+    let preparedIndex = -1;
+    let nextDeadline = 0;
+    let advanceDue = false;
+    let advanceDueUntil = 0;
     let isNearViewport = false;
-    let isHovered = false;
-    let isFocused = false;
+    let isVisible = false;
+    let isLinkFocused = false;
     let isTransitioning = false;
     let userPaused = false;
     let rotationUnavailable = false;
     const failedFrames = new Set<number>();
 
-    root.dataset.gatewayRotation = 'available';
     root.dataset.gatewayFrameIndex = '0';
-    toggle.hidden = false;
 
     const clearSchedule = () => {
       if (!timer) return;
@@ -242,15 +327,22 @@ const canRotate = frames.length > 1;
       timer = 0;
     };
 
-    const canRun = () => (
-      isNearViewport
+    const isSaveDataEnabled = () => Boolean(connection?.saveData);
+    const canRotate = () => (
+      isVisible
       && !document.hidden
-      && !isHovered
-      && !isFocused
-      && !isTransitioning
+      && !isLinkFocused
       && !userPaused
       && !reducedMotion.matches
-      && !connection?.saveData
+      && !isSaveDataEnabled()
+      && !rotationUnavailable
+    );
+    const canPrepare = () => (
+      isNearViewport
+      && !document.hidden
+      && !reducedMotion.matches
+      && !isSaveDataEnabled()
+      && !rotationUnavailable
     );
 
     const updateToggle = () => {
@@ -265,14 +357,13 @@ const canRotate = frames.length > 1;
     };
 
     const cancelTransition = () => {
+      if (!isTransitioning && !transitionTimer) return;
       transitionToken += 1;
       if (transitionTimer) {
         window.clearTimeout(transitionTimer);
         transitionTimer = 0;
       }
-      nextImage.classList.remove('is-incoming');
-      nextImage.src = frames[currentIndex].src;
-      nextImage.style.objectPosition = frames[currentIndex].position;
+      standbySlot.image.classList.remove('is-incoming');
       isTransitioning = false;
     };
 
@@ -284,104 +375,155 @@ const canRotate = frames.length > 1;
       return -1;
     };
 
-    const schedule = () => {
-      clearSchedule();
-      if (!canRun()) return;
-      timer = window.setTimeout(() => {
-        timer = 0;
-        void advance();
-      }, FRAME_INTERVAL_MS);
+    const ensureSource = (slot: GatewaySlot) => {
+      if (slot.source) return slot.source;
+      const source = document.createElement('source');
+      source.type = 'image/webp';
+      slot.picture.insertBefore(source, slot.image);
+      slot.source = source;
+      return source;
     };
 
-    const advance = async () => {
-      if (!canRun()) return;
+    const applyFrame = (slot: GatewaySlot, frame: GatewayFrame) => {
+      const source = ensureSource(slot);
+      source.setAttribute('sizes', responsiveSizes);
+      if (frame.webpSrcset) {
+        source.setAttribute('srcset', frame.webpSrcset);
+      } else {
+        source.removeAttribute('srcset');
+      }
+      slot.image.src = frame.src;
+      slot.image.style.objectPosition = frame.position;
+    };
+
+    const stopClock = () => {
+      clearSchedule();
+      nextDeadline = 0;
+      advanceDue = false;
+      advanceDueUntil = 0;
+    };
+
+    const setRotationUnavailable = () => {
+      rotationUnavailable = true;
+      stopClock();
+      cancelTransition();
+      toggle.hidden = true;
+      root.dataset.gatewayRotation = 'static';
+    };
+
+    function prepareAhead() {
+      if (!canPrepare() || isTransitioning || preparedIndex >= 0 || preparingIndex >= 0) return;
       const requestedIndex = nextFrameIndex();
       if (requestedIndex < 0) {
-        rotationUnavailable = true;
-        clearSchedule();
-        toggle.hidden = true;
-        root.dataset.gatewayRotation = 'static';
+        setRotationUnavailable();
         return;
       }
+
+      if (!standbySlot.picture.isConnected) mediaElement.append(standbySlot.picture);
       const frame = frames[requestedIndex];
-      const requestToken = ++transitionToken;
+      const requestToken = ++preparationToken;
+      preparingIndex = requestedIndex;
+      applyFrame(standbySlot, frame);
+
+      void Promise.resolve()
+        .then(() => standbySlot.image.decode())
+        .then(() => {
+          if (requestToken !== preparationToken) return;
+          if (!standbySlot.image.complete || standbySlot.image.naturalWidth === 0) {
+            throw new Error('Gateway image decode failed.');
+          }
+          preparingIndex = -1;
+          preparedIndex = requestedIndex;
+          flushPreparedFrame();
+        })
+        .catch(() => {
+          if (requestToken !== preparationToken) return;
+          preparingIndex = -1;
+          preparedIndex = -1;
+          failedFrames.add(requestedIndex);
+          if (nextFrameIndex() < 0) setRotationUnavailable();
+          else prepareAhead();
+        });
+    }
+
+    function beginCrossfade(requestedIndex: number) {
+      if (!canRotate() || isTransitioning || preparedIndex !== requestedIndex) return;
+      advanceDue = false;
+      advanceDueUntil = 0;
       isTransitioning = true;
-      clearSchedule();
-      nextImage.src = frame.src;
-      nextImage.style.objectPosition = frame.position;
-
-      try {
-        await nextImage.decode();
-        if (requestToken !== transitionToken) return;
-        if (!nextImage.complete || nextImage.naturalWidth === 0) throw new Error('Image decode failed.');
-      } catch {
-        if (requestToken !== transitionToken) return;
-        failedFrames.add(requestedIndex);
-        nextImage.src = frames[currentIndex].src;
-        nextImage.style.objectPosition = frames[currentIndex].position;
-        isTransitioning = false;
-        schedule();
-        return;
-      }
-
-      if (!canRun() && (
-        !isNearViewport
-        || isHovered
-        || isFocused
-        || document.hidden
-        || userPaused
-        || reducedMotion.matches
-        || connection?.saveData
-      )) {
-        nextImage.src = frames[currentIndex].src;
-        nextImage.style.objectPosition = frames[currentIndex].position;
-        isTransitioning = false;
-        schedule();
-        return;
-      }
-
-      nextImage.classList.add('is-incoming');
+      const requestToken = ++transitionToken;
+      mediaElement.append(standbySlot.picture);
+      standbySlot.image.classList.add('is-incoming');
       transitionTimer = window.setTimeout(() => {
-        currentImage.classList.remove('is-current');
-        nextImage.classList.remove('is-incoming');
-        nextImage.classList.add('is-current');
-        const previousImage = currentImage;
-        currentImage = nextImage;
-        nextImage = previousImage;
+        if (requestToken !== transitionToken) return;
+        currentSlot.image.classList.remove('is-current');
+        standbySlot.image.classList.remove('is-incoming');
+        standbySlot.image.classList.add('is-current');
+        const previousSlot = currentSlot;
+        currentSlot = standbySlot;
+        standbySlot = previousSlot;
         currentIndex = requestedIndex;
-        root.dataset.gatewayFrameIndex = String(currentIndex);
+        preparedIndex = -1;
         transitionTimer = 0;
         isTransitioning = false;
-        schedule();
-      }, CROSSFADE_MS);
-    };
+        root.dataset.gatewayFrameIndex = String(currentIndex);
+        prepareAhead();
+        flushPreparedFrame();
+      }, crossfadeMs);
+    }
 
-    const resetToFirstFrame = () => {
+    function flushPreparedFrame() {
+      if (!advanceDue || !canRotate() || isTransitioning || preparedIndex < 0) return;
+      if (performance.now() > advanceDueUntil) {
+        advanceDue = false;
+        advanceDueUntil = 0;
+        return;
+      }
+      beginCrossfade(preparedIndex);
+    }
+
+    const armDeadline = () => {
       clearSchedule();
-      cancelTransition();
-      currentImage.classList.remove('is-incoming', 'is-current');
-      nextImage.classList.remove('is-incoming', 'is-current');
-      initialImage.src = frames[0].src;
-      initialImage.style.objectPosition = frames[0].position;
-      initialImage.classList.add('is-current');
-      incomingImage.src = frames[0].src;
-      incomingImage.style.objectPosition = frames[0].position;
-      currentImage = initialImage;
-      nextImage = incomingImage;
-      currentIndex = 0;
-      isTransitioning = false;
-      root.dataset.gatewayFrameIndex = '0';
+      if (!canRotate() || nextDeadline <= 0) return;
+      timer = window.setTimeout(handleDeadline, Math.max(0, nextDeadline - performance.now()));
     };
 
-    const syncTemporaryPause = () => {
-      if (reducedMotion.matches || connection?.saveData) {
-        resetToFirstFrame();
+    function handleDeadline() {
+      timer = 0;
+      if (!canRotate()) {
+        stopClock();
+        return;
+      }
+      const dueDeadline = nextDeadline;
+      const now = performance.now();
+      do nextDeadline += frameIntervalMs;
+      while (nextDeadline <= now);
+      armDeadline();
+      if (preparedIndex >= 0 && !isTransitioning) {
+        beginCrossfade(preparedIndex);
+        return;
+      }
+      advanceDue = true;
+      advanceDueUntil = dueDeadline + 250;
+      flushPreparedFrame();
+    }
+
+    const startClock = () => {
+      if (!canRotate()) return;
+      if (nextDeadline <= 0) nextDeadline = performance.now() + frameIntervalMs;
+      armDeadline();
+    };
+
+    const syncState = () => {
+      if (reducedMotion.matches || isSaveDataEnabled()) {
+        stopClock();
+        cancelTransition();
         toggle.hidden = true;
         root.dataset.gatewayRotation = 'static';
         return;
       }
       if (rotationUnavailable) {
-        clearSchedule();
+        stopClock();
         cancelTransition();
         toggle.hidden = true;
         root.dataset.gatewayRotation = 'static';
@@ -389,52 +531,52 @@ const canRotate = frames.length > 1;
       }
       toggle.hidden = false;
       root.dataset.gatewayRotation = 'available';
-      if (!isNearViewport || document.hidden || isHovered || isFocused || userPaused) {
-        clearSchedule();
+      prepareAhead();
+      if (!canRotate()) {
+        stopClock();
         cancelTransition();
         return;
       }
-      schedule();
+      startClock();
     };
 
-    root.addEventListener('mouseenter', () => {
-      isHovered = true;
-      syncTemporaryPause();
+    link.addEventListener('focusin', () => {
+      isLinkFocused = true;
+      syncState();
     });
-    root.addEventListener('mouseleave', () => {
-      isHovered = false;
-      syncTemporaryPause();
-    });
-    root.addEventListener('focusin', () => {
-      isFocused = true;
-      syncTemporaryPause();
-    });
-    root.addEventListener('focusout', () => {
+    link.addEventListener('focusout', () => {
       window.requestAnimationFrame(() => {
-        isFocused = root.contains(document.activeElement);
-        syncTemporaryPause();
+        isLinkFocused = link.contains(document.activeElement);
+        syncState();
       });
     });
-    document.addEventListener('visibilitychange', syncTemporaryPause);
-    reducedMotion.addEventListener('change', syncTemporaryPause);
+    document.addEventListener('visibilitychange', syncState);
+    reducedMotion.addEventListener('change', syncState);
+    connection?.addEventListener?.('change', syncState);
     toggle.addEventListener('click', () => {
       userPaused = !userPaused;
       updateToggle();
-      syncTemporaryPause();
+      syncState();
     });
 
     if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver((entries) => {
+      const preloadObserver = new IntersectionObserver((entries) => {
         isNearViewport = entries.some((entry) => entry.isIntersecting);
-        syncTemporaryPause();
-      }, { rootMargin: '200px 0px', threshold: 0.01 });
-      observer.observe(root);
+        syncState();
+      }, { rootMargin: '600px 0px', threshold: 0 });
+      const visibilityObserver = new IntersectionObserver((entries) => {
+        isVisible = entries.some((entry) => entry.isIntersecting);
+        syncState();
+      }, { rootMargin: '0px', threshold: 0.01 });
+      preloadObserver.observe(root);
+      visibilityObserver.observe(root);
     } else {
       isNearViewport = true;
+      isVisible = true;
     }
 
     updateToggle();
-    schedule();
+    syncState();
   };
 
   const initializeProjectArchiveGateways = () => {

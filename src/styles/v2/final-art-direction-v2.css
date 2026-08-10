@@ -388,7 +388,7 @@
 }
 
 .immersive-direction-hero__media figcaption {
-  right: max(24px, calc((100vw - 1360px) / 2));
+  right: var(--hv2-main-shell-inset, 24px);
   color: rgba(247, 249, 252, 0.78);
   background: rgba(16, 23, 32, 0.78);
 }
