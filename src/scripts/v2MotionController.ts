@@ -29,7 +29,7 @@ type ConnectionNavigator = Navigator & {
   connection?: { saveData?: boolean; effectiveType?: string };
 };
 
-const SESSION_KEY = 'smu1:entry-intro:v1';
+const SESSION_KEY = 'smu1:entry-intro:v2';
 const MIN_OPEN_AT = 1700;
 const HARD_DEADLINE_AT = 3900;
 const PLANE_DURATION = 760;
@@ -212,16 +212,23 @@ const resolveBootstrapMode = (): EntryState => {
   const saveData = Boolean((navigator as ConnectionNavigator).connection?.saveData);
   let mode: EntryState = 'armed';
 
-  if (window.location.hash) mode = 'skipped';
-  else if (reducedMotion || saveData) mode = 'static';
-  else {
-    try {
+  try {
+    if (html.dataset.v2PageBootstrap === 'arrival') {
+      window.sessionStorage.setItem(SESSION_KEY, 'seen');
+      mode = 'static';
+    } else if (window.location.hash) {
+      window.sessionStorage.setItem(SESSION_KEY, 'seen');
+      mode = 'skipped';
+    } else if (reducedMotion || saveData) {
+      window.sessionStorage.setItem(SESSION_KEY, 'seen');
+      mode = 'static';
+    } else {
       const seen = window.sessionStorage.getItem(SESSION_KEY) === 'seen';
       if (!forcedReplay && seen) mode = 'static';
       else window.sessionStorage.setItem(SESSION_KEY, 'seen');
-    } catch {
-      mode = 'fail-open';
     }
+  } catch {
+    mode = 'fail-open';
   }
 
   html.dataset.v2EntryBootstrap = mode;
@@ -233,7 +240,9 @@ const initializeScrollChoreography = (
   reducedMotion: boolean,
   revealImmediately = false
 ) => {
-  const elements = Array.from(root.querySelectorAll<HTMLElement>('[data-v2-reveal]'))
+  const scrollScope = root.querySelector<HTMLElement>('[data-home-final-root]');
+  if (!scrollScope) return () => undefined;
+  const elements = Array.from(scrollScope.querySelectorAll<HTMLElement>('[data-v2-reveal]'))
     .filter((element) => !element.hasAttribute('data-v2-entry'));
   if (elements.length === 0) return () => undefined;
 
@@ -356,7 +365,9 @@ const initializeMotionRoot = (root: HTMLElement) => {
 
   const readiness = (async (): Promise<ReadinessOutcome> => {
     try {
-      const criticalImages = Array.from(root.querySelectorAll<HTMLImageElement>('img[data-v2-critical-media]'));
+      const criticalImages = Array.from(root.querySelectorAll<HTMLImageElement>(
+        'img[data-v2-critical-media], img[data-v2-page-critical]'
+      ));
       await Promise.all([
         Promise.all(criticalImages.map(waitForCriticalImage)),
         waitForCriticalFonts()
@@ -439,7 +450,7 @@ const initializeMotionRoot = (root: HTMLElement) => {
 
 export const initializeV2MotionController = () => {
   const roots = Array.from(document.querySelectorAll<HTMLElement>(
-    '[data-v2-motion-root][data-v2-entry-mode="preview"]'
+    '[data-v2-motion-root][data-v2-entry-mode]'
   ));
   roots.forEach(initializeMotionRoot);
 
@@ -447,7 +458,7 @@ export const initializeV2MotionController = () => {
   motionWindow.__smu1V2PageshowReady = true;
   window.addEventListener('pageshow', (event) => {
     if (!event.persisted) return;
-    document.querySelectorAll<HTMLElement>('[data-v2-motion-root][data-v2-entry-mode="preview"]')
+    document.querySelectorAll<HTMLElement>('[data-v2-motion-root][data-v2-entry-mode]')
       .forEach((root) => managedEntries.get(root)?.forceVisible('done'));
   });
 };

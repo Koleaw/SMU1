@@ -1,0 +1,166 @@
+---
+import '../../../styles/v2/page-transition-v2.css';
+
+interface Props {
+  part?: 'head' | 'overlay';
+  allowDesignLab?: boolean;
+}
+
+const {
+  part = 'overlay',
+  allowDesignLab = false
+} = Astro.props as Props;
+
+const basePath = import.meta.env.BASE_URL || '/';
+---
+
+{part === 'head' ? (
+  <>
+    <!--
+      This deliberately small rule is duplicated from the bundled stylesheet.
+      It is needed before first paint: a valid MPA handoff arrives with the
+      project sheet already covering the new document.
+    -->
+    <style is:inline>
+      .v2-page-transition{position:fixed;z-index:1200;inset:0;overflow:hidden;visibility:hidden;pointer-events:none;contain:strict;isolation:isolate}.v2-page-transition__sheet{position:absolute;inset:0;background:#fff;transform:translate3d(100%,0,0)}html[data-v2-page-bootstrap=arrival]{overflow:hidden;background:#fff;scrollbar-gutter:stable;scrollbar-color:transparent #fff}html[data-v2-page-bootstrap=arrival] .v2-page-transition{visibility:visible;pointer-events:auto}html[data-v2-page-bootstrap=arrival] .v2-page-transition__sheet{transform:translate3d(0,0,0)}
+    </style>
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        const key = 'smu1:page-transition:v1';
+        const entryKey = 'smu1:entry-intro:v2';
+        const tabKey = 'smu1:browser-tab:v1';
+        const tabNameMarker = '__smu1_browser_tab_v1__:';
+        const ttl = 20000;
+        const exactTarget = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        let state = 'static';
+        let reason = 'no-token';
+
+        try {
+          // sessionStorage can be cloned into a newly opened tab. window.name
+          // is browsing-context-local, so their matching IDs distinguish a
+          // same-tab MPA/reload from a cloned session. Preserve an unrelated
+          // name as a prefix instead of replacing it.
+          const markerPattern = /(?:^|\|)__smu1_browser_tab_v1__:([a-z\d-]+)$/i;
+          const currentName = String(window.name || '');
+          const nameMatch = currentName.match(markerPattern);
+          const nameId = nameMatch ? nameMatch[1] : '';
+          const storedId = window.sessionStorage.getItem(tabKey) || '';
+          if (!nameId || nameId !== storedId) {
+            let tabId = '';
+            try {
+              tabId = typeof crypto.randomUUID === 'function'
+                ? crypto.randomUUID()
+                : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+            } catch {
+              tabId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+            }
+            const preservedName = currentName.replace(markerPattern, '');
+            window.name = `${preservedName}${preservedName ? '|' : ''}${tabNameMarker}${tabId}`;
+            window.sessionStorage.setItem(tabKey, tabId);
+            window.sessionStorage.removeItem(entryKey);
+            window.sessionStorage.removeItem(key);
+          }
+
+          const raw = window.sessionStorage.getItem(key);
+          if (raw) {
+            // Invalid and mismatched records are one-shot as well. Removing
+            // them prevents an unrelated later navigation from accepting a
+            // token which was not created for that navigation.
+            window.sessionStorage.removeItem(key);
+            try {
+              const token = JSON.parse(raw);
+              const age = Date.now() - Number(token && token.timestamp);
+              const validShape = token
+                && token.version === 1
+                && typeof token.nonce === 'string'
+                && token.nonce.length > 0
+                && typeof token.target === 'string'
+                && Number.isFinite(age);
+
+              if (!validShape) {
+                state = 'skipped';
+                reason = 'invalid-token';
+              } else if (age < -1000 || age > ttl) {
+                state = 'skipped';
+                reason = 'stale-token';
+              } else if (token.target !== exactTarget) {
+                state = 'skipped';
+                reason = 'target-mismatch';
+              } else {
+                state = 'arrival';
+                reason = 'valid-token';
+              }
+            } catch {
+              state = 'skipped';
+              reason = 'invalid-token';
+            }
+          }
+        } catch {
+          state = 'fail-open';
+          reason = 'storage-error';
+        }
+
+        root.dataset.v2PageBootstrap = state;
+        root.dataset.v2PageBootstrapReason = reason;
+        root.dataset.v2PageState = state;
+
+        if (state === 'arrival') {
+          window.__smu1PageTransitionFailSafe = window.setTimeout(() => {
+            const current = root.dataset.v2PageState;
+            if (root.dataset.v2PageBootstrap !== 'arrival'
+              || (current !== 'arrival' && current !== 'waiting')) return;
+
+            root.dataset.v2PageBootstrap = 'fail-open';
+            root.dataset.v2PageBootstrapReason = 'controller-timeout';
+            root.dataset.v2PageState = 'fail-open';
+            root.classList.remove('v2-page-transition-locked');
+            delete root.dataset.v2PageLock;
+            const overlay = document.querySelector('[data-v2-page-transition]');
+            if (overlay instanceof HTMLElement) {
+              overlay.dataset.v2PageState = 'fail-open';
+              overlay.dataset.v2PageFailure = 'controller-timeout';
+              overlay.dataset.v2PageSettled = 'true';
+              delete overlay.dataset.v2PageLock;
+            }
+            document.dispatchEvent(new CustomEvent('v2:page-revealing', {
+              detail: { state: 'fail-open', reason: 'controller-timeout' }
+            }));
+            document.dispatchEvent(new CustomEvent('v2:page-done', {
+              detail: { state: 'fail-open', reason: 'controller-timeout' }
+            }));
+          }, 1600);
+        }
+      })();
+    </script>
+  </>
+) : (
+  <div
+    class="v2-page-transition"
+    data-v2-page-transition
+    data-v2-page-state="idle"
+    data-v2-page-base={basePath}
+    data-v2-page-allow-design-lab={allowDesignLab ? 'true' : undefined}
+    aria-hidden="true"
+    inert
+  >
+    <div class="v2-page-transition__sheet" data-v2-page-sheet>
+      <span
+        class="v2-page-transition__trail v2-page-transition__trail--cover"
+        data-v2-page-trail="cover"
+      ></span>
+      <span
+        class="v2-page-transition__edge v2-page-transition__edge--cover"
+        data-v2-page-edge="cover"
+      ></span>
+      <span
+        class="v2-page-transition__trail v2-page-transition__trail--reveal"
+        data-v2-page-trail="reveal"
+      ></span>
+      <span
+        class="v2-page-transition__edge v2-page-transition__edge--reveal"
+        data-v2-page-edge="reveal"
+      ></span>
+    </div>
+  </div>
+)}

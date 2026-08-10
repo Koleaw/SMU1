@@ -111,6 +111,7 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
         fetchpriority="high"
         decoding="async"
         data-v2-image
+        data-v2-page-critical
       />
     )}
     <div class="practical-company__hero-edge" aria-hidden="true"></div>
@@ -126,7 +127,7 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
         />
       </div>
 
-      <div class="practical-company__hero-copy">
+      <div class="practical-company__hero-copy" data-v2-page-handoff="copy">
         <p class="hv2-eyebrow hv2-eyebrow--light">{heroKicker}</p>
         <h1>{heroTitle}</h1>
         <p class="practical-company__hero-lead">{heroDescription}</p>

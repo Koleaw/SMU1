@@ -75,6 +75,7 @@ const imagePresentationStyle = [
     <div
       class="v2-catalog-hero__copy"
       data-v2-hero-scroll-copy={!productFinalHandoff ? '' : undefined}
+      data-v2-page-handoff="copy"
     >
       <div class="v2-catalog-hero__meta">
       {hasBreadcrumbs && (
@@ -116,6 +117,7 @@ const imagePresentationStyle = [
           decoding="async"
           style={imagePresentationStyle}
           data-v2-image
+          data-v2-page-critical
         />
       </figure>
     )}

@@ -36,7 +36,7 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
 
 <section class:list={['direction-hero', `direction-hero--${resolvedLayout}`]} aria-labelledby="direction-v2-title">
   <div class="hv2-shell hv2-grid direction-hero__grid">
-    <div class="direction-hero__copy" data-v2-reveal>
+    <div class="direction-hero__copy" data-v2-reveal data-v2-page-handoff="copy">
       <p class:list={['hv2-eyebrow', { 'hv2-eyebrow--light': resolvedLayout === 'full' }]}>{eyebrow}</p>
       <h1 id="direction-v2-title">{title}</h1>
       <p class="direction-hero__lead">{description}</p>
@@ -62,6 +62,7 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
           decoding="async"
           style={imageViewStyle(imageView)}
           data-v2-image
+          data-v2-page-critical
         />
         <div class="direction-hero__media-fallback" aria-hidden="true">
           <p>Изображение направления недоступно</p>

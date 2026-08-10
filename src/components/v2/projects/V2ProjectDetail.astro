@@ -61,7 +61,7 @@ const sectionNavItems = [
 <article class:list={['v2-project-detail', { 'v2-project-detail--media-sparse': isTextOnly }]}>
   <header class="v2-project-detail__hero" id="project-overview">
     <div class="hv2-shell v2-project-detail__hero-grid">
-      <div class="v2-project-detail__hero-copy" data-v2-reveal>
+      <div class="v2-project-detail__hero-copy" data-v2-reveal data-v2-page-handoff="copy">
         <p class="hv2-eyebrow">{eyebrow}</p>
         <h1>{project.title}</h1>
         <V2ProjectMeta location={location} year={project.year} />
@@ -86,6 +86,7 @@ const sectionNavItems = [
             fetchpriority="high"
             decoding="async"
             data-v2-image
+            data-v2-page-critical
           />
           {heroMedia.caption && <figcaption>{heroMedia.caption}</figcaption>}
         </figure>

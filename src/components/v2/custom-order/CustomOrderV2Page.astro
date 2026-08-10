@@ -28,7 +28,7 @@ const heroMedia = data.heroMedia[0];
     >
       <div class="custom-order-hero__track" data-product-final-track>
         <div class="hv2-shell custom-order-hero__grid">
-          <div class="custom-order-hero__copy">
+          <div class="custom-order-hero__copy" data-v2-page-handoff="copy">
             <div class="custom-order-hero__breadcrumbs">
               <V2Breadcrumbs items={[
                 { title: 'Главная', href: '/design-lab/home-v2/' },
@@ -64,6 +64,7 @@ const heroMedia = data.heroMedia[0];
               fetchpriority="high"
               style={`--custom-order-hero-position:${heroMedia.position};--custom-order-hero-position-mobile:${heroMedia.mobilePosition};`}
               data-v2-image
+              data-v2-page-critical
             />
           </div>
         </div>

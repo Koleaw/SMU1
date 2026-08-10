@@ -44,13 +44,14 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
             decoding="async"
             style={imageViewStyle(imageView || { fit: 'cover', positionX: 50, positionY: 52, scale: 1 })}
             data-v2-image
+            data-v2-page-critical
           />
           <div class="place-hero__fallback" aria-hidden="true">Изображение территории недоступно</div>
           {caption && <figcaption>{caption}</figcaption>}
         </figure>
       )}
 
-      <div class="place-hero__copy">
+      <div class="place-hero__copy" data-v2-page-handoff="copy">
         <p class="hv2-eyebrow hv2-eyebrow--light">{eyebrow}</p>
         <h1 id="place-direction-title">{title}</h1>
         <p class="place-hero__lead">{description}</p>

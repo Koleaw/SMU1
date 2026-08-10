@@ -32,7 +32,7 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
 <section class:list={['engineering-hero', { 'engineering-hero--no-media': !image }]} aria-labelledby="engineering-direction-title">
   <div class="hv2-shell">
     <div class="engineering-hero__heading hv2-grid">
-      <div class="engineering-hero__title" data-v2-reveal>
+      <div class="engineering-hero__title" data-v2-reveal data-v2-page-handoff="copy">
         <p class="hv2-eyebrow hv2-eyebrow--light">{eyebrow}</p>
         <h1 id="engineering-direction-title">{title}</h1>
       </div>
@@ -61,6 +61,7 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
           decoding="async"
           style={imageViewStyle(imageView)}
           data-v2-image
+          data-v2-page-critical
         />
         <div class="engineering-hero__media-fallback" aria-hidden="true">
           <p>Изображение направления недоступно</p>

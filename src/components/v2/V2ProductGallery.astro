@@ -9,9 +9,17 @@ interface Props {
   imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
   caption?: string;
   entityLabel?: string;
+  pageCritical?: boolean;
 }
 
-const { images, title, imageView, caption = '', entityLabel = 'товара' } = Astro.props as Props;
+const {
+  images,
+  title,
+  imageView,
+  caption = '',
+  entityLabel = 'товара',
+  pageCritical = false
+} = Astro.props as Props;
 const galleryImages = Array.from(new Set(images.map((item) => item.trim()).filter(Boolean)));
 const hasImages = galleryImages.length > 0;
 const hasMultipleImages = galleryImages.length > 1;
@@ -41,6 +49,7 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
             decoding="async"
             style={imageViewStyle(imageView)}
             data-v2-gallery-main
+            data-v2-page-critical={pageCritical ? '' : undefined}
           />
           <span class="v2-product-gallery__zoom" aria-hidden="true">Развернуть</span>
         </button>

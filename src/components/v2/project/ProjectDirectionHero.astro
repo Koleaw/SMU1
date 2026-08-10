@@ -33,7 +33,7 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
 
 <section class:list={['project-hero', { 'project-hero--no-media': visibleMedia.length === 0 }]} aria-labelledby="project-direction-title">
   <div class="hv2-shell hv2-grid project-hero__grid">
-    <div class="project-hero__copy" data-v2-reveal>
+    <div class="project-hero__copy" data-v2-reveal data-v2-page-handoff="copy">
       <p class="hv2-eyebrow">{eyebrow}</p>
       <h1 id="project-direction-title">{title}</h1>
       <p class="project-hero__lead">{description}</p>
@@ -61,6 +61,7 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
               decoding="async"
               style={imageViewStyle(item.view)}
               data-v2-image
+              data-v2-page-critical={index === 0 ? '' : undefined}
             />
             <div class="project-hero__fallback" aria-hidden="true">Изображение объекта недоступно</div>
             {item.caption && <figcaption>{item.caption}</figcaption>}

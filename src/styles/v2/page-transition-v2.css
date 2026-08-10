@@ -1,0 +1,264 @@
+:root {
+  --v2-page-sheet: #ffffff;
+  --v2-page-edge: var(--v2-entry-blue, #1759b7);
+  --v2-page-sheet-ease: cubic-bezier(0.76, 0, 0.24, 1);
+  --v2-page-copy-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --v2-page-cover-duration: 320ms;
+  --v2-page-reveal-duration: 560ms;
+  --v2-page-fail-open-duration: 140ms;
+  --v2-page-edge-width: 2px;
+  --v2-page-trail-width: 10px;
+}
+
+html.v2-page-transition-locked,
+html[data-v2-page-bootstrap='arrival'] {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  scrollbar-gutter: stable;
+  scrollbar-color: transparent #ffffff;
+}
+
+html.v2-page-transition-locked body,
+html[data-v2-page-bootstrap='arrival'] body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+html.v2-page-transition-locked::-webkit-scrollbar,
+html.v2-page-transition-locked::-webkit-scrollbar-track,
+html[data-v2-page-bootstrap='arrival']::-webkit-scrollbar,
+html[data-v2-page-bootstrap='arrival']::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+
+html.v2-page-transition-locked::-webkit-scrollbar-thumb,
+html[data-v2-page-bootstrap='arrival']::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.v2-page-transition {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  isolation: isolate;
+  contain: strict;
+}
+
+.v2-page-transition__sheet {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--v2-page-sheet);
+  transform: translate3d(100%, 0, 0);
+  transition-property: transform;
+  transition-duration: 0ms;
+  transition-timing-function: var(--v2-page-sheet-ease);
+  will-change: transform;
+}
+
+.v2-page-transition__edge,
+.v2-page-transition__trail {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.v2-page-transition__edge {
+  width: var(--v2-page-edge-width);
+  background: var(--v2-page-edge);
+}
+
+.v2-page-transition__trail {
+  width: var(--v2-page-trail-width);
+}
+
+.v2-page-transition__edge--cover {
+  left: 0;
+}
+
+.v2-page-transition__trail--cover {
+  left: var(--v2-page-edge-width);
+  background: linear-gradient(90deg, rgb(23 89 183 / 8%), rgb(23 89 183 / 0%));
+}
+
+.v2-page-transition__edge--reveal {
+  right: 0;
+}
+
+.v2-page-transition__trail--reveal {
+  right: var(--v2-page-edge-width);
+  background: linear-gradient(270deg, rgb(23 89 183 / 8%), rgb(23 89 183 / 0%));
+}
+
+/* A valid token must cover the incoming document before its first paint. */
+html[data-v2-page-bootstrap='arrival'] .v2-page-transition,
+.v2-page-transition:is(
+  [data-v2-page-state='covering'],
+  [data-v2-page-state='covered'],
+  [data-v2-page-state='navigating'],
+  [data-v2-page-state='arrival'],
+  [data-v2-page-state='waiting'],
+  [data-v2-page-state='revealing'],
+  [data-v2-page-state='fail-open']
+) {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+html[data-v2-page-bootstrap='arrival'] .v2-page-transition__sheet,
+.v2-page-transition:is(
+  [data-v2-page-state='covered'],
+  [data-v2-page-state='navigating'],
+  [data-v2-page-state='arrival'],
+  [data-v2-page-state='waiting']
+) .v2-page-transition__sheet {
+  transform: translate3d(0, 0, 0);
+}
+
+.v2-page-transition[data-v2-page-state='covering'] .v2-page-transition__sheet {
+  transform: translate3d(0, 0, 0);
+  transition-duration: var(--v2-page-cover-duration);
+}
+
+.v2-page-transition[data-v2-page-state='revealing'] .v2-page-transition__sheet {
+  transform: translate3d(-100%, 0, 0);
+  transition-duration: var(--v2-page-reveal-duration);
+}
+
+.v2-page-transition[data-v2-page-state='fail-open'] .v2-page-transition__sheet {
+  transform: translate3d(-100%, 0, 0);
+  transition-duration: var(--v2-page-fail-open-duration);
+}
+
+.v2-page-transition[data-v2-page-state='covering'] :is(
+  .v2-page-transition__edge--cover,
+  .v2-page-transition__trail--cover
+),
+.v2-page-transition[data-v2-page-state='covered'] :is(
+  .v2-page-transition__edge--cover,
+  .v2-page-transition__trail--cover
+) {
+  opacity: 1;
+}
+
+.v2-page-transition[data-v2-page-state='revealing'] :is(
+  .v2-page-transition__edge--reveal,
+  .v2-page-transition__trail--reveal
+) {
+  opacity: 1;
+}
+
+.v2-page-transition[data-v2-page-settled='true'] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* A recovered document may navigate again. Reset the hidden sheet to the
+ * outgoing start side while preserving fail-open diagnostics on the root. */
+.v2-page-transition[data-v2-page-state='fail-open'][data-v2-page-settled='true']
+  .v2-page-transition__sheet {
+  transform: translate3d(100%, 0, 0);
+  transition-duration: 0ms;
+}
+
+/*
+ * Incoming copy is prepared under the closed sheet. The marker belongs to a
+ * Hero-copy container, so local title/CTA controllers keep ownership of their
+ * children and no element receives two competing transform animations.
+ */
+html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='arrival']
+  body.home-v2-body [data-v2-page-handoff],
+html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='waiting']
+  body.home-v2-body [data-v2-page-handoff] {
+  opacity: 0 !important;
+  translate: 0 16px !important;
+  transition:
+    opacity 500ms var(--v2-page-copy-ease),
+    translate 500ms var(--v2-page-copy-ease) !important;
+  transition-delay: 0ms !important;
+  will-change: opacity, translate;
+}
+
+html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='revealing']
+  body.home-v2-body [data-v2-page-handoff],
+html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='fail-open']
+  body.home-v2-body [data-v2-page-handoff] {
+  opacity: 1 !important;
+  translate: 0 0 !important;
+  transition:
+    opacity 500ms var(--v2-page-copy-ease),
+    translate 500ms var(--v2-page-copy-ease) !important;
+  transition-delay: 0ms !important;
+}
+
+/* The shared Header must already be final under the incoming sheet. */
+html.home-v2-html[data-v2-page-bootstrap='arrival']
+  .hv2-header :where(
+    .hv2-header__brand,
+    .hv2-header__nav,
+    .hv2-header__actions,
+    .hv2-header__menu-button
+  ) {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+  transition-delay: 0ms !important;
+}
+
+html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='fail-open']
+  body.home-v2-body [data-v2-page-handoff] {
+  transition-duration: 120ms !important;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --v2-page-cover-duration: 250ms;
+    --v2-page-reveal-duration: 400ms;
+    --v2-page-edge-width: 1px;
+    --v2-page-trail-width: 9px;
+  }
+
+  html.home-v2-html[data-v2-page-bootstrap='arrival']
+    body.home-v2-body [data-v2-page-handoff] {
+    transition-duration: 400ms !important;
+  }
+
+  html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='fail-open']
+    body.home-v2-body [data-v2-page-handoff] {
+    transition-duration: 120ms !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --v2-page-cover-duration: 120ms;
+    --v2-page-reveal-duration: 120ms;
+    --v2-page-fail-open-duration: 100ms;
+  }
+
+  .v2-page-transition__sheet {
+    will-change: auto;
+  }
+
+  html.home-v2-html[data-v2-page-bootstrap='arrival']
+    body.home-v2-body [data-v2-page-handoff] {
+    opacity: 1 !important;
+    translate: 0 0 !important;
+    transition-duration: 120ms !important;
+    transition-delay: 0ms !important;
+    will-change: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  .v2-page-transition__edge {
+    background: CanvasText;
+  }
+}

@@ -399,7 +399,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
     }
     syncHeaderState();
     const entryMotionManaged = Boolean(
-      header.closest('[data-v2-motion-root][data-v2-entry-mode="preview"]')
+      header.closest('[data-v2-motion-root][data-v2-entry-mode]')
       && document.documentElement.classList.contains('v2-entry-js')
     );
     if (!entryMotionManaged) {

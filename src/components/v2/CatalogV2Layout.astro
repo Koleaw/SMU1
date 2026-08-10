@@ -98,6 +98,17 @@ const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const revealItems = Array.from(root.querySelectorAll<HTMLElement>('[data-v2-reveal]'));
+    const pageArrivalManaged = document.documentElement.dataset.v2PageBootstrap === 'arrival'
+      && document.documentElement.dataset.v2PageState !== 'done';
+    if (pageArrivalManaged) {
+      revealItems.forEach((element) => {
+        element.classList.remove('hv2-reveal-pending');
+        element.classList.add('hv2-reveal-visible');
+        delete element.dataset.v2RevealQueued;
+      });
+      root.dataset.enhancementsReady = 'arrival';
+      return;
+    }
     let observer: IntersectionObserver | undefined;
     let revealScanQueued = false;
     const revealElement = (element: HTMLElement) => {

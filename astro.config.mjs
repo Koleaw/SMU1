@@ -102,6 +102,10 @@ const isSitemapPageAllowed = (page) => {
 export default defineConfig({
   site: siteUrl,
   base: basePath,
+  prefetch: {
+    prefetchAll: false,
+    defaultStrategy: 'hover'
+  },
   integrations: [
     sitemap({
       filter: isSitemapPageAllowed

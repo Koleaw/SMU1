@@ -119,56 +119,32 @@ html.v2-entry-js:is([data-v2-entry-bootstrap='armed'], [data-v2-entry-bootstrap=
   will-change: opacity, translate;
 }
 
-.v2-entry-experience__logo-part {
-  position: absolute;
-  inset: 0;
-  display: block;
-  overflow: hidden;
-}
-
-.v2-entry-experience__logo-part img {
+.v2-entry-experience__logo-svg {
   display: block;
   width: 100%;
   height: 100%;
   max-width: none;
-  object-fit: contain;
   user-select: none;
 }
 
-/*
- * The source SVG is intentionally untouched. The first exact copy is clipped
- * around the roof/post silhouette; its reveal originates at the actual roof
- * apex (about 57.5% of the cropped SVG width).
- */
-.v2-entry-experience__logo-part--roof {
-  clip-path: polygon(
-    31% 38%,
-    57.5% 0%,
-    100% 54%,
-    100% 62%,
-    85% 62%,
-    83% 59%,
-    83% 100%,
-    77% 100%,
-    77% 53%,
-    57.5% 9%,
-    34% 45%
-  );
+.v2-entry-logo__roof-reveal {
+  transform: scaleX(0);
+  transform-box: fill-box;
+  transition: transform 500ms var(--v2-entry-content-ease);
+  will-change: transform;
 }
 
-.v2-entry-experience__logo-part--roof img {
-  clip-path: inset(0 42.5% 0 57.5%);
-  transition: clip-path 500ms var(--v2-entry-content-ease);
-  will-change: clip-path;
+.v2-entry-logo__roof-reveal--left {
+  transform-origin: right center;
 }
 
-/* The second exact copy is masked to the three letterforms. */
-.v2-entry-experience__logo-part--letters {
-  clip-path: inset(39% 21% 0 0);
+.v2-entry-logo__roof-reveal--right {
+  transform-origin: left center;
 }
 
-.v2-entry-experience__logo-part--letters img {
+[data-v2-logo-letters] {
   opacity: 0;
+  transform-box: view-box;
   translate: 0 24%;
   transition:
     opacity 440ms var(--v2-entry-content-ease) 180ms,
@@ -202,15 +178,15 @@ html.v2-entry-js:is([data-v2-entry-bootstrap='armed'], [data-v2-entry-bootstrap=
   [data-v2-entry-state='logo'],
   [data-v2-entry-state='waiting'],
   [data-v2-entry-state='opening']
-) .v2-entry-experience__logo-part--roof img {
-  clip-path: inset(0);
+) .v2-entry-logo__roof-reveal {
+  transform: scaleX(1);
 }
 
 .v2-entry-experience:is(
   [data-v2-entry-state='logo'],
   [data-v2-entry-state='waiting'],
   [data-v2-entry-state='opening']
-) .v2-entry-experience__logo-part--letters img {
+) [data-v2-logo-letters] {
   opacity: 1;
   translate: 0 0;
 }
@@ -385,6 +361,7 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
 }
 
 [data-v2-motion-root][data-v2-motion-active='true'][data-v2-entry-settled='true'] [data-v2-entry='header'] {
+  clip-path: none;
   transition:
     transform 300ms var(--hv2-ease),
     color 300ms var(--hv2-ease),

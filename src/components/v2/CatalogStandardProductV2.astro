@@ -141,7 +141,7 @@ const sectionNavItems = [
     aria-labelledby="v2-product-title"
   >
     <div class="hv2-shell hv2-grid v2-product-top__grid" data-product-final-track>
-      <article class="v2-product-summary">
+      <article class="v2-product-summary" data-v2-page-handoff="copy">
         <div class="v2-product-summary__breadcrumbs">
           <V2Breadcrumbs items={productBreadcrumbs} />
         </div>
@@ -177,6 +177,7 @@ const sectionNavItems = [
             title={product.title}
             imageView={product.imageView}
             caption={galleryCaption}
+            pageCritical
           />
         </div>
       )}

@@ -3,9 +3,11 @@ import '../styles/v2/home-v2.css';
 import '../styles/v2/cookie-banner-v2.css';
 import '../styles/v2/visual-polish-v2.css';
 import '../styles/v2/motion-v2.css';
+import '../styles/v2/page-transition-v2.css';
 import finalArtDirectionUrl from '../styles/v2/final-art-direction-v2.css?url';
 import CookieBanner from '../components/CookieBanner.astro';
 import V2EntryExperience from '../components/v2/motion/V2EntryExperience.astro';
+import V2PageTransition from '../components/v2/motion/V2PageTransition.astro';
 import siteSettings from '../content/site-settings/global.json';
 import yandex from '../data/yandex.json';
 import { withBase } from '../utils/withBase';
@@ -41,8 +43,17 @@ const {
 
 const isProduction = scope === 'production';
 const isEntryPreview = entryMotion === 'preview';
-const entrySessionKey = 'smu1:entry-intro:v1';
-const entryLogoHref = withBase('/assets/brand/logo_scan_cropped.svg');
+const entrySessionKey = 'smu1:entry-intro:v2';
+const currentProductionPath = productionV2Path(Astro.url.pathname).split(/[?#]/, 1)[0];
+const compatibilityRoutes = new Set(['/lavochki-i-skameyki/', '/urny/', '/navesy/']);
+const motionExcludedRoutes = new Set(['/404/', '/404.html', '/404.html/']);
+const isPublicV2Motion = isProduction
+  && !refreshTarget
+  && !compatibilityRoutes.has(currentProductionPath)
+  && !motionExcludedRoutes.has(currentProductionPath);
+const isEntryEnabled = isPublicV2Motion || isEntryPreview;
+const entryMode = isPublicV2Motion ? 'public' : isEntryPreview ? 'preview' : undefined;
+const v2BasePath = withBase('/');
 const pageTitle = title?.trim() || 'СМУ-1';
 const pageDescription = description?.trim()
   || 'СМУ-1: производство металлоконструкций, уличной мебели, ограждений и изделий для благоустройства.';
@@ -95,7 +106,9 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
   lang="ru"
   class="home-v2-html"
   data-home-v2-theme="engineering"
-  data-v2-entry-enabled={isEntryPreview ? 'preview' : undefined}
+  data-v2-entry-enabled={entryMode}
+  data-v2-public-route={isPublicV2Motion ? 'true' : undefined}
+  data-v2-base={v2BasePath}
 >
   <head>
     <meta charset="UTF-8" />
@@ -114,6 +127,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <meta name="twitter:description" content={pageDescription} />
     {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
     <meta name="theme-color" content="#101720" data-home-v2-theme-color />
+    {isPublicV2Motion && <V2PageTransition part="head" />}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -150,7 +164,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
         }
       })();
     </script>
-    {isEntryPreview && (
+    {isEntryEnabled && (
       <script is:inline define:vars={{ entrySessionKey }}>
         (() => {
           const root = document.documentElement;
@@ -161,21 +175,26 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
           const saveData = Boolean(connection && connection.saveData);
           let bootstrap = 'armed';
 
-          if (window.location.hash) {
-            bootstrap = 'skipped';
-          } else if (reducedMotion || saveData) {
-            bootstrap = 'static';
-          } else {
-            try {
+          try {
+            if (root.dataset.v2PageBootstrap === 'arrival') {
+              window.sessionStorage.setItem(entrySessionKey, 'seen');
+              bootstrap = 'static';
+            } else if (window.location.hash) {
+              window.sessionStorage.setItem(entrySessionKey, 'seen');
+              bootstrap = 'skipped';
+            } else if (reducedMotion || saveData) {
+              window.sessionStorage.setItem(entrySessionKey, 'seen');
+              bootstrap = 'static';
+            } else {
               const alreadySeen = window.sessionStorage.getItem(entrySessionKey) === 'seen';
               if (!forcedReplay && alreadySeen) {
                 bootstrap = 'static';
               } else {
                 window.sessionStorage.setItem(entrySessionKey, 'seen');
               }
-            } catch {
-              bootstrap = 'fail-open';
             }
+          } catch {
+            bootstrap = 'fail-open';
           }
 
           root.dataset.v2EntryBootstrap = bootstrap;
@@ -231,7 +250,6 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       />
     </noscript>
     <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
-    {isEntryPreview && <link rel="preload" href={entryLogoHref} as="image" type="image/svg+xml" />}
     <link rel="preload" href={finalArtDirectionUrl} as="style" />
     <title>{pageTitle}</title>
     {isProduction && !noindex && (
@@ -300,10 +318,11 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <link rel="stylesheet" href={finalArtDirectionUrl} data-final-art-direction />
   </head>
   <body class="home-v2-body">
-    {isEntryPreview ? (
+    {isPublicV2Motion && <V2PageTransition />}
+    {isEntryEnabled ? (
       <div
         data-v2-motion-root
-        data-v2-entry-mode="preview"
+        data-v2-entry-mode={entryMode}
         data-v2-motion-state="armed"
       >
         <a class="v2-entry-skip-link" href="#main-content" data-v2-entry-skip-link>
@@ -381,8 +400,11 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     </script>
     <script>
       import { initializeV2MotionController } from '../scripts/v2MotionController';
+      import { initializeV2PageTransitionController } from '../scripts/v2PageTransitionController';
 
+      initializeV2PageTransitionController();
       initializeV2MotionController();
+      document.addEventListener('astro:page-load', initializeV2PageTransitionController);
       document.addEventListener('astro:page-load', initializeV2MotionController);
     </script>
   </body>

@@ -151,7 +151,7 @@ const sectionNavItems = [
             ]} />
           </div>
 
-          <div class="v2-premium-product-hero__copy">
+          <div class="v2-premium-product-hero__copy" data-v2-page-handoff="copy">
             <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-reveal="entry-meta">{solutionKicker}</p>
             <h1 id="v2-premium-product-title" data-v2-reveal="entry-title">{product.title}</h1>
             {productLead && <p class="v2-premium-product-hero__lead" data-v2-reveal="entry-copy">{productLead}</p>}
@@ -185,6 +185,7 @@ const sectionNavItems = [
               decoding="async"
               style={imagePresentationStyle}
               data-v2-image
+              data-v2-page-critical
             />
           ) : (
             <div class="v2-media-empty"><p>Фотоматериалы решения не указаны</p></div>

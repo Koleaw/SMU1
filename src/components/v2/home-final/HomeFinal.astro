@@ -56,6 +56,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
             fetchpriority="high"
             decoding="async"
             data-v2-critical-media
+            data-v2-page-critical
           />
         </picture>
         <video
@@ -86,7 +87,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
       </button>
 
       <div class="hf-shell hf-shell--editorial hf-hero__content">
-        <div class="hf-hero__copy" data-hf-hero-copy data-v2-hero-scroll-copy>
+        <div class="hf-hero__copy" data-hf-hero-copy data-v2-hero-scroll-copy data-v2-page-handoff="copy">
           <p class="hf-eyebrow hf-eyebrow--light" data-reveal data-v2-entry="meta" style="--hv2-reveal-delay: 0ms">{copy.heroKicker}</p>
           <h1 id="home-final-title" data-reveal data-v2-entry="title" style="--hv2-reveal-delay: 60ms">{copy.heroTitle}</h1>
           <p class="hf-hero__lead" data-reveal data-v2-entry="lead" style="--hv2-reveal-delay: 120ms">{copy.heroDescription}</p>
@@ -265,8 +266,10 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
     const connection = (navigator as Navigator & {
       connection?: { saveData?: boolean; effectiveType?: string };
     }).connection;
-    const motionRoot = root.closest<HTMLElement>('[data-v2-motion-root][data-v2-entry-mode="preview"]');
+    const motionRoot = root.closest<HTMLElement>('[data-v2-motion-root][data-v2-entry-mode]');
     const entryManaged = Boolean(motionRoot && document.documentElement.classList.contains('v2-entry-js'));
+    const pageArrivalManaged = document.documentElement.dataset.v2PageBootstrap === 'arrival'
+      && document.documentElement.dataset.v2PageState !== 'done';
     const constrainedConnection = ['slow-2g', '2g'].includes(connection?.effectiveType ?? '');
     const videoAllowed = !reducedMotion.matches
       && !connection?.saveData
@@ -322,7 +325,11 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
       });
     };
 
-    if (entryManaged && motionRoot) {
+    if (pageArrivalManaged) {
+      primeVideoControl();
+      document.addEventListener('v2:page-revealing', startVideo, { once: true });
+      document.addEventListener('v2:page-done', startVideo, { once: true });
+    } else if (entryManaged && motionRoot) {
       primeVideoControl();
       const state = motionRoot.dataset.v2MotionState;
       const entryStillBlocking = state === 'armed' || state === 'logo' || state === 'waiting';
@@ -374,7 +381,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
   };
 
   const initializeHomeFinalMotion = (root: HTMLElement) => {
-    if (root.closest('[data-v2-motion-root][data-v2-entry-mode="preview"]')) {
+    if (root.closest('[data-v2-motion-root][data-v2-entry-mode]')) {
       root.querySelectorAll<HTMLElement>('[data-reveal]').forEach((element) => {
         element.classList.remove('hv2-reveal-pending', 'hv2-reveal-visible');
         delete element.dataset.v2RevealQueued;

@@ -82,7 +82,11 @@ const mediaStyle = [
     </div>
 
     <div class="immersive-direction-hero__composition">
-      <div class="immersive-direction-hero__copy" data-v2-hero-scroll-copy={productFinalHandoff ? undefined : ''}>
+      <div
+        class="immersive-direction-hero__copy"
+        data-v2-hero-scroll-copy={productFinalHandoff ? undefined : ''}
+        data-v2-page-handoff="copy"
+      >
         <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-reveal data-v2-reveal-stage="eyebrow">{eyebrow}</p>
         <h1 id={titleId} data-v2-reveal data-v2-reveal-stage="title">{title}</h1>
         <p class="immersive-direction-hero__lead" data-v2-reveal data-v2-reveal-stage="description">{description}</p>
@@ -116,6 +120,7 @@ const mediaStyle = [
         decoding="async"
         style={mediaStyle}
         data-v2-image
+        data-v2-page-critical
       />
       <div class="immersive-direction-hero__fallback" aria-hidden="true"></div>
       {caption && <figcaption>{caption}</figcaption>}
