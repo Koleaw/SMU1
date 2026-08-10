@@ -2541,10 +2541,6 @@
   :where(.catalog-v2[data-catalog-v2-root] > main) .hv2-grid {
     column-gap: 28px;
   }
-
-  :where(.catalog-v2[data-catalog-v2-root] > main) p {
-    max-inline-size: 75ch;
-  }
 }
 
 @media (min-width: 2200px) {

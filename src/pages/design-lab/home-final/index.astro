@@ -12,6 +12,7 @@ if (!homePage) throw new Error('static-pages collection must contain home.json.'
   description={homePage.seoDescription}
   canonicalPath="/"
   ogImage={homePage.heroMediaPoster ?? homePage.image}
+  entryMotion="preview"
 >
   <HomeFinal />
 </PublicV2Layout>

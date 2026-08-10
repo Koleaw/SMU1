@@ -513,20 +513,91 @@ const runHeroScrollAudit = async (name, route) => {
   await navigate(route, 180);
   await evaluate(`scrollTo({ top: 0, left: 0, behavior: 'instant' })`);
   await settle(80);
+  const productFinalReady = await waitForCondition(`(() => {
+    const handoff = document.querySelector('[data-product-final-handoff]');
+    return !handoff || handoff.hasAttribute('data-product-final-handoff-ready');
+  })()`, 3000);
   const initial = await evaluate(`(() => {
     const hero = document.querySelector('[data-v2-hero-scroll]');
     const copy = hero?.querySelector('[data-v2-hero-scroll-copy]');
     const header = document.querySelector('[data-home-v2-header]');
-    if (!hero || !copy) return null;
+    if (!hero || !copy) {
+      const root = document.querySelector('[data-catalog-v2-root][data-product-final-prototype]');
+      const handoff = root?.querySelector('[data-product-final-handoff]');
+      const productHero = handoff?.querySelector('[data-product-final-hero]');
+      const track = productHero?.querySelector('[data-product-final-track]');
+      if (!root || !handoff || !productHero || !track) return null;
+      const handoffStyle = getComputedStyle(handoff);
+      const productHeroRect = productHero.getBoundingClientRect();
+      return {
+        mode: 'product-final',
+        ready: handoff.hasAttribute('data-product-final-handoff-ready'),
+        controllerReady: root.getAttribute('data-product-final-controller-ready') === 'true',
+        sceneHeight: Number.parseFloat(handoffStyle.getPropertyValue('--product-final-scene-height')) || productHeroRect.height,
+        handoffTop: handoff.getBoundingClientRect().top + scrollY,
+        heroHeight: productHeroRect.height,
+        trackTransform: getComputedStyle(track).transform,
+        progress: Number.parseFloat(track.style.getPropertyValue('--product-final-progress')) || 0
+      };
+    }
     const heroRect = hero.getBoundingClientRect(), copyRect = copy.getBoundingClientRect();
-    return { heroHeight: heroRect.height, heroTop: heroRect.top, copyTop: copyRect.top, copyBottom: copyRect.bottom,
+    return { mode: 'legacy', heroHeight: heroRect.height, heroTop: heroRect.top, copyTop: copyRect.top, copyBottom: copyRect.bottom,
       copyOpacity: Number.parseFloat(getComputedStyle(copy).opacity || '1'), headerHeight: header?.offsetHeight || 0,
       scrollVar: getComputedStyle(hero).getPropertyValue('--v2-hero-scroll-y').trim() };
   })()`);
   if (!initial) {
-    record(`hero-scroll.${name}`, false, { route, issue: 'missing [data-v2-hero-scroll] / copy marker' });
+    record(`hero-scroll.${name}`, false, { route, issue: 'missing legacy Hero scroll or product-final handoff markers' });
     return;
   }
+
+  if (initial.mode === 'product-final') {
+    const requestedScroll = Math.min(
+      initial.handoffTop + Math.max(300, initial.sceneHeight * 0.58),
+      await evaluate(`Math.max(0, document.documentElement.scrollHeight - innerHeight)`)
+    );
+    const middle = await evaluate(`(async () => {
+      window.scrollTo({ top: ${requestedScroll}, left: 0, behavior: 'instant' });
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 140));
+      const root = document.querySelector('[data-catalog-v2-root][data-product-final-prototype]');
+      const handoff = root.querySelector('[data-product-final-handoff]');
+      const track = handoff.querySelector('[data-product-final-track]');
+      return {
+        scrollY,
+        active: root.hasAttribute('data-product-final-handoff-active'),
+        ready: handoff.hasAttribute('data-product-final-handoff-ready'),
+        trackTransform: getComputedStyle(track).transform,
+        progress: Number.parseFloat(track.style.getPropertyValue('--product-final-progress')) || 0
+      };
+    })()`);
+    const endScroll = Math.min(
+      initial.handoffTop + initial.sceneHeight + 8,
+      await evaluate(`Math.max(0, document.documentElement.scrollHeight - innerHeight)`)
+    );
+    const end = await evaluate(`(async () => {
+      window.scrollTo({ top: ${endScroll}, left: 0, behavior: 'instant' });
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 140));
+      const root = document.querySelector('[data-catalog-v2-root][data-product-final-prototype]');
+      const handoff = root.querySelector('[data-product-final-handoff]');
+      const track = handoff.querySelector('[data-product-final-track]');
+      return {
+        scrollY,
+        active: root.hasAttribute('data-product-final-handoff-active'),
+        trackTransform: getComputedStyle(track).transform,
+        progress: Number.parseFloat(track.style.getPropertyValue('--product-final-progress')) || 0
+      };
+    })()`);
+    const transformChanged = middle.trackTransform !== initial.trackTransform && middle.trackTransform !== 'none';
+    const progressAdvanced = middle.progress > 0.2 && middle.progress < 0.95;
+    const handoffComplete = end.progress >= 0.95;
+    record(`hero-scroll.${name}`, productFinalReady && initial.ready && initial.controllerReady
+      && middle.ready && middle.active && transformChanged && progressAdvanced && handoffComplete, {
+      route, initial, middle, end, productFinalReady, transformChanged, progressAdvanced, handoffComplete
+    });
+    return;
+  }
+
   const requestedScroll = Math.min(620, Math.max(300, Math.round(initial.heroHeight * 0.55)));
   const middle = await evaluate(`(async () => {
     window.scrollTo({ top: ${requestedScroll}, left: 0, behavior: 'instant' });
@@ -588,7 +659,8 @@ const runStickyNavAudit = async (viewportName, width, height, mobile = false) =>
   }
   const stuck = await evaluate(`(async () => {
     const nav = document.querySelector('[data-v2-section-nav]');
-    window.scrollTo({ top: nav.offsetTop + Math.max(180, innerHeight * 0.35), left: 0, behavior: 'instant' });
+    const navDocumentTop = nav.getBoundingClientRect().top + scrollY;
+    window.scrollTo({ top: navDocumentTop + Math.max(180, innerHeight * 0.35), left: 0, behavior: 'instant' });
     await new Promise((resolve) => setTimeout(resolve, 520));
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const header = document.querySelector('[data-home-v2-header]');

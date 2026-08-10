@@ -1,0 +1,50 @@
+---
+import { withBase } from '../../../utils/withBase';
+
+const logoSrc = withBase('/assets/brand/logo_scan_cropped.svg');
+---
+
+<div
+  class="v2-entry-experience"
+  data-v2-entry-root
+  data-v2-entry-overlay
+  data-v2-entry-state="armed"
+  aria-hidden="true"
+  inert
+>
+  <div class="v2-entry-experience__plane v2-entry-experience__plane--top" data-v2-entry-plane="top"></div>
+  <div class="v2-entry-experience__plane v2-entry-experience__plane--bottom" data-v2-entry-plane="bottom"></div>
+
+  <div class="v2-entry-experience__logo" data-v2-entry-logo>
+    <span
+      class="v2-entry-experience__logo-part v2-entry-experience__logo-part--roof"
+      data-v2-entry-logo-part="roof"
+    >
+      <img
+        src={logoSrc}
+        alt=""
+        width="355"
+        height="211"
+        loading="eager"
+        decoding="sync"
+        draggable="false"
+      />
+    </span>
+    <span
+      class="v2-entry-experience__logo-part v2-entry-experience__logo-part--letters"
+      data-v2-entry-logo-part="letters"
+    >
+      <img
+        src={logoSrc}
+        alt=""
+        width="355"
+        height="211"
+        loading="eager"
+        decoding="sync"
+        draggable="false"
+      />
+    </span>
+  </div>
+
+  <span class="v2-entry-experience__axis" data-v2-entry-axis></span>
+</div>

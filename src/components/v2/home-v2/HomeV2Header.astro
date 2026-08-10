@@ -64,7 +64,12 @@ const mobileMenuId = 'home-v2-mobile-menu';
 
 ---
 
-<header class:list={['hv2-header', { 'is-scrolled': mode === 'light' }]} data-home-v2-header data-hv2-header-mode={mode}>
+<header
+  class:list={['hv2-header', { 'is-scrolled': mode === 'light' }]}
+  data-home-v2-header
+  data-hv2-header-mode={mode}
+  data-v2-entry="header"
+>
   <div class="hv2-shell hv2-header__inner">
     <a
       class="hv2-header__brand"
@@ -393,7 +398,13 @@ const mobileMenuId = 'home-v2-mobile-menu';
       new ResizeObserver(queueHeaderSync).observe(heroBoundary);
     }
     syncHeaderState();
-    window.requestAnimationFrame(() => header.classList.add('is-ready'));
+    const entryMotionManaged = Boolean(
+      header.closest('[data-v2-motion-root][data-v2-entry-mode="preview"]')
+      && document.documentElement.classList.contains('v2-entry-js')
+    );
+    if (!entryMotionManaged) {
+      window.requestAnimationFrame(() => header.classList.add('is-ready'));
+    }
 
     let lastFocus: HTMLElement | null = null;
     let lockedScrollY = 0;

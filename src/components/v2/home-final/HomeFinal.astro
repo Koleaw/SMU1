@@ -33,7 +33,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
 <div class="home-v2 home-final" data-home-v2-root data-home-final-root>
   <HomeV2Header currentPath={Astro.url.pathname} catalogV2 />
 
-  <main>
+  <main id="main-content" tabindex="-1">
     <section class="hf-hero" aria-labelledby="home-final-title" data-hf-hero data-v2-hero-scroll>
       <span class="hf-hero__header-sentinel" aria-hidden="true" data-home-v2-header-sentinel></span>
 
@@ -41,6 +41,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
         class="hf-hero__media"
         aria-hidden="true"
         data-reveal
+        data-v2-entry="media"
         data-v2-hero-scroll-media
         style="--hv2-reveal-delay: 220ms"
       >
@@ -53,6 +54,8 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
             height="1080"
             loading="eager"
             fetchpriority="high"
+            decoding="async"
+            data-v2-critical-media
           />
         </picture>
         <video
@@ -62,8 +65,11 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
           playsinline
           preload="none"
           data-hf-hero-video
+          data-v2-deferred-video
           data-hf-desktop-src={path(home.heroMediaVideo)}
           data-hf-mobile-src={path(home.heroMediaVideoMobile)}
+          data-v2-desktop-src={path(home.heroMediaVideo)}
+          data-v2-mobile-src={path(home.heroMediaVideoMobile)}
         ></video>
         <div class="hf-hero__veil"></div>
       </div>
@@ -73,6 +79,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
         type="button"
         aria-label="Приостановить фоновое видео"
         data-hf-video-toggle
+        data-v2-entry="control"
         hidden
       >
         <span data-hf-video-toggle-label>Пауза видео</span>
@@ -80,10 +87,10 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
 
       <div class="hf-shell hf-shell--editorial hf-hero__content">
         <div class="hf-hero__copy" data-hf-hero-copy data-v2-hero-scroll-copy>
-          <p class="hf-eyebrow hf-eyebrow--light" data-reveal style="--hv2-reveal-delay: 0ms">{copy.heroKicker}</p>
-          <h1 id="home-final-title" data-reveal style="--hv2-reveal-delay: 60ms">{copy.heroTitle}</h1>
-          <p class="hf-hero__lead" data-reveal style="--hv2-reveal-delay: 120ms">{copy.heroDescription}</p>
-          <div class="hf-actions" data-reveal style="--hv2-reveal-delay: 180ms">
+          <p class="hf-eyebrow hf-eyebrow--light" data-reveal data-v2-entry="meta" style="--hv2-reveal-delay: 0ms">{copy.heroKicker}</p>
+          <h1 id="home-final-title" data-reveal data-v2-entry="title" style="--hv2-reveal-delay: 60ms">{copy.heroTitle}</h1>
+          <p class="hf-hero__lead" data-reveal data-v2-entry="lead" style="--hv2-reveal-delay: 120ms">{copy.heroDescription}</p>
+          <div class="hf-actions" data-reveal data-v2-entry="actions" style="--hv2-reveal-delay: 180ms">
             <a class="hf-button hf-button--primary" href="#contact">{copy.heroPrimaryLabel}</a>
             <a class="hf-button hf-button--ghost" href={path('/design-lab/v2/vypolnennye-obekty/')}>
               {copy.heroSecondaryLabel}
@@ -95,7 +102,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
 
     <section class="hf-directions" id="directions" aria-labelledby="home-final-directions-title">
       <div class="hf-shell hf-shell--editorial">
-        <header class="hf-section-head" data-reveal>
+        <header class="hf-section-head" data-reveal data-v2-reveal="title">
           <div>
             <p class="hf-eyebrow">{copy.directionsEyebrow}</p>
             <h2 id="home-final-directions-title">От предметного решения до строительного объекта</h2>
@@ -108,7 +115,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
 
         <div class="hf-directions__layout">
           {directionCards.map(({ direction, className, kicker }) => direction && (
-            <a class={`hf-direction hf-direction--${className}`} href={path(direction.href)} data-reveal>
+            <a class={`hf-direction hf-direction--${className}`} href={path(direction.href)} data-reveal data-v2-reveal="media">
               {direction.image && <img
                 src={path(direction.image)}
                 alt=""
@@ -129,7 +136,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
 
           <div class="hf-direction-rail" aria-label="Специализированные направления">
             {railDirections.map(({ direction, kicker }) => direction && (
-              <a class="hf-direction-rail__item" href={path(direction.href)} data-reveal>
+              <a class="hf-direction-rail__item" href={path(direction.href)} data-reveal data-v2-reveal="group">
                 <span class="hf-direction-rail__copy">
                   <span class="hf-direction__meta">{kicker}</span>
                   <strong>{direction.title}</strong>
@@ -143,6 +150,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
             class="hf-direction hf-direction--landscaping"
             href={path(landscapingDirection.href)}
             data-reveal
+            data-v2-reveal="media"
           >
             {landscapingDirection.image && <img
               src={path(landscapingDirection.image)}
@@ -174,7 +182,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
 
     <section class="hf-intake" id="brief" aria-labelledby="home-final-intake-title">
       <div class="hf-shell hf-shell--editorial hf-intake__layout">
-        <div class="hf-intake__intro" data-reveal>
+        <div class="hf-intake__intro" data-reveal data-v2-reveal="copy">
           <p class="hf-eyebrow hf-eyebrow--light">Как начать работу</p>
           <h2 id="home-final-intake-title">Пришлите то, что уже есть</h2>
           <p>
@@ -186,7 +194,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
           </a>
         </div>
 
-        <ol class="hf-intake__sequence" aria-label="Что можно прислать" data-reveal>
+        <ol class="hf-intake__sequence" aria-label="Что можно прислать" data-reveal data-v2-reveal="group">
           <li><strong>Описание задачи</strong><span class="hf-intake__format">Текст</span></li>
           <li><strong>Фотографию</strong><span class="hf-intake__format">JPG / PNG</span></li>
           <li><strong>Размеры</strong><span class="hf-intake__format">Габариты</span></li>
@@ -199,7 +207,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
 
     <section class="hv2-contact" id="contact" aria-labelledby="home-final-contact-title">
       <div class="hv2-shell hv2-contact__grid hv2-grid">
-        <div class="hv2-contact__intro" data-reveal>
+        <div class="hv2-contact__intro" data-reveal data-v2-reveal="title">
           <p class="hv2-eyebrow hv2-eyebrow--light">Прямая связь</p>
           <h2 id="home-final-contact-title">{copy.contactTitle}</h2>
           <p>{copy.contactDescription}</p>
@@ -211,7 +219,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
           </div>
         </div>
 
-        <div class="hv2-contact__channels" data-reveal>
+        <div class="hv2-contact__channels" data-reveal data-v2-reveal="group">
           <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
             <span>Основной телефон</span><strong>{settings.phonePrimary}</strong>
           </a>
@@ -257,6 +265,8 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
     const connection = (navigator as Navigator & {
       connection?: { saveData?: boolean; effectiveType?: string };
     }).connection;
+    const motionRoot = root.closest<HTMLElement>('[data-v2-motion-root][data-v2-entry-mode="preview"]');
+    const entryManaged = Boolean(motionRoot && document.documentElement.classList.contains('v2-entry-js'));
     const constrainedConnection = ['slow-2g', '2g'].includes(connection?.effectiveType ?? '');
     const videoAllowed = !reducedMotion.matches
       && !connection?.saveData
@@ -275,15 +285,29 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
       video.removeAttribute('src');
       video.load();
       toggle.hidden = true;
+      toggle.disabled = true;
+      toggle.setAttribute('aria-hidden', 'true');
       setPlayingState(false);
     };
 
-    if (videoAllowed && selectedSource) {
+    const primeVideoControl = () => {
+      if (!videoAllowed || !selectedSource) return;
+      toggle.hidden = false;
+      toggle.disabled = true;
+      toggle.setAttribute('aria-hidden', 'true');
+    };
+
+    let videoStarted = false;
+    const startVideo = () => {
+      if (videoStarted || !videoAllowed || !selectedSource) return;
+      videoStarted = true;
       video.src = selectedSource;
       video.defaultMuted = true;
       video.muted = true;
       setPlayingState(false);
       toggle.hidden = false;
+      toggle.disabled = false;
+      toggle.removeAttribute('aria-hidden');
       video.addEventListener('playing', () => setPlayingState(true));
       video.addEventListener('pause', () => setPlayingState(false));
       video.addEventListener('error', stopAndUnloadVideo);
@@ -296,6 +320,19 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
         if (video.paused) video.play().catch(() => setPlayingState(false));
         else video.pause();
       });
+    };
+
+    if (entryManaged && motionRoot) {
+      primeVideoControl();
+      const state = motionRoot.dataset.v2MotionState;
+      const entryStillBlocking = state === 'armed' || state === 'logo' || state === 'waiting';
+      if (!entryStillBlocking) startVideo();
+      else {
+        motionRoot.addEventListener('v2:entry-opening', startVideo, { once: true });
+        motionRoot.addEventListener('v2:entry-done', startVideo, { once: true });
+      }
+    } else {
+      startVideo();
     }
 
     reducedMotion.addEventListener('change', (event) => {
@@ -337,6 +374,14 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
   };
 
   const initializeHomeFinalMotion = (root: HTMLElement) => {
+    if (root.closest('[data-v2-motion-root][data-v2-entry-mode="preview"]')) {
+      root.querySelectorAll<HTMLElement>('[data-reveal]').forEach((element) => {
+        element.classList.remove('hv2-reveal-pending', 'hv2-reveal-visible');
+        delete element.dataset.v2RevealQueued;
+      });
+      root.dataset.hfMotionReady = 'managed';
+      return;
+    }
     if (root.dataset.hfMotionReady === 'true') return;
     root.dataset.hfMotionReady = 'true';
 

@@ -1,0 +1,549 @@
+/*
+ * V2 entry and scroll choreography.
+ *
+ * Nothing below hides public content until the controller explicitly arms a
+ * `[data-v2-motion-root]`. The entry overlay itself is also display:none when
+ * scripting is disabled, so the server-rendered page is always the fallback.
+ */
+
+:root {
+  --v2-entry-blue: #1759b7;
+  --v2-entry-navy: #000080;
+  --v2-entry-plane: #ffffff;
+  --v2-entry-seam: 50%;
+  --v2-entry-plane-ease: cubic-bezier(0.76, 0, 0.24, 1);
+  --v2-entry-content-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* The reserved scrollbar gutter is part of the loading canvas as well. */
+html.v2-entry-js:is([data-v2-entry-bootstrap='armed'], [data-v2-entry-bootstrap='fail-open']) {
+  background: #ffffff;
+}
+
+.v2-entry-experience {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: none;
+  overflow: clip;
+  isolation: isolate;
+  contain: strict;
+  pointer-events: auto;
+  visibility: visible;
+  opacity: 1;
+}
+
+@media (scripting: enabled) {
+  html.v2-entry-js:is([data-v2-entry-bootstrap='armed'], [data-v2-entry-bootstrap='fail-open']) .v2-entry-experience:is(
+    [data-v2-entry-state='armed'],
+    [data-v2-entry-state='logo'],
+    [data-v2-entry-state='waiting'],
+    [data-v2-entry-state='opening'],
+    [data-v2-entry-state='assembling']
+  ) {
+    display: block;
+  }
+}
+
+.v2-entry-experience:is(
+  [data-v2-entry-state='skipped'],
+  [data-v2-entry-state='static'],
+  [data-v2-entry-state='fail-open'],
+  [data-v2-entry-state='done']
+) {
+  display: none;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.v2-entry-skip-link {
+  position: fixed;
+  z-index: 1100;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 10px 16px;
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  background: #0b1d36;
+  font: 700 14px/1.25 'Manrope', 'Segoe UI', Arial, sans-serif;
+  text-decoration: none;
+  opacity: 0;
+  translate: 0 calc(-100% - 20px);
+  transition: opacity 120ms linear, translate 180ms var(--v2-entry-content-ease);
+}
+
+.v2-entry-skip-link:focus-visible {
+  outline: 3px solid var(--v2-entry-blue);
+  outline-offset: 3px;
+  opacity: 1;
+  translate: 0 0;
+}
+
+.v2-entry-experience__plane {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  left: 0;
+  background: var(--v2-entry-plane);
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.v2-entry-experience__plane--top {
+  top: 0;
+  height: calc(var(--v2-entry-seam) + 1px);
+  transform-origin: center top;
+}
+
+.v2-entry-experience__plane--bottom {
+  top: var(--v2-entry-seam);
+  bottom: 0;
+  transform-origin: center bottom;
+}
+
+.v2-entry-experience__logo {
+  position: absolute;
+  z-index: 3;
+  top: var(--v2-entry-seam);
+  left: 50%;
+  width: min(clamp(220px, 18vw, 320px), calc(100vw - 48px));
+  aspect-ratio: 355.365 / 210.509;
+  opacity: 1;
+  translate: -50% calc(-100% - clamp(22px, 2.4vh, 34px));
+  transition:
+    opacity 260ms var(--v2-entry-content-ease),
+    translate 300ms var(--v2-entry-content-ease);
+  will-change: opacity, translate;
+}
+
+.v2-entry-experience__logo-part {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+}
+
+.v2-entry-experience__logo-part img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  user-select: none;
+}
+
+/*
+ * The source SVG is intentionally untouched. The first exact copy is clipped
+ * around the roof/post silhouette; its reveal originates at the actual roof
+ * apex (about 57.5% of the cropped SVG width).
+ */
+.v2-entry-experience__logo-part--roof {
+  clip-path: polygon(
+    31% 38%,
+    57.5% 0%,
+    100% 54%,
+    100% 62%,
+    85% 62%,
+    83% 59%,
+    83% 100%,
+    77% 100%,
+    77% 53%,
+    57.5% 9%,
+    34% 45%
+  );
+}
+
+.v2-entry-experience__logo-part--roof img {
+  clip-path: inset(0 42.5% 0 57.5%);
+  transition: clip-path 500ms var(--v2-entry-content-ease);
+  will-change: clip-path;
+}
+
+/* The second exact copy is masked to the three letterforms. */
+.v2-entry-experience__logo-part--letters {
+  clip-path: inset(39% 21% 0 0);
+}
+
+.v2-entry-experience__logo-part--letters img {
+  opacity: 0;
+  translate: 0 24%;
+  transition:
+    opacity 440ms var(--v2-entry-content-ease) 180ms,
+    translate 520ms var(--v2-entry-content-ease) 180ms;
+  will-change: opacity, translate;
+}
+
+.v2-entry-experience__axis {
+  position: absolute;
+  z-index: 4;
+  top: var(--v2-entry-seam);
+  right: 0;
+  left: 0;
+  display: block;
+  height: 2px;
+  background: color-mix(in srgb, var(--v2-entry-blue) 48%, transparent);
+  opacity: 0;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+.v2-entry-experience__axis::after {
+  position: absolute;
+  inset: 0;
+  background: var(--v2-entry-blue);
+  content: '';
+}
+
+.v2-entry-experience:is(
+  [data-v2-entry-state='logo'],
+  [data-v2-entry-state='waiting'],
+  [data-v2-entry-state='opening']
+) .v2-entry-experience__logo-part--roof img {
+  clip-path: inset(0);
+}
+
+.v2-entry-experience:is(
+  [data-v2-entry-state='logo'],
+  [data-v2-entry-state='waiting'],
+  [data-v2-entry-state='opening']
+) .v2-entry-experience__logo-part--letters img {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.v2-entry-experience[data-v2-entry-state='waiting'] .v2-entry-experience__axis {
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
+  transition:
+    opacity 160ms linear,
+    transform 600ms var(--v2-entry-content-ease);
+}
+
+.v2-entry-experience[data-v2-entry-state='waiting'] .v2-entry-experience__axis::after {
+  animation: v2-entry-axis-hold 1400ms ease-in-out 620ms infinite alternate;
+}
+
+.v2-entry-experience[data-v2-entry-state='opening'] .v2-entry-experience__logo {
+  opacity: 0;
+  translate: -50% calc(-100% - clamp(32px, 3.2vh, 46px));
+}
+
+.v2-entry-experience[data-v2-entry-state='opening'] .v2-entry-experience__axis {
+  opacity: 0;
+  transform: translateY(-50%) scaleX(1);
+  transition: opacity 260ms linear 90ms;
+}
+
+.v2-entry-experience[data-v2-entry-state='opening'] .v2-entry-experience__plane--top {
+  transform: translate3d(0, -100%, 0);
+  transition: transform 760ms var(--v2-entry-plane-ease);
+}
+
+.v2-entry-experience[data-v2-entry-state='opening'] .v2-entry-experience__plane--bottom {
+  transform: translate3d(0, 100%, 0);
+  transition: transform 760ms var(--v2-entry-plane-ease);
+}
+
+.v2-entry-experience[data-v2-entry-state='assembling'] {
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.v2-entry-experience[data-v2-entry-state='assembling'] .v2-entry-experience__plane--top {
+  transform: translate3d(0, -100%, 0);
+}
+
+.v2-entry-experience[data-v2-entry-state='assembling'] .v2-entry-experience__plane--bottom {
+  transform: translate3d(0, 100%, 0);
+}
+
+@keyframes v2-entry-axis-hold {
+  from { opacity: 0.68; }
+  to { opacity: 1; }
+}
+
+/* CSS lock mirrors the controller lock and automatically clears with state. */
+html.v2-entry-scroll-locked,
+html[data-v2-entry-lock='true'],
+html[data-v2-scroll-locked='true'],
+html:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
+  overflow: hidden;
+  overscroll-behavior: none;
+  scrollbar-gutter: stable;
+  scrollbar-color: transparent #fff;
+}
+
+html.v2-entry-scroll-locked::-webkit-scrollbar,
+html.v2-entry-scroll-locked::-webkit-scrollbar-track {
+  background: #fff;
+}
+
+html.v2-entry-scroll-locked::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+body.v2-entry-scroll-locked,
+body[data-v2-entry-lock='true'],
+html[data-v2-scroll-locked='true'] body,
+body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+/* Hero handoff ---------------------------------------------------------- */
+
+[data-v2-motion-root]:not([data-v2-motion-active='true']) [data-hf-video-toggle][disabled][aria-hidden='true'] {
+  display: none;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry] {
+  --v2-entry-delay: 0ms;
+  opacity: 0;
+  translate: 0 24px;
+  transition:
+    opacity 720ms var(--v2-entry-content-ease) var(--v2-entry-delay),
+    translate 720ms var(--v2-entry-content-ease) var(--v2-entry-delay),
+    clip-path 720ms var(--v2-entry-content-ease) var(--v2-entry-delay),
+    scale 900ms var(--v2-entry-content-ease) var(--v2-entry-delay);
+  will-change: opacity, translate;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='media'] {
+  opacity: 0.68;
+  translate: 0 0;
+  scale: 1.02;
+  clip-path: inset(0 0 5% 0);
+}
+
+[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='header'] {
+  --v2-entry-delay: 160ms;
+  translate: 0 -12px;
+  transition:
+    opacity 620ms var(--v2-entry-content-ease) var(--v2-entry-delay),
+    translate 620ms var(--v2-entry-content-ease) var(--v2-entry-delay),
+    transform 300ms var(--hv2-ease),
+    color 300ms var(--hv2-ease),
+    background-color 300ms var(--hv2-ease),
+    border-color 300ms var(--hv2-ease);
+  will-change: opacity, translate, transform;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='meta'] {
+  --v2-entry-delay: 220ms;
+  translate: 0 18px;
+  transition-duration: 620ms;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='title'] {
+  --v2-entry-delay: 280ms;
+  clip-path: inset(0 0 100% 0);
+  translate: 0 28px;
+  transition-duration: 820ms;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='lead'] {
+  --v2-entry-delay: 500ms;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='support'] {
+  --v2-entry-delay: 560ms;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='actions'] {
+  --v2-entry-delay: 620ms;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='control'] {
+  --v2-entry-delay: 740ms;
+  translate: 0 16px;
+  transition-duration: 620ms;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true']:is(
+  [data-v2-motion-state='opening'],
+  [data-v2-motion-state='assembling'],
+  [data-v2-motion-state='done'],
+  [data-v2-motion-state='static'],
+  [data-v2-motion-state='skipped'],
+  [data-v2-motion-state='fail-open']
+) [data-v2-entry] {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  clip-path: inset(0);
+}
+
+[data-v2-motion-root][data-v2-motion-active='true'][data-v2-entry-settled='true'] [data-v2-entry]:not([data-v2-entry='header']) {
+  transition: none;
+  will-change: auto;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true'][data-v2-entry-settled='true'] [data-v2-entry='header'] {
+  transition:
+    transform 300ms var(--hv2-ease),
+    color 300ms var(--hv2-ease),
+    background-color 300ms var(--hv2-ease),
+    border-color 300ms var(--hv2-ease);
+  will-change: transform;
+}
+
+/*
+ * `translate` and `scale` are individual transform properties on purpose.
+ * Existing `[data-v2-hero-scroll-*]` transforms can therefore keep owning the
+ * `transform` property without fighting the entry choreography.
+ */
+
+/* Scroll choreography --------------------------------------------------- */
+
+[data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-reveal]:not([data-v2-entry]):not([data-v2-reveal='group'])[data-v2-reveal-state] {
+  transition:
+    opacity 620ms var(--v2-entry-content-ease) var(--v2-reveal-delay, 0ms),
+    translate 720ms var(--v2-entry-content-ease) var(--v2-reveal-delay, 0ms),
+    clip-path 720ms var(--v2-entry-content-ease) var(--v2-reveal-delay, 0ms),
+    scale 820ms var(--v2-entry-content-ease) var(--v2-reveal-delay, 0ms);
+}
+
+[data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-reveal]:not([data-v2-entry]):not([data-v2-reveal='group'])[data-v2-reveal-state='pending'] {
+  opacity: 0;
+  translate: 0 24px;
+  will-change: opacity, translate;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-reveal='title']:not([data-v2-entry])[data-v2-reveal-state='pending'] {
+  /* Keep a real intersection area so the observed element can trigger its
+     own reveal; the Hero title retains the full line-mask treatment. */
+  clip-path: inset(0 0 14% 0);
+  translate: 0 26px;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-reveal='media']:not([data-v2-entry])[data-v2-reveal-state='pending'] {
+  opacity: 0.56;
+  translate: 0 0;
+  scale: 1.018;
+  clip-path: inset(0 0 6% 0);
+}
+
+[data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-reveal]:not([data-v2-entry]):not([data-v2-reveal='group'])[data-v2-reveal-state='visible'] {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  clip-path: inset(0);
+}
+
+[data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-reveal='group'][data-v2-reveal-state='pending'] > * {
+  opacity: 0;
+  translate: 0 22px;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-reveal='group'][data-v2-reveal-state='visible'] > * {
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity 620ms var(--v2-entry-content-ease),
+    translate 720ms var(--v2-entry-content-ease);
+}
+
+[data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-reveal='group'][data-v2-reveal-state='visible'] > :nth-child(2) {
+  transition-delay: 70ms;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-reveal='group'][data-v2-reveal-state='visible'] > :nth-child(3) {
+  transition-delay: 140ms;
+}
+
+[data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-reveal='group'][data-v2-reveal-state='visible'] > :nth-child(n + 4) {
+  transition-delay: 210ms;
+}
+
+@media (max-width: 760px) {
+  .v2-entry-experience__logo {
+    width: min(220px, calc(100vw - 48px));
+    translate: -50% calc(-100% - 22px);
+  }
+
+  .v2-entry-experience__axis {
+    height: 1px;
+  }
+
+  .v2-entry-experience[data-v2-entry-state='opening'] .v2-entry-experience__logo {
+    translate: -50% calc(-100% - 32px);
+  }
+
+  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry],
+  [data-v2-motion-root][data-v2-motion-active='true']
+    [data-v2-reveal]:not([data-v2-entry]):not([data-v2-reveal='group'])[data-v2-reveal-state='pending'] {
+    translate: 0 16px;
+  }
+
+  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='header'] {
+    translate: 0 -8px;
+  }
+
+  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='title'],
+  [data-v2-motion-root][data-v2-motion-active='true']
+    [data-v2-reveal='title']:not([data-v2-entry])[data-v2-reveal-state='pending'] {
+    translate: 0 20px;
+  }
+
+  [data-v2-motion-root][data-v2-motion-active='true']
+    [data-v2-reveal='group'][data-v2-reveal-state='pending'] > * {
+    translate: 0 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-entry-experience,
+  .v2-entry-experience *,
+  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry],
+  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-reveal],
+  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-reveal] > * {
+    animation: none !important;
+    transition-duration: 120ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  .v2-entry-experience[data-v2-entry-state='opening'] {
+    opacity: 0;
+    transition: opacity 120ms linear !important;
+  }
+
+  .v2-entry-experience[data-v2-entry-state='opening'] .v2-entry-experience__plane {
+    transform: none;
+  }
+
+  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry],
+  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-reveal],
+  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-reveal] > * {
+    translate: 0 0 !important;
+    scale: 1 !important;
+    clip-path: inset(0) !important;
+  }
+}
+
+[data-v2-motion-root][data-v2-motion-static='true'] [data-v2-entry],
+[data-v2-motion-root][data-v2-motion-static='true'] [data-v2-reveal],
+[data-v2-motion-root][data-v2-motion-static='true'] [data-v2-reveal] > * {
+  opacity: 1 !important;
+  translate: 0 0 !important;
+  scale: 1 !important;
+  clip-path: inset(0) !important;
+  animation: none !important;
+  transition-duration: 120ms !important;
+  transition-delay: 0ms !important;
+}

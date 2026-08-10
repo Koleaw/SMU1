@@ -2,8 +2,10 @@
 import '../styles/v2/home-v2.css';
 import '../styles/v2/cookie-banner-v2.css';
 import '../styles/v2/visual-polish-v2.css';
+import '../styles/v2/motion-v2.css';
 import finalArtDirectionUrl from '../styles/v2/final-art-direction-v2.css?url';
 import CookieBanner from '../components/CookieBanner.astro';
+import V2EntryExperience from '../components/v2/motion/V2EntryExperience.astro';
 import siteSettings from '../content/site-settings/global.json';
 import yandex from '../data/yandex.json';
 import { withBase } from '../utils/withBase';
@@ -20,6 +22,7 @@ interface Props {
   noCanonical?: boolean;
   structuredData?: Record<string, unknown> | Record<string, unknown>[];
   refreshTarget?: string;
+  entryMotion?: 'preview';
 }
 
 const {
@@ -32,10 +35,14 @@ const {
   noindex = false,
   noCanonical = false,
   structuredData,
-  refreshTarget = ''
+  refreshTarget = '',
+  entryMotion
 } = Astro.props as Props;
 
 const isProduction = scope === 'production';
+const isEntryPreview = entryMotion === 'preview';
+const entrySessionKey = 'smu1:entry-intro:v1';
+const entryLogoHref = withBase('/assets/brand/logo_scan_cropped.svg');
 const pageTitle = title?.trim() || 'СМУ-1';
 const pageDescription = description?.trim()
   || 'СМУ-1: производство металлоконструкций, уличной мебели, ограждений и изделий для благоустройства.';
@@ -84,7 +91,12 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
 ---
 
 <!doctype html>
-<html lang="ru" class="home-v2-html" data-home-v2-theme="engineering">
+<html
+  lang="ru"
+  class="home-v2-html"
+  data-home-v2-theme="engineering"
+  data-v2-entry-enabled={isEntryPreview ? 'preview' : undefined}
+>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -126,11 +138,92 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       (() => {
         const stylesheet = document.querySelector('[data-v2-font-stylesheet]');
         if (!(stylesheet instanceof HTMLLinkElement)) return;
-        const activate = () => { stylesheet.media = 'all'; };
+        const activate = () => {
+          stylesheet.media = 'all';
+          stylesheet.dataset.v2FontState = 'loaded';
+        };
+        const fail = () => { stylesheet.dataset.v2FontState = 'error'; };
         if (stylesheet.sheet) activate();
-        else stylesheet.addEventListener('load', activate, { once: true });
+        else {
+          stylesheet.addEventListener('load', activate, { once: true });
+          stylesheet.addEventListener('error', fail, { once: true });
+        }
       })();
     </script>
+    {isEntryPreview && (
+      <script is:inline define:vars={{ entrySessionKey }}>
+        (() => {
+          const root = document.documentElement;
+          const params = new URLSearchParams(window.location.search);
+          const forcedReplay = params.get('intro') === 'replay' || params.get('intro') === 'slow';
+          const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+          const saveData = Boolean(connection && connection.saveData);
+          let bootstrap = 'armed';
+
+          if (window.location.hash) {
+            bootstrap = 'skipped';
+          } else if (reducedMotion || saveData) {
+            bootstrap = 'static';
+          } else {
+            try {
+              const alreadySeen = window.sessionStorage.getItem(entrySessionKey) === 'seen';
+              if (!forcedReplay && alreadySeen) {
+                bootstrap = 'static';
+              } else {
+                window.sessionStorage.setItem(entrySessionKey, 'seen');
+              }
+            } catch {
+              bootstrap = 'fail-open';
+            }
+          }
+
+          root.dataset.v2EntryBootstrap = bootstrap;
+          root.dataset.v2MotionState = bootstrap;
+          if (bootstrap !== 'armed') return;
+
+          root.classList.add('v2-entry-js');
+          root.classList.add('v2-entry-scroll-locked');
+          root.dataset.v2ScrollLocked = 'true';
+          window.__smu1EntryFailSafe = window.setTimeout(() => {
+            root.dataset.v2EntryBootstrap = 'fail-open';
+            root.dataset.v2MotionState = 'fail-open';
+            const motionRoot = document.querySelector('[data-v2-motion-root]');
+            const entryRoot = document.querySelector('[data-v2-entry-root]');
+            const header = document.querySelector('[data-home-v2-header]');
+            if (motionRoot instanceof HTMLElement) {
+              motionRoot.dataset.v2MotionState = 'fail-open';
+              motionRoot.dataset.v2MotionStatic = 'true';
+              motionRoot.dataset.v2CriticalStatus = 'controller-timeout';
+              motionRoot.querySelectorAll('[data-v2-reveal]').forEach((element) => {
+                if (element instanceof HTMLElement) element.dataset.v2RevealState = 'visible';
+              });
+              motionRoot.dispatchEvent(new CustomEvent('v2:entry-opening', {
+                detail: { state: 'fail-open' }
+              }));
+            }
+            if (entryRoot instanceof HTMLElement) entryRoot.dataset.v2EntryState = 'opening';
+            if (header instanceof HTMLElement) header.classList.add('is-ready');
+
+            window.__smu1EntryFailSafeCleanup = window.setTimeout(() => {
+              delete root.dataset.v2ScrollLocked;
+              delete root.dataset.v2EntryLock;
+              root.classList.remove('v2-entry-js', 'v2-entry-scroll-locked');
+              if (motionRoot instanceof HTMLElement) {
+                motionRoot.dataset.v2EntrySettled = 'true';
+                delete motionRoot.dataset.v2ScrollLocked;
+                motionRoot.dispatchEvent(new CustomEvent('v2:entry-done', {
+                  detail: { state: 'fail-open' }
+                }));
+              }
+              if (entryRoot instanceof HTMLElement) entryRoot.dataset.v2EntryState = 'fail-open';
+              document.body?.classList.remove('v2-entry-scroll-locked');
+              if (document.body) delete document.body.dataset.v2EntryLock;
+            }, 800);
+          }, 3900);
+        })();
+      </script>
+    )}
     <noscript>
       <link
         href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional"
@@ -138,6 +231,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       />
     </noscript>
     <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
+    {isEntryPreview && <link rel="preload" href={entryLogoHref} as="image" type="image/svg+xml" />}
     <link rel="preload" href={finalArtDirectionUrl} as="style" />
     <title>{pageTitle}</title>
     {isProduction && !noindex && (
@@ -206,7 +300,21 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <link rel="stylesheet" href={finalArtDirectionUrl} data-final-art-direction />
   </head>
   <body class="home-v2-body">
-    <slot />
+    {isEntryPreview ? (
+      <div
+        data-v2-motion-root
+        data-v2-entry-mode="preview"
+        data-v2-motion-state="armed"
+      >
+        <a class="v2-entry-skip-link" href="#main-content" data-v2-entry-skip-link>
+          К основному содержанию
+        </a>
+        <V2EntryExperience />
+        <slot />
+      </div>
+    ) : (
+      <slot />
+    )}
     {isProduction && <CookieBanner />}
     <script>
       const initV2HeroScroll = () => {
@@ -270,6 +378,12 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
 
       initV2HeroScroll();
       document.addEventListener('astro:page-load', initV2HeroScroll);
+    </script>
+    <script>
+      import { initializeV2MotionController } from '../scripts/v2MotionController';
+
+      initializeV2MotionController();
+      document.addEventListener('astro:page-load', initializeV2MotionController);
     </script>
   </body>
 </html>
