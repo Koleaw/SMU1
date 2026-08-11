@@ -40,6 +40,7 @@ const showMedia = variant === 'visual' && Boolean(media);
     class="v2-project-card__card-link"
     href={withBase(v2Route)}
     aria-label={`Открыть объект «${project.title}»`}
+    data-v2-transition-label={project.title}
   >
     {showMedia && media && (
       <figure

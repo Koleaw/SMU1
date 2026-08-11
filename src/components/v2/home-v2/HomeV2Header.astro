@@ -3,6 +3,7 @@ import settings from '../../../content/site-settings/global.json';
 import { v2CurrentState, v2Href } from '../../../utils/v2Routes';
 import { getV2Navigation } from '../../../utils/v2Navigation';
 import { getV2TelegramLabel } from '../../../utils/v2SiteSettings';
+import { v2TransitionLabelForRoute } from '../../../utils/v2TransitionLabel';
 
 interface Props {
   mode?: 'overlay' | 'light';
@@ -44,6 +45,10 @@ const splitRightPrimaryLinks = primaryLinks.filter(
   (item) => item.href !== metalworksV2Root && item.href !== landscapingV2Root
 );
 const telegramLabel = getV2TelegramLabel(settings);
+const transitionLabel = (href: string, fallback: string) => v2TransitionLabelForRoute(href, fallback);
+const contactTransitionLabel = contactHref.startsWith('#')
+  ? undefined
+  : transitionLabel(contactHref, 'Контакты');
 const companyV2Roots = [aboutV2Root, contactsV2Root, vacanciesV2Root, legalV2Root];
 const v2Roots = [
   ...productV2Roots,
@@ -75,6 +80,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
       class="hv2-header__brand"
       href={path('/')}
       aria-label="СМУ-1 — на главную"
+      data-v2-transition-label="Главная"
       aria-current={currentState('/')}
       data-hv2-header-side="left"
     >
@@ -105,7 +111,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
           <p class="hv2-dropdown__eyebrow">Продукция и конструкции</p>
           <div class="hv2-dropdown__links">
             {productLinks.map((item) => (
-              <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-dropdown-link>
+              <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-dropdown-link>
                 <span>{item.label}</span>
               </a>
             ))}
@@ -113,14 +119,14 @@ const mobileMenuId = 'home-v2-mobile-menu';
         </div>
       </div>
 
-      {splitLeftPrimaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+      {splitLeftPrimaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)}>{item.label}</a>)}
       </div>
 
       <div
         class="hv2-header__nav-group hv2-header__nav-group--right"
         data-hv2-header-side="right"
       >
-      {splitRightPrimaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+      {splitRightPrimaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)}>{item.label}</a>)}
 
       <div class="hv2-dropdown" data-hv2-dropdown>
         <button
@@ -141,7 +147,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
           <p class="hv2-dropdown__eyebrow">СМУ-1</p>
           <div class="hv2-dropdown__links">
             {companyLinks.map((item) => (
-              <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-dropdown-link>
+              <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-dropdown-link>
                 <span>{item.label}</span>
               </a>
             ))}
@@ -164,7 +170,11 @@ const mobileMenuId = 'home-v2-mobile-menu';
       >
         <span class="hv2-header__telegram-label">Telegram</span>
       </a>
-      <a class="hv2-button hv2-button--header" href={resolveHref(contactHref)}>{ctaLabel}</a>
+      <a
+        class="hv2-button hv2-button--header"
+        href={resolveHref(contactHref)}
+        data-v2-transition-label={contactTransitionLabel}
+      >{ctaLabel}</a>
     </div>
 
     <button
@@ -192,7 +202,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
   data-hv2-mobile-menu
 >
   <div class="hv2-mobile-menu__top">
-    <a class="hv2-mobile-menu__brand" href={path('/')} aria-current={currentState('/')} data-hv2-mobile-link>
+    <a class="hv2-mobile-menu__brand" href={path('/')} aria-current={currentState('/')} data-v2-transition-label="Главная" data-hv2-mobile-link>
       <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="355" height="211" />
     </a>
     <p id="home-v2-mobile-menu-title">Навигация</p>
@@ -202,23 +212,28 @@ const mobileMenuId = 'home-v2-mobile-menu';
   </div>
 
   <div class="hv2-mobile-menu__scroll">
-    <a class="hv2-button hv2-button--primary hv2-mobile-menu__cta" href={resolveHref(contactHref)} data-hv2-mobile-link>
+    <a
+      class="hv2-button hv2-button--primary hv2-mobile-menu__cta"
+      href={resolveHref(contactHref)}
+      data-v2-transition-label={contactTransitionLabel}
+      data-hv2-mobile-link
+    >
       {ctaLabel}
     </a>
 
     <nav class="hv2-mobile-menu__nav" aria-label="Мобильная навигация">
       <div class="hv2-mobile-menu__group">
         <p>Продукция</p>
-        {productLinks.filter((item) => item.href !== customOrderV2Root).map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-mobile-link>{item.label}</a>)}
+        {productLinks.filter((item) => item.href !== customOrderV2Root).map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-mobile-link>{item.label}</a>)}
       </div>
 
       <div class="hv2-mobile-menu__group hv2-mobile-menu__group--primary">
-        {primaryLinks.filter((item) => item.href !== objectsV2Root).map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-mobile-link>{item.label}</a>)}
+        {primaryLinks.filter((item) => item.href !== objectsV2Root).map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-mobile-link>{item.label}</a>)}
       </div>
 
       <div class="hv2-mobile-menu__group">
         <p>Работа и компания</p>
-        {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-hv2-mobile-link>{item.label}</a>)}
+        {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-mobile-link>{item.label}</a>)}
       </div>
     </nav>
 

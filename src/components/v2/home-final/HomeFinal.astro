@@ -93,7 +93,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
           <p class="hf-hero__lead" data-reveal data-v2-entry="lead" style="--hv2-reveal-delay: 120ms">{copy.heroDescription}</p>
           <div class="hf-actions" data-reveal data-v2-entry="actions" style="--hv2-reveal-delay: 180ms">
             <a class="hf-button hf-button--primary" href="#contact">{copy.heroPrimaryLabel}</a>
-            <a class="hf-button hf-button--ghost" href={path('/design-lab/v2/vypolnennye-obekty/')}>
+            <a class="hf-button hf-button--ghost" href={path('/design-lab/v2/vypolnennye-obekty/')} data-v2-transition-label="Выполненные объекты">
               {copy.heroSecondaryLabel}
             </a>
           </div>
@@ -116,7 +116,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
 
         <div class="hf-directions__layout">
           {directionCards.map(({ direction, className, kicker }) => direction && (
-            <a class={`hf-direction hf-direction--${className}`} href={path(direction.href)} data-reveal data-v2-reveal="media">
+            <a class={`hf-direction hf-direction--${className}`} href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="media">
               {direction.image && <img
                 src={path(direction.image)}
                 alt=""
@@ -137,7 +137,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
 
           <div class="hf-direction-rail" aria-label="Специализированные направления">
             {railDirections.map(({ direction, kicker }) => direction && (
-              <a class="hf-direction-rail__item" href={path(direction.href)} data-reveal data-v2-reveal="group">
+              <a class="hf-direction-rail__item" href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="group">
                 <span class="hf-direction-rail__copy">
                   <span class="hf-direction__meta">{kicker}</span>
                   <strong>{direction.title}</strong>
@@ -150,6 +150,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
           {landscapingDirection && <a
             class="hf-direction hf-direction--landscaping"
             href={path(landscapingDirection.href)}
+            data-v2-transition-label={landscapingDirection.title}
             data-reveal
             data-v2-reveal="media"
           >
@@ -190,7 +191,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
             Для первого разговора не нужен готовый комплект документов. Опишите задачу и приложите доступные вводные —
             по ним можно уточнить формат решения и расчёта.
           </p>
-          <a class="hf-intake__link" href={path('/design-lab/v2/izgotovlenie-na-zakaz/')}>
+          <a class="hf-intake__link" href={path('/design-lab/v2/izgotovlenie-na-zakaz/')} data-v2-transition-label="Изготовление на заказ">
             <span>Изготовление на заказ</span>
           </a>
         </div>
@@ -216,7 +217,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
             <a class="hv2-button hv2-button--light" href={settings.telegram} target="_blank" rel="noopener noreferrer">
               Написать в Telegram
             </a>
-            <a class="hv2-button hv2-button--contrast" href={path('/design-lab/v2/kontakty/')}>Все контакты</a>
+            <a class="hv2-button hv2-button--contrast" href={path('/design-lab/v2/kontakty/')} data-v2-transition-label="Контакты">Все контакты</a>
           </div>
         </div>
 

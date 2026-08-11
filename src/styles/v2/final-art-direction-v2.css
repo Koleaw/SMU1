@@ -2883,7 +2883,10 @@
 }
 
 .home-v2-body .catalog-product--premium .hv2-header:not(.is-scrolled) {
-  background: linear-gradient(90deg, var(--hv2-contrast) 0 44%, rgba(11, 29, 54, 0.94) 44%, rgba(11, 29, 54, 0.72) 100%);
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .home-v2-body .catalog-product--premium .hv2-header:not(.is-scrolled) :where(.hv2-header__nav-link, .hv2-header__nav-button)[aria-current] {
@@ -3263,14 +3266,25 @@
 }
 
 .hv2-header:not(.is-scrolled) {
-  background: linear-gradient(180deg, rgba(7, 16, 30, 0.88) 0%, rgba(7, 16, 30, 0.5) 72%, transparent 100%);
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .catalog-v2--immersive .hv2-header:not(.is-scrolled),
 .catalog-product--premium .hv2-header:not(.is-scrolled) {
-  background:
-    linear-gradient(180deg, rgba(7, 16, 30, 0.9) 0%, rgba(7, 16, 30, 0.52) 72%, transparent 100%),
-    linear-gradient(90deg, transparent 0 44%, rgba(11, 29, 54, 0.36) 72%, rgba(11, 29, 54, 0.52) 100%);
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.home-v2-body .hv2-header .hv2-button--header {
+  min-height: 40px;
+  padding: 0 15px;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .catalog-v2--immersive:not([data-product-final-prototype]) .hv2-header {
@@ -3650,7 +3664,7 @@
 .home-v2-body .immersive-direction-hero--canopies .immersive-direction-hero__veil,
 .home-v2-body .immersive-direction-hero--topiary .immersive-direction-hero__veil {
   background:
-    linear-gradient(180deg, rgba(11, 29, 54, 0.7) 0%, rgba(11, 29, 54, 0) 17%),
+    linear-gradient(180deg, rgba(11, 29, 54, 0.38) 0%, rgba(11, 29, 54, 0) 17%),
     linear-gradient(90deg, var(--hv2-contrast) 0%, var(--hv2-contrast) 46%, transparent 46%);
 }
 
@@ -3658,8 +3672,8 @@
 .home-v2-body .immersive-direction-hero--landscaping .immersive-direction-hero__veil,
 .home-v2-body .immersive-direction-hero--construction .immersive-direction-hero__veil {
   background:
-    linear-gradient(180deg, rgba(8, 20, 37, 0.76) 0%, rgba(8, 20, 37, 0.06) 34%, rgba(8, 20, 37, 0.48) 100%),
-    linear-gradient(90deg, rgba(8, 20, 37, 0.94) 0%, rgba(8, 20, 37, 0.7) 38%, rgba(8, 20, 37, 0.08) 76%, transparent 100%);
+    linear-gradient(180deg, rgba(8, 20, 37, 0.62) 0%, rgba(8, 20, 37, 0.05) 34%, rgba(8, 20, 37, 0.38) 100%),
+    linear-gradient(90deg, rgba(8, 20, 37, 0.72) 0%, rgba(8, 20, 37, 0.56) 38%, rgba(8, 20, 37, 0.08) 76%, transparent 100%);
 }
 
 .home-v2-body .immersive-direction-hero--construction .immersive-direction-hero__copy {
@@ -3918,8 +3932,8 @@ body.home-v2-body:has(.engineering-direction-v2--metalworks) {
 
 .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__veil {
   background:
-    linear-gradient(180deg, rgba(7, 15, 25, 0.74) 0%, rgba(7, 15, 25, 0.08) 34%, rgba(7, 15, 25, 0.48) 100%),
-    linear-gradient(90deg, rgba(7, 15, 25, 0.92) 0%, rgba(7, 15, 25, 0.72) 38%, rgba(7, 15, 25, 0.18) 72%, transparent 100%);
+    linear-gradient(180deg, rgba(7, 15, 25, 0.6) 0%, rgba(7, 15, 25, 0.06) 34%, rgba(7, 15, 25, 0.4) 100%),
+    linear-gradient(90deg, rgba(7, 15, 25, 0.72) 0%, rgba(7, 15, 25, 0.58) 38%, rgba(7, 15, 25, 0.16) 72%, transparent 100%);
 }
 
 .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof,
@@ -4262,8 +4276,8 @@ body.home-v2-body:has(.engineering-direction-v2--metalworks) {
   .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .immersive-direction-hero--metalworks .immersive-direction-hero__veil {
     display: block;
     background:
-      linear-gradient(180deg, rgba(7, 15, 25, 0.84) 0%, rgba(7, 15, 25, 0.62) 52%, rgba(7, 15, 25, 0.34) 100%),
-      linear-gradient(90deg, rgba(7, 15, 25, 0.52) 0%, rgba(7, 15, 25, 0.14) 100%);
+      linear-gradient(180deg, rgba(7, 15, 25, 0.68) 0%, rgba(7, 15, 25, 0.52) 52%, rgba(7, 15, 25, 0.3) 100%),
+      linear-gradient(90deg, rgba(7, 15, 25, 0.46) 0%, rgba(7, 15, 25, 0.12) 100%);
   }
 
   .home-v2-body .engineering-direction-v2.engineering-direction-v2--metalworks .engineering-proof,
@@ -5334,8 +5348,8 @@ body.home-v2-body:has(.project-direction-v2--construction) {
 
 .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero--landscaping .immersive-direction-hero__veil {
   background:
-    linear-gradient(180deg, rgba(7, 15, 25, 0.64) 0%, rgba(7, 15, 25, 0.04) 34%, rgba(7, 15, 25, 0.3) 100%),
-    linear-gradient(90deg, rgba(7, 15, 25, 0.8) 0%, rgba(7, 15, 25, 0.52) 34%, rgba(7, 15, 25, 0.1) 62%, transparent 82%);
+    linear-gradient(180deg, rgba(7, 15, 25, 0.52) 0%, rgba(7, 15, 25, 0.04) 34%, rgba(7, 15, 25, 0.26) 100%),
+    linear-gradient(90deg, rgba(7, 15, 25, 0.64) 0%, rgba(7, 15, 25, 0.48) 34%, rgba(7, 15, 25, 0.1) 62%, transparent 82%);
 }
 
 .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction .immersive-direction-hero__copy {
@@ -5360,8 +5374,8 @@ body.home-v2-body:has(.project-direction-v2--construction) {
 
 .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction .immersive-direction-hero__veil {
   background:
-    linear-gradient(180deg, rgba(7, 15, 25, 0.7) 0%, rgba(7, 15, 25, 0.06) 35%, rgba(7, 15, 25, 0.36) 100%),
-    linear-gradient(90deg, rgba(7, 15, 25, 0.92) 0%, rgba(7, 15, 25, 0.68) 40%, rgba(7, 15, 25, 0.18) 72%, transparent 100%);
+    linear-gradient(180deg, rgba(7, 15, 25, 0.6) 0%, rgba(7, 15, 25, 0.05) 35%, rgba(7, 15, 25, 0.32) 100%),
+    linear-gradient(90deg, rgba(7, 15, 25, 0.72) 0%, rgba(7, 15, 25, 0.56) 40%, rgba(7, 15, 25, 0.16) 72%, transparent 100%);
 }
 
 /* Landscaping: open white sequences, one spatial proof and one compact contrast band. */
@@ -5994,16 +6008,16 @@ body.home-v2-body:has(.project-direction-v2--construction) {
     margin-top: 20px;
   }
 
-  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero__veil {
+  .home-v2-body .place-direction-v2.place-direction-v2--landscaping .immersive-direction-hero--landscaping .immersive-direction-hero__veil {
     background:
-      linear-gradient(180deg, rgba(7, 15, 25, 0.84) 0%, rgba(7, 15, 25, 0.58) 60%, rgba(7, 15, 25, 0.12) 100%),
-      linear-gradient(90deg, rgba(7, 15, 25, 0.36) 0%, transparent 100%);
+      linear-gradient(180deg, rgba(7, 15, 25, 0.68) 0%, rgba(7, 15, 25, 0.48) 60%, rgba(7, 15, 25, 0.12) 100%),
+      linear-gradient(90deg, rgba(7, 15, 25, 0.32) 0%, transparent 100%);
   }
 
-  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero__veil {
+  .home-v2-body .project-direction-v2.project-direction-v2--construction .immersive-direction-hero--construction .immersive-direction-hero__veil {
     background:
-      linear-gradient(180deg, rgba(7, 15, 25, 0.92) 0%, rgba(7, 15, 25, 0.74) 66%, rgba(7, 15, 25, 0.28) 100%),
-      linear-gradient(90deg, rgba(7, 15, 25, 0.44) 0%, transparent 100%);
+      linear-gradient(180deg, rgba(7, 15, 25, 0.76) 0%, rgba(7, 15, 25, 0.58) 66%, rgba(7, 15, 25, 0.28) 100%),
+      linear-gradient(90deg, rgba(7, 15, 25, 0.4) 0%, transparent 100%);
   }
 
   .home-v2-body .place-direction-v2.place-direction-v2--landscaping .place-projects,

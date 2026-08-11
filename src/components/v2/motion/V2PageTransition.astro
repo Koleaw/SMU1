@@ -19,10 +19,10 @@ const basePath = import.meta.env.BASE_URL || '/';
     <!--
       This deliberately small rule is duplicated from the bundled stylesheet.
       It is needed before first paint: a valid MPA handoff arrives with the
-      project sheet already covering the new document.
+      navigation drawing already covering the new document.
     -->
     <style is:inline>
-      .v2-page-transition{position:fixed;z-index:1200;inset:0;overflow:hidden;visibility:hidden;pointer-events:none;contain:strict;isolation:isolate}.v2-page-transition__sheet{position:absolute;inset:0;background:#fff;transform:translate3d(100%,0,0)}html[data-v2-page-bootstrap=arrival]{overflow:hidden;background:#fff;scrollbar-gutter:stable;scrollbar-color:transparent #fff}html[data-v2-page-bootstrap=arrival] .v2-page-transition{visibility:visible;pointer-events:auto}html[data-v2-page-bootstrap=arrival] .v2-page-transition__sheet{transform:translate3d(0,0,0)}
+      .v2-page-transition{position:fixed;z-index:1200;inset:0;overflow:hidden;visibility:hidden;pointer-events:none;contain:strict;isolation:isolate}.v2-page-transition__sheet,.v2-page-transition-bootstrap{position:absolute;inset:0;display:flex;align-items:center;overflow:hidden;background-color:#0b1d36;background-image:linear-gradient(rgb(255 255 255/.035) 1px,transparent 1px),linear-gradient(90deg,rgb(255 255 255/.035) 1px,transparent 1px);background-size:64px 64px}.v2-page-transition__sheet{transform:translate3d(100%,0,0)}.v2-page-transition-bootstrap{position:fixed;z-index:1201;pointer-events:auto}.v2-page-transition-bootstrap:before{position:absolute;z-index:3;inset-block:0;left:0;width:2px;background:#1759b7;content:""}.v2-page-transition-bootstrap:after{position:absolute;z-index:3;inset-block:0;left:2px;width:10px;background:linear-gradient(90deg,rgb(23 89 183/.1),transparent);content:""}.v2-page-transition__shell,.v2-page-transition-bootstrap__shell{position:relative;z-index:2;width:min(calc(100% - 64px),1360px);margin-inline:auto}.v2-page-transition__label,.v2-page-transition-bootstrap__label{display:-webkit-box;max-width:18ch;margin:0;overflow:hidden;color:#fff;font-family:Manrope,Arial,sans-serif;font-size:clamp(32px,4.2vw,64px);font-weight:600;line-height:1.08;letter-spacing:-.025em;text-transform:none;-webkit-box-orient:vertical;-webkit-line-clamp:2}html[data-v2-page-bootstrap=arrival]{overflow:hidden;background:#0b1d36;scrollbar-gutter:stable;scrollbar-color:transparent #0b1d36}html[data-v2-page-bootstrap=arrival] .v2-page-transition{visibility:visible;pointer-events:auto}html[data-v2-page-bootstrap=arrival] .v2-page-transition__sheet{transform:translate3d(0,0,0)}@media(max-width:760px){.v2-page-transition__shell,.v2-page-transition-bootstrap__shell{width:calc(100% - 32px)}.v2-page-transition__label,.v2-page-transition-bootstrap__label{font-size:clamp(27px,8vw,38px)}}
     </style>
     <script is:inline>
       (() => {
@@ -32,9 +32,16 @@ const basePath = import.meta.env.BASE_URL || '/';
         const tabKey = 'smu1:browser-tab:v1';
         const tabNameMarker = '__smu1_browser_tab_v1__:';
         const ttl = 20000;
+        const labelLimit = 80;
         const exactTarget = `${window.location.pathname}${window.location.search}${window.location.hash}`;
         let state = 'static';
         let reason = 'no-token';
+        const sanitizeLabel = (value) => Array.from(
+          String(value ?? '')
+            .replace(/[\u0000-\u001f\u007f]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+        ).slice(0, labelLimit).join('');
 
         try {
           // sessionStorage can be cloned into a newly opened tab. window.name
@@ -87,9 +94,13 @@ const basePath = import.meta.env.BASE_URL || '/';
               } else if (token.target !== exactTarget) {
                 state = 'skipped';
                 reason = 'target-mismatch';
+              } else if (typeof token.label !== 'string' || !sanitizeLabel(token.label)) {
+                state = 'skipped';
+                reason = 'invalid-label';
               } else {
                 state = 'arrival';
                 reason = 'valid-token';
+                root.dataset.v2PageTransitionLabel = sanitizeLabel(token.label);
               }
             } catch {
               state = 'skipped';
@@ -106,6 +117,24 @@ const basePath = import.meta.env.BASE_URL || '/';
         root.dataset.v2PageState = state;
 
         if (state === 'arrival') {
+          // The body overlay has not been parsed yet. Create the same drawing
+          // now so even a progressive first paint contains the target label.
+          // The body handoff replaces it atomically, and both labels are set
+          // exclusively through textContent.
+          const bootstrapOverlay = document.createElement('div');
+          const bootstrapShell = document.createElement('div');
+          const bootstrapLabel = document.createElement('p');
+          bootstrapOverlay.className = 'v2-page-transition-bootstrap';
+          bootstrapOverlay.dataset.v2PageBootstrapOverlay = '';
+          bootstrapOverlay.setAttribute('aria-hidden', 'true');
+          bootstrapOverlay.inert = true;
+          bootstrapShell.className = 'v2-page-transition-bootstrap__shell';
+          bootstrapLabel.className = 'v2-page-transition-bootstrap__label';
+          bootstrapLabel.textContent = root.dataset.v2PageTransitionLabel || '';
+          bootstrapShell.append(bootstrapLabel);
+          bootstrapOverlay.append(bootstrapShell);
+          root.append(bootstrapOverlay);
+
           window.__smu1PageTransitionFailSafe = window.setTimeout(() => {
             const current = root.dataset.v2PageState;
             if (root.dataset.v2PageBootstrap !== 'arrival'
@@ -116,6 +145,7 @@ const basePath = import.meta.env.BASE_URL || '/';
             root.dataset.v2PageState = 'fail-open';
             root.classList.remove('v2-page-transition-locked');
             delete root.dataset.v2PageLock;
+            document.querySelector('[data-v2-page-bootstrap-overlay]')?.remove();
             const overlay = document.querySelector('[data-v2-page-transition]');
             if (overlay instanceof HTMLElement) {
               overlay.dataset.v2PageState = 'fail-open';
@@ -145,6 +175,27 @@ const basePath = import.meta.env.BASE_URL || '/';
     inert
   >
     <div class="v2-page-transition__sheet" data-v2-page-sheet>
+      <div class="v2-page-transition__shell">
+        <p class="v2-page-transition__label" data-v2-page-label>
+          <script is:inline>
+            (() => {
+              const current = document.currentScript;
+              const label = current instanceof HTMLScriptElement ? current.parentElement : null;
+              if (!(label instanceof HTMLElement)) return;
+              const value = Array.from(
+                String(document.documentElement.dataset.v2PageTransitionLabel || '')
+                  .replace(/[\u0000-\u001f\u007f]/g, ' ')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+              ).slice(0, 80).join('');
+              label.textContent = value;
+              const bootstrapOverlay = document.querySelector('[data-v2-page-bootstrap-overlay]');
+              if (value) document.documentElement.dataset.v2PageOverlayReady = 'true';
+              bootstrapOverlay?.remove();
+            })();
+          </script>
+        </p>
+      </div>
       <span
         class="v2-page-transition__trail v2-page-transition__trail--cover"
         data-v2-page-trail="cover"

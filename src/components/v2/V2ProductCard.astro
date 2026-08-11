@@ -21,6 +21,7 @@ const isPremium = product.presentationType === 'premium';
 <a
   class:list={['v2-product-card', { 'v2-product-card--related': related, 'v2-product-card--premium': isPremium }]}
   href={withBase(href)}
+  data-v2-transition-label={product.title}
   data-product-card-presentation={isPremium ? 'premium' : 'standard'}
   data-v2-reveal
 >

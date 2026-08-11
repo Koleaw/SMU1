@@ -16,7 +16,7 @@ const { system, title, description } = Astro.props as Props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
     <meta name="description" content={description} />
     <meta name="theme-color" content={system === 'a' ? '#F3F5F1' : system === 'b' ? '#F2EFE9' : '#E9E8E3'} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -10,8 +10,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
+    "qa:deploy-isolation": "node tools/migration/deploy-isolation-qa.mjs",
     "qa:final:static": "node tools/migration/final-design-qa.mjs",
-    "qa:h2:motion": "node tools/migration/h2-motion-qa.mjs",
+    "qa:h2:motion": "node tools/migration/h2-motion-qa.mjs && npm run qa:deploy-isolation",
     "qa:final:browser": "node tools/migration/browser-final-design-qa.mjs && npm run qa:h2:motion",
     "qa:admin-browser": "node tools/admin-api/admin-browser-roundtrip.mjs",
     "qa:final": "npm run check && npm run test:admin-import && npm run build && npm run qa:final:static && npm run qa:final:browser"

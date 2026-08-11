@@ -1,10 +1,10 @@
 :root {
-  --v2-page-sheet: #ffffff;
+  --v2-page-sheet: #0b1d36;
   --v2-page-edge: var(--v2-entry-blue, #1759b7);
   --v2-page-sheet-ease: cubic-bezier(0.76, 0, 0.24, 1);
   --v2-page-copy-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --v2-page-cover-duration: 320ms;
-  --v2-page-reveal-duration: 560ms;
+  --v2-page-cover-duration: 300ms;
+  --v2-page-reveal-duration: 480ms;
   --v2-page-fail-open-duration: 140ms;
   --v2-page-edge-width: 2px;
   --v2-page-trail-width: 10px;
@@ -13,9 +13,10 @@
 html.v2-page-transition-locked,
 html[data-v2-page-bootstrap='arrival'] {
   overflow: hidden !important;
+  background: var(--v2-page-sheet);
   overscroll-behavior: none;
   scrollbar-gutter: stable;
-  scrollbar-color: transparent #ffffff;
+  scrollbar-color: transparent var(--v2-page-sheet);
 }
 
 html.v2-page-transition-locked body,
@@ -28,7 +29,7 @@ html.v2-page-transition-locked::-webkit-scrollbar,
 html.v2-page-transition-locked::-webkit-scrollbar-track,
 html[data-v2-page-bootstrap='arrival']::-webkit-scrollbar,
 html[data-v2-page-bootstrap='arrival']::-webkit-scrollbar-track {
-  background: #ffffff;
+  background: var(--v2-page-sheet);
 }
 
 html.v2-page-transition-locked::-webkit-scrollbar-thumb,
@@ -50,8 +51,14 @@ html[data-v2-page-bootstrap='arrival']::-webkit-scrollbar-thumb {
 .v2-page-transition__sheet {
   position: absolute;
   inset: 0;
+  display: flex;
+  align-items: center;
   overflow: hidden;
-  background: var(--v2-page-sheet);
+  background-color: var(--v2-page-sheet);
+  background-image:
+    linear-gradient(rgb(255 255 255 / 3.5%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 3.5%) 1px, transparent 1px);
+  background-size: 64px 64px;
   transform: translate3d(100%, 0, 0);
   transition-property: transform;
   transition-duration: 0ms;
@@ -59,10 +66,35 @@ html[data-v2-page-bootstrap='arrival']::-webkit-scrollbar-thumb {
   will-change: transform;
 }
 
+.v2-page-transition__shell {
+  position: relative;
+  z-index: 2;
+  width: min(calc(100% - 64px), 1360px);
+  margin-inline: auto;
+  pointer-events: none;
+}
+
+.v2-page-transition__label {
+  display: -webkit-box;
+  max-width: 18ch;
+  margin: 0;
+  overflow: hidden;
+  color: #ffffff;
+  font-family: Manrope, Arial, sans-serif;
+  font-size: clamp(32px, 4.2vw, 64px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-transform: none;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .v2-page-transition__edge,
 .v2-page-transition__trail {
   position: absolute;
-  z-index: 1;
+  z-index: 3;
   top: 0;
   bottom: 0;
   display: block;
@@ -85,7 +117,7 @@ html[data-v2-page-bootstrap='arrival']::-webkit-scrollbar-thumb {
 
 .v2-page-transition__trail--cover {
   left: var(--v2-page-edge-width);
-  background: linear-gradient(90deg, rgb(23 89 183 / 8%), rgb(23 89 183 / 0%));
+  background: linear-gradient(90deg, rgb(23 89 183 / 10%), rgb(23 89 183 / 0%));
 }
 
 .v2-page-transition__edge--reveal {
@@ -94,7 +126,7 @@ html[data-v2-page-bootstrap='arrival']::-webkit-scrollbar-thumb {
 
 .v2-page-transition__trail--reveal {
   right: var(--v2-page-edge-width);
-  background: linear-gradient(270deg, rgb(23 89 183 / 8%), rgb(23 89 183 / 0%));
+  background: linear-gradient(270deg, rgb(23 89 183 / 10%), rgb(23 89 183 / 0%));
 }
 
 /* A valid token must cover the incoming document before its first paint. */
@@ -142,6 +174,18 @@ html[data-v2-page-bootstrap='arrival'] .v2-page-transition__sheet,
   .v2-page-transition__trail--cover
 ),
 .v2-page-transition[data-v2-page-state='covered'] :is(
+  .v2-page-transition__edge--cover,
+  .v2-page-transition__trail--cover
+),
+.v2-page-transition[data-v2-page-state='navigating'] :is(
+  .v2-page-transition__edge--cover,
+  .v2-page-transition__trail--cover
+),
+.v2-page-transition[data-v2-page-state='arrival'] :is(
+  .v2-page-transition__edge--cover,
+  .v2-page-transition__trail--cover
+),
+.v2-page-transition[data-v2-page-state='waiting'] :is(
   .v2-page-transition__edge--cover,
   .v2-page-transition__trail--cover
 ) {
@@ -219,10 +263,16 @@ html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='fail-ope
 
 @media (max-width: 760px) {
   :root {
-    --v2-page-cover-duration: 250ms;
-    --v2-page-reveal-duration: 400ms;
-    --v2-page-edge-width: 1px;
-    --v2-page-trail-width: 9px;
+    --v2-page-cover-duration: 240ms;
+    --v2-page-reveal-duration: 380ms;
+  }
+
+  .v2-page-transition__shell {
+    width: calc(100% - 32px);
+  }
+
+  .v2-page-transition__label {
+    font-size: clamp(27px, 8vw, 38px);
   }
 
   html.home-v2-html[data-v2-page-bootstrap='arrival']

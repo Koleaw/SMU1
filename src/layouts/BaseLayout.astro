@@ -5,6 +5,7 @@ import Footer from '../components/Footer.astro';
 import MobileMenu from '../components/MobileMenu.astro';
 import CookieBanner from '../components/CookieBanner.astro';
 import { withBase } from '../utils/withBase';
+import { isProductionDeploy, isTestDeploy, NOINDEX_ROBOTS } from '../utils/deployEnvironment';
 import yandex from '../data/yandex.json';
 import siteSettings from '../content/site-settings/global.json';
 
@@ -31,8 +32,9 @@ const pageDescription =
   description?.trim() ||
   'СМУ-1: производство металлоконструкций, уличной мебели, ограждений и изделий для благоустройства.';
 const canonical = new URL(Astro.url.pathname, Astro.site);
-const canonicalUrl = canonical.toString();
-const robotsContent = robots || (noindex ? 'noindex, nofollow' : undefined);
+const canonicalUrl = isTestDeploy ? '' : canonical.toString();
+const robotsContent = isTestDeploy || noindex ? NOINDEX_ROBOTS : robots;
+const isMetrikaEnabled = isProductionDeploy && !noindex && !robotsContent?.toLowerCase().includes('noindex');
 const toAbsoluteUrl = (path: string) => {
   if (/^https?:\/\//i.test(path)) return path;
   return new URL(withBase(path), Astro.site).toString();
@@ -91,18 +93,20 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <meta name="description" content={pageDescription} />
     {robotsContent && <meta name="robots" content={robotsContent} />}
     <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
-    <link rel="canonical" href={canonicalUrl} />
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
     <meta property="og:type" content="website" />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={pageDescription} />
-    <meta property="og:url" content={canonicalUrl} />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
     <meta property="og:image" content={ogImageUrl} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={pageDescription} />
     <meta name="twitter:image" content={ogImageUrl} />
-    <script type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', '@graph': jsonLdGraph })} />
-    <script
+    {!isTestDeploy && !noindex && (
+      <script type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', '@graph': jsonLdGraph })} />
+    )}
+    {isMetrikaEnabled && <script
       is:inline
       define:vars={{
         metrikaCounterId: yandex.metrika.counterId,
@@ -160,7 +164,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
 
         document.addEventListener('astro:page-load', scheduleMetrika);
       })();
-    </script>
+    </script>}
   </head>
   <body>
     <Header />

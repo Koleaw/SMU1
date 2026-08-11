@@ -10,6 +10,7 @@ import V2EntryExperience from '../components/v2/motion/V2EntryExperience.astro';
 import V2PageTransition from '../components/v2/motion/V2PageTransition.astro';
 import siteSettings from '../content/site-settings/global.json';
 import yandex from '../data/yandex.json';
+import { isProductionDeploy, isTestDeploy, NOINDEX_ROBOTS } from '../utils/deployEnvironment';
 import { withBase } from '../utils/withBase';
 import { getV2Scope, productionV2Path, type V2Scope } from '../utils/v2Routes';
 
@@ -60,10 +61,12 @@ const pageDescription = description?.trim()
 const resolvedCanonicalPath = canonicalPath === undefined
   ? productionV2Path(Astro.url.pathname)
   : canonicalPath;
-const canonicalUrl = !noCanonical && resolvedCanonicalPath
+const canonicalUrl = !isTestDeploy && !noCanonical && resolvedCanonicalPath
   ? new URL(withBase(resolvedCanonicalPath), Astro.site).toString()
   : '';
-const robotsContent = robots || (!isProduction || noindex ? 'noindex, nofollow' : 'index, follow');
+const isSearchExcluded = isTestDeploy || !isProduction || noindex;
+const robotsContent = isSearchExcluded ? NOINDEX_ROBOTS : robots || 'index, follow';
+const isMetrikaEnabled = isProductionDeploy && !isSearchExcluded && !robotsContent.toLowerCase().includes('noindex');
 const toAbsoluteUrl = (path: string) => /^https?:\/\//i.test(path)
   ? path
   : new URL(withBase(path), Astro.site).toString();
@@ -252,7 +255,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
     <link rel="preload" href={finalArtDirectionUrl} as="style" />
     <title>{pageTitle}</title>
-    {isProduction && !noindex && (
+    {!isSearchExcluded && (
       <script type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', '@graph': jsonLdGraph })} />
     )}
     {scope === 'design-lab' && (
@@ -268,7 +271,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
         })();
       </script>
     )}
-    {isProduction && (
+    {isMetrikaEnabled && (
       <script
         is:inline
         define:vars={{

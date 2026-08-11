@@ -3,6 +3,7 @@ import settings from '../../../content/site-settings/global.json';
 import { getV2Scope, v2CurrentState, v2Href } from '../../../utils/v2Routes';
 import { getV2Navigation } from '../../../utils/v2Navigation';
 import { getV2TelegramLabel } from '../../../utils/v2SiteSettings';
+import { v2TransitionLabelForRoute } from '../../../utils/v2TransitionLabel';
 
 interface Props {
   currentPath?: string;
@@ -36,6 +37,10 @@ const legalV2Root = '/politika-konfidencialnosti/';
 const customOrderV2Root = '/izgotovlenie-na-zakaz/';
 const { directions, workAndCompanyLinks, additions } = await getV2Navigation();
 const telegramLabel = getV2TelegramLabel(settings);
+const transitionLabel = (href: string, fallback: string) => v2TransitionLabelForRoute(href, fallback);
+const contactTransitionLabel = contactHref.startsWith('#')
+  ? undefined
+  : transitionLabel(contactHref, 'Контакты');
 const v2Roots = [...directionV2Roots, aboutV2Root, contactsV2Root, vacanciesV2Root, legalV2Root, customOrderV2Root];
 const currentState = (href: string) => v2CurrentState(currentPath, href, v2Roots);
 const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
@@ -44,7 +49,7 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
 <footer class="hv2-footer">
   <div class="hv2-shell hv2-footer__grid">
     <section class="hv2-footer__brand" aria-label="Реквизиты СМУ-1">
-      <a href={path('/')} aria-label="СМУ-1 — на главную">
+      <a href={path('/')} aria-label="СМУ-1 — на главную" data-v2-transition-label="Главная">
         <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="355" height="211" />
       </a>
       <p>{settings.companyName}</p>
@@ -56,12 +61,12 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
     <section class="hv2-footer__nav-group hv2-footer__nav-group--directions" aria-label="Навигация по направлениям">
       <nav class="hv2-footer__directions hv2-footer__desktop-nav" aria-label="Направления СМУ-1">
         <p>Направления</p>
-        {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+        {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)}>{item.label}</a>)}
       </nav>
       <details class="hv2-footer__accordion">
         <summary>Направления <span aria-hidden="true"></span></summary>
         <nav class="hv2-footer__directions hv2-footer__accordion-content" aria-label="Направления СМУ-1">
-          {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+          {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)}>{item.label}</a>)}
         </nav>
       </details>
     </section>
@@ -69,19 +74,25 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
     <section class="hv2-footer__nav-group hv2-footer__nav-group--company" aria-label="Навигация по компании">
       <nav class="hv2-footer__company hv2-footer__desktop-nav" aria-label="Работа и компания">
         <p>Работа и компания</p>
-        {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+        {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)}>{item.label}</a>)}
       </nav>
       <details class="hv2-footer__accordion">
         <summary>Работа и компания <span aria-hidden="true"></span></summary>
         <nav class="hv2-footer__company hv2-footer__accordion-content" aria-label="Работа и компания">
-          {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)}>{item.label}</a>)}
+          {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)}>{item.label}</a>)}
         </nav>
       </details>
     </section>
 
     <section class="hv2-footer__contacts" aria-labelledby="hv2-footer-contacts-title">
       <p id="hv2-footer-contacts-title">Прямая связь</p>
-      {catalogV2 && <a class="hv2-footer__mobile-cta" href={resolveHref(contactHref)}>{mobileCtaLabel}</a>}
+      {catalogV2 && (
+        <a
+          class="hv2-footer__mobile-cta"
+          href={resolveHref(contactHref)}
+          data-v2-transition-label={contactTransitionLabel}
+        >{mobileCtaLabel}</a>
+      )}
       <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>{settings.phonePrimary}</a>
       <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`}>{settings.phoneSecondary}</a>
       <a href={settings.telegram} target="_blank" rel="noopener noreferrer">{telegramLabel} · Telegram</a>
@@ -93,7 +104,7 @@ const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
   <div class="hv2-shell hv2-footer__legal" role="group" aria-label="Юридическая информация">
     <small>© ООО «СМУ 1», 2026</small>
     <small>Информация на сайте носит ознакомительный характер и не является публичной офертой.</small>
-    <a href={path(additions.privacy.href)} aria-current={currentState(additions.privacy.href)}>{additions.privacy.label}</a>
+    <a href={path(additions.privacy.href)} aria-current={currentState(additions.privacy.href)} data-v2-transition-label={additions.privacy.label}>{additions.privacy.label}</a>
     {isDesignLab
       ? <button type="button" data-hv2-cookie-open>Настройки cookies</button>
       : <button type="button" data-open-cookie-settings>Настройки cookies</button>}

@@ -20,8 +20,9 @@ const inferDeployTarget = () => {
 
 const DEPLOY_TARGET = String(inferDeployTarget()).toLowerCase();
 const IS_PRODUCTION_DEPLOY = DEPLOY_TARGET === 'production';
+const IS_TEST_DEPLOY = DEPLOY_TARGET === 'test';
 const STRICT_SITE_URL_REQUIRED = IS_PRODUCTION_DEPLOY || process.env.REQUIRE_SITE_URL === 'true';
-const TEMPORARY_SITE_URL_PATTERNS = [/example\./i, /localhost/i, /127\.0\.0\.1/i, /\.github\.io/i];
+const TEMPORARY_SITE_URL_PATTERNS = [/example\./i, /\.invalid(?::\d+)?\/?$/i, /localhost/i, /127\.0\.0\.1/i, /\.github\.io/i];
 
 const githubPagesSiteUrl = () => {
   const repository = process.env.GITHUB_REPOSITORY || '';
@@ -69,8 +70,8 @@ const basePath = normalizeBasePath(process.env.BASE_PATH ?? (!IS_PRODUCTION_DEPL
 const normalizedBasePath = basePath.endsWith('/') ? basePath : `${basePath}/`;
 
 if (STRICT_SITE_URL_REQUIRED) {
-  const allowTemporarySiteUrl = process.env.ALLOW_TEMPORARY_SITE_URL === 'true';
-  if (!allowTemporarySiteUrl && TEMPORARY_SITE_URL_PATTERNS.some((pattern) => pattern.test(siteUrl))) {
+  const isSyntheticProductionQa = process.env.SYNTHETIC_PRODUCTION_BUILD === 'true';
+  if (!isSyntheticProductionQa && TEMPORARY_SITE_URL_PATTERNS.some((pattern) => pattern.test(siteUrl))) {
     throw new Error(`Production SITE_URL points to a temporary/dev host: ${siteUrl}. Set the real domain or use DEPLOY_TARGET=test.`);
   }
 }
@@ -106,10 +107,15 @@ export default defineConfig({
     prefetchAll: false,
     defaultStrategy: 'hover'
   },
-  integrations: [
-    sitemap({
+  integrations: IS_TEST_DEPLOY
+    ? []
+    : [sitemap({
       filter: isSitemapPageAllowed
-    })
-  ],
+    })],
+  vite: {
+    define: {
+      'import.meta.env.SMU1_DEPLOY_TARGET': JSON.stringify(DEPLOY_TARGET)
+    }
+  },
   output: 'static'
 });

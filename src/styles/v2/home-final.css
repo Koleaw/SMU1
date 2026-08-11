@@ -134,8 +134,8 @@ body.home-v2-body:has([data-home-final-root]) {
 
 .home-final .hf-hero__veil {
   background:
-    linear-gradient(180deg, rgba(7, 16, 30, 0.48) 0%, rgba(7, 16, 30, 0) 26%, rgba(7, 16, 30, 0.18) 100%),
-    linear-gradient(90deg, rgba(7, 16, 30, 0.84) 0%, rgba(7, 16, 30, 0.62) 32%, rgba(7, 16, 30, 0.18) 58%, rgba(7, 16, 30, 0) 78%);
+    linear-gradient(180deg, rgba(7, 16, 30, 0.38) 0%, rgba(7, 16, 30, 0) 26%, rgba(7, 16, 30, 0.16) 100%),
+    linear-gradient(90deg, rgba(7, 16, 30, 0.68) 0%, rgba(7, 16, 30, 0.54) 32%, rgba(7, 16, 30, 0.16) 58%, rgba(7, 16, 30, 0) 78%);
 }
 
 .home-final .hf-hero__content {
@@ -643,7 +643,7 @@ body.home-v2-body:has([data-home-final-root]) {
   }
 
   .home-final .hf-hero__veil {
-    background: linear-gradient(180deg, rgba(7, 16, 30, 0.34) 0%, rgba(7, 16, 30, 0.08) 34%, rgba(7, 16, 30, 0.7) 66%, rgba(7, 16, 30, 0.94) 100%);
+    background: linear-gradient(180deg, rgba(7, 16, 30, 0.28) 0%, rgba(7, 16, 30, 0.06) 34%, rgba(7, 16, 30, 0.62) 66%, rgba(7, 16, 30, 0.78) 100%);
   }
 
   .home-final .hf-hero__content {

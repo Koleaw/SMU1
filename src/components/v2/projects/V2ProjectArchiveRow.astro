@@ -28,7 +28,7 @@ const description = project.whatWasDone?.trim() || project.shortDescription;
   data-v2-project-card
   data-v2-reveal
 >
-  <a class="v2-project-archive-row__link" href={withBase(productionRoute)}>
+  <a class="v2-project-archive-row__link" href={withBase(productionRoute)} data-v2-transition-label={project.title}>
     {showMedia && archiveCoverMedia && (
       <figure
         class="v2-project-archive-row__media"

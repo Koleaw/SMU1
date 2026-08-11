@@ -36,7 +36,7 @@ const schema = {
       <ol>
         {publicItems.map((item, index) => (
           <li>
-            {item.href ? <a href={withBase(item.href)}>{item.title}</a> : <span aria-current="page">{item.title}</span>}
+            {item.href ? <a href={withBase(item.href)} data-v2-transition-label={item.title}>{item.title}</a> : <span aria-current="page">{item.title}</span>}
             {index < publicItems.length - 1 && <i aria-hidden="true">/</i>}
           </li>
         ))}

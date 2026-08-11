@@ -45,7 +45,7 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
       {presentation === 'cards' ? (
         <div class="direction-related__grid" role="list">
           {items.map((item) => (
-            <a class="direction-related__card" href={href(item.href)} role="listitem" data-v2-reveal>
+            <a class="direction-related__card" href={href(item.href)} role="listitem" data-v2-transition-label={item.title} data-v2-reveal>
               <span>{item.eyebrow || 'Направление'}</span>
               <h3>{item.title}</h3>
               {item.description && <p>{item.description}</p>}
@@ -56,7 +56,7 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
         <ul class="direction-related__links" data-v2-reveal>
           {items.map((item) => (
             <li>
-              <a class="direction-related__link" href={href(item.href)}>
+              <a class="direction-related__link" href={href(item.href)} data-v2-transition-label={item.title}>
                 <span class="direction-related__link-eyebrow">{item.eyebrow || 'Направление'}</span>
                 <span class="direction-related__link-copy">
                   <strong>{item.title}</strong>

@@ -28,7 +28,7 @@ const options = {
 };
 
 if (options.help) {
-  process.stdout.write(`H2 first-entry and Project Sheet browser QA\n\n`);
+  process.stdout.write(`H2 first-entry and Navigation Drawing browser QA\n\n`);
   process.stdout.write(`  node tools/migration/h2-motion-qa.mjs\n`);
   process.stdout.write(`      Serve ./dist, run the complete H2 motion suite, build a temporary /SMU1/ copy,\n`);
   process.stdout.write(`      and save a transition filmstrip below the operating-system temp directory.\n`);
@@ -394,11 +394,13 @@ const stateSnapshot = () => evaluate(`(() => {
   const html = document.documentElement;
   const overlay = document.querySelector('[data-v2-page-transition]');
   const sheet = overlay?.querySelector('[data-v2-page-sheet]');
+  const label = overlay?.querySelector('[data-v2-page-label]');
   const entry = document.querySelector('[data-v2-entry-root]');
   const rect = overlay?.getBoundingClientRect();
   const sheetRect = sheet?.getBoundingClientRect();
   const style = overlay ? getComputedStyle(overlay) : null;
   const sheetStyle = sheet ? getComputedStyle(sheet) : null;
+  const labelStyle = label ? getComputedStyle(label) : null;
   const edge = overlay?.querySelector('[data-v2-page-edge="cover"]');
   const trail = overlay?.querySelector('[data-v2-page-trail="cover"]');
   const edgeStyle = edge ? getComputedStyle(edge) : null;
@@ -432,6 +434,14 @@ const stateSnapshot = () => evaluate(`(() => {
     sheetRight: sheetRect?.right ?? 0,
     sheetWidth: sheetRect?.width ?? 0,
     sheetBackground: sheetStyle?.backgroundColor || '',
+    sheetBackgroundImage: sheetStyle?.backgroundImage || '',
+    sheetBackgroundSize: sheetStyle?.backgroundSize || '',
+    transitionLabel: label?.textContent?.trim() || '',
+    transitionLabelWeight: labelStyle?.fontWeight || '',
+    transitionLabelColor: labelStyle?.color || '',
+    transitionLabelFontSize: labelStyle?.fontSize || '',
+    transitionLabelLineClamp: labelStyle?.webkitLineClamp || '',
+    transitionLabelMaxWidth: labelStyle?.maxWidth || '',
     edgeColor: edgeStyle?.backgroundColor || '',
     edgeWidth: edgeStyle?.width || '',
     trailWidth: trailStyle?.width || '',
@@ -476,7 +486,7 @@ const setReducedMotion = (enabled) => cdp.send('Emulation.setEmulatedMedia', {
   media: '',
   features: enabled ? [{ name: 'prefers-reduced-motion', value: 'reduce' }] : []
 });
-const fireRouteClick = (href, { double = false } = {}) => evaluate(`(() => {
+const fireRouteClick = (href, { double = false, label = 'Целевая страница' } = {}) => evaluate(`(() => {
   let link = document.querySelector('a[data-h2-qa-route-link]');
   if (!(link instanceof HTMLAnchorElement)) {
     link = document.createElement('a');
@@ -485,6 +495,7 @@ const fireRouteClick = (href, { double = false } = {}) => evaluate(`(() => {
     document.body.append(link);
   }
   link.href = ${JSON.stringify(href)};
+  link.dataset.v2TransitionLabel = ${JSON.stringify(label)};
   link.removeAttribute('target');
   link.removeAttribute('download');
   delete link.dataset.v2Transition;
@@ -503,6 +514,9 @@ const TRACE_BOOTSTRAP = `(() => {
       const html = document.documentElement;
       const entry = document.querySelector?.('[data-v2-entry-root]');
       const overlay = document.querySelector?.('[data-v2-page-transition]');
+      const label = overlay?.querySelector?.('[data-v2-page-label]');
+      const bootstrapOverlay = document.querySelector?.('[data-v2-page-bootstrap-overlay]');
+      const bootstrapLabel = bootstrapOverlay?.querySelector?.('.v2-page-transition-bootstrap__label');
       const row = {
         at: Date.now(), doc, kind, href: location.href,
         pageBootstrap: html?.dataset.v2PageBootstrap || '',
@@ -510,12 +524,17 @@ const TRACE_BOOTSTRAP = `(() => {
         criticalStatus: html?.dataset.v2PageCriticalStatus || '',
         entryBootstrap: html?.dataset.v2EntryBootstrap || '',
         entryState: entry?.getAttribute('data-v2-entry-state') || '',
+        transitionLabel: label?.textContent?.trim() || '',
+        transitionLabelPresent: Boolean(label),
+        bootstrapOverlayPresent: Boolean(bootstrapOverlay),
+        bootstrapTransitionLabel: bootstrapLabel?.textContent?.trim() || '',
         locked: Boolean(html?.classList.contains('v2-page-transition-locked') || html?.dataset.v2PageLock === 'true'
           || html?.classList.contains('v2-entry-scroll-locked') || html?.dataset.v2ScrollLocked === 'true'),
         ...extra
       };
       const signature = JSON.stringify([row.kind, row.href, row.pageBootstrap, row.pageState, row.criticalStatus,
-        row.entryBootstrap, row.entryState, row.locked, row.persisted]);
+        row.entryBootstrap, row.entryState, row.transitionLabel, row.transitionLabelPresent,
+        row.bootstrapOverlayPresent, row.bootstrapTransitionLabel, row.locked, row.persisted]);
       if (signature === last && kind === 'mutation') return;
       last = signature;
       const rows = JSON.parse(localStorage.getItem(key) || '[]');
@@ -678,10 +697,11 @@ const transitionFilmstripAudit = async () => {
   storageEvents.length = 0;
   const oldHref = await evaluate('location.href');
   const targetHref = hrefFor(routes.deep);
+  const targetLabel = 'Топиарии';
   const files = [];
   files.push(await screenshot('sheet-01-old-page'));
   if (filmstripCriticalPath) configureFault(filmstripCriticalPath, 'delay', 900);
-  await fireRouteClick(targetHref, { double: true });
+  await fireRouteClick(targetHref, { double: true, label: targetLabel });
   const covering = await waitForCondition(`(() => {
     const overlay = document.querySelector('[data-v2-page-transition]');
     const state = document.documentElement.dataset.v2PageState || overlay?.getAttribute('data-v2-page-state');
@@ -734,6 +754,12 @@ const transitionFilmstripAudit = async () => {
     try { return new URL(row.href).pathname === new URL(targetHref).pathname; } catch { return false; }
   });
   const forbiddenLogo = targetRows.filter((row) => ['logo','waiting','opening','assembling'].includes(row.entryState));
+  const labelledTransitionRows = trace.filter((row) => row.transitionLabelPresent && (row.locked || row.criticalStatus)
+    && ['covering','covered','navigating','arrival','waiting','revealing'].includes(row.pageState));
+  const labelsAcrossDocuments = new Set(labelledTransitionRows.map((row) => row.transitionLabel).filter(Boolean));
+  const blankTransitionRows = labelledTransitionRows.filter((row) => !row.transitionLabel);
+  const labelledDocuments = new Set(labelledTransitionRows.map((row) => row.doc));
+  const bootstrapLabelRows = targetRows.filter((row) => row.bootstrapOverlayPresent);
   const coveringRows = trace.filter((row) => row.pageState === 'covering');
   const coveringDocuments = new Set(coveringRows.map((row) => row.doc));
   const coveredRow = trace.find((row) => row.pageState === 'covered');
@@ -748,6 +774,7 @@ const transitionFilmstripAudit = async () => {
   const expectedTarget = targetValue(targetHref);
   const now = Date.now();
   const tokenOk = token?.version === TOKEN_VERSION && token?.target === expectedTarget
+    && token?.label === targetLabel && typeof token.label === 'string' && token.label.length <= 80
     && typeof token?.nonce === 'string' && token.nonce.length >= 6
     && Number.isFinite(token?.timestamp) && Math.abs(now - token.timestamp) < TOKEN_TTL_MS;
   const timings = {
@@ -763,6 +790,14 @@ const transitionFilmstripAudit = async () => {
     && state.horizontalOverflow <= 2, { files, pageStates: [...new Set(pageStates)], timings, state });
   record('transition.exact-token-and-consumption', tokenOk && Boolean(removeEvent) && state.token === null,
     { expectedTarget, token, tokenEvents, consumedValue: state.token });
+  record('transition.label-token-and-mpa-continuity', blankTransitionRows.length === 0
+    && labelsAcrossDocuments.size === 1 && labelsAcrossDocuments.has(targetLabel)
+    && labelledDocuments.size >= 2
+    && bootstrapLabelRows.length > 0
+    && bootstrapLabelRows.every((row) => row.bootstrapTransitionLabel === targetLabel)
+    && state.transitionLabel === targetLabel,
+  { targetLabel, labelsAcrossDocuments: [...labelsAcrossDocuments], labelledDocuments: [...labelledDocuments],
+    bootstrapLabelRows, blankTransitionRows, finalLabel: state.transitionLabel });
   record('transition.no-logo-and-double-click-guard', forbiddenLogo.length === 0
     && coveringDocuments.size === 1 && tokenWrites.length === 1,
   { forbiddenLogo, coveringRows: coveringRows.length, coveringDocuments: [...coveringDocuments],
@@ -780,11 +815,197 @@ const transitionFilmstripAudit = async () => {
     : Number.parseFloat(state.revealDuration) * 1000;
   const normalizedEase = state.sheetEasing.replace(/\s+/g, '')
     .replace(/(?<=\(|,)0\./g, '.');
-  record('transition.sheet-visual-contract', state.sheetBackground === 'rgb(255, 255, 255)'
+  record('transition.sheet-visual-contract', state.sheetBackground === 'rgb(11, 29, 54)'
+    && state.sheetBackgroundImage.split('linear-gradient').length - 1 === 2
+    && state.sheetBackgroundSize.includes('64px 64px')
     && state.edgeColor === 'rgb(23, 89, 183)' && state.edgeWidth === '2px'
-    && state.trailWidth === '10px' && coverMs === 320
-    && revealMs === 560 && normalizedEase === 'cubic-bezier(.76,0,.24,1)', state);
+    && state.trailWidth === '10px' && state.transitionLabel
+    && state.transitionLabelWeight === '600' && state.transitionLabelColor === 'rgb(255, 255, 255)'
+    && coverMs === 300 && revealMs === 480
+    && normalizedEase === 'cubic-bezier(.76,0,.24,1)', state);
   return { files, timings };
+};
+
+const transitionMobileVisualContractAudit = async () => {
+  try {
+    await setViewport(390, 844, true, 1);
+    await clearOriginStorage();
+    await seedEntrySeenAndNavigate(hrefFor(routes.home));
+    await waitUntilUsable();
+    const state = await stateSnapshot();
+    const durationMs = (value) => value.endsWith('ms')
+      ? Number.parseFloat(value)
+      : Number.parseFloat(value) * 1000;
+    const fontSize = Number.parseFloat(state.transitionLabelFontSize);
+    record('transition.mobile-visual-contract', durationMs(state.coverDuration) === 240
+      && durationMs(state.revealDuration) === 380
+      && state.edgeWidth === '2px' && state.trailWidth === '10px'
+      && state.sheetBackground === 'rgb(11, 29, 54)'
+      && state.sheetBackgroundImage.split('linear-gradient').length - 1 === 2
+      && state.transitionLabelWeight === '600'
+      && fontSize >= 27 && fontSize <= 38
+      && state.transitionLabelLineClamp === '2'
+      && state.horizontalOverflow <= 2,
+    { viewport: '390x844', state });
+  } finally {
+    await setViewport(1440, 900, false, 1);
+  }
+};
+
+const followActualLink = async ({ targetHref = '', selector = 'a[href]' } = {}) => {
+  await evaluate(`try { localStorage.setItem(${JSON.stringify(TRACE_KEY)}, '[]'); } catch {}`);
+  storageEvents.length = 0;
+  const clicked = await evaluate(`(() => {
+    const selector = ${JSON.stringify(selector)};
+    const expected = ${JSON.stringify(targetHref)} ? new URL(${JSON.stringify(targetHref)}) : null;
+    const links = Array.from(document.querySelectorAll(selector)).filter((element) => element instanceof HTMLAnchorElement);
+    const anchor = links.find((element) => !expected
+      || (new URL(element.href).pathname === expected.pathname
+        && new URL(element.href).search === expected.search
+        && new URL(element.href).hash === expected.hash));
+    if (!(anchor instanceof HTMLAnchorElement)) {
+      return { found: false, selector, candidates: links.slice(0, 12).map((element) => element.href) };
+    }
+    const result = {
+      found: true,
+      href: anchor.href,
+      label: anchor.dataset.v2TransitionLabel || '',
+      ariaLabel: anchor.getAttribute('aria-label') || '',
+      text: (anchor.innerText || anchor.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 120)
+    };
+    anchor.click();
+    return result;
+  })()`);
+  if (!clicked?.found) return { ok: false, clicked, reason: 'link-not-found' };
+
+  const exactTarget = targetValue(clicked.href);
+  const arrived = await waitForCondition(
+    `location.pathname + location.search + location.hash === ${JSON.stringify(exactTarget)}`,
+    10_000
+  );
+  const usable = arrived ? await waitUntilUsable(6_000) : null;
+  const trace = await getTrace();
+  const transitionRows = trace.filter((row) => row.transitionLabelPresent && (row.locked || row.criticalStatus)
+    && ['covering','covered','navigating','arrival','waiting','revealing'].includes(row.pageState));
+  const blankRows = transitionRows.filter((row) => !row.transitionLabel);
+  const labels = [...new Set(transitionRows.map((row) => row.transitionLabel).filter(Boolean))];
+  const tokenEvent = readTokenEvents().find((event) => ['added','updated'].includes(event.type));
+  let token = null;
+  try { token = JSON.parse(tokenEvent?.newValue || 'null'); } catch {}
+  const state = await stateSnapshot();
+  const expectedLabel = clicked.label || token?.label || '';
+  const ok = Boolean(arrived && usable && expectedLabel && token?.target === exactTarget
+    && token?.label === expectedLabel && labels.length === 1 && labels[0] === expectedLabel
+    && blankRows.length === 0 && state.token === null && !state.locked);
+  return { ok, clicked, exactTarget, expectedLabel, token, labels, blankRows, arrived, usable: Boolean(usable), state };
+};
+
+const actualNavigationFamiliesAudit = async () => {
+  const results = {};
+
+  await clearOriginStorage();
+  await seedEntrySeenAndNavigate(hrefFor(routes.home));
+  await waitUntilUsable();
+  results.homeToMetal = await followActualLink({
+    targetHref: hrefFor(routes.business),
+    selector: 'a[data-v2-transition-label]'
+  });
+  record('actual.home-to-metal', results.homeToMetal.ok, results.homeToMetal);
+
+  await clearOriginStorage();
+  await seedEntrySeenAndNavigate(hrefFor(routes.business));
+  await waitUntilUsable();
+  const dropdown = await evaluate(`(() => {
+    const trigger = document.querySelector('[data-hv2-dropdown-trigger][aria-controls="home-v2-company-menu"]');
+    if (!(trigger instanceof HTMLButtonElement)) return { found: false };
+    trigger.click();
+    const panel = document.getElementById('home-v2-company-menu');
+    return { found: true, expanded: trigger.getAttribute('aria-expanded'), panelHidden: panel?.hasAttribute('hidden') ?? true };
+  })()`);
+  results.headerDropdown = await followActualLink({
+    targetHref: hrefFor(routes.about),
+    selector: '#home-v2-company-menu a[data-v2-transition-label]'
+  });
+  record('actual.header-dropdown-metal-to-about', dropdown?.found && dropdown.expanded === 'true'
+    && !dropdown.panelHidden && results.headerDropdown.ok,
+  { dropdown, transition: results.headerDropdown });
+
+  const benchesCategory = '/ulichnaya-mebel/lavochki-i-skameyki/';
+  await clearOriginStorage();
+  await seedEntrySeenAndNavigate(hrefFor('/ulichnaya-mebel/'));
+  await waitUntilUsable();
+  const streetToCategory = await followActualLink({
+    targetHref: hrefFor(benchesCategory),
+    selector: '.v2-category-card[data-v2-transition-label]'
+  });
+  const categoryToStandard = streetToCategory.ok
+    ? await followActualLink({ targetHref: hrefFor(routes.standard), selector: '.v2-product-card[data-v2-transition-label]' })
+    : { ok: false, reason: 'category-not-reached' };
+  results.streetToStandard = { streetToCategory, categoryToStandard };
+  record('actual.street-furniture-to-standard', streetToCategory.ok && categoryToStandard.ok,
+    results.streetToStandard);
+
+  const premiumCategory = '/ulichnaya-mebel/kacheli/';
+  await clearOriginStorage();
+  await seedEntrySeenAndNavigate(hrefFor(premiumCategory));
+  await waitUntilUsable();
+  results.categoryToPremium = await followActualLink({
+    targetHref: hrefFor(routes.premium),
+    selector: '.v2-product-card[data-v2-transition-label]'
+  });
+  record('actual.category-to-premium', results.categoryToPremium.ok, results.categoryToPremium);
+
+  await clearOriginStorage();
+  await seedEntrySeenAndNavigate(hrefFor(routes.standard));
+  await waitUntilUsable();
+  results.breadcrumb = await followActualLink({
+    targetHref: hrefFor(benchesCategory),
+    selector: '.v2-breadcrumbs a[data-v2-transition-label]'
+  });
+  record('actual.breadcrumb', results.breadcrumb.ok, results.breadcrumb);
+
+  await clearOriginStorage();
+  await seedEntrySeenAndNavigate(hrefFor(routes.standard));
+  await waitUntilUsable();
+  results.relatedCard = await followActualLink({ selector: '.v2-product-card--related[data-v2-transition-label]' });
+  record('actual.related-card', results.relatedCard.ok, results.relatedCard);
+
+  try {
+    await setViewport(390, 844, true, 1);
+    await clearOriginStorage();
+    await seedEntrySeenAndNavigate(hrefFor(routes.home));
+    await waitUntilUsable();
+    const mobileMenu = await evaluate(`(() => {
+      const trigger = document.querySelector('[data-hv2-mobile-open]');
+      const menu = document.querySelector('[data-hv2-mobile-menu]');
+      if (!(trigger instanceof HTMLButtonElement) || !(menu instanceof HTMLElement)) return { found: false };
+      trigger.click();
+      return { found: true, expanded: trigger.getAttribute('aria-expanded'), hidden: menu.hidden,
+        ariaHidden: menu.getAttribute('aria-hidden') };
+    })()`);
+    results.mobileMenu = await followActualLink({
+      targetHref: hrefFor(routes.contacts),
+      selector: '[data-hv2-mobile-menu] a[data-v2-transition-label]'
+    });
+    record('actual.mobile-menu', mobileMenu?.found && mobileMenu.expanded === 'true'
+      && !mobileMenu.hidden && mobileMenu.ariaHidden === 'false' && results.mobileMenu.ok,
+    { mobileMenu, transition: results.mobileMenu });
+  } finally {
+    await setViewport(1440, 900, false, 1);
+  }
+
+  await clearOriginStorage();
+  await seedEntrySeenAndNavigate(hrefFor(routes.home));
+  await waitUntilUsable();
+  const sequenceTargets = [routes.business, routes.about, '/ulichnaya-mebel/', benchesCategory, routes.standard];
+  const sequence = [];
+  for (const route of sequenceTargets) {
+    sequence.push(await followActualLink({ targetHref: hrefFor(route), selector: 'a[data-v2-transition-label]' }));
+    if (!sequence.at(-1)?.ok) break;
+  }
+  results.fiveConsecutive = sequence;
+  record('actual.five-consecutive', sequence.length === sequenceTargets.length && sequence.every((item) => item.ok),
+    { targets: sequenceTargets, sequence });
 };
 
 const crossPageHashAudit = async () => {
@@ -1202,6 +1423,8 @@ try {
   await hashEntrySkipAudit();
 
   await transitionFilmstripAudit();
+  await transitionMobileVisualContractAudit();
+  await actualNavigationFamiliesAudit();
   await crossPageHashAudit();
 
   await invalidTokenAudit('mismatched', JSON.stringify({

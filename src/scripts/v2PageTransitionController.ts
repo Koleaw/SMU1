@@ -5,12 +5,13 @@ export const V2_PAGE_TRANSITION_VERSION = 1 as const;
 export const V2_PAGE_TRANSITION_TTL = 20_000;
 export const V2_PAGE_TRANSITION_HARD_DEADLINE = 1_200;
 
-const DESKTOP_COVER_DURATION = 320;
-const MOBILE_COVER_DURATION = 250;
-const DESKTOP_REVEAL_DURATION = 560;
-const MOBILE_REVEAL_DURATION = 400;
+const DESKTOP_COVER_DURATION = 300;
+const MOBILE_COVER_DURATION = 240;
+const DESKTOP_REVEAL_DURATION = 480;
+const MOBILE_REVEAL_DURATION = 380;
 const FAIL_OPEN_DURATION = 140;
 const NAVIGATION_WATCHDOG = 4_000;
+const TRANSITION_LABEL_MAX_LENGTH = 80;
 
 type PageTransitionState =
   | 'idle'
@@ -36,6 +37,7 @@ type CriticalStatus =
 type PageTransitionToken = {
   version: typeof V2_PAGE_TRANSITION_VERSION;
   target: string;
+  label: string;
   timestamp: number;
   nonce: string;
 };
@@ -112,6 +114,51 @@ const routeWithinBase = (pathname: string, basePath: string) => {
 const normalizeRouteForComparison = (route: string) => {
   if (!route || route === '/') return '/';
   return route.endsWith('/') ? route : `${route}/`;
+};
+
+export const sanitizeV2PageTransitionLabel = (value: unknown) => Array.from(
+  String(value ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+).slice(0, TRANSITION_LABEL_MAX_LENGTH).join('');
+
+const TECHNICAL_LABEL = /^(?:(?:открыть|перейти|смотреть|посмотреть|читать)(?:\s+(?:все|всю|полный|полную|текущий|текущую|следующий|следующую|предыдущий|предыдущую))?(?:\s+(?:страницу|категорию|объект|объекты|товар|товары|изделие|изделия|направление))?|подробнее)$/iu;
+const TECHNICAL_PREFIX = /^(?:открыть|перейти|смотреть|посмотреть|читать)(?:\s+(?:страницу|категорию|объект|товар|изделие|направление))?\s*[:\u2014\u2013-]?\s*/iu;
+
+const cleanTransitionLabel = (value: unknown) => {
+  const sanitized = sanitizeV2PageTransitionLabel(value);
+  if (!sanitized || TECHNICAL_LABEL.test(sanitized)) return '';
+  const withoutAction = sanitizeV2PageTransitionLabel(sanitized.replace(TECHNICAL_PREFIX, ''));
+  if (!withoutAction || TECHNICAL_LABEL.test(withoutAction)) return '';
+  const unquoted = withoutAction.match(/^[\u00ab"](.+)[\u00bb"]$/u)?.[1] || withoutAction;
+  return sanitizeV2PageTransitionLabel(unquoted);
+};
+
+const cardHeadingForAnchor = (anchor: HTMLAnchorElement) => {
+  const ownHeading = anchor.querySelector<HTMLElement>(
+    '[data-v2-transition-title], h1, h2, h3, h4, h5, h6'
+  );
+  const context = anchor.closest<HTMLElement>(
+    '[data-v2-transition-context], [data-v2-project-card], article, [class*="card"]'
+  );
+  const contextHeading = context?.querySelector<HTMLElement>(
+    '[data-v2-transition-title], h1, h2, h3, h4, h5, h6'
+  );
+  return cleanTransitionLabel(ownHeading?.textContent || contextHeading?.textContent || '');
+};
+
+const transitionLabelForAnchor = (anchor: HTMLAnchorElement) => {
+  const explicit = cleanTransitionLabel(anchor.dataset.v2TransitionLabel);
+  if (explicit) return explicit;
+
+  const accessible = cleanTransitionLabel(anchor.getAttribute('aria-label'));
+  if (accessible) return accessible;
+
+  const cardHeading = cardHeadingForAnchor(anchor);
+  if (cardHeading) return cardHeading;
+
+  return cleanTransitionLabel(anchor.innerText || anchor.textContent || '');
 };
 
 const COMPATIBILITY_ROUTES = new Set([
@@ -262,10 +309,11 @@ const createNonce = () => {
   }
 };
 
-const writeHandoffToken = (url: URL): PageTransitionToken => {
+const writeHandoffToken = (url: URL, label: string): PageTransitionToken => {
   const token: PageTransitionToken = {
     version: V2_PAGE_TRANSITION_VERSION,
     target: exactV2PageTarget(url),
+    label: sanitizeV2PageTransitionLabel(label),
     timestamp: Date.now(),
     nonce: createNonce()
   };
@@ -394,7 +442,16 @@ const waitForIncomingReadiness = async (root: HTMLElement): Promise<CriticalOutc
 const initializeTransitionRoot = (root: HTMLElement) => {
   if (root.dataset.v2PageController === 'ready') return;
   const sheet = root.querySelector<HTMLElement>('[data-v2-page-sheet]');
-  if (!sheet) return;
+  const labelElement = root.querySelector<HTMLElement>('[data-v2-page-label]');
+  if (!sheet || !labelElement) return;
+
+  const setTransitionLabel = (label: unknown) => {
+    const sanitized = sanitizeV2PageTransitionLabel(label);
+    labelElement.textContent = sanitized;
+    root.dataset.v2PageLabel = sanitized;
+    document.documentElement.dataset.v2PageTransitionLabel = sanitized;
+    return sanitized;
+  };
 
   root.dataset.v2PageController = 'ready';
   let busy = false;
@@ -444,8 +501,13 @@ const initializeTransitionRoot = (root: HTMLElement) => {
     }
   };
 
-  const beginNavigation = async (url: URL) => {
+  const beginNavigation = async (url: URL, requestedLabel: string) => {
     if (busy) return;
+    const label = setTransitionLabel(requestedLabel);
+    if (!label) {
+      window.location.assign(url.href);
+      return;
+    }
     busy = true;
     delete root.dataset.v2PageSettled;
     delete root.dataset.v2PageFailure;
@@ -466,7 +528,7 @@ const initializeTransitionRoot = (root: HTMLElement) => {
     if (!busy) return;
 
     try {
-      activeToken = writeHandoffToken(url);
+      activeToken = writeHandoffToken(url, label);
     } catch {
       await failOpen('storage-error', url);
       return;
@@ -501,8 +563,10 @@ const initializeTransitionRoot = (root: HTMLElement) => {
 
     const url = resolveEligibleUrl(anchor, root);
     if (!url) return;
+    const label = transitionLabelForAnchor(anchor);
+    if (!label) return;
     event.preventDefault();
-    void beginNavigation(url).catch(() => {
+    void beginNavigation(url, label).catch(() => {
       void failOpen('controller-error', url);
     });
   };
@@ -561,6 +625,15 @@ const initializeTransitionRoot = (root: HTMLElement) => {
   const bootstrap = document.documentElement.dataset.v2PageBootstrap;
   if (bootstrap === 'arrival') {
     clearHeadFailSafe();
+    const incomingLabel = setTransitionLabel(
+      document.documentElement.dataset.v2PageTransitionLabel || labelElement.textContent
+    );
+    if (!incomingLabel) {
+      root.dataset.v2PageFailure = 'missing-label';
+      setCriticalStatus(root, 'controller-error');
+      resetOverlay('fail-open');
+      return;
+    }
     busy = true;
     delete root.dataset.v2PageSettled;
     lockPage(root);

@@ -152,7 +152,7 @@ const sectionNavItems = [
         </header>
         <div class="v2-project-detail__direction-grid" role="list">
           {relatedDirections.map((direction) => (
-            <a href={withBase(direction.href)} role="listitem" data-v2-reveal>
+            <a href={withBase(direction.href)} role="listitem" data-v2-transition-label={direction.label} data-v2-reveal>
               <span>{direction.context}</span>
               <strong>{direction.label}</strong>
             </a>
@@ -166,13 +166,13 @@ const sectionNavItems = [
     <nav class="v2-project-detail__navigation" aria-label="Переходы между выполненными объектами">
       <div class="hv2-shell">
         {previous && (
-          <a href={withBase(previous.v2Route)} rel="prev">
+          <a href={withBase(previous.v2Route)} rel="prev" data-v2-transition-label={previous.project.title}>
             <span>Предыдущий объект</span>
             <strong>{previous.project.title}</strong>
           </a>
         )}
         {next && (
-          <a href={withBase(next.v2Route)} rel="next">
+          <a href={withBase(next.v2Route)} rel="next" data-v2-transition-label={next.project.title}>
             <span>Следующий объект</span>
             <strong>{next.project.title}</strong>
           </a>

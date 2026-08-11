@@ -185,7 +185,6 @@ jobs:
           SITE_URL: ${{ steps.deploy-meta.outputs.effective_site_url }}
           TEST_SITE_URL: ${{ steps.deploy-meta.outputs.test_site_url }}
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
-          ALLOW_TEMPORARY_SITE_URL: ${{ vars.ALLOW_TEMPORARY_SITE_URL || 'false' }}
 
       - run: npm run build
         env:
@@ -194,7 +193,9 @@ jobs:
           SITE_URL: ${{ steps.deploy-meta.outputs.effective_site_url }}
           TEST_SITE_URL: ${{ steps.deploy-meta.outputs.test_site_url }}
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
-          ALLOW_TEMPORARY_SITE_URL: ${{ vars.ALLOW_TEMPORARY_SITE_URL || 'false' }}
+
+      - name: Assert test/production SEO and analytics isolation
+        run: npm run qa:deploy-isolation
 
       - uses: actions/upload-pages-artifact@v3
         if: steps.deploy-meta.outputs.deploy_kind == 'test'
