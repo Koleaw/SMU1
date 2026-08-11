@@ -180,6 +180,19 @@ html:is(
   transition-delay: 0ms;
 }
 
+/* Save-Data may become active after a media watcher has started. Keep the
+ * asset region usable immediately while readiness/fallback settles behind it. */
+html[data-v2-public-route='true'][data-v2-motion-profile='save-data'] :is(
+  [data-v2-reveal],
+  [data-reveal]
+).v2-image-awaiting {
+  opacity: 1 !important;
+  transform: none !important;
+  translate: 0 0 !important;
+  scale: 1 !important;
+  clip-path: none !important;
+}
+
 @media (max-width: 760px) {
   html[data-v2-motion-profile='normal']:is(
     [data-v2-entrance-state='armed'],

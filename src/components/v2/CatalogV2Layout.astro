@@ -96,12 +96,52 @@ const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
       else image.addEventListener('error', markBroken, { once: true });
     });
 
-    // Production is owned exclusively by the universal H4 coordinator. The
-    // Design Lab keeps the accepted catalog reveal observer for visual parity.
-    if (root.closest('[data-v2-motion-root][data-v2-entry-mode="public"]')) return;
-
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const revealItems = Array.from(root.querySelectorAll<HTMLElement>('[data-v2-reveal]'));
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const isProduction = Boolean(root.closest('[data-v2-motion-root][data-v2-entry-mode="public"]'));
+
+    if (isProduction) {
+      // H4 exclusively owns production entrance and scroll visibility. Keep
+      // the accepted image readiness/fallback pipeline independent so a slow
+      // or broken asset never removes its accessible replacement.
+      const mediaItems = revealItems.filter((element) => element.querySelector('[data-v2-image]'));
+      const compactMediaProfile = reducedMotion.matches
+        || document.documentElement.dataset.v2MotionProfile === 'save-data';
+      let mediaObserver: IntersectionObserver | undefined;
+      const watchMedia = (element: HTMLElement, timeoutMs = 6000) => {
+        if (element.dataset.v2MediaReadiness === 'watching') return;
+        element.dataset.v2MediaReadiness = 'watching';
+        mediaObserver?.unobserve(element);
+        void waitForRevealMedia(element, timeoutMs);
+      };
+      const watchAllMedia = (timeoutMs = 6000) => mediaItems
+        .forEach((element) => watchMedia(element, timeoutMs));
+
+      if (compactMediaProfile || !('IntersectionObserver' in window)) {
+        watchAllMedia(0);
+      } else {
+        try {
+          mediaObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) watchMedia(entry.target as HTMLElement);
+            });
+          }, { rootMargin: '20% 0px 20% 0px', threshold: 0.01 });
+          const observePendingMedia = () => mediaItems
+            .filter((element) => element.dataset.v2MediaReadiness !== 'watching')
+            .forEach((element) => mediaObserver?.observe(element));
+          observePendingMedia();
+          window.addEventListener('pagehide', () => mediaObserver?.disconnect());
+          window.addEventListener('pageshow', (event) => {
+            if (event.persisted) observePendingMedia();
+          });
+        } catch {
+          watchAllMedia(0);
+        }
+      }
+      return;
+    }
+
+    // Design Lab keeps the accepted catalog reveal observer for visual parity.
     const pageArrivalManaged = document.documentElement.dataset.v2PageBootstrap === 'arrival'
       && document.documentElement.dataset.v2PageState !== 'done';
     if (pageArrivalManaged) {

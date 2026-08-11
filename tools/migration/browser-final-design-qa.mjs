@@ -68,7 +68,7 @@ const mimeTypes = {
   '.mp4': 'video/mp4', '.png': 'image/png', '.svg': 'image/svg+xml', '.webm': 'video/webm',
   '.webp': 'image/webp', '.xml': 'application/xml; charset=utf-8'
 };
-const imageDelayMs = Math.max(6500, Number.parseInt(process.env.FINAL_QA_IMAGE_DELAY_MS || '6800', 10) || 6800);
+const imageDelayMs = Math.max(11_500, Number.parseInt(process.env.FINAL_QA_IMAGE_DELAY_MS || '12000', 10) || 12000);
 const delayedImagePath = new URL(premiumProduct.image, 'http://qa.local/').pathname;
 let delayedImageRequestUsed = false;
 let invalidImageRequestPending = false;
@@ -383,11 +383,15 @@ const runImageReadyAudit = async () => {
     const final = await evaluate(`(() => {
       const image = document.querySelector('[data-product-presentation="premium"] [data-v2-image]');
       const reveal = image?.closest('[data-v2-reveal], [data-reveal]');
+      const style = reveal ? getComputedStyle(reveal) : null;
       return { complete: image?.complete || false, naturalWidth: image?.naturalWidth || 0,
         ready: reveal?.classList.contains('v2-image-ready') || false,
-        awaiting: reveal?.classList.contains('v2-image-awaiting') || false };
+        awaiting: reveal?.classList.contains('v2-image-awaiting') || false,
+        visible: Boolean(reveal && style?.visibility !== 'hidden'
+          && Number.parseFloat(style?.opacity || '1') > .95 && reveal.getClientRects().length > 0) };
     })()`);
-    record('image-ready.final-state', final.complete && final.naturalWidth > 0 && final.ready && !final.awaiting, final);
+    record('image-ready.final-state', final.complete && final.naturalWidth > 0
+      && final.ready && !final.awaiting && final.visible, final);
     return;
   }
 
@@ -410,27 +414,30 @@ const runImageReadyAudit = async () => {
       imageComplete: image?.complete || false,
       awaiting: reveal?.classList.contains('v2-image-awaiting') || false,
       ready: reveal?.classList.contains('v2-image-ready') || false,
-      revealVisible: reveal?.classList.contains('hv2-reveal-visible') || false,
       opacity: style ? Number.parseFloat(style.opacity || '1') : 1
     };
   })()`);
   record('image-ready.delayed-reveal', pending.observed && !pending.imageComplete && pending.awaiting
-    && !pending.ready && !pending.revealVisible && pending.opacity <= 0.05, pending);
+    && !pending.ready && pending.opacity <= 0.05, pending);
 
   await delay(Math.max(0, 6200 - 160));
+  await settle(700);
   const slowNetwork = await evaluate(`(() => {
     const image = document.querySelector('[data-product-presentation="premium"] [data-v2-image]');
     const reveal = image?.closest('[data-v2-reveal], [data-reveal]');
     const host = image?.closest('[data-v2-media]');
     const fallback = host?.querySelector('[data-v2-image-fallback]');
     const fallbackStyle = fallback ? getComputedStyle(fallback) : null;
+    const revealStyle = reveal ? getComputedStyle(reveal) : null;
     return {
       imageComplete: image?.complete || false,
       imageHidden: image?.hidden || false,
       awaiting: reveal?.classList.contains('v2-image-awaiting') || false,
       ready: reveal?.classList.contains('v2-image-ready') || false,
       fallbackState: reveal?.classList.contains('v2-image-fallback') || false,
-      revealVisible: reveal?.classList.contains('hv2-reveal-visible') || false,
+      revealOpacity: Number.parseFloat(revealStyle?.opacity || '1'),
+      revealVisible: Boolean(reveal && revealStyle?.visibility !== 'hidden'
+        && Number.parseFloat(revealStyle?.opacity || '1') > .95 && reveal.getClientRects().length > 0),
       readiness: reveal?.getAttribute('data-v2-image-ready') || '',
       mediaState: host?.getAttribute('data-v2-media-state') || '',
       fallbackVisible: Boolean(fallback && fallbackStyle?.display !== 'none' && fallback.getBoundingClientRect().height > 0),
@@ -454,12 +461,14 @@ const runImageReadyAudit = async () => {
     const reveal = image?.closest('[data-v2-reveal], [data-reveal]');
     const host = image?.closest('[data-v2-media]');
     const fallback = host?.querySelector('[data-v2-image-fallback]');
+    const revealStyle = reveal ? getComputedStyle(reveal) : null;
     return {
       loaded: ${loaded}, complete: image?.complete || false, naturalWidth: image?.naturalWidth || 0,
       imageHidden: image?.hidden || false,
       awaiting: reveal?.classList.contains('v2-image-awaiting') || false,
       ready: reveal?.classList.contains('v2-image-ready') || false,
-      revealVisible: reveal?.classList.contains('hv2-reveal-visible') || false,
+      revealVisible: Boolean(reveal && revealStyle?.visibility !== 'hidden'
+        && Number.parseFloat(revealStyle?.opacity || '1') > .95 && reveal.getClientRects().length > 0),
       readiness: reveal?.getAttribute('data-v2-image-ready') || '',
       mediaState: host?.getAttribute('data-v2-media-state') || '',
       fallbackAriaHidden: fallback?.getAttribute('aria-hidden') || ''
@@ -490,13 +499,15 @@ const runImageErrorAudit = async () => {
     const host = image?.closest('[data-v2-media]');
     const fallback = host?.querySelector('[data-v2-image-fallback]');
     const style = fallback ? getComputedStyle(fallback) : null;
+    const revealStyle = reveal ? getComputedStyle(reveal) : null;
     return {
       reachedFallback: ${reachedFallback},
       imageComplete: image?.complete || false,
       naturalWidth: image?.naturalWidth || 0,
       imageHidden: image?.hidden || false,
       readiness: reveal?.getAttribute('data-v2-image-ready') || '',
-      revealVisible: reveal?.classList.contains('hv2-reveal-visible') || false,
+      revealVisible: Boolean(reveal && revealStyle?.visibility !== 'hidden'
+        && Number.parseFloat(revealStyle?.opacity || '1') > .95 && reveal.getClientRects().length > 0),
       mediaState: host?.getAttribute('data-v2-media-state') || '',
       fallbackVisible: Boolean(fallback && style?.display !== 'none' && fallback.getBoundingClientRect().height > 0),
       fallbackText: fallback?.textContent?.replace(/\s+/g, ' ').trim() || '',
