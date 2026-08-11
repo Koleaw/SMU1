@@ -11,6 +11,7 @@ import V2PageTransition from '../components/v2/motion/V2PageTransition.astro';
 import siteSettings from '../content/site-settings/global.json';
 import yandex from '../data/yandex.json';
 import { isProductionDeploy, isTestDeploy, NOINDEX_ROBOTS } from '../utils/deployEnvironment';
+import { loadV2TransitionRouteRegistryJson } from '../utils/v2RouteRegistry';
 import { withBase } from '../utils/withBase';
 import { getV2Scope, productionV2Path, type V2Scope } from '../utils/v2Routes';
 
@@ -47,13 +48,14 @@ const isEntryPreview = entryMotion === 'preview';
 const entrySessionKey = 'smu1:entry-intro:v2';
 const currentProductionPath = productionV2Path(Astro.url.pathname).split(/[?#]/, 1)[0];
 const compatibilityRoutes = new Set(['/lavochki-i-skameyki/', '/urny/', '/navesy/']);
-const motionExcludedRoutes = new Set(['/404/', '/404.html', '/404.html/']);
 const isPublicV2Motion = isProduction
   && !refreshTarget
-  && !compatibilityRoutes.has(currentProductionPath)
-  && !motionExcludedRoutes.has(currentProductionPath);
+  && !compatibilityRoutes.has(currentProductionPath);
 const isEntryEnabled = isPublicV2Motion || isEntryPreview;
 const entryMode = isPublicV2Motion ? 'public' : isEntryPreview ? 'preview' : undefined;
+const transitionRouteRegistryJson = isPublicV2Motion
+  ? await loadV2TransitionRouteRegistryJson()
+  : '';
 const v2BasePath = withBase('/');
 const pageTitle = title?.trim() || 'СМУ-1';
 const pageDescription = description?.trim()
@@ -130,6 +132,13 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <meta name="twitter:description" content={pageDescription} />
     {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
     <meta name="theme-color" content="#101720" data-home-v2-theme-color />
+    {isPublicV2Motion && (
+      <script
+        type="application/json"
+        data-v2-route-registry
+        set:html={transitionRouteRegistryJson}
+      />
+    )}
     {isPublicV2Motion && <V2PageTransition part="head" />}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

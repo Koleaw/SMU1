@@ -10,6 +10,17 @@
   --v2-page-trail-width: 10px;
 }
 
+html[data-v2-page-variant='calm'] {
+  --v2-page-calm-cover-duration: 220ms;
+  --v2-page-calm-reveal-duration: 420ms;
+  --v2-page-calm-fail-open-duration: 140ms;
+  --v2-page-calm-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.v2-page-transition[data-v2-page-variant='calm'] {
+  transition-property: none;
+}
+
 html.v2-page-transition-locked,
 html[data-v2-page-bootstrap='arrival'] {
   overflow: hidden !important;
@@ -213,52 +224,72 @@ html[data-v2-page-bootstrap='arrival'] .v2-page-transition__sheet,
 }
 
 /*
- * Incoming copy is prepared under the closed sheet. The marker belongs to a
- * Hero-copy container, so local title/CTA controllers keep ownership of their
- * children and no element receives two competing transform animations.
+ * Calm is an independent, label-free navy fade. Its active sheet contains no
+ * H3 drawing nodes; these selectors are a defensive visual guard if DOM is
+ * inspected or repaired while a transition is already running.
  */
-html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='arrival']
-  body.home-v2-body [data-v2-page-handoff],
-html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='waiting']
-  body.home-v2-body [data-v2-page-handoff] {
-  opacity: 0 !important;
-  translate: 0 16px !important;
-  transition:
-    opacity 500ms var(--v2-page-copy-ease),
-    translate 500ms var(--v2-page-copy-ease) !important;
-  transition-delay: 0ms !important;
-  will-change: opacity, translate;
-}
-
-html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='revealing']
-  body.home-v2-body [data-v2-page-handoff],
-html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='fail-open']
-  body.home-v2-body [data-v2-page-handoff] {
-  opacity: 1 !important;
-  translate: 0 0 !important;
-  transition:
-    opacity 500ms var(--v2-page-copy-ease),
-    translate 500ms var(--v2-page-copy-ease) !important;
-  transition-delay: 0ms !important;
-}
-
-/* The shared Header must already be final under the incoming sheet. */
-html.home-v2-html[data-v2-page-bootstrap='arrival']
-  .hv2-header :where(
-    .hv2-header__brand,
-    .hv2-header__nav,
-    .hv2-header__actions,
-    .hv2-header__menu-button
+.v2-page-transition[data-v2-page-variant='calm']
+  :is(
+    .v2-page-transition__shell,
+    .v2-page-transition__label,
+    .v2-page-transition__edge,
+    .v2-page-transition__trail
   ) {
-  opacity: 1 !important;
-  transform: none !important;
-  transition: none !important;
-  transition-delay: 0ms !important;
+  display: none;
 }
 
-html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='fail-open']
-  body.home-v2-body [data-v2-page-handoff] {
-  transition-duration: 120ms !important;
+.v2-page-transition[data-v2-page-variant='calm'] .v2-page-transition__sheet {
+  background-image: none;
+  opacity: 0;
+  transform: none;
+  transition-property: opacity;
+  transition-duration: 0ms;
+  transition-timing-function: var(--v2-page-calm-ease);
+  will-change: auto;
+}
+
+html[data-v2-page-bootstrap='arrival'][data-v2-page-variant='calm']
+  .v2-page-transition[data-v2-page-variant='calm'] .v2-page-transition__sheet,
+.v2-page-transition[data-v2-page-variant='calm']:is(
+  [data-v2-page-state='covered'],
+  [data-v2-page-state='navigating'],
+  [data-v2-page-state='arrival'],
+  [data-v2-page-state='waiting']
+) .v2-page-transition__sheet {
+  opacity: 1;
+  transform: none;
+}
+
+.v2-page-transition[data-v2-page-variant='calm'][data-v2-page-state='covering']
+  .v2-page-transition__sheet {
+  opacity: 1;
+  transform: none;
+  transition-duration: var(--v2-page-calm-cover-duration);
+  will-change: opacity;
+}
+
+.v2-page-transition[data-v2-page-variant='calm'][data-v2-page-state='revealing']
+  .v2-page-transition__sheet {
+  opacity: 0;
+  transform: none;
+  transition-duration: var(--v2-page-calm-reveal-duration);
+  will-change: opacity;
+}
+
+.v2-page-transition[data-v2-page-variant='calm'][data-v2-page-state='fail-open']
+  .v2-page-transition__sheet {
+  opacity: 0;
+  transform: none;
+  transition-duration: var(--v2-page-calm-fail-open-duration);
+  will-change: opacity;
+}
+
+.v2-page-transition[data-v2-page-variant='calm'][data-v2-page-settled='true']
+  .v2-page-transition__sheet {
+  opacity: 0;
+  transform: none;
+  transition-duration: 0ms;
+  will-change: auto;
 }
 
 @media (max-width: 760px) {
@@ -267,22 +298,18 @@ html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='fail-ope
     --v2-page-reveal-duration: 380ms;
   }
 
+  html[data-v2-page-variant='calm'] {
+    --v2-page-calm-cover-duration: 180ms;
+    --v2-page-calm-reveal-duration: 320ms;
+    --v2-page-calm-fail-open-duration: 120ms;
+  }
+
   .v2-page-transition__shell {
     width: calc(100% - 32px);
   }
 
   .v2-page-transition__label {
     font-size: clamp(27px, 8vw, 38px);
-  }
-
-  html.home-v2-html[data-v2-page-bootstrap='arrival']
-    body.home-v2-body [data-v2-page-handoff] {
-    transition-duration: 400ms !important;
-  }
-
-  html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='fail-open']
-    body.home-v2-body [data-v2-page-handoff] {
-    transition-duration: 120ms !important;
   }
 }
 
@@ -294,15 +321,6 @@ html.home-v2-html[data-v2-page-bootstrap='arrival'][data-v2-page-state='fail-ope
   }
 
   .v2-page-transition__sheet {
-    will-change: auto;
-  }
-
-  html.home-v2-html[data-v2-page-bootstrap='arrival']
-    body.home-v2-body [data-v2-page-handoff] {
-    opacity: 1 !important;
-    translate: 0 0 !important;
-    transition-duration: 120ms !important;
-    transition-delay: 0ms !important;
     will-change: auto;
   }
 }

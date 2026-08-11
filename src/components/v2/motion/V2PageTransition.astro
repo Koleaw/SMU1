@@ -18,36 +18,75 @@ const basePath = import.meta.env.BASE_URL || '/';
   <>
     <!--
       This deliberately small rule is duplicated from the bundled stylesheet.
-      It is needed before first paint: a valid MPA handoff arrives with the
-      navigation drawing already covering the new document.
+      A consumed MPA handoff must restore its exact opaque drawing before the
+      incoming document's first paint.
     -->
     <style is:inline>
-      .v2-page-transition{position:fixed;z-index:1200;inset:0;overflow:hidden;visibility:hidden;pointer-events:none;contain:strict;isolation:isolate}.v2-page-transition__sheet,.v2-page-transition-bootstrap{position:absolute;inset:0;display:flex;align-items:center;overflow:hidden;background-color:#0b1d36;background-image:linear-gradient(rgb(255 255 255/.035) 1px,transparent 1px),linear-gradient(90deg,rgb(255 255 255/.035) 1px,transparent 1px);background-size:64px 64px}.v2-page-transition__sheet{transform:translate3d(100%,0,0)}.v2-page-transition-bootstrap{position:fixed;z-index:1201;pointer-events:auto}.v2-page-transition-bootstrap:before{position:absolute;z-index:3;inset-block:0;left:0;width:2px;background:#1759b7;content:""}.v2-page-transition-bootstrap:after{position:absolute;z-index:3;inset-block:0;left:2px;width:10px;background:linear-gradient(90deg,rgb(23 89 183/.1),transparent);content:""}.v2-page-transition__shell,.v2-page-transition-bootstrap__shell{position:relative;z-index:2;width:min(calc(100% - 64px),1360px);margin-inline:auto}.v2-page-transition__label,.v2-page-transition-bootstrap__label{display:-webkit-box;max-width:18ch;margin:0;overflow:hidden;color:#fff;font-family:Manrope,Arial,sans-serif;font-size:clamp(32px,4.2vw,64px);font-weight:600;line-height:1.08;letter-spacing:-.025em;text-transform:none;-webkit-box-orient:vertical;-webkit-line-clamp:2}html[data-v2-page-bootstrap=arrival]{overflow:hidden;background:#0b1d36;scrollbar-gutter:stable;scrollbar-color:transparent #0b1d36}html[data-v2-page-bootstrap=arrival] .v2-page-transition{visibility:visible;pointer-events:auto}html[data-v2-page-bootstrap=arrival] .v2-page-transition__sheet{transform:translate3d(0,0,0)}@media(max-width:760px){.v2-page-transition__shell,.v2-page-transition-bootstrap__shell{width:calc(100% - 32px)}.v2-page-transition__label,.v2-page-transition-bootstrap__label{font-size:clamp(27px,8vw,38px)}}
+      .v2-page-transition{position:fixed;z-index:1200;inset:0;overflow:hidden;visibility:hidden;pointer-events:none;contain:strict;isolation:isolate}.v2-page-transition__sheet,.v2-page-transition-bootstrap{position:absolute;inset:0;display:flex;align-items:center;overflow:hidden;background-color:#0b1d36;background-image:linear-gradient(rgb(255 255 255/.035) 1px,transparent 1px),linear-gradient(90deg,rgb(255 255 255/.035) 1px,transparent 1px);background-size:64px 64px}.v2-page-transition__sheet{opacity:1;transform:translate3d(100%,0,0)}.v2-page-transition-bootstrap{position:fixed;z-index:1201;pointer-events:auto}.v2-page-transition-bootstrap:not(.v2-page-transition-bootstrap--calm):before{position:absolute;z-index:3;inset-block:0;left:0;width:2px;background:#1759b7;content:""}.v2-page-transition-bootstrap:not(.v2-page-transition-bootstrap--calm):after{position:absolute;z-index:3;inset-block:0;left:2px;width:10px;background:linear-gradient(90deg,rgb(23 89 183/.1),transparent);content:""}.v2-page-transition-bootstrap--calm{background-image:none;transform:none;opacity:1}.v2-page-transition__shell,.v2-page-transition-bootstrap__shell{position:relative;z-index:2;width:min(calc(100% - 64px),1360px);margin-inline:auto}.v2-page-transition__label,.v2-page-transition-bootstrap__label{display:-webkit-box;max-width:18ch;margin:0;overflow:hidden;color:#fff;font-family:Manrope,Arial,sans-serif;font-size:clamp(32px,4.2vw,64px);font-weight:600;line-height:1.08;letter-spacing:-.025em;text-transform:none;-webkit-box-orient:vertical;-webkit-line-clamp:2}html[data-v2-page-bootstrap=arrival]{overflow:hidden;background:#0b1d36;scrollbar-gutter:stable;scrollbar-color:transparent #0b1d36}html[data-v2-page-bootstrap=arrival] .v2-page-transition{visibility:visible;pointer-events:auto}html[data-v2-page-bootstrap=arrival] .v2-page-transition__sheet{transform:translate3d(0,0,0)}html[data-v2-page-bootstrap=arrival][data-v2-page-variant=calm] .v2-page-transition__sheet{background-image:none;opacity:1;transform:none}@media(max-width:760px){.v2-page-transition__shell,.v2-page-transition-bootstrap__shell{width:calc(100% - 32px)}.v2-page-transition__label,.v2-page-transition-bootstrap__label{font-size:clamp(27px,8vw,38px)}}
     </style>
-    <script is:inline>
+    <script is:inline define:vars={{ v2BasePath: basePath }}>
       (() => {
         const root = document.documentElement;
-        const key = 'smu1:page-transition:v1';
+        const key = 'smu1:page-transition:v2';
         const entryKey = 'smu1:entry-intro:v2';
         const tabKey = 'smu1:browser-tab:v1';
         const tabNameMarker = '__smu1_browser_tab_v1__:';
         const ttl = 20000;
         const labelLimit = 80;
+        const rootIdPattern = /^[a-z\d][a-z\d-]{0,119}$/;
         const exactTarget = `${window.location.pathname}${window.location.search}${window.location.hash}`;
         let state = 'static';
         let reason = 'no-token';
+
         const sanitizeLabel = (value) => Array.from(
           String(value ?? '')
             .replace(/[\u0000-\u001f\u007f]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim()
         ).slice(0, labelLimit).join('');
+        const normalizeBase = (value) => {
+          let pathname = '/';
+          try { pathname = new URL(String(value || '/'), window.location.origin).pathname; }
+          catch { pathname = '/'; }
+          if (!pathname.startsWith('/')) pathname = `/${pathname}`;
+          return pathname.endsWith('/') ? pathname : `${pathname}/`;
+        };
+        const routeWithinBase = (pathname, base) => {
+          if (base === '/') return pathname || '/';
+          const rootWithoutSlash = base.slice(0, -1);
+          if (pathname === rootWithoutSlash || pathname === base) return '/';
+          if (!pathname.startsWith(base)) return null;
+          return `/${pathname.slice(base.length)}`;
+        };
+        const normalizeLogicalPath = (value) => {
+          const raw = String(value || '/');
+          const pathname = raw.startsWith('/') ? raw : `/${raw}`;
+          if (pathname === '/') return '/';
+          if (pathname === '/404/' || pathname === '/404.html/' || pathname === '/404.html') {
+            return '/404.html';
+          }
+          if (/\.[a-z\d]{1,12}\/?$/i.test(pathname)) return pathname.replace(/\/$/, '');
+          return pathname.endsWith('/') ? pathname : `${pathname}/`;
+        };
+        const validPathname = (value) => typeof value === 'string'
+          && value.startsWith('/')
+          && !/[?#]/.test(value)
+          && normalizeLogicalPath(value) === value;
+        const validRoot = (value) => value === null
+          || (typeof value === 'string' && rootIdPattern.test(value));
+        const record = (value) => value && typeof value === 'object' && !Array.isArray(value);
+
+        delete root.dataset.v2PageVariant;
+        delete root.dataset.v2PageNavigationId;
+        delete root.dataset.v2PageFromRoot;
+        delete root.dataset.v2PageToRoot;
+        delete root.dataset.v2PageTransitionLabel;
+        delete root.dataset.v2PageHandoffConsumed;
 
         try {
-          // sessionStorage can be cloned into a newly opened tab. window.name
-          // is browsing-context-local, so their matching IDs distinguish a
-          // same-tab MPA/reload from a cloned session. Preserve an unrelated
-          // name as a prefix instead of replacing it.
+          // sessionStorage may be cloned into a newly opened tab. window.name
+          // is browsing-context-local, so matching IDs keep a handoff bound to
+          // the tab which initiated it.
           const markerPattern = /(?:^|\|)__smu1_browser_tab_v1__:([a-z\d-]+)$/i;
           const currentName = String(window.name || '');
           const nameMatch = currentName.match(markerPattern);
@@ -71,39 +110,83 @@ const basePath = import.meta.env.BASE_URL || '/';
 
           const raw = window.sessionStorage.getItem(key);
           if (raw) {
-            // Invalid and mismatched records are one-shot as well. Removing
-            // them prevents an unrelated later navigation from accepting a
-            // token which was not created for that navigation.
+            // Every observed record is one-shot, including malformed, stale or
+            // target-mismatched records.
             window.sessionStorage.removeItem(key);
+            state = 'fail-open';
+            reason = 'invalid-token';
             try {
               const token = JSON.parse(raw);
               const age = Date.now() - Number(token && token.timestamp);
+              const normalizedBase = normalizeBase(v2BasePath);
+              const currentWithinBase = routeWithinBase(window.location.pathname, normalizedBase);
+              const currentLogicalPath = currentWithinBase === null
+                ? null
+                : normalizeLogicalPath(currentWithinBase);
+              const validVariant = token && (token.variant === 'h3' || token.variant === 'calm');
+              const validNavigationId = token
+                && typeof token.navigationId === 'string'
+                && token.navigationId.length > 0
+                && token.navigationId.length <= 128
+                && token.navigationId === token.nonce;
+              const validEndpoints = token
+                && record(token.from)
+                && record(token.to)
+                && validPathname(token.from.pathname)
+                && validPathname(token.to.pathname)
+                && token.from.pathname !== token.to.pathname
+                && validRoot(token.from.rootSectionId)
+                && validRoot(token.to.rootSectionId)
+                && token.to.pathname === currentLogicalPath;
+              const sanitizedLabel = sanitizeLabel(token && token.label);
+              const validCalmLabel = token && token.calmLabel === undefined
+                ? true
+                : typeof token.calmLabel === 'string'
+                  && sanitizeLabel(token.calmLabel) === token.calmLabel;
+              const validH3 = token && token.variant !== 'h3'
+                ? true
+                : Boolean(
+                    token
+                    && typeof token.label === 'string'
+                    && sanitizedLabel
+                    && sanitizedLabel === token.label
+                    && typeof token.from.rootSectionId === 'string'
+                    && typeof token.to.rootSectionId === 'string'
+                    && token.from.rootSectionId !== token.to.rootSectionId
+                  );
+              const validCalm = token && token.variant !== 'calm'
+                ? true
+                : Boolean(token && token.label === '' && validCalmLabel);
               const validShape = token
-                && token.version === 1
-                && typeof token.nonce === 'string'
-                && token.nonce.length > 0
+                && token.version === 2
+                && validVariant
                 && typeof token.target === 'string'
-                && Number.isFinite(age);
+                && typeof token.timestamp === 'number'
+                && Number.isFinite(age)
+                && validNavigationId
+                && validEndpoints
+                && validH3
+                && validCalm;
 
               if (!validShape) {
-                state = 'skipped';
                 reason = 'invalid-token';
               } else if (age < -1000 || age > ttl) {
-                state = 'skipped';
                 reason = 'stale-token';
               } else if (token.target !== exactTarget) {
-                state = 'skipped';
                 reason = 'target-mismatch';
-              } else if (typeof token.label !== 'string' || !sanitizeLabel(token.label)) {
-                state = 'skipped';
-                reason = 'invalid-label';
               } else {
                 state = 'arrival';
                 reason = 'valid-token';
-                root.dataset.v2PageTransitionLabel = sanitizeLabel(token.label);
+                root.dataset.v2PageVariant = token.variant;
+                root.dataset.v2PageNavigationId = token.navigationId;
+                root.dataset.v2PageFromRoot = token.from.rootSectionId || '';
+                root.dataset.v2PageToRoot = token.to.rootSectionId || '';
+                root.dataset.v2PageTransitionLabel = token.variant === 'h3'
+                  ? sanitizedLabel
+                  : '';
+                root.dataset.v2PageHandoffConsumed = 'true';
               }
             } catch {
-              state = 'skipped';
               reason = 'invalid-token';
             }
           }
@@ -117,22 +200,24 @@ const basePath = import.meta.env.BASE_URL || '/';
         root.dataset.v2PageState = state;
 
         if (state === 'arrival') {
-          // The body overlay has not been parsed yet. Create the same drawing
-          // now so even a progressive first paint contains the target label.
-          // The body handoff replaces it atomically, and both labels are set
-          // exclusively through textContent.
+          const variant = root.dataset.v2PageVariant;
           const bootstrapOverlay = document.createElement('div');
-          const bootstrapShell = document.createElement('div');
-          const bootstrapLabel = document.createElement('p');
-          bootstrapOverlay.className = 'v2-page-transition-bootstrap';
+          bootstrapOverlay.className = variant === 'calm'
+            ? 'v2-page-transition-bootstrap v2-page-transition-bootstrap--calm'
+            : 'v2-page-transition-bootstrap';
           bootstrapOverlay.dataset.v2PageBootstrapOverlay = '';
           bootstrapOverlay.setAttribute('aria-hidden', 'true');
           bootstrapOverlay.inert = true;
-          bootstrapShell.className = 'v2-page-transition-bootstrap__shell';
-          bootstrapLabel.className = 'v2-page-transition-bootstrap__label';
-          bootstrapLabel.textContent = root.dataset.v2PageTransitionLabel || '';
-          bootstrapShell.append(bootstrapLabel);
-          bootstrapOverlay.append(bootstrapShell);
+
+          if (variant === 'h3') {
+            const bootstrapShell = document.createElement('div');
+            const bootstrapLabel = document.createElement('p');
+            bootstrapShell.className = 'v2-page-transition-bootstrap__shell';
+            bootstrapLabel.className = 'v2-page-transition-bootstrap__label';
+            bootstrapLabel.textContent = root.dataset.v2PageTransitionLabel || '';
+            bootstrapShell.append(bootstrapLabel);
+            bootstrapOverlay.append(bootstrapShell);
+          }
           root.append(bootstrapOverlay);
 
           window.__smu1PageTransitionFailSafe = window.setTimeout(() => {
@@ -140,6 +225,12 @@ const basePath = import.meta.env.BASE_URL || '/';
             if (root.dataset.v2PageBootstrap !== 'arrival'
               || (current !== 'arrival' && current !== 'waiting')) return;
 
+            const detail = {
+              state: 'fail-open',
+              reason: 'controller-timeout',
+              variant: root.dataset.v2PageVariant || null,
+              navigationId: root.dataset.v2PageNavigationId || null
+            };
             root.dataset.v2PageBootstrap = 'fail-open';
             root.dataset.v2PageBootstrapReason = 'controller-timeout';
             root.dataset.v2PageState = 'fail-open';
@@ -153,48 +244,29 @@ const basePath = import.meta.env.BASE_URL || '/';
               overlay.dataset.v2PageSettled = 'true';
               delete overlay.dataset.v2PageLock;
             }
-            document.dispatchEvent(new CustomEvent('v2:page-revealing', {
-              detail: { state: 'fail-open', reason: 'controller-timeout' }
-            }));
-            document.dispatchEvent(new CustomEvent('v2:page-done', {
-              detail: { state: 'fail-open', reason: 'controller-timeout' }
-            }));
+            document.dispatchEvent(new CustomEvent('v2:page-revealing', { detail }));
+            document.dispatchEvent(new CustomEvent('v2:page-done', { detail }));
           }, 1600);
         }
       })();
     </script>
   </>
 ) : (
-  <div
-    class="v2-page-transition"
-    data-v2-page-transition
-    data-v2-page-state="idle"
-    data-v2-page-base={basePath}
-    data-v2-page-allow-design-lab={allowDesignLab ? 'true' : undefined}
-    aria-hidden="true"
-    inert
-  >
-    <div class="v2-page-transition__sheet" data-v2-page-sheet>
+  <>
+    <div
+      class="v2-page-transition"
+      data-v2-page-transition
+      data-v2-page-state="idle"
+      data-v2-page-base={basePath}
+      data-v2-page-allow-design-lab={allowDesignLab ? 'true' : undefined}
+      aria-hidden="true"
+      inert
+    >
+      <div class="v2-page-transition__sheet" data-v2-page-sheet></div>
+    </div>
+    <template data-v2-page-h3-template>
       <div class="v2-page-transition__shell">
-        <p class="v2-page-transition__label" data-v2-page-label>
-          <script is:inline>
-            (() => {
-              const current = document.currentScript;
-              const label = current instanceof HTMLScriptElement ? current.parentElement : null;
-              if (!(label instanceof HTMLElement)) return;
-              const value = Array.from(
-                String(document.documentElement.dataset.v2PageTransitionLabel || '')
-                  .replace(/[\u0000-\u001f\u007f]/g, ' ')
-                  .replace(/\s+/g, ' ')
-                  .trim()
-              ).slice(0, 80).join('');
-              label.textContent = value;
-              const bootstrapOverlay = document.querySelector('[data-v2-page-bootstrap-overlay]');
-              if (value) document.documentElement.dataset.v2PageOverlayReady = 'true';
-              bootstrapOverlay?.remove();
-            })();
-          </script>
-        </p>
+        <p class="v2-page-transition__label" data-v2-page-label></p>
       </div>
       <span
         class="v2-page-transition__trail v2-page-transition__trail--cover"
@@ -212,6 +284,44 @@ const basePath = import.meta.env.BASE_URL || '/';
         class="v2-page-transition__edge v2-page-transition__edge--reveal"
         data-v2-page-edge="reveal"
       ></span>
-    </div>
-  </div>
+    </template>
+    <script is:inline>
+      (() => {
+        const current = document.currentScript;
+        const overlay = document.querySelector('[data-v2-page-transition]');
+        if (!(overlay instanceof HTMLElement)) return;
+        const sheet = overlay.querySelector('[data-v2-page-sheet]');
+        if (!(sheet instanceof HTMLElement)) return;
+
+        const html = document.documentElement;
+        const variant = html.dataset.v2PageVariant;
+        if (variant === 'h3' || variant === 'calm') {
+          overlay.dataset.v2PageVariant = variant;
+        }
+
+        if (variant !== 'calm') {
+          const template = document.querySelector('[data-v2-page-h3-template]');
+          if (template instanceof HTMLTemplateElement) {
+            sheet.append(template.content.cloneNode(true));
+          }
+          const label = sheet.querySelector('[data-v2-page-label]');
+          if (label instanceof HTMLElement) {
+            const value = Array.from(
+              String(html.dataset.v2PageTransitionLabel || '')
+                .replace(/[\u0000-\u001f\u007f]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+            ).slice(0, 80).join('');
+            label.textContent = value;
+            if (value) html.dataset.v2PageOverlayReady = 'true';
+          }
+        } else {
+          html.dataset.v2PageOverlayReady = 'true';
+        }
+
+        document.querySelector('[data-v2-page-bootstrap-overlay]')?.remove();
+        current?.remove();
+      })();
+    </script>
+  </>
 )}
