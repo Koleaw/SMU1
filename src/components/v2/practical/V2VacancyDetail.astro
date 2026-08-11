@@ -36,15 +36,15 @@ const facts = [
   <header class="practical-vacancy__hero">
     <div class="hv2-shell practical-vacancy__hero-grid" data-v2-page-handoff="copy">
       <div data-v2-reveal>
-        <p class="hv2-eyebrow">Вакансия</p>
-        <h1>{job.title}</h1>
-        {job.shortDescription && <p class="practical-hero__lead">{job.shortDescription}</p>}
-        <a class="practical-vacancy__back" href={withBase('/design-lab/v2/vakansii/')}>
+        <p class="hv2-eyebrow" data-v2-entrance-role="context">Вакансия</p>
+        <h1 data-v2-entrance-role="title-primary">{job.title}</h1>
+        {job.shortDescription && <p class="practical-hero__lead" data-v2-entrance-role="lead">{job.shortDescription}</p>}
+        <a class="practical-vacancy__back" href={withBase('/design-lab/v2/vakansii/')} data-v2-entrance-role="actions-meta">
           Все вакансии
         </a>
       </div>
       {facts.length > 0 && (
-        <dl data-v2-reveal>
+        <dl data-v2-reveal data-v2-entrance-role="support">
           {facts.map((fact) => (
             <div><dt>{fact.label}</dt><dd>{fact.value}</dd></div>
           ))}

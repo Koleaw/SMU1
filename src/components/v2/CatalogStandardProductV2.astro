@@ -142,14 +142,14 @@ const sectionNavItems = [
   >
     <div class="hv2-shell hv2-grid v2-product-top__grid" data-product-final-track>
       <article class="v2-product-summary" data-v2-page-handoff="copy">
-        <div class="v2-product-summary__breadcrumbs">
+        <div class="v2-product-summary__breadcrumbs" data-v2-entrance-role="context">
           <V2Breadcrumbs items={productBreadcrumbs} />
         </div>
-        <p class="hv2-eyebrow" data-v2-reveal="entry-meta">{category.title}</p>
-        <h1 id="v2-product-title" data-v2-reveal="entry-title">{product.title}</h1>
-        {productLead && <p class="v2-product-summary__lead" data-v2-reveal="entry-copy">{productLead}</p>}
+        <p class="hv2-eyebrow" data-v2-reveal="entry-meta" data-v2-entrance-role="context">{category.title}</p>
+        <h1 id="v2-product-title" data-v2-reveal="entry-title" data-v2-entrance-role="title-primary">{product.title}</h1>
+        {productLead && <p class="v2-product-summary__lead" data-v2-reveal="entry-copy" data-v2-entrance-role="lead">{productLead}</p>}
 
-        <dl class="v2-product-summary__meta" data-v2-reveal="entry-price">
+        <dl class="v2-product-summary__meta" data-v2-reveal="entry-price" data-v2-entrance-role="actions-meta">
           <div>
             <dt>Стоимость</dt>
             <dd>{formatProductPrice(product)}</dd>
@@ -157,12 +157,12 @@ const sectionNavItems = [
         </dl>
 
         {features.length > 0 && (
-          <ul class="v2-product-summary__features" data-v2-reveal="entry-features">
+          <ul class="v2-product-summary__features" data-v2-reveal="entry-features" data-v2-entrance-role="support">
             {features.map((feature) => <li>{feature}</li>)}
           </ul>
         )}
 
-        <div class="hv2-actions v2-product-summary__actions" data-v2-reveal="entry-actions">
+        <div class="hv2-actions v2-product-summary__actions" data-v2-reveal="entry-actions" data-v2-entrance-role="actions-meta">
           <a class="hv2-button hv2-button--primary" href="#contact">Запросить расчёт</a>
           <a class="hv2-text-link" href={settings.telegram} target="_blank" rel="noopener noreferrer">
             Написать в Telegram
@@ -171,7 +171,7 @@ const sectionNavItems = [
       </article>
 
       {images.length > 0 && (
-        <div class="v2-product-top__gallery" data-v2-reveal="entry-media">
+        <div class="v2-product-top__gallery" data-v2-reveal="entry-media" data-v2-entrance-role="media">
           <V2ProductGallery
             images={images}
             title={product.title}
@@ -201,8 +201,8 @@ const sectionNavItems = [
         </article>
       )}
 
-      {hasTechnicalPanels && <div class="v2-technical-grid" id="product-specifications">
-        {hasSpecifications && <section class="v2-technical-panel v2-technical-panel--specs" aria-labelledby="v2-specs-title" data-v2-reveal>
+      {hasTechnicalPanels && <div class="v2-technical-grid" id="product-specifications" data-v2-scroll-section>
+        {hasSpecifications && <section class="v2-technical-panel v2-technical-panel--specs" aria-labelledby="v2-specs-title" data-v2-reveal data-v2-scroll-role="card">
           <header>
             <p class="hv2-eyebrow">Технические данные</p>
             <h2 id="v2-specs-title">Размеры и характеристики</h2>
@@ -228,17 +228,17 @@ const sectionNavItems = [
           </div>
         </section>}
 
-        {materials.length > 0 && <section class="v2-technical-panel" aria-labelledby="v2-materials-title" data-v2-reveal>
+        {materials.length > 0 && <section class="v2-technical-panel" aria-labelledby="v2-materials-title" data-v2-reveal data-v2-scroll-role="card">
           <header><p class="hv2-eyebrow">Состав</p><h2 id="v2-materials-title">Материалы</h2></header>
           <ul class="v2-data-list">{materials.map((item) => <li>{item}</li>)}</ul>
         </section>}
 
-        {colors.length > 0 && <section class="v2-technical-panel" aria-labelledby="v2-colors-title" data-v2-reveal>
+        {colors.length > 0 && <section class="v2-technical-panel" aria-labelledby="v2-colors-title" data-v2-reveal data-v2-scroll-role="card">
           <header><p class="hv2-eyebrow">Варианты</p><h2 id="v2-colors-title">Цвета и покрытие</h2></header>
           <ul class="v2-data-list">{colors.map((item) => <li>{item}</li>)}</ul>
         </section>}
 
-        {customizationItems.length > 0 && <section class="v2-technical-panel v2-technical-panel--custom" aria-labelledby="v2-customization-title" data-v2-reveal>
+        {customizationItems.length > 0 && <section class="v2-technical-panel v2-technical-panel--custom" aria-labelledby="v2-customization-title" data-v2-reveal data-v2-scroll-role="card">
           <header><p class="hv2-eyebrow">Под задачу</p><h2 id="v2-customization-title">Что можно изменить</h2></header>
           <ul class="v2-customization-list">
             {customizationItems.map((item) => <li><p>{item}</p></li>)}

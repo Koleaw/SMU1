@@ -475,7 +475,7 @@ body.home-v2-body:has([data-home-final-root]) {
 
 .home-final .hf-intake__intro {
   position: sticky;
-  top: 128px;
+  top: calc(var(--hv2-header-height) + 48px);
 }
 
 .home-final .hf-intake__intro h2 {
@@ -685,7 +685,7 @@ body.home-v2-body:has([data-home-final-root]) {
   }
 
   .home-final .hf-hero__video-toggle {
-    top: 88px;
+    top: calc(var(--hv2-header-height) + 24px);
     right: var(--hf-gutter);
     bottom: auto;
     min-width: 44px;

@@ -77,7 +77,7 @@ const imagePresentationStyle = [
       data-v2-hero-scroll-copy={!productFinalHandoff ? '' : undefined}
       data-v2-page-handoff="copy"
     >
-      <div class="v2-catalog-hero__meta">
+      <div class="v2-catalog-hero__meta" data-v2-entrance-role="context">
       {hasBreadcrumbs && (
         <div class="v2-catalog-hero__breadcrumbs">
           {breadcrumbs.length > 0
@@ -91,10 +91,10 @@ const imagePresentationStyle = [
         {countLabel && <span>{countLabel}</span>}
       </div>
       </div>
-      <h1 id="v2-catalog-title" data-v2-reveal="entry-title">{title}</h1>
-      {description && <p class="v2-catalog-hero__lead" data-v2-reveal="entry-copy">{description}</p>}
-      {supportingText && <p class="v2-catalog-hero__support" data-v2-reveal="entry-support">{supportingText}</p>}
-      <div class="hv2-actions v2-catalog-hero__actions" data-v2-reveal="entry-actions">
+      <h1 id="v2-catalog-title" data-v2-reveal="entry-title" data-v2-entrance-role="title-primary">{title}</h1>
+      {description && <p class="v2-catalog-hero__lead" data-v2-reveal="entry-copy" data-v2-entrance-role="lead">{description}</p>}
+      {supportingText && <p class="v2-catalog-hero__support" data-v2-reveal="entry-support" data-v2-entrance-role="support">{supportingText}</p>}
+      <div class="hv2-actions v2-catalog-hero__actions" data-v2-reveal="entry-actions" data-v2-entrance-role="actions-meta">
         <a class="hv2-button hv2-button--primary" href={href(primaryHref)}>{primaryLabel}</a>
         {secondaryLabel && <a class="hv2-text-link" href={href(secondaryHref)}>{secondaryLabel}</a>}
       </div>
@@ -106,6 +106,7 @@ const imagePresentationStyle = [
         data-v2-media
         data-v2-hero-scroll-media={!productFinalHandoff ? '' : undefined}
         data-v2-reveal="entry-media"
+        data-v2-entrance-role="media"
       >
         <img
           src={withBase(image)}

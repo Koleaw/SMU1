@@ -142,7 +142,7 @@ const sectionNavItems = [
     >
       <div class="v2-premium-product-hero__track" data-product-final-track>
         <div class="hv2-shell v2-premium-product-hero__inner">
-          <div class="v2-premium-product-hero__breadcrumbs" data-v2-reveal="entry-meta">
+          <div class="v2-premium-product-hero__breadcrumbs" data-v2-reveal="entry-meta" data-v2-entrance-role="context">
             <V2Breadcrumbs items={[
               { title: 'Главная', href: '/design-lab/home-v2/' },
               { title: section.title, href: links.sectionHref },
@@ -152,14 +152,14 @@ const sectionNavItems = [
           </div>
 
           <div class="v2-premium-product-hero__copy" data-v2-page-handoff="copy">
-            <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-reveal="entry-meta">{solutionKicker}</p>
-            <h1 id="v2-premium-product-title" data-v2-reveal="entry-title">{product.title}</h1>
-            {productLead && <p class="v2-premium-product-hero__lead" data-v2-reveal="entry-copy">{productLead}</p>}
-            <dl class="v2-premium-product-hero__price" data-v2-reveal="entry-price">
+            <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-reveal="entry-meta" data-v2-entrance-role="context">{solutionKicker}</p>
+            <h1 id="v2-premium-product-title" data-v2-reveal="entry-title" data-v2-entrance-role="title-primary">{product.title}</h1>
+            {productLead && <p class="v2-premium-product-hero__lead" data-v2-reveal="entry-copy" data-v2-entrance-role="lead">{productLead}</p>}
+            <dl class="v2-premium-product-hero__price" data-v2-reveal="entry-price" data-v2-entrance-role="actions-meta">
               <dt>Формат расчёта</dt>
               <dd>{formatProductPrice(product)}</dd>
             </dl>
-            <div class="hv2-actions" data-v2-reveal="entry-actions">
+            <div class="hv2-actions" data-v2-reveal="entry-actions" data-v2-entrance-role="actions-meta">
               <a class="hv2-button hv2-button--primary" href="#contact">Обсудить решение</a>
               <a class="hv2-button hv2-button--ghost" href={settings.telegram} target="_blank" rel="noopener noreferrer">
                 Написать в Telegram
@@ -172,6 +172,7 @@ const sectionNavItems = [
           class="v2-premium-product-hero__media"
           data-v2-media
           data-v2-reveal="entry-media"
+          data-v2-entrance-role="media"
           style={imageVariableStyle}
         >
           {primaryImage ? (
@@ -300,9 +301,9 @@ const sectionNavItems = [
           <header class="v2-section-heading" data-v2-reveal>
             <div><p class="hv2-eyebrow">Инженерная основа</p><h2 id="premium-technical-title">Материалы и конструктив</h2></div>
           </header>
-          <div class="v2-premium-technical__grid">
+          <div class="v2-premium-technical__grid" data-v2-scroll-section>
             {hasSpecifications && (
-              <section data-v2-reveal>
+              <section data-v2-reveal data-v2-scroll-role="card">
                 <h3>Размеры и характеристики</h3>
                 {pairedSpecs.length > 0 && <dl>
                   {pairedSpecs.map((item) => <div><dt>{item.label}</dt><dd>{item.values.map((value) => <span>{value}</span>)}</dd></div>)}
@@ -310,8 +311,8 @@ const sectionNavItems = [
                 {textualSpecs.length > 0 && <ul>{textualSpecs.map((item) => <li>{item}</li>)}</ul>}
               </section>
             )}
-            {materials.length > 0 && <section data-v2-reveal><h3>Материалы</h3><ul>{materials.map((item) => <li>{item}</li>)}</ul></section>}
-            {colors.length > 0 && <section data-v2-reveal><h3>Покрытие и цвет</h3><ul>{colors.map((item) => <li>{item}</li>)}</ul></section>}
+            {materials.length > 0 && <section data-v2-reveal data-v2-scroll-role="card"><h3>Материалы</h3><ul>{materials.map((item) => <li>{item}</li>)}</ul></section>}
+            {colors.length > 0 && <section data-v2-reveal data-v2-scroll-role="card"><h3>Покрытие и цвет</h3><ul>{colors.map((item) => <li>{item}</li>)}</ul></section>}
           </div>
         </div>
       </section>

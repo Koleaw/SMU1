@@ -1,0 +1,352 @@
+/*
+ * H4 public scale override.
+ *
+ * PublicV2Layout loads this file last. The public-route guard keeps the
+ * larger production scale away from admin, legacy, compatibility, and Design
+ * Lab surfaces that can reuse the same component class names.
+ */
+
+:root[data-v2-public-route='true'] {
+  --hv2-header-height: 92px;
+  --h4-header-logo-width: 80px;
+  --h4-h1-home: clamp(88px, 5vw, 96px);
+  --h4-h1-short: clamp(88px, 5.9vw, 112px);
+  --h4-h1-direction: clamp(72px, 5.4vw, 96px);
+  --h4-h1-long: clamp(56px, 4vw, 76px);
+  --h4-h2-major: clamp(44px, 3.25vw, 62px);
+  --h4-lead: clamp(22px, 1.6vw, 28px);
+}
+
+/* Header geometry and states ------------------------------------------------ */
+
+:root[data-v2-public-route='true'] .home-v2-body .hv2-header {
+  height: var(--hv2-header-height);
+  will-change: auto;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body .hv2-header__inner {
+  gap: clamp(16px, 1.45vw, 26px);
+}
+
+:root[data-v2-public-route='true'] .home-v2-body .hv2-header__brand {
+  width: var(--h4-header-logo-width);
+  height: 100%;
+  min-height: 44px;
+  flex-basis: var(--h4-header-logo-width);
+}
+
+:root[data-v2-public-route='true'] .home-v2-body .hv2-header__brand img {
+  width: var(--h4-header-logo-width);
+  height: auto;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body .hv2-header__nav {
+  gap: clamp(10px, 1vw, 18px);
+}
+
+:root[data-v2-public-route='true'] .home-v2-body :is(
+  .hv2-header__nav-link,
+  .hv2-header__nav-button
+) {
+  min-height: 44px;
+  font-size: clamp(13px, 0.9vw, 15px);
+  line-height: 1.2;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body .hv2-header__actions {
+  gap: 8px;
+  font-size: 12px;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body :is(
+  .hv2-header__phone,
+  .hv2-header__telegram,
+  .hv2-header__telegram-label
+) {
+  min-height: 44px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body .hv2-header .hv2-button--header {
+  min-height: 44px;
+  padding: 2px 15px;
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body .hv2-header__menu-button {
+  min-width: 88px;
+  min-height: 48px;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body .hv2-header:not(.is-scrolled) {
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body .hv2-header.is-scrolled {
+  border-color: rgba(13, 23, 36, 0.12) !important;
+  color: var(--hv2-text) !important;
+  background: #ffffff !important;
+  box-shadow: 0 8px 24px rgba(13, 23, 36, 0.07) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Hero hierarchy ------------------------------------------------------------ */
+
+:root[data-v2-public-route='true'] .home-v2-body .home-final .hf-hero__copy {
+  width: min(100%, 1100px);
+}
+
+:root[data-v2-public-route='true'] .home-v2-body .home-final .hf-hero__copy h1 {
+  max-width: 20ch;
+  font-size: var(--h4-h1-home);
+  line-height: 0.98;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body :is(
+  .projects-v2--archive .v2-project-archive-hero h1,
+  .practical-v2--contacts .practical-contacts__hero h1,
+  .practical-v2--vacancies .practical-vacancies__hero h1,
+  .custom-order-v2 .custom-order-hero h1,
+  .not-found-v2__copy h1
+) {
+  font-size: var(--h4-h1-short);
+  line-height: 0.98;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body :is(
+  .catalog-v2[data-product-final-prototype='hub'] .v2-catalog-hero h1,
+  .catalog-v2[data-product-final-prototype='category'] .v2-catalog-hero h1,
+  .direction-hero h1,
+  .engineering-hero__title h1,
+  .place-hero h1,
+  .project-hero h1,
+  .immersive-direction-hero h1,
+  .practical-company__hero h1
+) {
+  font-size: var(--h4-h1-direction);
+  line-height: 0.98;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body :is(
+  .catalog-v2[data-product-final-prototype='standard-product'] .v2-product-summary h1,
+  .catalog-v2[data-product-final-prototype='premium-product'] .v2-premium-product-hero h1,
+  .projects-v2 .v2-project-detail__hero h1,
+  .practical-v2 .practical-vacancy__hero h1,
+  .practical-v2 .practical-legal__document h1
+) {
+  font-size: var(--h4-h1-long);
+  line-height: 0.99;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body
+  .catalog-v2[data-product-final-prototype='standard-product']
+  .v2-product-summary h1 {
+  max-width: 13ch;
+}
+
+:root[data-v2-public-route='true'] .home-v2-body
+  .catalog-v2[data-product-final-prototype='premium-product']
+  .v2-premium-product-hero h1 {
+  max-width: 10ch;
+}
+
+@media (min-width: 761px) {
+  :root[data-v2-public-route='true'] .home-v2-body .custom-order-v2 .custom-order-hero__copy {
+    grid-column: 1 / 8;
+  }
+
+  :root[data-v2-public-route='true'] .home-v2-body .custom-order-v2 .custom-order-hero h1 {
+    max-width: 13ch;
+  }
+
+  :root[data-v2-public-route='true'] .home-v2-body .custom-order-v2 .custom-order-hero__media {
+    grid-column: 8 / 13;
+  }
+}
+
+:root[data-v2-public-route='true'] .home-v2-body :is(
+  .home-final .hf-hero__lead,
+  .hv2-hero__lead,
+  .catalog-v2[data-product-final-prototype='hub'] .v2-catalog-hero__lead,
+  .catalog-v2[data-product-final-prototype='category'] .v2-catalog-hero__lead,
+  .catalog-v2[data-product-final-prototype='standard-product'] .v2-product-summary__lead,
+  .catalog-v2[data-product-final-prototype='premium-product'] .v2-premium-product-hero__lead,
+  .direction-hero__lead,
+  .engineering-hero__offer > p,
+  .place-hero__lead,
+  .project-hero__lead,
+  .immersive-direction-hero__lead,
+  .projects-v2--archive .v2-project-archive-hero__grid > p,
+  .projects-v2 .v2-project-detail__lead,
+  .practical-company__hero-lead,
+  .practical-hero__lead,
+  .practical-v2--contacts .practical-contacts__hero-grid > p,
+  .practical-v2--vacancies .practical-vacancies__hero-grid > p,
+  .custom-order-v2 .custom-order-hero__lead,
+  .not-found-v2__copy > p:last-of-type
+) {
+  font-size: var(--h4-lead);
+  line-height: 1.48;
+}
+
+/* Major section headings only; card and utility headings keep local scale. */
+:root[data-v2-public-route='true'] .home-v2-body :is(
+  .home-final .hf-section-head h2,
+  .home-final .hf-intake__intro h2,
+  .catalog-v2 .v2-section-heading h2,
+  .catalog-v2 .v2-custom-cta h2,
+  .catalog-v2 .v2-product-custom-project h2,
+  .catalog-v2 .v2-direct-contact__intro h2,
+  .catalog-product--premium .v2-premium-solution h2,
+  .catalog-product--premium .v2-premium-applications h2,
+  .catalog-product--premium .v2-premium-gallery h2,
+  .catalog-product--premium .v2-premium-adaptation h2,
+  .catalog-product--premium .v2-premium-variants h2,
+  .catalog-product--premium .v2-premium-technical h2,
+  .catalog-product--premium .v2-premium-delivery h2,
+  .catalog-product--premium .v2-premium-related h2,
+  .direction-v2 .direction-section-heading h2,
+  .direction-v2 .direction-intro__heading h2,
+  .direction-v2 .direction-scope__heading h2,
+  .direction-v2 .direction-brief__heading h2,
+  .direction-v2 .engineering-scope__heading h2,
+  .direction-v2 .engineering-tasks__heading h2,
+  .direction-v2 .engineering-proof__heading h2,
+  .direction-v2 .engineering-brief__heading h2,
+  .direction-v2 .place-section-heading h2,
+  .direction-v2 .place-intro__heading h2,
+  .direction-v2 .place-contexts__heading h2,
+  .direction-v2 .place-brief__heading h2,
+  .direction-v2 .project-scope__heading h2,
+  .direction-v2 .project-contexts__heading h2,
+  .direction-v2 .project-proof__heading h2,
+  .direction-v2 .project-brief__heading h2,
+  .projects-v2--archive .v2-project-archive__heading h2,
+  .projects-v2 .v2-project-detail__work h2,
+  .projects-v2 .v2-project-detail__section-heading h2,
+  .projects-v2 .v2-project-detail__facts > .hv2-shell > header h2,
+  .practical-v2 .practical-section-heading h2,
+  .practical-v2 .practical-company__details h2,
+  .practical-v2 .practical-contacts__details h2,
+  .practical-v2 .practical-contacts__brief h2,
+  .practical-v2 .practical-contacts__cta h2,
+  .practical-v2 .practical-vacancy__content h2,
+  .practical-v2 .practical-vacancy__contact h2,
+  .custom-order-v2 .custom-order-brief h2,
+  .custom-order-v2 .custom-order-directions h2,
+  .custom-order-v2 .custom-order-contact h2
+) {
+  font-size: var(--h4-h2-major);
+  line-height: 1.03;
+  letter-spacing: -0.04em;
+}
+
+/* The engineering offer gains one existing grid track for the larger lead. */
+@media (min-width: 1181px) {
+  :root[data-v2-public-route='true'] .home-v2-body .engineering-hero__title {
+    grid-column: 1 / 9;
+  }
+
+  :root[data-v2-public-route='true'] .home-v2-body .engineering-hero__offer {
+    grid-column: 9 / 13;
+  }
+}
+
+/* Compact desktop ----------------------------------------------------------- */
+
+@media (min-width: 1181px) and (max-width: 1439px) {
+  :root[data-v2-public-route='true'] {
+    --hv2-header-height: 88px;
+    --h4-header-logo-width: 76px;
+  }
+
+  :root[data-v2-public-route='true'] .home-v2-body .hv2-header__inner {
+    gap: 12px;
+  }
+
+  :root[data-v2-public-route='true'] .home-v2-body .hv2-header__nav {
+    gap: clamp(8px, 0.7vw, 10px);
+  }
+
+  :root[data-v2-public-route='true'] .home-v2-body :is(
+    .hv2-header__nav-link,
+    .hv2-header__nav-button
+  ) {
+    font-size: clamp(12.5px, 0.88vw, 14px);
+  }
+
+  :root[data-v2-public-route='true'] .home-v2-body .hv2-header .hv2-button--header {
+    padding-inline: 11px;
+    font-size: 12px;
+  }
+}
+
+/* Tablet keeps the hierarchy without forcing desktop-sized line towers. */
+@media (min-width: 761px) and (max-width: 1180px) {
+  :root[data-v2-public-route='true'] {
+    --hv2-header-height: 80px;
+    --h4-header-logo-width: 72px;
+    --h4-h1-home: clamp(64px, 7.4vw, 88px);
+    --h4-h1-short: clamp(64px, 7.4vw, 88px);
+    --h4-h1-direction: clamp(58px, 6.3vw, 72px);
+    --h4-h1-long: clamp(48px, 5vw, 56px);
+    --h4-h2-major: clamp(38px, 4vw, 44px);
+    --h4-lead: clamp(20px, 1.9vw, 22px);
+  }
+}
+
+/* Mobile ------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  :root[data-v2-public-route='true'] {
+    --hv2-header-height: 72px;
+    --h4-header-logo-width: 66px;
+    --h4-h1-home: clamp(44px, 11.8vw, 48px);
+    --h4-h1-short: clamp(44px, 12.8vw, 52px);
+    --h4-h1-direction: clamp(44px, 12vw, 52px);
+    --h4-h1-long: clamp(38px, 11.3vw, 46px);
+    --h4-h2-major: clamp(32px, 9.8vw, 42px);
+    --h4-lead: clamp(18px, 5vw, 21px);
+  }
+
+  :root[data-v2-public-route='true'] .home-v2-body .hv2-header__brand {
+    height: 100%;
+  }
+
+  :root[data-v2-public-route='true'] .home-v2-body :is(
+    .home-final .hf-hero__copy h1,
+    .v2-catalog-hero h1,
+    .v2-product-summary h1,
+    .v2-premium-product-hero h1,
+    .direction-hero h1,
+    .engineering-hero__title h1,
+    .place-hero h1,
+    .project-hero h1,
+    .immersive-direction-hero h1,
+    .v2-project-archive-hero h1,
+    .v2-project-detail__hero h1,
+    .practical-company__hero h1,
+    .practical-hero h1,
+    .practical-vacancy__hero h1,
+    .custom-order-hero h1,
+    .not-found-v2__copy h1
+  ) {
+    max-width: 100%;
+  }
+
+  :root[data-v2-public-route='true'] .home-v2-body .immersive-direction-hero h1 {
+    overflow-wrap: anywhere !important;
+    hyphens: auto;
+  }
+
+  :root[data-v2-public-route='true'] .home-v2-body .hv2-header__menu-button {
+    min-height: 48px;
+  }
+}

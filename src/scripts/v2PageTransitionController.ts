@@ -512,6 +512,62 @@ const waitForIncomingReadiness = async (): Promise<IncomingReadiness> => {
   });
 };
 
+const terminalizeEntranceBeforePageReveal = (reason: string) => {
+  const html = document.documentElement;
+  document.dispatchEvent(new CustomEvent('v2:entrance-fail-open-request', {
+    detail: { owner: 'page-transition', state: 'fail-open', reason }
+  }));
+  // A coordinator that is already initializing consumes the request above
+  // synchronously. This persistent fallback also covers a controller bundle
+  // that did not register before the 250ms page-readiness deadline.
+  if (html.dataset.v2EntranceState === 'fail-open') return;
+
+  const motionRoot = document.querySelector<HTMLElement>(
+    '[data-v2-motion-root][data-v2-entry-mode="public"]'
+  );
+  const detail = {
+    activationId: html.dataset.v2EntranceActivationId || null,
+    source: html.dataset.v2EntranceSource || null,
+    scope: html.dataset.v2EntranceScope || null,
+    route: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    state: 'fail-open',
+    navigationId: html.dataset.v2PageNavigationId || null,
+    reason
+  };
+  html.dataset.v2EntranceState = 'fail-open';
+  html.dataset.v2EntranceController = 'fail-open';
+  delete html.dataset.v2MotionProfile;
+  delete html.dataset.v2ScrollLocked;
+  delete html.dataset.v2EntryLock;
+  html.classList.remove('v2-entry-js', 'v2-entry-scroll-locked');
+  if (motionRoot) {
+    motionRoot.dataset.v2EntranceState = 'fail-open';
+    motionRoot.dataset.v2EntranceController = 'fail-open';
+    motionRoot.dataset.v2MotionStatic = 'true';
+    delete motionRoot.dataset.v2ScrollLocked;
+  }
+  document.querySelectorAll<HTMLElement>('[data-v2-entrance-role], [data-v2-entrance-runtime-role]')
+    .forEach((element) => {
+      element.dataset.v2EntranceNode = 'settled';
+      delete element.dataset.v2EntranceRuntimeRole;
+      element.style.removeProperty('--v2-entrance-duration');
+      element.style.removeProperty('will-change');
+      element.style.removeProperty('pointer-events');
+    });
+  document.querySelectorAll<HTMLElement>('[data-v2-scroll-state], [data-v2-scroll-group-state]')
+    .forEach((element) => {
+      if (element.hasAttribute('data-v2-scroll-state')) element.dataset.v2ScrollState = 'settled';
+      if (element.hasAttribute('data-v2-scroll-group-state')) element.dataset.v2ScrollGroupState = 'settled';
+      element.style.removeProperty('--v2-scroll-delay');
+      element.style.removeProperty('--v2-scroll-duration');
+      element.style.removeProperty('will-change');
+      element.style.removeProperty('pointer-events');
+    });
+  document.body?.classList.remove('v2-entry-scroll-locked');
+  if (document.body) delete document.body.dataset.v2EntryLock;
+  document.dispatchEvent(new CustomEvent('v2:entrance-fail-open', { detail }));
+};
+
 const initializeTransitionRoot = (root: HTMLElement) => {
   if (root.dataset.v2PageController === 'ready') return;
   const sheet = root.querySelector<HTMLElement>('[data-v2-page-sheet]');
@@ -802,13 +858,22 @@ const initializeTransitionRoot = (root: HTMLElement) => {
     lockPage(root);
     setState(root, 'arrival', { preserveBootstrap: true });
 
-    if (hasReducedMotion() || hasSaveData()) {
-      root.dataset.v2PageFailure = hasReducedMotion() ? 'reduced-motion' : 'save-data';
+    const compactFailure = hasReducedMotion()
+      ? 'reduced-motion'
+      : hasSaveData()
+        ? 'save-data'
+        : '';
+    if (compactFailure) {
+      // Preserve the accepted H3 accessibility arrival contract: the sheet
+      // is released immediately and only the universal compact entrance may
+      // apply its short opacity fade. Calm inherits the same fail-open rule
+      // instead of introducing a second compact transition timing.
+      root.dataset.v2PageFailure = compactFailure;
       setCriticalStatus(root, 'not-required');
       setState(root, 'fail-open');
       dispatchPageEvent('revealing', root, {
         outcome: 'fail-open',
-        reason: root.dataset.v2PageFailure
+        reason: compactFailure
       });
       completeIncoming('fail-open');
       return;
@@ -822,6 +887,7 @@ const initializeTransitionRoot = (root: HTMLElement) => {
 
       if (outcome.kind === 'deadline' || outcome.kind === 'entrance-fail-open') {
         setCriticalStatus(root, outcome.kind === 'deadline' ? 'deadline' : 'controller-error');
+        if (outcome.kind === 'deadline') terminalizeEntranceBeforePageReveal('entrance-timeout');
         await failOpen(outcome.kind === 'deadline' ? 'entrance-timeout' : 'entrance-fail-open');
         return;
       }

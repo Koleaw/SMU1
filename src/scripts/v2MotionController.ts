@@ -16,7 +16,10 @@ type ReadinessOutcome =
   | { kind: CriticalFailure; error: unknown };
 
 type ManagedEntry = {
-  forceVisible: (state: Extract<EntryState, 'done' | 'skipped' | 'static' | 'fail-open'>) => void;
+  forceVisible: (
+    state: Extract<EntryState, 'done' | 'skipped' | 'static' | 'fail-open'>,
+    quiet?: boolean
+  ) => void;
 };
 
 type MotionWindow = Window & {
@@ -235,7 +238,7 @@ const resolveBootstrapMode = (): EntryState => {
   return mode;
 };
 
-const initializeScrollChoreography = (
+const initializePreviewScrollChoreography = (
   root: HTMLElement,
   reducedMotion: boolean,
   revealImmediately = false
@@ -285,18 +288,24 @@ const initializeMotionRoot = (root: HTMLElement) => {
   const overlay = root.querySelector<HTMLElement>('[data-v2-entry-root]');
   if (!overlay) return;
 
+  const isLegacyPreview = root.dataset.v2EntryMode === 'preview';
+  if (isLegacyPreview) root.dataset.v2MotionActive = 'true';
   root.dataset.v2MotionController = 'ready';
-  root.dataset.v2MotionActive = 'true';
   document.documentElement.dataset.v2EntryControllerReady = 'true';
 
-  const entryParts = Array.from(root.querySelectorAll<HTMLElement>('[data-v2-entry]'));
-  const header = root.querySelector<HTMLElement>('[data-v2-entry="header"]');
+  const entryParts = isLegacyPreview
+    ? Array.from(root.querySelectorAll<HTMLElement>('[data-v2-entry]'))
+    : [];
+  const header = isLegacyPreview
+    ? root.querySelector<HTMLElement>('[data-v2-entry="header"]')
+    : null;
   const skipLink = root.querySelector<HTMLElement>('[data-v2-entry-skip-link]');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const mode = resolveBootstrapMode();
   const timers = new Set<number>();
   let cancelled = false;
-  let disconnectScroll: () => void = () => {};
+  let entryDoneDispatched = false;
+  let disconnectPreviewScroll: () => void = () => undefined;
 
   const schedule = (callback: () => void, milliseconds: number) => {
     const timer = window.setTimeout(() => {
@@ -312,32 +321,47 @@ const initializeMotionRoot = (root: HTMLElement) => {
     timers.clear();
   };
 
-  const markEntriesVisible = () => {
+  const markPreviewEntriesVisible = () => {
+    if (!isLegacyPreview) return;
     entryParts.forEach((element) => { element.dataset.v2EntryVisible = 'true'; });
     header?.classList.add('is-ready');
   };
 
-  const forceVisible = (state: Extract<EntryState, 'done' | 'skipped' | 'static' | 'fail-open'>) => {
+  const forceVisible = (
+    state: Extract<EntryState, 'done' | 'skipped' | 'static' | 'fail-open'>,
+    quiet = false
+  ) => {
     cancelled = true;
     clearTimers();
-    disconnectScroll();
+    disconnectPreviewScroll();
     setDiagnosticState(root, overlay, state);
     root.dataset.v2EntrySettled = 'true';
     delete root.dataset.v2EntryStartedAt;
     if (root.dataset.v2CriticalStatus === 'loading') root.dataset.v2CriticalStatus = 'cancelled';
-    markEntriesVisible();
-    root.querySelectorAll<HTMLElement>('[data-v2-reveal]').forEach((element) => {
-      element.dataset.v2RevealState = 'visible';
-      element.classList.add('is-v2-revealed');
-      element.style.removeProperty('--v2-reveal-delay');
-    });
+    markPreviewEntriesVisible();
+    if (isLegacyPreview) {
+      root.querySelectorAll<HTMLElement>('[data-v2-reveal]').forEach((element) => {
+        element.dataset.v2RevealState = 'visible';
+        element.classList.add('is-v2-revealed');
+        element.style.removeProperty('--v2-reveal-delay');
+      });
+    }
     unlockScroll(root);
     document.documentElement.classList.remove('v2-entry-js');
     clearHeadFailSafe();
-    dispatchEntryEvent(root, 'done');
+    if (!quiet && !entryDoneDispatched) {
+      entryDoneDispatched = true;
+      dispatchEntryEvent(root, 'done');
+    }
+    if (!isLegacyPreview && !quiet && document.documentElement.dataset.v2EntranceState === 'waiting') {
+      document.dispatchEvent(new CustomEvent('v2:entrance-fail-open-request', {
+        detail: { owner: 'first-entry', state }
+      }));
+    }
   };
 
   managedEntries.set(root, { forceVisible });
+  root.addEventListener('v2:entry-cancel', () => forceVisible('fail-open', true), { once: true });
 
   const skipEntry = () => forceVisible('skipped');
   skipLink?.addEventListener('focus', skipEntry, { once: true });
@@ -347,18 +371,27 @@ const initializeMotionRoot = (root: HTMLElement) => {
     setDiagnosticState(root, overlay, mode);
     root.dataset.v2EntrySettled = 'true';
     root.dataset.v2CriticalStatus = 'not-required';
-    markEntriesVisible();
+    markPreviewEntriesVisible();
     unlockScroll(root);
     document.documentElement.classList.remove('v2-entry-js');
     clearHeadFailSafe();
-    disconnectScroll = initializeScrollChoreography(root, reducedMotion, mode === 'fail-open');
+    if (isLegacyPreview) {
+      disconnectPreviewScroll = initializePreviewScrollChoreography(
+        root,
+        reducedMotion,
+        mode === 'fail-open'
+      );
+    }
+    entryDoneDispatched = true;
     dispatchEntryEvent(root, 'done');
     return;
   }
 
   lockScroll(root);
   setDiagnosticState(root, overlay, 'armed');
-  disconnectScroll = initializeScrollChoreography(root, reducedMotion);
+  if (isLegacyPreview) {
+    disconnectPreviewScroll = initializePreviewScrollChoreography(root, reducedMotion);
+  }
   const startedAt = performance.now();
   root.dataset.v2EntryStartedAt = String(Math.round(startedAt));
   root.dataset.v2CriticalStatus = 'loading';
@@ -400,26 +433,46 @@ const initializeMotionRoot = (root: HTMLElement) => {
     if (cancelled) return;
 
     const failOpen = outcome.kind !== 'ready';
+
+    // The universal entrance coordinator is normally ready long before the
+    // accepted 1700ms opening point. If its pre-paint marker exists but module
+    // registration is still finishing, give the handshake one bounded beat;
+    // the normal first-entry timing remains unchanged.
+    if (
+      document.documentElement.dataset.v2EntranceState === 'armed'
+      && document.documentElement.dataset.v2EntranceController !== 'ready'
+    ) {
+      await Promise.race([
+        new Promise<void>((resolve) => {
+          document.addEventListener('v2:entrance-ready', () => resolve(), { once: true });
+        }),
+        wait(250)
+      ]);
+    }
+    if (cancelled) return;
+
     setDiagnosticState(root, overlay, failOpen ? 'fail-open' : 'opening', 'opening');
     dispatchEntryEvent(root, 'opening');
 
-    const entryDelays: Record<string, number> = {
-      media: 0,
-      header: 160,
-      meta: 220,
-      title: 280,
-      lead: 500,
-      support: 560,
-      actions: 620,
-      control: 740
-    };
-    entryParts.forEach((element) => {
-      const delay = entryDelays[element.dataset.v2Entry || ''] ?? 0;
-      schedule(() => {
-        element.dataset.v2EntryVisible = 'true';
-        if (element.dataset.v2Entry === 'header') element.classList.add('is-ready');
-      }, delay);
-    });
+    if (isLegacyPreview) {
+      const entryDelays: Record<string, number> = {
+        media: 0,
+        header: 160,
+        meta: 220,
+        title: 280,
+        lead: 500,
+        support: 560,
+        actions: 620,
+        control: 740
+      };
+      entryParts.forEach((element) => {
+        const delay = entryDelays[element.dataset.v2Entry || ''] ?? 0;
+        schedule(() => {
+          element.dataset.v2EntryVisible = 'true';
+          if (element.dataset.v2Entry === 'header') element.classList.add('is-ready');
+        }, delay);
+      });
+    }
 
     schedule(() => {
       overlay.dataset.v2EntryState = 'assembling';
@@ -438,7 +491,10 @@ const initializeMotionRoot = (root: HTMLElement) => {
       unlockScroll(root);
       document.documentElement.classList.remove('v2-entry-js');
       clearHeadFailSafe();
-      dispatchEntryEvent(root, 'done');
+      if (!entryDoneDispatched) {
+        entryDoneDispatched = true;
+        dispatchEntryEvent(root, 'done');
+      }
     }, OVERLAY_GONE_AFTER);
 
     schedule(() => {
@@ -456,9 +512,14 @@ export const initializeV2MotionController = () => {
 
   if (motionWindow.__smu1V2PageshowReady) return;
   motionWindow.__smu1V2PageshowReady = true;
+  const settleEntryOverlays = () => {
+    document.querySelectorAll<HTMLElement>('[data-v2-motion-root][data-v2-entry-mode]')
+      .forEach((root) => managedEntries.get(root)?.forceVisible('done', true));
+  };
+  window.addEventListener('pagehide', settleEntryOverlays);
+  document.addEventListener('v2:prepare-bfcache', settleEntryOverlays);
   window.addEventListener('pageshow', (event) => {
     if (!event.persisted) return;
-    document.querySelectorAll<HTMLElement>('[data-v2-motion-root][data-v2-entry-mode]')
-      .forEach((root) => managedEntries.get(root)?.forceVisible('done'));
+    settleEntryOverlays();
   });
 };

@@ -272,13 +272,17 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
   touch-action: none;
 }
 
-/* Hero handoff ---------------------------------------------------------- */
-
-[data-v2-motion-root]:not([data-v2-motion-active='true']) [data-hf-video-toggle][disabled][aria-hidden='true'] {
+[data-v2-motion-root] [data-hf-video-toggle][disabled][aria-hidden='true'] {
   display: none;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry] {
+/*
+ * The accepted H3 handoff remains available to Design Lab previews only.
+ * Public pages are owned by the H4 semantic entrance controller and its
+ * dedicated stylesheet, so the two systems can never animate one node.
+ */
+
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry] {
   --v2-entry-delay: 0ms;
   opacity: 0;
   translate: 0 24px;
@@ -290,14 +294,14 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
   will-change: opacity, translate;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='media'] {
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry='media'] {
   opacity: 0.68;
   translate: 0 0;
   scale: 1.02;
   clip-path: inset(0 0 5% 0);
 }
 
-[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='header'] {
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry='header'] {
   --v2-entry-delay: 160ms;
   translate: 0 -12px;
   transition:
@@ -310,38 +314,38 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
   will-change: opacity, translate, transform;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='meta'] {
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry='meta'] {
   --v2-entry-delay: 220ms;
   translate: 0 18px;
   transition-duration: 620ms;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='title'] {
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry='title'] {
   --v2-entry-delay: 280ms;
   clip-path: inset(0 0 100% 0);
   translate: 0 28px;
   transition-duration: 820ms;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='lead'] {
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry='lead'] {
   --v2-entry-delay: 500ms;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='support'] {
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry='support'] {
   --v2-entry-delay: 560ms;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='actions'] {
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry='actions'] {
   --v2-entry-delay: 620ms;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='control'] {
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry='control'] {
   --v2-entry-delay: 740ms;
   translate: 0 16px;
   transition-duration: 620ms;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true']:is(
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']:is(
   [data-v2-motion-state='opening'],
   [data-v2-motion-state='assembling'],
   [data-v2-motion-state='done'],
@@ -355,12 +359,12 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
   clip-path: inset(0);
 }
 
-[data-v2-motion-root][data-v2-motion-active='true'][data-v2-entry-settled='true'] [data-v2-entry]:not([data-v2-entry='header']) {
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'][data-v2-entry-settled='true'] [data-v2-entry]:not([data-v2-entry='header']) {
   transition: none;
   will-change: auto;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true'][data-v2-entry-settled='true'] [data-v2-entry='header'] {
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'][data-v2-entry-settled='true'] [data-v2-entry='header'] {
   clip-path: none;
   transition:
     transform 300ms var(--hv2-ease),
@@ -370,15 +374,9 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
   will-change: transform;
 }
 
-/*
- * `translate` and `scale` are individual transform properties on purpose.
- * Existing `[data-v2-hero-scroll-*]` transforms can therefore keep owning the
- * `transform` property without fighting the entry choreography.
- */
+/* Preview scroll choreography ----------------------------------------- */
 
-/* Scroll choreography --------------------------------------------------- */
-
-[data-v2-motion-root][data-v2-motion-active='true']
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
   [data-v2-reveal]:not([data-v2-entry]):not([data-v2-reveal='group'])[data-v2-reveal-state] {
   transition:
     opacity 620ms var(--v2-entry-content-ease) var(--v2-reveal-delay, 0ms),
@@ -387,22 +385,20 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
     scale 820ms var(--v2-entry-content-ease) var(--v2-reveal-delay, 0ms);
 }
 
-[data-v2-motion-root][data-v2-motion-active='true']
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
   [data-v2-reveal]:not([data-v2-entry]):not([data-v2-reveal='group'])[data-v2-reveal-state='pending'] {
   opacity: 0;
   translate: 0 24px;
   will-change: opacity, translate;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true']
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
   [data-v2-reveal='title']:not([data-v2-entry])[data-v2-reveal-state='pending'] {
-  /* Keep a real intersection area so the observed element can trigger its
-     own reveal; the Hero title retains the full line-mask treatment. */
   clip-path: inset(0 0 14% 0);
   translate: 0 26px;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true']
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
   [data-v2-reveal='media']:not([data-v2-entry])[data-v2-reveal-state='pending'] {
   opacity: 0.56;
   translate: 0 0;
@@ -410,7 +406,7 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
   clip-path: inset(0 0 6% 0);
 }
 
-[data-v2-motion-root][data-v2-motion-active='true']
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
   [data-v2-reveal]:not([data-v2-entry]):not([data-v2-reveal='group'])[data-v2-reveal-state='visible'] {
   opacity: 1;
   translate: 0 0;
@@ -418,13 +414,13 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
   clip-path: inset(0);
 }
 
-[data-v2-motion-root][data-v2-motion-active='true']
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
   [data-v2-reveal='group'][data-v2-reveal-state='pending'] > * {
   opacity: 0;
   translate: 0 22px;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true']
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
   [data-v2-reveal='group'][data-v2-reveal-state='visible'] > * {
   opacity: 1;
   translate: 0 0;
@@ -433,17 +429,17 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
     translate 720ms var(--v2-entry-content-ease);
 }
 
-[data-v2-motion-root][data-v2-motion-active='true']
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
   [data-v2-reveal='group'][data-v2-reveal-state='visible'] > :nth-child(2) {
   transition-delay: 70ms;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true']
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
   [data-v2-reveal='group'][data-v2-reveal-state='visible'] > :nth-child(3) {
   transition-delay: 140ms;
 }
 
-[data-v2-motion-root][data-v2-motion-active='true']
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
   [data-v2-reveal='group'][data-v2-reveal-state='visible'] > :nth-child(n + 4) {
   transition-delay: 210ms;
 }
@@ -462,23 +458,23 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
     translate: -50% calc(-100% - 32px);
   }
 
-  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry],
-  [data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry],
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
     [data-v2-reveal]:not([data-v2-entry]):not([data-v2-reveal='group'])[data-v2-reveal-state='pending'] {
     translate: 0 16px;
   }
 
-  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='header'] {
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry='header'] {
     translate: 0 -8px;
   }
 
-  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry='title'],
-  [data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry='title'],
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
     [data-v2-reveal='title']:not([data-v2-entry])[data-v2-reveal-state='pending'] {
     translate: 0 20px;
   }
 
-  [data-v2-motion-root][data-v2-motion-active='true']
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true']
     [data-v2-reveal='group'][data-v2-reveal-state='pending'] > * {
     translate: 0 14px;
   }
@@ -487,9 +483,9 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
 @media (prefers-reduced-motion: reduce) {
   .v2-entry-experience,
   .v2-entry-experience *,
-  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry],
-  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-reveal],
-  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-reveal] > * {
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry],
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-reveal],
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-reveal] > * {
     animation: none !important;
     transition-duration: 120ms !important;
     transition-delay: 0ms !important;
@@ -504,18 +500,18 @@ body:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
     transform: none;
   }
 
-  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-entry],
-  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-reveal],
-  [data-v2-motion-root][data-v2-motion-active='true'] [data-v2-reveal] > * {
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-entry],
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-reveal],
+  [data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-active='true'] [data-v2-reveal] > * {
     translate: 0 0 !important;
     scale: 1 !important;
     clip-path: inset(0) !important;
   }
 }
 
-[data-v2-motion-root][data-v2-motion-static='true'] [data-v2-entry],
-[data-v2-motion-root][data-v2-motion-static='true'] [data-v2-reveal],
-[data-v2-motion-root][data-v2-motion-static='true'] [data-v2-reveal] > * {
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-static='true'] [data-v2-entry],
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-static='true'] [data-v2-reveal],
+[data-v2-motion-root][data-v2-entry-mode='preview'][data-v2-motion-static='true'] [data-v2-reveal] > * {
   opacity: 1 !important;
   translate: 0 0 !important;
   scale: 1 !important;

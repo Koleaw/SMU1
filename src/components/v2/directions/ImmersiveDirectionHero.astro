@@ -77,7 +77,7 @@ const mediaStyle = [
   <span class="immersive-direction-hero__sentinel" aria-hidden="true" data-home-v2-header-sentinel></span>
 
   <div class="hv2-shell immersive-direction-hero__inner">
-    <div class="immersive-direction-hero__breadcrumbs" data-v2-reveal data-v2-reveal-stage="breadcrumbs">
+    <div class="immersive-direction-hero__breadcrumbs" data-v2-reveal data-v2-reveal-stage="breadcrumbs" data-v2-entrance-role="context">
       <V2Breadcrumbs items={breadcrumbs} />
     </div>
 
@@ -87,10 +87,10 @@ const mediaStyle = [
         data-v2-hero-scroll-copy={productFinalHandoff ? undefined : ''}
         data-v2-page-handoff="copy"
       >
-        <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-reveal data-v2-reveal-stage="eyebrow">{eyebrow}</p>
-        <h1 id={titleId} data-v2-reveal data-v2-reveal-stage="title">{title}</h1>
-        <p class="immersive-direction-hero__lead" data-v2-reveal data-v2-reveal-stage="description">{description}</p>
-        <div class="hv2-actions immersive-direction-hero__actions" data-v2-reveal data-v2-reveal-stage="actions">
+        <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-reveal data-v2-reveal-stage="eyebrow" data-v2-entrance-role="context">{eyebrow}</p>
+        <h1 id={titleId} data-v2-reveal data-v2-reveal-stage="title" data-v2-entrance-role="title-primary">{title}</h1>
+        <p class="immersive-direction-hero__lead" data-v2-reveal data-v2-reveal-stage="description" data-v2-entrance-role="lead">{description}</p>
+        <div class="hv2-actions immersive-direction-hero__actions" data-v2-reveal data-v2-reveal-stage="actions" data-v2-entrance-role="actions-meta">
           <a class="hv2-button hv2-button--primary" href={href(primaryHref)}>
             {primaryLabel}
           </a>
@@ -109,6 +109,7 @@ const mediaStyle = [
       data-v2-hero-scroll-media={productFinalHandoff ? undefined : ''}
       data-v2-reveal
       data-v2-reveal-stage="media"
+      data-v2-entrance-role="media"
     >
       <img
         src={withBase(image)}

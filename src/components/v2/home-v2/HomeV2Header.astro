@@ -83,11 +83,12 @@ const mobileMenuId = 'home-v2-mobile-menu';
       data-v2-transition-label="Главная"
       aria-current={currentState('/')}
       data-hv2-header-side="left"
+      data-v2-entrance-role="header-logo"
     >
       <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="355" height="211" />
     </a>
 
-    <nav class="hv2-header__nav" aria-label="Основная навигация">
+    <nav class="hv2-header__nav" aria-label="Основная навигация" data-v2-entrance-role="header-nav">
       <div
         class="hv2-header__nav-group hv2-header__nav-group--left"
         data-hv2-header-side="left"
@@ -157,7 +158,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
       </div>
     </nav>
 
-    <div class="hv2-header__actions" aria-label="Быстрые действия" data-hv2-header-side="right">
+    <div class="hv2-header__actions" aria-label="Быстрые действия" data-hv2-header-side="right" data-v2-entrance-role="header-actions">
       <a class="hv2-header__phone" href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
         {settings.phonePrimary}
       </a>
@@ -184,6 +185,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
       aria-controls={mobileMenuId}
       aria-label="Открыть меню"
       data-hv2-mobile-open
+      data-v2-entrance-role="header-actions"
     >
       <span>Меню</span>
       <span class="hv2-header__menu-lines" aria-hidden="true"><i></i><i></i></span>
@@ -413,16 +415,17 @@ const mobileMenuId = 'home-v2-mobile-menu';
       new ResizeObserver(queueHeaderSync).observe(heroBoundary);
     }
     syncHeaderState();
-    const entryMotionManaged = Boolean(
-      header.closest('[data-v2-motion-root][data-v2-entry-mode]')
+    const legacyPreviewManaged = Boolean(
+      header.closest('[data-v2-motion-root][data-v2-entry-mode="preview"]')
       && document.documentElement.classList.contains('v2-entry-js')
     );
-    if (!entryMotionManaged) {
-      window.requestAnimationFrame(() => header.classList.add('is-ready'));
-    }
+    // Production H4 stages the inner semantic groups independently. The
+    // Design Lab preview retains its accepted first-entry Header handoff.
+    if (!legacyPreviewManaged) header.classList.add('is-ready');
 
     let lastFocus: HTMLElement | null = null;
     let lockedScrollY = 0;
+    let pageLocked = false;
     let hideTimer = 0;
 
     const focusableItems = () => Array.from(menu.querySelectorAll<HTMLElement>(
@@ -430,7 +433,9 @@ const mobileMenuId = 'home-v2-mobile-menu';
     )).filter((element) => !element.hasAttribute('hidden'));
 
     const lockPage = () => {
+      if (pageLocked) return;
       lockedScrollY = window.scrollY;
+      pageLocked = true;
       document.body.style.position = 'fixed';
       document.body.style.top = `-${lockedScrollY}px`;
       document.body.style.width = '100%';
@@ -440,7 +445,8 @@ const mobileMenuId = 'home-v2-mobile-menu';
       header.setAttribute('inert', '');
     };
 
-    const unlockPage = () => {
+    const unlockPage = (restoreScroll = true) => {
+      const scrollYToRestore = pageLocked ? lockedScrollY : null;
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
@@ -448,7 +454,14 @@ const mobileMenuId = 'home-v2-mobile-menu';
       document.documentElement.classList.remove('hv2-menu-open');
       document.querySelector('main')?.removeAttribute('inert');
       header.removeAttribute('inert');
-      window.scrollTo(0, lockedScrollY);
+      pageLocked = false;
+      if (restoreScroll && scrollYToRestore !== null) {
+        const html = document.documentElement;
+        const previousScrollBehavior = html.style.scrollBehavior;
+        html.style.scrollBehavior = 'auto';
+        window.scrollTo(0, scrollYToRestore);
+        html.style.scrollBehavior = previousScrollBehavior;
+      }
     };
 
     const openMobileMenu = () => {
@@ -512,6 +525,23 @@ const mobileMenuId = 'home-v2-mobile-menu';
     window.addEventListener('resize', () => {
       if (window.innerWidth > compactMenuBreakpoint && !menu.hidden) closeMobileMenu(false);
     });
+
+    const settleHeaderForSnapshot = () => {
+      window.clearTimeout(closeTimer);
+      window.clearTimeout(hideTimer);
+      if (headerFrame) window.cancelAnimationFrame(headerFrame);
+      headerFrame = 0;
+      closeAllDropdowns();
+      revealHeader();
+      menu.classList.remove('is-open');
+      menu.setAttribute('aria-hidden', 'true');
+      menu.hidden = true;
+      menuOpen.setAttribute('aria-expanded', 'false');
+      unlockPage(true);
+    };
+
+    window.addEventListener('pagehide', settleHeaderForSnapshot);
+    document.addEventListener('v2:prepare-bfcache', settleHeaderForSnapshot);
   };
 
   initHomeV2Header();

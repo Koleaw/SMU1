@@ -1218,23 +1218,23 @@
 }
 
 @media (scripting: enabled) {
-  .hv2-header:not(.is-ready) :where(.hv2-header__brand, .hv2-header__nav, .hv2-header__actions, .hv2-header__menu-button) {
+  html:not([data-v2-public-route='true']) .hv2-header:not(.is-ready) :where(.hv2-header__brand, .hv2-header__nav, .hv2-header__actions, .hv2-header__menu-button) {
     opacity: 0;
     transform: translateY(-8px);
   }
 
-  .hv2-header.is-ready :where(.hv2-header__brand, .hv2-header__nav, .hv2-header__actions, .hv2-header__menu-button) {
+  html:not([data-v2-public-route='true']) .hv2-header.is-ready :where(.hv2-header__brand, .hv2-header__nav, .hv2-header__actions, .hv2-header__menu-button) {
     opacity: 1;
     transform: translateY(0);
     transition: opacity 420ms var(--hv2-ease), transform 420ms var(--hv2-ease);
   }
 
-  .hv2-header.is-ready .hv2-header__nav {
+  html:not([data-v2-public-route='true']) .hv2-header.is-ready .hv2-header__nav {
     transition-delay: 60ms;
   }
 
-  .hv2-header.is-ready .hv2-header__actions,
-  .hv2-header.is-ready .hv2-header__menu-button {
+  html:not([data-v2-public-route='true']) .hv2-header.is-ready .hv2-header__actions,
+  html:not([data-v2-public-route='true']) .hv2-header.is-ready .hv2-header__menu-button {
     transition-delay: 120ms;
   }
 }

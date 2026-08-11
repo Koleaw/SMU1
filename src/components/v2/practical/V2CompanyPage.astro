@@ -112,12 +112,13 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
         decoding="async"
         data-v2-image
         data-v2-page-critical
+        data-v2-entrance-role="media"
       />
     )}
     <div class="practical-company__hero-edge" aria-hidden="true"></div>
 
     <div class="hv2-shell practical-company__hero-inner">
-      <div class="practical-company__breadcrumbs">
+      <div class="practical-company__breadcrumbs" data-v2-entrance-role="context">
         <V2Breadcrumbs
           variant="overlay"
           items={[
@@ -128,10 +129,10 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
       </div>
 
       <div class="practical-company__hero-copy" data-v2-page-handoff="copy">
-        <p class="hv2-eyebrow hv2-eyebrow--light">{heroKicker}</p>
-        <h1>{heroTitle}</h1>
-        <p class="practical-company__hero-lead">{heroDescription}</p>
-        <div class="hv2-actions practical-company__hero-actions">
+        <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-entrance-role="context">{heroKicker}</p>
+        <h1 data-v2-entrance-role="title-primary">{heroTitle}</h1>
+        <p class="practical-company__hero-lead" data-v2-entrance-role="lead">{heroDescription}</p>
+        <div class="hv2-actions practical-company__hero-actions" data-v2-entrance-role="actions-meta">
           <a class="hv2-button hv2-button--light" href="#company-projects">
             {heroPrimaryLabel}
           </a>

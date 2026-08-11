@@ -52,10 +52,10 @@ const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
   <header class="v2-project-archive-hero">
     <div class="hv2-shell v2-project-archive-hero__grid" data-v2-page-handoff="copy">
       <div data-v2-reveal>
-        {showKicker && <p class="hv2-eyebrow">{heroKicker}</p>}
-        <h1>{heroTitle}</h1>
+        {showKicker && <p class="hv2-eyebrow" data-v2-entrance-role="context">{heroKicker}</p>}
+        <h1 data-v2-entrance-role="title-primary">{heroTitle}</h1>
       </div>
-      <p data-v2-reveal>{heroDescription}</p>
+      <p data-v2-reveal data-v2-entrance-role="lead">{heroDescription}</p>
     </div>
   </header>
 

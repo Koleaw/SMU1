@@ -62,11 +62,11 @@ const sectionNavItems = [
   <header class="v2-project-detail__hero" id="project-overview">
     <div class="hv2-shell v2-project-detail__hero-grid">
       <div class="v2-project-detail__hero-copy" data-v2-reveal data-v2-page-handoff="copy">
-        <p class="hv2-eyebrow">{eyebrow}</p>
-        <h1>{project.title}</h1>
+        <p class="hv2-eyebrow" data-v2-entrance-role="context">{eyebrow}</p>
+        <h1 data-v2-entrance-role="title-primary">{project.title}</h1>
         <V2ProjectMeta location={location} year={project.year} />
-        <p class="v2-project-detail__lead">{heroLead}</p>
-        <a class="v2-project-detail__back" href={withBase('/design-lab/v2/vypolnennye-obekty/')}>
+        <p class="v2-project-detail__lead" data-v2-entrance-role="lead">{heroLead}</p>
+        <a class="v2-project-detail__back" href={withBase('/design-lab/v2/vypolnennye-obekty/')} data-v2-entrance-role="actions-meta">
           Все объекты
         </a>
       </div>
@@ -76,6 +76,7 @@ const sectionNavItems = [
           style={`--v2-project-hero-position: ${detailHeroPosition};`}
           data-v2-media
           data-v2-reveal
+          data-v2-entrance-role="media"
         >
           <img
             src={withBase(heroMedia.src)}
@@ -112,9 +113,9 @@ const sectionNavItems = [
           <p class="hv2-eyebrow">Сведения об объекте</p>
           <h2 id="v2-project-facts-title">По опубликованным данным</h2>
         </header>
-        <div class="v2-project-detail__facts-grid">
+        <div class="v2-project-detail__facts-grid" data-v2-scroll-section>
           {additionalFacts.map((fact) => (
-            <section data-v2-reveal>
+            <section data-v2-reveal data-v2-scroll-role="card">
               <h3>{fact.title}</h3>
               <p>{fact.text}</p>
             </section>

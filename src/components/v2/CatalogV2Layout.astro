@@ -96,6 +96,10 @@ const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
       else image.addEventListener('error', markBroken, { once: true });
     });
 
+    // Production is owned exclusively by the universal H4 coordinator. The
+    // Design Lab keeps the accepted catalog reveal observer for visual parity.
+    if (root.closest('[data-v2-motion-root][data-v2-entry-mode="public"]')) return;
+
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const revealItems = Array.from(root.querySelectorAll<HTMLElement>('[data-v2-reveal]'));
     const pageArrivalManaged = document.documentElement.dataset.v2PageBootstrap === 'arrival'
@@ -125,7 +129,6 @@ const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
       revealScanQueued = false;
       revealItems.forEach((element) => {
         if (!element.classList.contains('hv2-reveal-pending')) return;
-        /* A negative top means a rapid scroll or anchor jump already passed it. */
         if (element.getBoundingClientRect().top < window.innerHeight * viewportFactor) revealElement(element);
       });
     };
@@ -145,27 +148,19 @@ const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
       observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
-          const element = entry.target as HTMLElement;
-          revealElement(element);
+          revealElement(entry.target as HTMLElement);
         });
       }, { rootMargin: '0px 0px -7% 0px', threshold: 0.08 });
 
       revealItems.forEach((element) => observer?.observe(element));
       window.addEventListener('scroll', queueRevealScan, { passive: true });
       window.addEventListener('resize', queueRevealScan);
-
-      /* Two frames guarantee a real initial state without delaying input. */
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        revealReached();
-      }));
-
-      /* Fail open only for content reached by the viewport; untouched sections stay observer-driven. */
-      window.setTimeout(() => {
-        revealReached(1);
-      }, 1600);
+      requestAnimationFrame(() => requestAnimationFrame(() => revealReached()));
+      window.setTimeout(() => revealReached(1), 1600);
     } catch {
       revealAll();
     }
+
   };
 
   initCatalogV2Enhancements();

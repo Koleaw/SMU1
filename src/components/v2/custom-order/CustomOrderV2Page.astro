@@ -29,16 +29,16 @@ const heroMedia = data.heroMedia[0];
       <div class="custom-order-hero__track" data-product-final-track>
         <div class="hv2-shell custom-order-hero__grid">
           <div class="custom-order-hero__copy" data-v2-page-handoff="copy">
-            <div class="custom-order-hero__breadcrumbs">
+            <div class="custom-order-hero__breadcrumbs" data-v2-entrance-role="context">
               <V2Breadcrumbs items={[
                 { title: 'Главная', href: '/design-lab/home-v2/' },
                 { title: data.sourcePage.title }
               ]} />
             </div>
-            <p class="hv2-eyebrow">{data.copy.heroKicker}</p>
-            <h1 id="custom-order-title">{data.copy.heroTitle}</h1>
-            <p class="custom-order-hero__lead">{data.copy.heroDescription}</p>
-            <div class="custom-order-hero__actions">
+            <p class="hv2-eyebrow" data-v2-entrance-role="context">{data.copy.heroKicker}</p>
+            <h1 id="custom-order-title" data-v2-entrance-role="title-primary">{data.copy.heroTitle}</h1>
+            <p class="custom-order-hero__lead" data-v2-entrance-role="lead">{data.copy.heroDescription}</p>
+            <div class="custom-order-hero__actions" data-v2-entrance-role="actions-meta">
               <a
                 class="hv2-button hv2-button--primary custom-order-hero__phone"
                 href={phoneHref}
@@ -53,7 +53,7 @@ const heroMedia = data.heroMedia[0];
             </div>
           </div>
 
-          <div class="custom-order-hero__media" data-v2-media>
+          <div class="custom-order-hero__media" data-v2-media data-v2-entrance-role="media">
             <img
               src={withBase(heroMedia.src)}
               alt={heroMedia.alt}

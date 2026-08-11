@@ -4,7 +4,9 @@ import '../styles/v2/cookie-banner-v2.css';
 import '../styles/v2/visual-polish-v2.css';
 import '../styles/v2/motion-v2.css';
 import '../styles/v2/page-transition-v2.css';
+import entranceV2Url from '../styles/v2/entrance-v2.css?url';
 import finalArtDirectionUrl from '../styles/v2/final-art-direction-v2.css?url';
+import h4ScaleV2Url from '../styles/v2/h4-scale-v2.css?url';
 import CookieBanner from '../components/CookieBanner.astro';
 import V2EntryExperience from '../components/v2/motion/V2EntryExperience.astro';
 import V2PageTransition from '../components/v2/motion/V2PageTransition.astro';
@@ -140,6 +142,111 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       />
     )}
     {isPublicV2Motion && <V2PageTransition part="head" />}
+    {isPublicV2Motion && (
+      <script is:inline>
+        (() => {
+          const root = document.documentElement;
+          const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+          const profile = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            ? 'reduce'
+            : connection && connection.saveData
+              ? 'save-data'
+              : 'normal';
+
+          root.dataset.v2MotionProfile = profile;
+          root.dataset.v2EntranceState = 'armed';
+          window.__smu1EntranceFailSafe = window.setTimeout(() => {
+            if (root.dataset.v2EntranceController === 'ready') return;
+
+            const reason = 'controller-timeout';
+            [
+              '__smu1PageTransitionFailSafe',
+              '__smu1EntryFailSafe',
+              '__smu1EntryFailSafeCleanup'
+            ].forEach((key) => {
+              const timer = window[key];
+              if (typeof timer === 'number') window.clearTimeout(timer);
+              delete window[key];
+            });
+
+            root.dataset.v2EntranceState = 'fail-open';
+            root.dataset.v2EntranceController = 'fail-open';
+            root.dataset.v2EntryBootstrap = 'fail-open';
+            root.dataset.v2MotionState = 'fail-open';
+            root.dataset.v2PageBootstrap = 'fail-open';
+            root.dataset.v2PageBootstrapReason = reason;
+            root.dataset.v2PageState = 'fail-open';
+            delete root.dataset.v2MotionProfile;
+            delete root.dataset.v2ScrollLocked;
+            delete root.dataset.v2EntryLock;
+            delete root.dataset.v2PageLock;
+            root.classList.remove('v2-entry-js', 'v2-entry-scroll-locked', 'v2-page-transition-locked');
+
+            document.querySelector('[data-v2-page-bootstrap-overlay]')?.remove();
+            const pageOverlay = document.querySelector('[data-v2-page-transition]');
+            if (pageOverlay instanceof HTMLElement) {
+              pageOverlay.dataset.v2PageState = 'fail-open';
+              pageOverlay.dataset.v2PageFailure = reason;
+              pageOverlay.dataset.v2PageSettled = 'true';
+              delete pageOverlay.dataset.v2PageLock;
+            }
+
+            const motionRoot = document.querySelector('[data-v2-motion-root][data-v2-entry-mode="public"]');
+            if (motionRoot instanceof HTMLElement) {
+              motionRoot.dataset.v2EntranceState = 'fail-open';
+              motionRoot.dataset.v2EntranceController = 'fail-open';
+              motionRoot.dataset.v2MotionStatic = 'true';
+              motionRoot.dataset.v2MotionState = 'fail-open';
+              motionRoot.dataset.v2EntrySettled = 'true';
+              delete motionRoot.dataset.v2ScrollLocked;
+              delete motionRoot.dataset.v2EntranceActivation;
+              delete motionRoot.dataset.v2EntranceActivationId;
+              motionRoot.dispatchEvent(new CustomEvent('v2:entry-cancel', {
+                detail: { state: 'fail-open', reason }
+              }));
+              motionRoot.dispatchEvent(new CustomEvent('v2:entry-done', {
+                detail: { state: 'fail-open', reason }
+              }));
+            }
+
+            document.querySelectorAll('[data-v2-entry-root], [data-v2-entry-overlay]')
+              .forEach((element) => {
+                if (element instanceof HTMLElement) element.dataset.v2EntryState = 'fail-open';
+              });
+
+            document.querySelectorAll('[data-v2-entrance-role], [data-v2-entrance-runtime-role]')
+              .forEach((element) => {
+                if (!(element instanceof HTMLElement)) return;
+                element.dataset.v2EntranceNode = 'settled';
+                delete element.dataset.v2EntranceRuntimeRole;
+                element.style.removeProperty('--v2-entrance-duration');
+                element.style.removeProperty('will-change');
+                element.style.removeProperty('pointer-events');
+              });
+            document.querySelectorAll('[data-v2-scroll-state], [data-v2-scroll-group-state]')
+              .forEach((element) => {
+                if (!(element instanceof HTMLElement)) return;
+                if (element.hasAttribute('data-v2-scroll-state')) element.dataset.v2ScrollState = 'settled';
+                if (element.hasAttribute('data-v2-scroll-group-state')) element.dataset.v2ScrollGroupState = 'settled';
+                element.style.removeProperty('--v2-scroll-delay');
+                element.style.removeProperty('--v2-scroll-duration');
+                element.style.removeProperty('will-change');
+                element.style.removeProperty('pointer-events');
+              });
+            document.body?.classList.remove('v2-entry-scroll-locked');
+            if (document.body) {
+              delete document.body.dataset.v2EntryLock;
+              document.body.style.removeProperty('overflow');
+            }
+
+            document.dispatchEvent(new CustomEvent('v2:entrance-fail-open', {
+              detail: { state: 'fail-open', reason }
+            }));
+            delete window.__smu1EntranceFailSafe;
+          }, 1200);
+        })();
+      </script>
+    )}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -328,6 +435,8 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       </script>
     )}
     <link rel="stylesheet" href={finalArtDirectionUrl} data-final-art-direction />
+    {isPublicV2Motion && <link rel="stylesheet" href={entranceV2Url} data-v2-entrance-styles />}
+    {isPublicV2Motion && <link rel="stylesheet" href={h4ScaleV2Url} data-v2-h4-scale-styles />}
   </head>
   <body class="home-v2-body">
     {isPublicV2Motion && <V2PageTransition />}
@@ -411,12 +520,15 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       document.addEventListener('astro:page-load', initV2HeroScroll);
     </script>
     <script>
+      import { initializeV2EntranceController } from '../scripts/v2EntranceController';
       import { initializeV2MotionController } from '../scripts/v2MotionController';
       import { initializeV2PageTransitionController } from '../scripts/v2PageTransitionController';
 
       initializeV2PageTransitionController();
+      initializeV2EntranceController();
       initializeV2MotionController();
       document.addEventListener('astro:page-load', initializeV2PageTransitionController);
+      document.addEventListener('astro:page-load', initializeV2EntranceController);
       document.addEventListener('astro:page-load', initializeV2MotionController);
     </script>
   </body>

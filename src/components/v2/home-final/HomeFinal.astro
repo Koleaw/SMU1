@@ -42,6 +42,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
         aria-hidden="true"
         data-reveal
         data-v2-entry="media"
+        data-v2-entrance-role="media"
         data-v2-hero-scroll-media
         style="--hv2-reveal-delay: 220ms"
       >
@@ -81,6 +82,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
         aria-label="Приостановить фоновое видео"
         data-hf-video-toggle
         data-v2-entry="control"
+        data-v2-entrance-role="support"
         hidden
       >
         <span data-hf-video-toggle-label>Пауза видео</span>
@@ -88,10 +90,10 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
 
       <div class="hf-shell hf-shell--editorial hf-hero__content">
         <div class="hf-hero__copy" data-hf-hero-copy data-v2-hero-scroll-copy data-v2-page-handoff="copy">
-          <p class="hf-eyebrow hf-eyebrow--light" data-reveal data-v2-entry="meta" style="--hv2-reveal-delay: 0ms">{copy.heroKicker}</p>
-          <h1 id="home-final-title" data-reveal data-v2-entry="title" style="--hv2-reveal-delay: 60ms">{copy.heroTitle}</h1>
-          <p class="hf-hero__lead" data-reveal data-v2-entry="lead" style="--hv2-reveal-delay: 120ms">{copy.heroDescription}</p>
-          <div class="hf-actions" data-reveal data-v2-entry="actions" style="--hv2-reveal-delay: 180ms">
+          <p class="hf-eyebrow hf-eyebrow--light" data-reveal data-v2-entry="meta" data-v2-entrance-role="context" style="--hv2-reveal-delay: 0ms">{copy.heroKicker}</p>
+          <h1 id="home-final-title" data-reveal data-v2-entry="title" data-v2-entrance-role="title-primary" style="--hv2-reveal-delay: 60ms">{copy.heroTitle}</h1>
+          <p class="hf-hero__lead" data-reveal data-v2-entry="lead" data-v2-entrance-role="lead" style="--hv2-reveal-delay: 120ms">{copy.heroDescription}</p>
+          <div class="hf-actions" data-reveal data-v2-entry="actions" data-v2-entrance-role="actions-meta" style="--hv2-reveal-delay: 180ms">
             <a class="hf-button hf-button--primary" href="#contact">{copy.heroPrimaryLabel}</a>
             <a class="hf-button hf-button--ghost" href={path('/design-lab/v2/vypolnennye-obekty/')} data-v2-transition-label="Выполненные объекты">
               {copy.heroSecondaryLabel}

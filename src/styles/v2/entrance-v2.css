@@ -1,0 +1,240 @@
+/*
+ * Universal production entrance and section choreography.
+ *
+ * SSR stays fully visible: every initial state below is gated by the profile
+ * that the pre-paint bootstrap adds only when JavaScript is available.
+ */
+
+:root {
+  --v2-entrance-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Waiting state: only explicitly marked semantic groups are prepared. */
+html[data-v2-motion-profile='normal']:is(
+  [data-v2-entrance-state='armed'],
+  [data-v2-entrance-state='waiting']
+) :is([data-v2-entrance-role], [data-v2-entrance-runtime-role]):not([data-v2-entrance-node='settled']),
+html[data-v2-motion-profile='normal'] [data-v2-entrance-node='pending'] {
+  opacity: 0;
+  translate: 0 22px;
+}
+
+html[data-v2-motion-profile='normal']:is(
+  [data-v2-entrance-state='armed'],
+  [data-v2-entrance-state='waiting']
+) :is(
+  [data-v2-entrance-role='media'],
+  [data-v2-entrance-runtime-role='media']
+):not([data-v2-entrance-node='settled']),
+html[data-v2-motion-profile='normal'] [data-v2-entrance-node='pending']:is(
+  [data-v2-entrance-role='media'],
+  [data-v2-entrance-runtime-role='media']
+) {
+  opacity: 0.52;
+  translate: 0 0;
+  scale: 1.018;
+}
+
+html[data-v2-motion-profile='normal']:is(
+  [data-v2-entrance-state='armed'],
+  [data-v2-entrance-state='waiting']
+) :is(
+  [data-v2-entrance-role='header-logo'],
+  [data-v2-entrance-role='header-nav'],
+  [data-v2-entrance-role='header-actions']
+):not([data-v2-entrance-node='settled']),
+html[data-v2-motion-profile='normal'] [data-v2-entrance-node='pending']:is(
+  [data-v2-entrance-role='header-logo'],
+  [data-v2-entrance-role='header-nav'],
+  [data-v2-entrance-role='header-actions']
+) {
+  translate: 0 -10px;
+}
+
+html[data-v2-motion-profile='normal']:is(
+  [data-v2-entrance-state='armed'],
+  [data-v2-entrance-state='waiting']
+) :is(
+  [data-v2-entrance-role='title-primary'],
+  [data-v2-entrance-runtime-role='title-primary']
+):not([data-v2-entrance-node='settled']),
+html[data-v2-motion-profile='normal'] [data-v2-entrance-node='pending']:is(
+  [data-v2-entrance-role='title-primary'],
+  [data-v2-entrance-runtime-role='title-primary']
+) {
+  translate: 0 34px;
+}
+
+html[data-v2-motion-profile='normal']:is(
+  [data-v2-entrance-state='armed'],
+  [data-v2-entrance-state='waiting']
+) :is(
+  [data-v2-entrance-role='title-secondary'],
+  [data-v2-entrance-runtime-role='title-secondary']
+):not([data-v2-entrance-node='settled']),
+html[data-v2-motion-profile='normal'] [data-v2-entrance-node='pending']:is(
+  [data-v2-entrance-role='title-secondary'],
+  [data-v2-entrance-runtime-role='title-secondary']
+) {
+  translate: 0 30px;
+}
+
+html[data-v2-motion-profile='normal'] [data-v2-entrance-node='pending']:is(
+  [data-v2-entrance-role='header-nav'],
+  [data-v2-entrance-role='header-actions'],
+  [data-v2-entrance-role='actions-meta'],
+  [data-v2-entrance-runtime-role='actions-meta']
+) {
+  pointer-events: none;
+}
+
+html[data-v2-motion-profile='normal'] [data-v2-entrance-node='revealing'] {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  transition-property: opacity, translate, scale;
+  transition-duration: var(--v2-entrance-duration, 760ms);
+  transition-timing-function: var(--v2-entrance-ease);
+  transition-delay: 0ms;
+}
+
+html[data-v2-motion-profile] [data-v2-entrance-node='settled'],
+html:is(
+  [data-v2-entrance-state='settled'],
+  [data-v2-entrance-state='fail-open']
+) :is([data-v2-entrance-role], [data-v2-entrance-runtime-role]) {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  pointer-events: revert;
+}
+
+/* Section-local choreography. Delay is scheduled by the single observer. */
+html[data-v2-motion-profile='normal'] [data-v2-scroll-state='pending'] {
+  opacity: 0;
+  translate: 0 22px;
+}
+
+html[data-v2-motion-profile='normal'] [data-v2-scroll-state='pending'][data-v2-scroll-role='title'] {
+  translate: 0 28px;
+}
+
+html[data-v2-motion-profile='normal'] [data-v2-scroll-state='pending'][data-v2-scroll-role='media'] {
+  opacity: 0.56;
+  translate: 0 0;
+  scale: 1.018;
+}
+
+html[data-v2-motion-profile='normal'] [data-v2-scroll-state='pending']:is(
+  [data-v2-scroll-role='actions'],
+  [data-v2-scroll-role='card']
+) {
+  pointer-events: none;
+}
+
+html[data-v2-motion-profile='normal'] [data-v2-scroll-state='revealing'] {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  transition-property: opacity, translate, scale;
+  transition-duration: var(--v2-scroll-duration, 820ms);
+  transition-timing-function: var(--v2-entrance-ease);
+  transition-delay: var(--v2-scroll-delay, 0ms);
+  pointer-events: revert;
+}
+
+html[data-v2-motion-profile] [data-v2-scroll-state='settled'] {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  pointer-events: revert;
+}
+
+/* Compact profiles never inherit normal displacement or scale. */
+html:is(
+  [data-v2-motion-profile='reduce'],
+  [data-v2-motion-profile='save-data']
+):is(
+  [data-v2-entrance-state='armed'],
+  [data-v2-entrance-state='waiting']
+) :is([data-v2-entrance-role], [data-v2-entrance-runtime-role]):not([data-v2-entrance-node='settled']),
+html:is(
+  [data-v2-motion-profile='reduce'],
+  [data-v2-motion-profile='save-data']
+) [data-v2-entrance-node='pending'] {
+  opacity: 0;
+  translate: 0 0;
+  scale: 1;
+}
+
+html:is(
+  [data-v2-motion-profile='reduce'],
+  [data-v2-motion-profile='save-data']
+) [data-v2-entrance-node='revealing'] {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  transition-property: opacity;
+  transition-duration: var(--v2-entrance-duration, 120ms);
+  transition-timing-function: linear;
+  transition-delay: 0ms;
+}
+
+@media (max-width: 760px) {
+  html[data-v2-motion-profile='normal']:is(
+    [data-v2-entrance-state='armed'],
+    [data-v2-entrance-state='waiting']
+  ) :is([data-v2-entrance-role], [data-v2-entrance-runtime-role]):not([data-v2-entrance-node='settled']),
+  html[data-v2-motion-profile='normal'] [data-v2-entrance-node='pending'],
+  html[data-v2-motion-profile='normal'] [data-v2-scroll-state='pending'] {
+    translate: 0 18px;
+  }
+
+  html[data-v2-motion-profile='normal']:is(
+    [data-v2-entrance-state='armed'],
+    [data-v2-entrance-state='waiting']
+  ) :is(
+    [data-v2-entrance-role='header-logo'],
+    [data-v2-entrance-role='header-actions']
+  ):not([data-v2-entrance-node='settled']),
+  html[data-v2-motion-profile='normal'] [data-v2-entrance-node='pending']:is(
+    [data-v2-entrance-role='header-logo'],
+    [data-v2-entrance-role='header-actions']
+  ) {
+    translate: 0 -8px;
+  }
+
+  html[data-v2-motion-profile='normal']:is(
+    [data-v2-entrance-state='armed'],
+    [data-v2-entrance-state='waiting']
+  ) :is(
+    [data-v2-entrance-role='title-primary'],
+    [data-v2-entrance-runtime-role='title-primary']
+  ):not([data-v2-entrance-node='settled']),
+  html[data-v2-motion-profile='normal'] [data-v2-entrance-node='pending']:is(
+    [data-v2-entrance-role='title-primary'],
+    [data-v2-entrance-runtime-role='title-primary']
+  ),
+  html[data-v2-motion-profile='normal'] [data-v2-scroll-state='pending'][data-v2-scroll-role='title'] {
+    translate: 0 24px;
+  }
+
+  html[data-v2-motion-profile='normal']:is(
+    [data-v2-entrance-state='armed'],
+    [data-v2-entrance-state='waiting']
+  ) [data-v2-entrance-role='header-nav']:not([data-v2-entrance-node='settled']) {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-v2-entrance-node],
+  [data-v2-scroll-state] {
+    translate: 0 0 !important;
+    scale: 1 !important;
+    animation: none !important;
+    transition-delay: 0ms !important;
+    transition-duration: 120ms !important;
+  }
+}
