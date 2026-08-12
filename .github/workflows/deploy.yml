@@ -162,6 +162,14 @@ jobs:
 
       - run: npm ci
 
+      - name: Restore responsive media build cache
+        uses: actions/cache@v4
+        with:
+          path: public/_media/h5
+          key: ${{ runner.os }}-node20-h5-media-v2-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-node20-h5-media-v2-
+
       - name: Check production settings
         if: steps.deploy-meta.outputs.deploy_target == 'production'
         shell: bash
@@ -192,6 +200,21 @@ jobs:
           PRODUCTION_DEPLOY_ENABLED: ${{ steps.deploy-meta.outputs.production_enabled }}
           SITE_URL: ${{ steps.deploy-meta.outputs.effective_site_url }}
           TEST_SITE_URL: ${{ steps.deploy-meta.outputs.test_site_url }}
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
+      - name: Validate deterministic performance budgets
+        run: npm run qa:performance
+        env:
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
+      - name: Prepare proven reachable Pages artifact
+        run: npm run deploy:prepare
+        env:
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
+      - name: Revalidate published Pages artifact
+        run: npm run qa:performance
+        env:
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
 
       - name: Assert test/production SEO and analytics isolation
