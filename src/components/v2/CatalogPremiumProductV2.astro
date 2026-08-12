@@ -9,6 +9,7 @@ import V2ResponsiveImage from './V2ResponsiveImage.astro';
 import V2DirectContact from './V2DirectContact.astro';
 import V2HeroHandoff from './V2HeroHandoff.astro';
 import V2SectionNav from './V2SectionNav.astro';
+import { resolveV2ResponsiveMedia } from '../../utils/v2ResponsiveMedia';
 import {
   catalogV2CategoryHref,
   catalogV2ProductHref,
@@ -40,7 +41,8 @@ const { section, category, product } = route;
 const premium = product as typeof product & PremiumProductFields;
 const images = productGalleryImages(product);
 const primaryImage = images[0] || '';
-const primaryImageUrl = primaryImage ? withBase(primaryImage) : '';
+const primaryImageMedia = primaryImage ? resolveV2ResponsiveMedia(primaryImage, 'hero') : null;
+const primaryImageUrl = primaryImage ? withBase(primaryImageMedia?.src || primaryImage) : '';
 const imageVariableStyle = [
   `--v2-image-source-x:${product.imageView?.positionX ?? 50}%`,
   `--v2-image-source-y:${product.imageView?.positionY ?? 50}%`,
