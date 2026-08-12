@@ -78,6 +78,7 @@ const responsiveImagePaths = (responsiveManifest?.entries?.[delayedImagePath]?.v
   .map((variant) => new URL(variant.path, 'http://qa.local/').pathname)
   .filter(Boolean);
 const delayedImagePaths = new Set(responsiveImagePaths.length ? responsiveImagePaths : [delayedImagePath]);
+let selectedImagePath = '';
 let delayedImageRequestUsed = false;
 let delayedImageRequestPath = '';
 let invalidImageRequestPending = false;
@@ -120,7 +121,7 @@ if (origin) {
         }).end(request.method === 'HEAD' ? undefined : fallback);
         return;
       }
-      if (request.method !== 'HEAD' && delayedImagePaths.has(pathname) && invalidImageRequestPending) {
+      if (request.method !== 'HEAD' && pathname === selectedImagePath && invalidImageRequestPending) {
         invalidImageRequestPending = false;
         invalidImageRequestPath = pathname;
         const invalidImage = Buffer.from('not-a-decodable-image');
@@ -132,7 +133,7 @@ if (origin) {
         return;
       }
       const body = request.method === 'HEAD' ? null : await readFile(filename);
-      if (request.method !== 'HEAD' && delayedImagePaths.has(pathname) && !delayedImageRequestUsed) {
+      if (request.method !== 'HEAD' && pathname === selectedImagePath && !delayedImageRequestUsed) {
         delayedImageRequestUsed = true;
         delayedImageRequestPath = pathname;
         await delay(imageDelayMs);
@@ -743,6 +744,13 @@ try {
     source: `try { Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: true } }); } catch {}`
   });
   await setViewport(1440, 900, false);
+
+  await navigate(routes.premium, 160);
+  const selectedImageUrl = await evaluate(`document.querySelector('[data-product-presentation="premium"] [data-v2-image]')?.currentSrc || ''`);
+  selectedImagePath = new URL(selectedImageUrl, origin).pathname;
+  if (!delayedImagePaths.has(selectedImagePath)) {
+    throw new Error(`Selected premium image is absent from its responsive manifest entry: ${selectedImagePath}`);
+  }
 
   await runImageReadyAudit();
   await runImageErrorAudit();

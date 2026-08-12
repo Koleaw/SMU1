@@ -654,6 +654,7 @@ const resourceProfiles = [
 const routeReports = [];
 const priorityFailures = [];
 const thumbnailFailures = [];
+const inlineBackgroundFailures = [];
 const isolationFailures = [];
 const routeBudgetFailures = [];
 const lcpTargetExceptions = [];
@@ -666,6 +667,16 @@ for (const htmlFile of htmlGroups.production.sort((left, right) => left.path.loc
   walkHtmlElements(tree, (node) => nodes.push(node));
   const route = htmlPathToRoute(htmlFile.path);
   const dense = /\bv2-(?:catalog-index|product-list|project-archive)\b/u.test(html);
+  const inlineStyleMediaPaths = sortedUnique(nodes.flatMap((node) => (
+    node.attributes.style
+      ? extractCssUrls(node.attributes.style).map((url) => logicalPublicPath(url, reachability.basePath))
+      : []
+  )).filter((filePath) => filePath && isMediaPath(filePath)));
+  for (const filePath of inlineStyleMediaPaths) {
+    if (canonicalPaths.has(filePath) && RASTER_EXTENSIONS.has(extname(filePath).toLocaleLowerCase('en'))) {
+      inlineBackgroundFailures.push({ route, error: 'Inline background references a canonical raster original.', path: filePath });
+    }
+  }
   if (/(?:href|src)=["'][^"']*\/(?:design-lab|admin)\//iu.test(html)) {
     isolationFailures.push({ route, path: htmlFile.path, error: 'Production HTML links to Design Lab or admin scope.' });
   }
@@ -748,6 +759,7 @@ for (const htmlFile of htmlGroups.production.sort((left, right) => left.path.loc
     collectRecursiveAssets(sortedUnique(jsSeeds), 'js', reachability.basePath)
   ]);
   const fontPaths = sortedUnique(cssGraph.related.filter((filePath) => FONT_EXTENSIONS.has(extname(filePath).toLocaleLowerCase('en'))));
+  const cssMediaPaths = sortedUnique(cssGraph.related.filter((filePath) => isMediaPath(filePath)));
   const cssGzipBytes = (await Promise.all(cssGraph.files.map(gzipBytesFor))).reduce((sum, bytes) => sum + bytes, 0);
   const jsGzipBytes = (await Promise.all(jsGraph.files.map(gzipBytesFor))).reduce((sum, bytes) => sum + bytes, 0);
   const htmlGzipBytes = gzipSync(htmlBuffer, { level: 9 }).byteLength;
@@ -763,6 +775,8 @@ for (const htmlFile of htmlGroups.production.sort((left, right) => left.path.loc
     const preloadPaths = priorityUrls.filter((row) => row.kind.startsWith('preload')).map((row) => row.url);
     const initialPaths = new Set(initial.map((row) => row.selected.logicalPath).filter(Boolean));
     preloadPaths.filter(Boolean).forEach((filePath) => initialPaths.add(filePath));
+    inlineStyleMediaPaths.forEach((filePath) => initialPaths.add(filePath));
+    cssMediaPaths.forEach((filePath) => initialPaths.add(filePath));
     const missingSelected = [];
     const selectedResources = [];
     for (const row of selected) {
@@ -849,6 +863,8 @@ for (const htmlFile of htmlGroups.production.sort((left, right) => left.path.loc
       cssRawBytes: cssGraph.files.reduce((sum, filePath) => sum + (filesByPath.get(filePath)?.bytes || 0), 0),
       cssGzipBytes,
       cssFiles: cssGraph.files,
+      cssMediaFiles: cssMediaPaths,
+      inlineStyleMediaFiles: inlineStyleMediaPaths,
       jsRawBytes: jsGraph.files.reduce((sum, filePath) => sum + (filesByPath.get(filePath)?.bytes || 0), 0),
       jsGzipBytes,
       jsFiles: jsGraph.files,
@@ -864,6 +880,9 @@ record('priority.single-first-viewport-high-not-lazy-no-duplicate', priorityFail
 });
 record('gallery.thumbnails-use-derivatives', thumbnailFailures.length === 0, {
   failures: thumbnailFailures.slice(0, 100), totalFailures: thumbnailFailures.length
+});
+record('media.inline-backgrounds-use-derivatives', inlineBackgroundFailures.length === 0, {
+  failures: inlineBackgroundFailures.slice(0, 100), totalFailures: inlineBackgroundFailures.length
 });
 record('isolation.production-no-admin-design-links', isolationFailures.length === 0, {
   failures: isolationFailures.slice(0, 100), totalFailures: isolationFailures.length
