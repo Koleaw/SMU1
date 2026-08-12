@@ -21,7 +21,8 @@ export class ContentStoreError extends Error {
 }
 
 export function revisionForBytes(bytes) {
-  return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+  const value = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes ?? '');
+  return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}:${value.length}`;
 }
 
 export function serializeContent(content) {

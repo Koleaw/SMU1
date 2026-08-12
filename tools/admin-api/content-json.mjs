@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { contentSchemas } from '../../src/content-schemas.mjs';
 import { projectMediaPath, sanitizeProjectGallery } from '../../src/utils/projectMedia.mjs';
+import { revisionForBytes } from './transaction-engine.mjs';
 
 const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SENSITIVE_KEY_RE = /(?:password|secret|token|api[-_]?key|authorization)/i;
@@ -348,7 +349,8 @@ export function createContentJsonService({
   collections,
   singletons = {},
   operationTtlMs = OPERATION_TTL_MS,
-  fileSystem = fs
+  fileSystem = fs,
+  transactionService = null
 }) {
   const operations = new Map();
   let applying = false;
@@ -578,7 +580,18 @@ export function createContentJsonService({
     throw new Error('Неизвестный режим импорта.');
   }
 
-  async function preview({ owner, collection = '', scope, currentSlug = '', writeMode = 'merge', rawJson = '' }) {
+  async function preview({
+    owner,
+    sessionFingerprint,
+    recoveryClientId,
+    idempotencyKey,
+    baseHead,
+    collection = '',
+    scope,
+    currentSlug = '',
+    writeMode = 'merge',
+    rawJson = ''
+  }) {
     for (const [id, operation] of operations) if (Date.now() - operation.createdAt > operationTtlMs) operations.delete(id);
     const baseReport = { collection, slug: currentSlug, scope, writeMode };
     if (!['single', 'collection', 'full-site', 'page-bundle'].includes(scope)) return reportPayload({ ...baseReport, result: 'validation-error', errors: ['Неизвестный режим импорта.'] });
@@ -715,13 +728,118 @@ export function createContentJsonService({
       files: writes.map((item) => relativePath(item.filePath))
     });
     if (errors.length) return { ...summary, rows, canApply: false };
+    if (transactionService && writes.length) {
+      const typedOperations = writes.map((write) => {
+        const baseRevision = revisionForBytes(write.before === null ? null : Buffer.from(write.before, 'utf8'));
+        const stored = JSON.parse(write.after);
+        return write.singleton
+          ? { type: 'upsert-singleton', singleton: write.singleton, value: stored, baseRevision }
+          : { type: 'upsert-record', collection: write.collection, slug: write.slug, content: stored, baseRevision };
+      });
+      const transaction = await transactionService.preview({
+        owner,
+        sessionFingerprint,
+        recoveryClientId,
+        idempotencyKey,
+        baseHead,
+        metadata: {
+          userSummary: `JSON-импорт: ${spec.importType}`,
+          transactionKind: 'json-import',
+          writeMode
+        },
+        operations: typedOperations
+      });
+      if (!transaction.canApply) {
+        return {
+          ...summary,
+          result: 'validation-error',
+          rows,
+          canApply: false,
+          blockers: transaction.blockers,
+          warnings: [...warnings, ...(transaction.warnings || []).map((item) => item.message || String(item))],
+          errors: (transaction.blockers || []).map((item) => item.message || item.userMessage || String(item))
+        };
+      }
+      operations.set(transaction.transactionId, {
+        owner,
+        writeMode,
+        createdAt: Date.now(),
+        transaction: true,
+        sessionFingerprint,
+        recoveryClientId,
+        idempotencyKey,
+        payloadHash: transaction.payloadHash,
+        summary
+      });
+      return {
+        ...summary,
+        rows,
+        canApply: true,
+        operationId: transaction.transactionId,
+        transactionId: transaction.transactionId,
+        payloadHash: transaction.payloadHash,
+        affectedRoutes: transaction.affectedRoutes,
+        diff: transaction.diff
+      };
+    }
     const operationId = crypto.randomUUID();
     operations.set(operationId, { owner, writeMode, createdAt: Date.now(), rows, writes, summary });
     return { ...summary, rows, canApply: writes.length > 0, operationId };
   }
 
-  async function apply({ owner, operationId, replaceConfirmed = false }) {
+  async function apply({
+    owner,
+    sessionFingerprint,
+    recoveryClientId,
+    idempotencyKey,
+    operationId,
+    replaceConfirmed = false
+  }) {
     const operation = operations.get(operationId);
+    if (!operation && transactionService && sessionFingerprint) {
+      let prepared = null;
+      try {
+        prepared = await transactionService.getTransaction({ owner, sessionFingerprint, transactionId: operationId });
+      } catch {
+        // Preserve the compatibility response below for missing, expired, or foreign previews.
+      }
+      if (prepared?.metadata?.transactionKind === 'json-import') {
+        if (prepared.metadata.writeMode === 'replace' && !replaceConfirmed) {
+          return reportPayload({ result: 'error', errors: ['Для режима replace требуется явное подтверждение.'] });
+        }
+        const applied = await transactionService.apply({
+          owner,
+          sessionFingerprint,
+          recoveryClientId,
+          idempotencyKey,
+          transactionId: operationId
+        });
+        return reportPayload({ result: applied.state === 'committed' ? 'success' : applied.state, errors: [] });
+      }
+    }
+    if (operation?.transaction && transactionService) {
+      if (operation.owner !== owner || Date.now() - operation.createdAt > operationTtlMs) {
+        operations.delete(operationId);
+        return reportPayload({ result: 'error', errors: ['Preview устарел или принадлежит другой сессии.'] });
+      }
+      if (operation.writeMode === 'replace' && !replaceConfirmed) {
+        return reportPayload({ ...operation.summary, result: 'error', errors: ['Для режима replace требуется явное подтверждение.'] });
+      }
+      const applied = await transactionService.apply({
+        owner,
+        sessionFingerprint: sessionFingerprint || operation.sessionFingerprint,
+        recoveryClientId: recoveryClientId || operation.recoveryClientId,
+        idempotencyKey: idempotencyKey || operation.idempotencyKey,
+        transactionId: operationId,
+        payloadHash: operation.payloadHash
+      });
+      operations.delete(operationId);
+      return reportPayload({
+        ...operation.summary,
+        result: applied.state === 'committed' ? 'success' : applied.state,
+        errors: []
+      });
+    }
     if (!operation || operation.owner !== owner || Date.now() - operation.createdAt > operationTtlMs) {
       operations.delete(operationId);
       return reportPayload({ result: 'error', errors: ['Preview устарел или не принадлежит текущей сессии. Выполните проверку заново.'] });

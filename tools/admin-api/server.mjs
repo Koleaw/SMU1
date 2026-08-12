@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createContentJsonService } from './content-json.mjs';
-import { createContentStore, MISSING_REVISION } from './content-store.mjs';
+import { MISSING_REVISION } from './content-store.mjs';
+import { createContentTransactionService, ContentTransactionError } from './transaction-service.mjs';
 import { loadAdminConfig, assertSecureOperation } from './config.mjs';
 import {
   assertValidContentRecord,
@@ -44,6 +45,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const contentRoot = process.env.ADMIN_TEST_CONTENT_ROOT
   ? path.resolve(process.env.ADMIN_TEST_CONTENT_ROOT)
   : path.join(repoRoot, 'src', 'content');
+const transactionRepoRoot = process.env.ADMIN_TEST_CONTENT_ROOT ? contentRoot : repoRoot;
 const execFileAsync = promisify(execFile);
 
 const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -98,6 +100,12 @@ const DATA_SINGLETONS = {
   navigation: { path: path.join(repoRoot, 'src/data/navigation.json') },
   yandex: { path: path.join(repoRoot, 'src/data/yandex.json') }
 };
+const TRANSACTION_SINGLETONS = process.env.ADMIN_TEST_CONTENT_ROOT
+  ? {
+      navigation: { path: path.join(contentRoot, '.admin-data', 'navigation.json') },
+      yandex: { path: path.join(contentRoot, '.admin-data', 'yandex.json') }
+    }
+  : DATA_SINGLETONS;
 
 const NAVIGATION_PATH = path.join(repoRoot, 'src', 'data', 'navigation.json');
 const UPLOADS_DIR = path.join(repoRoot, 'public', 'uploads');
@@ -955,7 +963,7 @@ function requireBaseRevision(value, { create = false } = {}) {
       ? 'Для создания записи нужен baseRevision="missing".'
       : 'Для сохранения нужен baseRevision из последнего чтения записи.');
     error.code = 'BASE_REVISION_REQUIRED';
-    error.status = 428;
+    error.status = 409;
     throw error;
   }
   return revision;
@@ -1102,6 +1110,76 @@ function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', clearSessionCookieHeader({ path: '/api/admin', secure: false }));
 }
 
+function headerText(req, name) {
+  const value = req.headers[String(name).toLowerCase()];
+  return Array.isArray(value) ? String(value[0] || '') : String(value || '');
+}
+
+function sessionFingerprint(session) {
+  return `session-${crypto.createHash('sha256').update(String(session.token)).digest('hex')}`;
+}
+
+function transactionContext(req, session, body = {}, fallbackSeed = '') {
+  const fingerprint = sessionFingerprint(session);
+  const recoveryClientId = String(
+    body?.recoveryClientId
+    || headerText(req, 'x-admin-recovery-client-id')
+    || fingerprint
+  ).trim();
+  const explicitKey = body?.idempotencyKey || headerText(req, 'x-admin-idempotency-key');
+  const idempotencyKey = String(explicitKey || `compat-${crypto.createHash('sha256')
+    .update(`${req.method || ''}\0${req.url || ''}\0${fallbackSeed || JSON.stringify(body)}`)
+    .digest('hex')}`).trim();
+  return {
+    owner: session.username,
+    sessionFingerprint: fingerprint,
+    recoveryClientId,
+    idempotencyKey
+  };
+}
+
+function transactionOwnership(req, session, body = {}) {
+  const recoveryClientId = body?.recoveryClientId || headerText(req, 'x-admin-recovery-client-id');
+  const idempotencyKey = body?.idempotencyKey || headerText(req, 'x-admin-idempotency-key');
+  return {
+    owner: session.username,
+    sessionFingerprint: sessionFingerprint(session),
+    ...(recoveryClientId ? { recoveryClientId: String(recoveryClientId).trim() } : {}),
+    ...(idempotencyKey ? { idempotencyKey: String(idempotencyKey).trim() } : {})
+  };
+}
+
+function blockedTransaction(preview) {
+  const error = new ContentTransactionError(
+    'CONTENT_TRANSACTION_BLOCKED',
+    'Изменения не прошли проверку связей и схемы.',
+    {
+      status: 409,
+      blockers: preview.blockers || [],
+      warnings: preview.warnings || [],
+      validationIssues: (preview.blockers || []).filter((item) => item?.collection || item?.path)
+    }
+  );
+  throw error;
+}
+
+async function applyCompatibilityTransaction(req, session, body, operations, userSummary) {
+  const context = transactionContext(req, session, body);
+  const preview = await contentTransactions.preview({
+    ...context,
+    operations,
+    metadata: { userSummary }
+  });
+  if (preview.state === 'blocked') blockedTransaction(preview);
+  if (preview.state === 'no-op') return { preview, applied: preview };
+  const applied = await contentTransactions.apply({
+    ...context,
+    transactionId: preview.transactionId,
+    payloadHash: preview.payloadHash
+  });
+  return { preview, applied };
+}
+
 const { config } = await loadAdminConfig({ repoRoot });
 assertSecureOperation(config, 'startup');
 const allowedHosts = [`${config.ADMIN_API_HOST}:${config.ADMIN_API_PORT}`];
@@ -1113,8 +1191,19 @@ const requestPolicy = createLocalRequestPolicy({
 });
 const sessions = new SessionStore({ secret: config.SESSION_SECRET });
 const loginLimiter = new LoginLimiter({ secret: config.SESSION_SECRET });
-const contentJson = createContentJsonService({ repoRoot, collections: COLLECTIONS, singletons: DATA_SINGLETONS });
-const contentStore = createContentStore({ repoRoot, collections: COLLECTIONS, singletons: DATA_SINGLETONS });
+const contentTransactions = createContentTransactionService({
+  repoRoot: transactionRepoRoot,
+  runtimeDir: path.join(transactionRepoRoot, '.admin-runtime', 'content-transactions'),
+  collections: COLLECTIONS,
+  singletons: TRANSACTION_SINGLETONS
+});
+await contentTransactions.initialize();
+const contentJson = createContentJsonService({
+  repoRoot,
+  collections: COLLECTIONS,
+  singletons: DATA_SINGLETONS,
+  transactionService: contentTransactions
+});
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -1213,12 +1302,66 @@ const server = http.createServer(async (req, res) => {
     }
     const authUser = authSession.username;
 
+    if (pathname === '/api/admin/transactions/preview' && req.method === 'POST') {
+      const body = await readBody(req, MAX_JSON_IMPORT_BODY_SIZE);
+      const preview = await contentTransactions.preview({
+        ...transactionContext(req, authSession, body),
+        operations: body?.operations,
+        baseHead: body?.baseHead,
+        metadata: {
+          userSummary: body?.userSummary || body?.metadata?.userSummary || 'Изменение контента',
+          ...(body?.baseHead ? { baseHead: body.baseHead } : {})
+        }
+      });
+      sendJson(res, 200, preview);
+      return;
+    }
+
+    if (pathname === '/api/admin/transactions/apply' && req.method === 'POST') {
+      const body = await readBody(req);
+      const result = await contentTransactions.apply({
+        ...transactionOwnership(req, authSession, body),
+        transactionId: body?.transactionId,
+        payloadHash: body?.payloadHash
+      });
+      sendJson(res, 200, result);
+      return;
+    }
+
+    const transactionMatch = pathname.match(/^\/api\/admin\/transactions\/([a-z0-9-]+)$/i);
+    if (transactionMatch && req.method === 'GET') {
+      const result = await contentTransactions.getTransaction({
+        ...transactionOwnership(req, authSession),
+        transactionId: transactionMatch[1]
+      });
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (pathname === '/api/admin/history' && req.method === 'GET') {
+      const history = await contentTransactions.listHistory(transactionOwnership(req, authSession));
+      sendJson(res, 200, { history });
+      return;
+    }
+
+    const restorePreviewMatch = pathname.match(/^\/api\/admin\/history\/([a-z0-9-]+)\/restore-preview$/i);
+    if (restorePreviewMatch && req.method === 'POST') {
+      const body = await readBody(req);
+      const preview = await contentTransactions.previewRestore({
+        ...transactionContext(req, authSession, body),
+        sourceTransactionId: restorePreviewMatch[1],
+        metadata: { userSummary: body?.userSummary || `Восстановление ${restorePreviewMatch[1]}` }
+      });
+      sendJson(res, 200, preview);
+      return;
+    }
+
     if (pathname === '/api/admin/navigation' && req.method === 'GET') {
-      const items = await readNavigationItems();
-      const raw = await fs.readFile(NAVIGATION_PATH);
+      const snapshot = await contentTransactions.readSingleton({ singleton: 'navigation' });
+      const items = normalizeNavigationItems(snapshot.content);
       sendJson(res, 200, {
         items,
-        revision: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
+        revision: snapshot.revision,
         schemaVersion: CONTENT_SCHEMA_VERSION
       });
       return;
@@ -1226,29 +1369,34 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/admin/navigation' && req.method === 'PUT') {
       const body = await readBody(req);
-      const current = await contentStore.read('navigation', 'navigation');
+      const baseRevision = requireBaseRevision(body?.baseRevision);
       const items = normalizeNavigationItems(body?.items ?? body);
       const validated = assertValidSingleton({ singleton: 'navigation', value: items, operation: 'update' });
-      const result = await contentStore.save({
-        collection: 'navigation',
-        slug: 'navigation',
-        content: validated,
-        baseRevision: body?.baseRevision ?? current.revision
+      const transaction = await applyCompatibilityTransaction(req, authSession, body, [{
+        type: 'upsert-singleton', singleton: 'navigation', value: validated, baseRevision
+      }], 'Обновление навигации');
+      const saved = await contentTransactions.readSingleton({ singleton: 'navigation' });
+      sendJson(res, 200, {
+        ok: true,
+        result: transaction.applied.state === 'no-op' ? 'noop' : 'saved',
+        items: saved.content,
+        revision: saved.revision,
+        schemaVersion: CONTENT_SCHEMA_VERSION,
+        transactionId: transaction.preview.transactionId
       });
-      sendJson(res, 200, { ok: true, items: result.content, ...result });
       return;
     }
 
     if (pathname === '/api/admin/export-catalog' && req.method === 'GET') {
       const exportedAt = new Date();
-      const payload = await buildCatalogExport();
+      const payload = await contentTransactions.withStableRead(() => buildCatalogExport());
       const filename = `smu1-catalog-export-${exportedAt.toISOString().slice(0, 10)}.json`;
       sendPrettyJson(res, 200, payload, filename);
       return;
     }
 
     if (pathname === '/api/admin/json-export/full-site' && req.method === 'GET') {
-      const exported = await contentJson.exportFullSite();
+      const exported = await contentTransactions.withStableRead(() => contentJson.exportFullSite());
       sendPrettyJson(res, 200, exported.payload, exported.filename);
       return;
     }
@@ -1256,7 +1404,7 @@ const server = http.createServer(async (req, res) => {
     const pageJsonExportMatch = pathname.match(/^\/api\/admin\/json-export\/page\/([a-z0-9-]+)\/([a-z0-9-]+)$/i);
     if (pageJsonExportMatch && req.method === 'GET') {
       const [, collection, slug] = pageJsonExportMatch;
-      const exported = await contentJson.exportPage(collection, slug);
+      const exported = await contentTransactions.withStableRead(() => contentJson.exportPage(collection, slug));
       sendPrettyJson(res, 200, exported.payload, exported.filename);
       return;
     }
@@ -1264,17 +1412,18 @@ const server = http.createServer(async (req, res) => {
     const jsonExportMatch = pathname.match(/^\/api\/admin\/json-export\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?$/i);
     if (jsonExportMatch && req.method === 'GET') {
       const [, collection, slug] = jsonExportMatch;
-      const exported = slug
-        ? await contentJson.exportSingle(collection, slug)
-        : await contentJson.exportCollection(collection);
+      const exported = await contentTransactions.withStableRead(() => slug
+        ? contentJson.exportSingle(collection, slug)
+        : contentJson.exportCollection(collection));
       sendPrettyJson(res, 200, exported.payload, exported.filename);
       return;
     }
 
     if (pathname === '/api/admin/json-import/preview' && req.method === 'POST') {
       const body = await readBody(req, MAX_JSON_IMPORT_BODY_SIZE);
+      const context = transactionContext(req, authSession, body);
       const preview = await contentJson.preview({
-        owner: authUser,
+        ...context,
         collection: body?.collection,
         scope: body?.scope,
         currentSlug: body?.currentSlug,
@@ -1289,6 +1438,7 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const result = await contentJson.apply({
         owner: authUser,
+        ...transactionOwnership(req, authSession, body),
         operationId: body?.operationId,
         replaceConfirmed: body?.replaceConfirmed === true
       });
@@ -1298,25 +1448,25 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/admin/publish' && req.method === 'POST') {
       const body = await readBody(req);
-      const result = await publishContentChanges({ target: body?.target, source: body?.source });
+      const result = await contentTransactions.withStableRead(() => publishContentChanges({ target: body?.target, source: body?.source }));
       sendJson(res, 200, { ok: true, ...result });
       return;
     }
 
     if (pathname === '/api/admin/publish-all' && req.method === 'POST') {
       const body = await readBody(req);
-      const result = await publishWholeSiteChanges({ target: body?.target, source: body?.source });
+      const result = await contentTransactions.withStableRead(() => publishWholeSiteChanges({ target: body?.target, source: body?.source }));
       sendJson(res, 200, { ok: true, ...result });
       return;
     }
 
     if (pathname === '/api/admin/publish-status' && req.method === 'GET') {
-      const status = await getPublishStatus({
+      const status = await contentTransactions.withStableRead(() => getPublishStatus({
         target: url.searchParams.get('target'),
         branch: url.searchParams.get('branch'),
         commitSha: url.searchParams.get('commitSha') || url.searchParams.get('commit'),
         runId: url.searchParams.get('runId')
-      });
+      }));
       sendJson(res, 200, { ok: true, ...status });
       return;
     }
@@ -1332,7 +1482,7 @@ const server = http.createServer(async (req, res) => {
         publishSource: url.searchParams.get('publishSource'),
         ref: url.searchParams.get('ref')
       };
-      const status = await getPublishStatus(params).catch((error) => ({
+      const status = await contentTransactions.withStableRead(() => getPublishStatus(params)).catch((error) => ({
         target: normalizeDeployTarget(params.target),
         branch: params.branch || '',
         commitSha: params.commitSha || '',
@@ -1410,7 +1560,7 @@ const server = http.createServer(async (req, res) => {
     const matchList = pathname.match(/^\/api\/admin\/content\/([a-z0-9-]+)$/i);
     if (matchList && req.method === 'GET') {
       const [, collection] = matchList;
-      const entries = await listCollectionEntries(collection);
+      const entries = await contentTransactions.withStableRead(() => listCollectionEntries(collection));
       sendJson(res, 200, { entries });
       return;
     }
@@ -1449,29 +1599,30 @@ const server = http.createServer(async (req, res) => {
       }
 
       const savedContent = validateContentForWrite(collection, { ...content, slug }, { operation: 'create' });
-      const saved = await contentStore.save({
-        collection,
+      const transaction = await applyCompatibilityTransaction(req, authSession, body, [{
+        type: 'upsert-record', collection, slug, content: savedContent, baseRevision
+      }], `Создание ${collection}:${slug}`);
+      const saved = await contentTransactions.readRecord({ collection, slug });
+      sendJson(res, 201, {
+        ok: true,
+        result: transaction.applied.state === 'no-op' ? 'noop' : 'saved',
         slug,
-        content: savedContent,
-        baseRevision,
-        create: true
+        content: saved.content,
+        revision: saved.revision,
+        schemaVersion: CONTENT_SCHEMA_VERSION,
+        transactionId: transaction.preview.transactionId
       });
-      sendJson(res, 201, { ok: true, slug, ...saved });
       return;
     }
 
     const matchEntry = pathname.match(/^\/api\/admin\/content\/([a-z0-9-]+)\/([a-z0-9-]+)$/i);
     if (matchEntry && req.method === 'GET') {
       const [, collection, slug] = matchEntry;
-      const filePath = await resolveJsonPath(collection, slug);
-      const content = await readJsonFile(filePath);
-      const raw = await fs.readFile(filePath);
-      const stat = await fs.stat(filePath);
+      const snapshot = await contentTransactions.readRecord({ collection, slug });
       sendJson(res, 200, {
-        content,
-        revision: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
-        schemaVersion: CONTENT_SCHEMA_VERSION,
-        lastModified: stat.mtime.toISOString()
+        content: snapshot.content,
+        revision: snapshot.revision,
+        schemaVersion: CONTENT_SCHEMA_VERSION
       });
       return;
     }
@@ -1480,7 +1631,8 @@ const server = http.createServer(async (req, res) => {
       const [, collection, slug] = matchEntry;
       const config = getCollectionConfig(collection);
       const filePath = await resolveJsonPath(collection, slug);
-      const previousContent = await readJsonFile(filePath);
+      const previousSnapshot = await contentTransactions.readRecord({ collection, slug });
+      const previousContent = previousSnapshot.content;
       const requestBody = await readBody(req);
       const baseRevision = requireBaseRevision(requestBody?.baseRevision);
       const body = requestBody?.content && typeof requestBody.content === 'object' && !Array.isArray(requestBody.content)
@@ -1496,24 +1648,36 @@ const server = http.createServer(async (req, res) => {
       const nextSlug = config.type === 'single-file'
         ? config.slug
         : await validateDirectoryContentSlug(collection, body, filePath, previousSlug);
-      if (config.type !== 'single-file' && nextSlug !== previousSlug) {
-        const error = new Error('Изменение slug выполняется только через транзакционный preview/apply с планом ссылок.');
-        error.code = 'SLUG_RENAME_REQUIRES_TRANSACTION';
-        error.status = 409;
-        throw error;
-      }
       const contentForValidation = config.type === 'single-file' ? body : { ...body, slug: nextSlug };
       const savedContent = validateContentForWrite(collection, contentForValidation, { previous: previousContent, operation: 'update' });
-      const storageSlug = config.type === 'single-file'
-        ? config.slug
-        : path.basename(filePath, '.json');
-      const saved = await contentStore.save({
-        collection,
-        slug: storageSlug,
-        content: savedContent,
-        baseRevision
+      const operation = config.type !== 'single-file' && nextSlug !== previousSlug
+        ? {
+            type: 'rename-record', collection, slug: previousSlug, nextSlug,
+            content: savedContent, baseRevision
+          }
+        : {
+            type: 'upsert-record', collection, slug: config.type === 'single-file' ? config.slug : previousSlug,
+            content: savedContent, baseRevision
+          };
+      const transaction = await applyCompatibilityTransaction(
+        req,
+        authSession,
+        requestBody,
+        [operation],
+        (nextSlug === previousSlug ? 'Обновление ' : 'Переименование ') + collection + ':' + previousSlug
+      );
+      const saved = await contentTransactions.readRecord({ collection, slug: nextSlug });
+      sendJson(res, 200, {
+        ok: true,
+        result: transaction.applied.state === 'no-op' ? 'noop' : 'saved',
+        previousSlug,
+        slug: nextSlug,
+        updatedProductCount: transaction.preview.diff?.filter((item) => item.entity?.collection === 'products').length || 0,
+        content: saved.content,
+        revision: saved.revision,
+        schemaVersion: CONTENT_SCHEMA_VERSION,
+        transactionId: transaction.preview.transactionId
       });
-      sendJson(res, 200, { ok: true, previousSlug, slug: nextSlug, updatedProductCount: 0, ...saved });
       return;
     }
 
@@ -1525,9 +1689,16 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const filePath = await resolveJsonPath(collection, slug);
-      await fs.unlink(filePath);
-      sendJson(res, 200, { ok: true });
+      const body = await readBody(req);
+      const baseRevision = requireBaseRevision(body?.baseRevision);
+      const transaction = await applyCompatibilityTransaction(req, authSession, body, [{
+        type: 'delete-record',
+        collection,
+        slug,
+        baseRevision,
+        relationPlan: body?.relationPlan
+      }], `Удаление ${collection}:${slug}`);
+      sendJson(res, 200, { ok: true, transactionId: transaction.preview.transactionId });
       return;
     }
 
@@ -1535,10 +1706,24 @@ const server = http.createServer(async (req, res) => {
   } catch (error) {
     const message = error instanceof Error ? maskSecrets(error.message) : 'Неизвестная ошибка';
     const isProductionNotReady = error?.code === 'PRODUCTION_NOT_READY';
-    sendJson(res, error?.status ?? (error?.code === 'PRODUCTION_NOT_READY' ? 409 : 400), {
+    const locked = new Set(['TRANSACTION_LOCKED', 'TRANSACTION_RECOVERY_REQUIRED']);
+    const conflict = typeof error?.code === 'string' && (
+      error.code.includes('REVISION')
+      || error.code.includes('IDEMPOTENCY')
+      || error.code.includes('TRANSACTION_BINDING')
+      || error.code.includes('TRANSACTION_PAYLOAD')
+      || error.code.includes('TRANSACTION_EXPIRED')
+    );
+    const status = locked.has(error?.code)
+      ? 423
+      : error?.status ?? (isProductionNotReady || conflict ? 409 : 400);
+    sendJson(res, status, {
       error: message,
       code: error?.code || 'ADMIN_API_ERROR',
       ...(Array.isArray(error?.validationIssues) ? { validationIssues: error.validationIssues } : {}),
+      ...(Array.isArray(error?.blockers) ? { blockers: error.blockers } : {}),
+      ...(Array.isArray(error?.warnings) ? { warnings: error.warnings } : {}),
+      ...(error?.details && typeof error.details === 'object' ? { details: error.details } : {}),
       ...(isProductionNotReady ? getPublishConfigPayload() : {})
     });
   }

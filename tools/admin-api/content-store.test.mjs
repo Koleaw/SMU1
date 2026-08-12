@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 
 import { contentSchemas } from '../../src/content-schemas.mjs';
-import { createContentStore } from './content-store.mjs';
+import { createContentStore, revisionForBytes } from './content-store.mjs';
 import {
   COLLECTION_NAMES,
   REPO_ROOT,
@@ -26,6 +26,11 @@ function deepFreeze(value) {
   for (const item of Object.values(value)) deepFreeze(item);
   return Object.freeze(value);
 }
+
+test('content store revisions use the shared exact-byte digest and length format', () => {
+  const bytes = Buffer.from('{"ok":true}\n', 'utf8');
+  assert.match(revisionForBytes(bytes), /^sha256:[a-f0-9]{64}:12$/);
+});
 
 test('the complete production content corpus is schema-valid and the audit is read-only', async (t) => {
   const before = await snapshotRecordCorpus(REPO_ROOT);

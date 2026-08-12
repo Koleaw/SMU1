@@ -78,7 +78,7 @@ function product(overrides = {}) {
   return {
     title: 'Тестовый товар',
     slug: 'test-product',
-    productCategorySlug: 'test-category',
+    productCategorySlug: 'besedki-i-pergoly',
     sku: 'TEST-1',
     shortDescription: 'Краткое описание.',
     leadText: 'Лид-текст.',
@@ -111,9 +111,21 @@ function product(overrides = {}) {
 
 async function createContentRoot(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-admin-routes-'));
-  await Promise.all(['product-categories', 'product-sections', 'products'].map((collection) => (
+  await Promise.all([
+    'product-categories', 'product-sections', 'products', 'static-pages', 'services', 'projects', 'jobs'
+  ].map((collection) => (
     fs.mkdir(path.join(root, collection), { recursive: true })
   )));
+  await Promise.all([
+    fs.copyFile(
+      path.join(process.cwd(), 'src', 'content', 'product-categories', 'besedki-i-pergoly.json'),
+      path.join(root, 'product-categories', 'besedki-i-pergoly.json')
+    ),
+    fs.copyFile(
+      path.join(process.cwd(), 'src', 'content', 'product-sections', 'ulichnaya-mebel.json'),
+      path.join(root, 'product-sections', 'ulichnaya-mebel.json')
+    )
+  ]);
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   return root;
 }
@@ -208,6 +220,67 @@ test('product writes validate presentation data and catalog export round-trips t
   assert.equal(invalidPayload.code, 'PRODUCT_SCHEMA_VALIDATION_FAILED');
   assert.ok(invalidPayload.validationIssues.some((issue) => issue.path === 'presentationType'));
   assert.equal(await fs.readFile(path.join(contentRoot, 'products', 'test-product.json'), 'utf8'), beforeInvalid);
+
+  const transactionPreviewResponse = await fetch(`${base}/transactions/preview`, {
+    method: 'POST',
+    headers: { ...headers, 'x-admin-recovery-client-id': 'route-test-browser', 'x-admin-idempotency-key': 'typed-product-update' },
+    body: JSON.stringify({
+      userSummary: 'Типизированное обновление товара',
+      operations: [{
+        type: 'upsert-record',
+        collection: 'products',
+        slug: 'test-product',
+        baseRevision: premiumPayload.revision,
+        content: { ...premium, title: 'Типизированное название' }
+      }]
+    })
+  });
+  assert.equal(transactionPreviewResponse.status, 200);
+  const transactionPreview = await transactionPreviewResponse.json();
+  assert.equal(transactionPreview.state, 'prepared');
+  assert.equal(transactionPreview.diff.length, 1);
+
+  const transactionApplyResponse = await fetch(`${base}/transactions/apply`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ transactionId: transactionPreview.transactionId, payloadHash: transactionPreview.payloadHash })
+  });
+  assert.equal(transactionApplyResponse.status, 200);
+  assert.equal((await transactionApplyResponse.json()).state, 'committed');
+  const transactionResponse = await fetch(`${base}/transactions/${transactionPreview.transactionId}`, { headers: { cookie } });
+  assert.equal(transactionResponse.status, 200);
+  assert.equal((await transactionResponse.json()).metadata.userSummary, 'Типизированное обновление товара');
+  const historyResponse = await fetch(`${base}/history`, { headers: { cookie } });
+  assert.equal(historyResponse.status, 200);
+  assert.equal((await historyResponse.json()).history.length, 3);
+
+  const currentResponse = await fetch(`${base}/content/products/test-product`, { headers: { cookie } });
+  const currentProduct = (await currentResponse.json()).content;
+  const importPreviewResponse = await fetch(`${base}/json-import/preview`, {
+    method: 'POST',
+    headers: { ...headers, 'x-admin-recovery-client-id': 'route-test-browser', 'x-admin-idempotency-key': 'generic-import-update' },
+    body: JSON.stringify({
+      collection: 'products',
+      scope: 'single',
+      currentSlug: 'test-product',
+      writeMode: 'merge',
+      rawJson: JSON.stringify({ ...currentProduct, shortDescription: 'Обновлено импортом' })
+    })
+  });
+  assert.equal(importPreviewResponse.status, 200);
+  const importPreview = await importPreviewResponse.json();
+  assert.equal(importPreview.canApply, true);
+  assert.ok(importPreview.transactionId);
+  const importApplyResponse = await fetch(`${base}/json-import/apply`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ operationId: importPreview.operationId })
+  });
+  assert.equal(importApplyResponse.status, 200);
+  assert.equal((await importApplyResponse.json()).result, 'success');
+  assert.equal(JSON.parse(await fs.readFile(path.join(contentRoot, 'products', 'test-product.json'), 'utf8')).shortDescription, 'Обновлено импортом');
+  const afterImportHistory = await fetch(`${base}/history`, { headers: { cookie } });
+  assert.equal((await afterImportHistory.json()).history.length, 4);
 
   const exportResponse = await fetch(`${base}/export-catalog`, { headers: { cookie } });
   assert.equal(exportResponse.status, 200);
