@@ -3,6 +3,7 @@ import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 import { imageViewStyle } from '../catalogV2Data';
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import { resolveV2ResponsiveMedia } from '../../../utils/v2ResponsiveMedia';
 
 interface BreadcrumbItem {
   title: string;
@@ -57,6 +58,20 @@ const mediaStyle = [
     ? `--direction-hero-image-fit:${mediaFit};--direction-hero-image-x:${mediaPositionX}%;--direction-hero-image-y:${mediaPositionY}%;--direction-hero-image-scale:${mediaScale};`
     : ''
 ].join('');
+const responsiveMedia = image ? resolveV2ResponsiveMedia(image, 'hero') : null;
+const isolatedMedia = variant === 'canopies' || variant === 'topiary';
+const transitionPlaceholder = isolatedMedia
+  ? (responsiveMedia?.fallback.find((candidate) => candidate.width >= 768) ?? responsiveMedia?.fallback.at(-1))
+  : (responsiveMedia?.fallback.find((candidate) => candidate.width >= 1440) ?? responsiveMedia?.fallback.at(-1));
+const heroSizes = isolatedMedia ? '(max-width: 760px) 100vw, 52vw' : '100vw';
+const transitionPlaceholderStyle = transitionPlaceholder
+  ? [
+      `--v2-transition-placeholder-fit:${isolatedMedia ? 'contain' : mediaFit}`,
+      `--v2-transition-placeholder-x:${isolatedMedia ? 50 : mediaPositionX}%`,
+      `--v2-transition-placeholder-y:${isolatedMedia ? 50 : mediaPositionY}%`,
+      `--v2-transition-placeholder-scale:${mediaScale}`
+    ].join(';')
+  : undefined;
 ---
 
 <section
@@ -111,12 +126,48 @@ const mediaStyle = [
       data-v2-reveal
       data-v2-reveal-stage="media"
       data-v2-entrance-role="media"
+      data-v2-transition-placeholder={transitionPlaceholder ? '' : undefined}
+      data-v2-transition-placeholder-src={transitionPlaceholder ? withBase(transitionPlaceholder.path) : undefined}
+      style={transitionPlaceholderStyle}
     >
+      <span class="v2-transition-media-placeholder" data-v2-transition-placeholder-layer aria-hidden="true"></span>
+      <script is:inline>
+        (() => {
+          const script = document.currentScript;
+          const host = script?.parentElement;
+          if (document.documentElement.dataset.v2PageBootstrap === 'arrival'
+            && document.documentElement.dataset.v2MotionProfile === 'normal'
+            && host?.hasAttribute('data-v2-transition-placeholder')) {
+            const layer = host.querySelector('[data-v2-transition-placeholder-layer]');
+            const url = host.dataset.v2TransitionPlaceholderSrc;
+            if (url && layer) {
+              const preload = new Image();
+              host.dataset.v2TransitionPlaceholderPreload = 'loading';
+              preload.alt = '';
+              preload.setAttribute('aria-hidden', 'true');
+              preload.setAttribute('role', 'presentation');
+              preload.dataset.v2TransitionPlaceholderImage = '';
+              preload.dataset.v2ImageReadinessIgnore = '';
+              preload.decoding = 'async';
+              preload.addEventListener('load', () => {
+                host.dataset.v2TransitionPlaceholderPreload = 'ready';
+              }, { once: true });
+              preload.addEventListener('error', () => {
+                host.dataset.v2TransitionPlaceholderPreload = 'error';
+                preload.remove();
+              }, { once: true });
+              layer.append(preload);
+              preload.src = url;
+            }
+          }
+          script?.remove();
+        })();
+      </script>
       <V2ResponsiveImage
         src={image}
         alt={imageAlt || title}
         role="hero"
-        sizes="100vw"
+        sizes={heroSizes}
         loading="eager"
         fetchpriority="high"
         decoding="async"

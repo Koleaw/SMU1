@@ -5,6 +5,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
+import sharp from 'sharp';
 import {
   V2_COMPATIBILITY_ROUTES,
   classifyV2Route,
@@ -608,6 +609,49 @@ const screenshot = async (name, metadata = {}) => {
     filename: path.relative(artifactRoot, filename).replace(/\\/g, '/')
   });
   return filename;
+};
+const analyzeH3MediaPixels = async (filename, geometry) => {
+  const viewportWidth = Number(geometry?.viewport?.width || 0);
+  const viewportHeight = Number(geometry?.viewport?.height || 0);
+  const rect = geometry?.hostRect;
+  const metadata = await sharp(filename).metadata();
+  if (!metadata.width || !metadata.height || !viewportWidth || !viewportHeight || !rect?.width || !rect?.height) {
+    return null;
+  }
+  const scaleX = metadata.width / viewportWidth;
+  const scaleY = metadata.height / viewportHeight;
+  const cssCrop = {
+    left: Math.max(0, rect.left + rect.width * 0.09),
+    top: Math.max(0, rect.top + rect.height * 0.13),
+    width: rect.width * 0.82,
+    height: rect.height * 0.55
+  };
+  const left = Math.max(0, Math.min(metadata.width - 1, Math.round(cssCrop.left * scaleX)));
+  const top = Math.max(0, Math.min(metadata.height - 1, Math.round(cssCrop.top * scaleY)));
+  const width = Math.max(1, Math.min(metadata.width - left, Math.round(cssCrop.width * scaleX)));
+  const height = Math.max(1, Math.min(metadata.height - top, Math.round(cssCrop.height * scaleY)));
+  const { data, info } = await sharp(filename)
+    .extract({ left, top, width, height })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  let darkPixels = 0;
+  let chromaticPixels = 0;
+  for (let index = 0; index < data.length; index += info.channels) {
+    const red = data[index];
+    const green = data[index + 1];
+    const blue = data[index + 2];
+    const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    if (luminance < 210) darkPixels += 1;
+    if (Math.max(red, green, blue) - Math.min(red, green, blue) > 18) chromaticPixels += 1;
+  }
+  const pixels = data.length / info.channels;
+  return {
+    crop: { left, top, width, height },
+    pixels,
+    darkRatio: darkPixels / pixels,
+    chromaticRatio: chromaticPixels / pixels
+  };
 };
 const clearOriginStorage = async () => {
   // Storage.clearDataForOrigin is inconsistent about sessionStorage across
@@ -1497,13 +1541,27 @@ const clickFilterAudit = async () => {
 
 const transitionFilmstripAudit = async () => {
   let filmstripCriticalPath = '';
+  let directPlaceholderAudit = null;
   if (!options.externalOrigin) {
     await clearOriginStorage();
     await seedEntrySeenAndNavigate(hrefFor(routes.deep));
     await waitUntilUsable();
     const probe = await stateSnapshot();
     if (probe.criticalSrc) filmstripCriticalPath = new URL(probe.criticalSrc).pathname;
+    directPlaceholderAudit = await evaluate(`(() => {
+      const host = document.querySelector('[data-v2-transition-placeholder]');
+      const url = host?.dataset.v2TransitionPlaceholderSrc || '';
+      const absoluteUrl = url ? new URL(url, location.href).href : '';
+      return {
+        url: absoluteUrl,
+        requested: Boolean(absoluteUrl && performance.getEntriesByType('resource').some((entry) => entry.name === absoluteUrl)),
+        preloadPresent: Boolean(document.querySelector('[data-v2-transition-placeholder-preload]'))
+      };
+    })()`);
   }
+  record('transition.placeholder-not-requested-on-direct-load', options.externalOrigin
+    || Boolean(directPlaceholderAudit?.url && !directPlaceholderAudit.requested && !directPlaceholderAudit.preloadPresent),
+  { skipped: options.externalOrigin, directPlaceholderAudit });
   // The controller intentionally keeps the exact `covered` state for only
   // one animation frame before navigation. Hold the real navigation after
   // that semantic event so captureScreenshot cannot drift into the new document.
@@ -1599,11 +1657,122 @@ const transitionFilmstripAudit = async () => {
     files.push(arrivalFile);
   }
   const revealing = await waitForCondition(`document.documentElement.dataset.v2PageState === 'revealing'`, 3000, 12);
+  let revealingMediaVisual = null;
   if (revealing) {
     await delay(220);
-    files.push(await screenshot('sheet-05-revealing', h3Capture));
+    revealingMediaVisual = await evaluate(`(() => {
+      const image = document.querySelector('.immersive-direction-hero__media [data-v2-page-critical]')
+        || document.querySelector('[data-v2-page-critical]');
+      const host = image?.closest('[data-v2-transition-placeholder]');
+      const placeholder = host?.querySelector('[data-v2-transition-placeholder-layer]');
+      const placeholderImage = placeholder?.querySelector('[data-v2-transition-placeholder-image]');
+      const hostStyle = host ? getComputedStyle(host) : null;
+      const imageStyle = image ? getComputedStyle(image) : null;
+      const placeholderStyle = placeholder ? getComputedStyle(placeholder) : null;
+      const placeholderImageStyle = placeholderImage ? getComputedStyle(placeholderImage) : null;
+      const highImages = Array.from(document.querySelectorAll('img[fetchpriority="high"]'));
+      const hostOpacity = Number.parseFloat(hostStyle?.opacity || '0');
+      const imageOpacity = Number.parseFloat(imageStyle?.opacity || '0');
+      const actualVisible = Boolean(image && image.complete && image.naturalWidth > 0 && !image.hidden
+        && imageStyle?.display !== 'none' && imageStyle?.visibility !== 'hidden'
+        && imageOpacity > 0.01 && hostOpacity > 0.01);
+      const placeholderLoaded = Boolean(placeholderImage?.complete && placeholderImage.naturalWidth > 0);
+      const placeholderVisible = Boolean(host && placeholder && placeholderImage && hostOpacity > 0.5
+        && placeholderStyle?.display !== 'none' && placeholderStyle?.visibility !== 'hidden'
+        && placeholderImageStyle?.display !== 'none' && placeholderImageStyle?.visibility !== 'hidden'
+        && placeholderLoaded);
+      return {
+        actualVisible,
+        placeholderVisible,
+        placeholderSource: placeholderImage?.currentSrc || placeholderImage?.src || '',
+        placeholderLoaded,
+        placeholderNaturalWidth: placeholderImage?.naturalWidth ?? null,
+        placeholderFetchPriority: placeholderImage?.fetchPriority || '',
+        semanticFetchPriority: image?.fetchPriority || '',
+        highImageCount: highImages.length,
+        preloadPresent: Boolean(document.querySelector('[data-v2-transition-placeholder-preload]')),
+        preloadState: host?.getAttribute('data-v2-transition-placeholder-preload') || '',
+        hostOpacity,
+        imageOpacity,
+        imageComplete: image?.complete ?? null,
+        imageNaturalWidth: image?.naturalWidth ?? null,
+        imageState: image?.getAttribute('data-v2-image-state') || '',
+        hostState: host?.getAttribute('data-v2-media-state') || '',
+        currentSrc: image?.currentSrc || image?.src || '',
+        pageBootstrap: document.documentElement.dataset.v2PageBootstrap || '',
+        pageState: document.documentElement.dataset.v2PageState || '',
+        entranceNode: host?.getAttribute('data-v2-entrance-node') || '',
+        hostClass: host?.className || '',
+        hostMatchesArrivalRule: Boolean(host?.matches('[data-v2-reveal][data-v2-transition-placeholder].v2-image-awaiting')),
+        hostRect: host ? (() => {
+          const rect = host.getBoundingClientRect();
+          return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+        })() : null,
+        placeholderRect: placeholder ? (() => {
+          const rect = placeholder.getBoundingClientRect();
+          return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+        })() : null,
+        placeholderStyle: placeholderStyle ? {
+          opacity: placeholderStyle.opacity,
+          position: placeholderStyle.position,
+          zIndex: placeholderStyle.zIndex,
+          inset: placeholderStyle.inset,
+          transform: placeholderStyle.transform
+        } : null,
+        placeholderImageStyle: placeholderImageStyle ? {
+          opacity: placeholderImageStyle.opacity,
+          objectFit: placeholderImageStyle.objectFit,
+          objectPosition: placeholderImageStyle.objectPosition,
+          transform: placeholderImageStyle.transform
+        } : null,
+        paintStack: host ? (() => {
+          const rect = host.getBoundingClientRect();
+          const x = Math.min(innerWidth - 1, Math.max(0, rect.left + rect.width * 0.68));
+          const y = Math.min(innerHeight - 1, Math.max(0, rect.top + rect.height * 0.42));
+          return document.elementsFromPoint(x, y).slice(0, 8).map((element) => ({
+            tag: element.tagName,
+            className: String(element.className || ''),
+            placeholder: element.hasAttribute('data-v2-transition-placeholder-layer'),
+            responsivePicture: element.hasAttribute('data-v2-responsive-picture')
+          }));
+        })() : [],
+        viewport: { width: innerWidth, height: innerHeight }
+      };
+    })()`);
+    const revealingFile = await screenshot('sheet-05-revealing', h3Capture);
+    files.push(revealingFile);
+    revealingMediaVisual.filmstripCriticalPath = filmstripCriticalPath;
+    revealingMediaVisual.fault = { hits: serverFault.hits, pathname: serverFault.pathname, mode: serverFault.mode };
+    revealingMediaVisual.pixels = await analyzeH3MediaPixels(revealingFile, revealingMediaVisual);
+    await writeFile(
+      path.join(artifactRoot, 'final', 'transitions', 'h3', 'reveal-media.json'),
+      JSON.stringify(revealingMediaVisual, null, 2)
+    );
   }
   const usable = await waitUntilUsable(5000);
+  const readyMediaVisual = await evaluate(`(() => {
+    const image = document.querySelector('.immersive-direction-hero__media [data-v2-page-critical]')
+      || document.querySelector('[data-v2-page-critical]');
+    const host = image?.closest('[data-v2-transition-placeholder]');
+    const layer = host?.querySelector('[data-v2-transition-placeholder-layer]');
+    const picture = image?.closest('[data-v2-responsive-picture]');
+    const layerStyle = layer ? getComputedStyle(layer) : null;
+    const pictureStyle = picture ? getComputedStyle(picture) : null;
+    return {
+      imageComplete: image?.complete ?? null,
+      imageNaturalWidth: image?.naturalWidth ?? null,
+      hostClass: host?.className || '',
+      hostState: host?.getAttribute('data-v2-media-state') || '',
+      imageState: image?.getAttribute('data-v2-image-state') || '',
+      layerDisplay: layerStyle?.display || '',
+      pictureVisibility: pictureStyle?.visibility || '',
+      placeholderImages: layer?.querySelectorAll('[data-v2-transition-placeholder-image]').length || 0,
+      fallbackExposed: Boolean(Array.from(host?.querySelectorAll('[data-v2-image-fallback]') || [])
+        .some((fallback) => fallback.getAttribute('aria-hidden') !== 'true')),
+      liveStatusExposed: Boolean(Array.from(host?.querySelectorAll('[role="status"]') || [])
+        .some((status) => status.getAttribute('aria-hidden') !== 'true'))
+    };
+  })()`);
   clearFault();
   files.push(await screenshot('sheet-06-ready-hero', h3Capture));
 
@@ -1673,6 +1842,29 @@ const transitionFilmstripAudit = async () => {
         tokenEvents: coveredCapture.tokenEvents
       }
     });
+  record('transition.h3-reveal-media-visible', Boolean(revealingMediaVisual
+    && (revealingMediaVisual.actualVisible || revealingMediaVisual.placeholderVisible)
+    && revealingMediaVisual.hostState === 'pending'
+    && revealingMediaVisual.placeholderFetchPriority !== 'high'
+    && revealingMediaVisual.semanticFetchPriority === 'high'
+    && revealingMediaVisual.highImageCount === 1
+    && revealingMediaVisual.placeholderRect?.width > 0
+    && revealingMediaVisual.placeholderRect?.height > 0
+    && revealingMediaVisual.pixels?.darkRatio > 0.08
+    && revealingMediaVisual.pixels?.chromaticRatio > 0.05), {
+      filmstripCriticalPath,
+      faultHits: revealingMediaVisual?.fault?.hits ?? 0,
+      revealingMediaVisual
+    });
+  record('transition.h3-ready-media-handoff', Boolean(usable
+    && readyMediaVisual?.imageComplete && readyMediaVisual.imageNaturalWidth > 0
+    && readyMediaVisual.hostState === 'ready'
+    && readyMediaVisual.imageState === 'ready'
+    && !readyMediaVisual.hostClass.includes('is-broken')
+    && readyMediaVisual.layerDisplay === 'none'
+    && readyMediaVisual.pictureVisibility !== 'hidden'
+    && !readyMediaVisual.fallbackExposed
+    && !readyMediaVisual.liveStatusExposed), { usable, readyMediaVisual });
   record('transition.exact-token-and-consumption', tokenOk && Boolean(removeEvent) && state.token === null,
     { expectedTarget, expectedVariant: 'h3', fromClassification, toClassification,
       navigationId: token?.navigationId || token?.nonce, token, tokenEvents, consumedValue: state.token });
@@ -1715,7 +1907,174 @@ const transitionFilmstripAudit = async () => {
     variants: [...new Set(trace.map((row) => row.pageVariant).filter(Boolean))] });
   record('entrance.h3-arrival-lifecycle-order', h3Lifecycle.ok && cleanupContract(state),
     { lifecycle: h3Lifecycle, state });
+  let placeholderFaultAudit = { skipped: true, reason: 'external origin or missing transition derivative' };
+  if (!options.externalOrigin && directPlaceholderAudit?.url) {
+    await clearOriginStorage();
+    await seedEntrySeenAndNavigate(hrefFor(routes.home));
+    await waitUntilUsable();
+    const placeholderPathname = new URL(directPlaceholderAudit.url).pathname;
+    configureFault(placeholderPathname, 'invalid');
+    await fireRouteClick(targetHref, { label: targetLabel });
+    const faultArrived = await waitForCondition(
+      `location.pathname === ${JSON.stringify(new URL(targetHref).pathname)}`,
+      10_000
+    );
+    const placeholderFailed = faultArrived && await waitForCondition(`(() => {
+      const host = document.querySelector('[data-v2-transition-placeholder]');
+      return host?.getAttribute('data-v2-transition-placeholder-preload') === 'error';
+    })()`, 3000, 8);
+    const transientState = await evaluate(`(() => {
+      const host = document.querySelector('[data-v2-transition-placeholder]');
+      const layer = host?.querySelector('[data-v2-transition-placeholder-layer]');
+      return {
+        placeholderImages: layer?.querySelectorAll('[data-v2-transition-placeholder-image]').length || 0,
+        hostClass: host?.className || '',
+        fallbackExposed: Boolean(Array.from(host?.querySelectorAll('[data-v2-image-fallback]') || [])
+          .some((fallback) => fallback.getAttribute('aria-hidden') !== 'true')),
+        liveStatusExposed: Boolean(Array.from(host?.querySelectorAll('[role="status"]') || [])
+          .some((status) => status.getAttribute('aria-hidden') !== 'true'))
+      };
+    })()`);
+    const faultUsable = faultArrived ? await waitUntilUsable(6500) : null;
+    const faultHits = serverFault.hits;
+    const stateAfterFault = await evaluate(`(() => {
+      const image = document.querySelector('.immersive-direction-hero__media [data-v2-page-critical]')
+        || document.querySelector('[data-v2-page-critical]');
+      const host = image?.closest('[data-v2-transition-placeholder]');
+      const layer = host?.querySelector('[data-v2-transition-placeholder-layer]');
+      return {
+        imageComplete: image?.complete ?? null,
+        imageNaturalWidth: image?.naturalWidth ?? null,
+        imageState: image?.getAttribute('data-v2-image-state') || '',
+        hostState: host?.getAttribute('data-v2-media-state') || '',
+        hostClass: host?.className || '',
+        placeholderState: host?.getAttribute('data-v2-transition-placeholder-preload') || '',
+        layerDisplay: layer ? getComputedStyle(layer).display : '',
+        fallbackExposed: Boolean(Array.from(host?.querySelectorAll('[data-v2-image-fallback]') || [])
+          .some((fallback) => fallback.getAttribute('aria-hidden') !== 'true')),
+        liveStatusExposed: Boolean(Array.from(host?.querySelectorAll('[role="status"]') || [])
+          .some((status) => status.getAttribute('aria-hidden') !== 'true'))
+      };
+    })()`);
+    placeholderFaultAudit = { skipped: false, faultArrived, placeholderFailed, transientState,
+      faultUsable: Boolean(faultUsable), faultHits, placeholderPathname, state: stateAfterFault };
+    clearFault();
+  }
+  record('transition.placeholder-error-does-not-poison-readiness', options.externalOrigin
+    || Boolean(placeholderFaultAudit.faultArrived && placeholderFaultAudit.faultUsable
+      && placeholderFaultAudit.placeholderFailed
+      && placeholderFaultAudit.faultHits === 1
+      && placeholderFaultAudit.transientState?.placeholderImages === 0
+      && !placeholderFaultAudit.transientState?.hostClass.includes('is-broken')
+      && !placeholderFaultAudit.transientState?.fallbackExposed
+      && !placeholderFaultAudit.transientState?.liveStatusExposed
+      && placeholderFaultAudit.state?.placeholderState === 'error'
+      && placeholderFaultAudit.state?.imageComplete
+      && placeholderFaultAudit.state?.imageNaturalWidth > 0
+      && placeholderFaultAudit.state?.imageState === 'ready'
+      && placeholderFaultAudit.state?.hostState === 'ready'
+      && !placeholderFaultAudit.state?.hostClass.includes('is-broken')
+      && placeholderFaultAudit.state?.layerDisplay === 'none'
+      && !placeholderFaultAudit.state?.fallbackExposed
+      && !placeholderFaultAudit.state?.liveStatusExposed), placeholderFaultAudit);
   return { files, timings };
+};
+
+const fullBleedTransitionMediaAudit = async () => {
+  if (options.externalOrigin) {
+    record('transition.full-bleed-placeholder-dpr', true, {
+      skipped: true,
+      reason: '--origin cannot inject a deterministic delay into the semantic hero candidate'
+    });
+    return;
+  }
+  const results = [];
+  for (const dpr of [1, 2]) {
+    await setViewport(1440, 900, false, dpr);
+    await clearOriginStorage();
+    await seedEntrySeenAndNavigate(hrefFor(routes.business));
+    await waitUntilUsable();
+    const direct = await evaluate(`(() => {
+      const host = document.querySelector('[data-v2-transition-placeholder]');
+      const image = document.querySelector('.immersive-direction-hero__media [data-v2-page-critical]')
+        || document.querySelector('[data-v2-page-critical]');
+      const placeholderUrl = host?.dataset.v2TransitionPlaceholderSrc || '';
+      const absolutePlaceholderUrl = placeholderUrl ? new URL(placeholderUrl, location.href).href : '';
+      return {
+        criticalUrl: image?.currentSrc || image?.src || '',
+        placeholderUrl: absolutePlaceholderUrl,
+        placeholderRequested: Boolean(absolutePlaceholderUrl
+          && performance.getEntriesByType('resource').some((entry) => entry.name === absolutePlaceholderUrl))
+      };
+    })()`);
+    await clearOriginStorage();
+    await seedEntrySeenAndNavigate(hrefFor(routes.home));
+    await waitUntilUsable();
+    const criticalPathname = direct.criticalUrl ? new URL(direct.criticalUrl).pathname : '';
+    if (criticalPathname) configureFault(criticalPathname, 'delay', 900);
+    await fireRouteClick(hrefFor(routes.business), { label: classify(hrefFor(routes.business)).canonicalLabel });
+    const arrived = await waitForCondition(
+      `location.pathname === ${JSON.stringify(new URL(hrefFor(routes.business)).pathname)}`,
+      10_000
+    );
+    const revealing = arrived && await waitForCondition(
+      `document.documentElement.dataset.v2PageState === 'revealing'`,
+      3000,
+      12
+    );
+    if (revealing) await delay(220);
+    const visual = await evaluate(`(() => {
+      const host = document.querySelector('[data-v2-transition-placeholder]');
+      const image = document.querySelector('.immersive-direction-hero__media [data-v2-page-critical]')
+        || document.querySelector('[data-v2-page-critical]');
+      const placeholder = host?.querySelector('[data-v2-transition-placeholder-image]');
+      const hostRect = host?.getBoundingClientRect();
+      const resource = placeholder?.currentSrc
+        ? performance.getEntriesByType('resource').find((entry) => entry.name === placeholder.currentSrc)
+        : null;
+      return {
+        hostRect: hostRect ? { left: hostRect.left, top: hostRect.top, width: hostRect.width, height: hostRect.height } : null,
+        placeholderUrl: placeholder?.currentSrc || placeholder?.src || '',
+        placeholderLoaded: Boolean(placeholder?.complete && placeholder.naturalWidth > 0),
+        placeholderNaturalWidth: placeholder?.naturalWidth || 0,
+        placeholderBytes: resource?.encodedBodySize || resource?.transferSize || 0,
+        placeholderFetchPriority: placeholder?.fetchPriority || '',
+        semanticFetchPriority: image?.fetchPriority || '',
+        semanticPending: !image?.complete || image.naturalWidth === 0,
+        highImageCount: document.querySelectorAll('img[fetchpriority="high"]').length,
+        hostState: host?.getAttribute('data-v2-media-state') || '',
+        viewport: { width: innerWidth, height: innerHeight, dpr: devicePixelRatio }
+      };
+    })()`);
+    const filename = await screenshot(`sheet-full-bleed-dpr-${dpr}`, {
+      directory: 'final/transitions/h3',
+      flow: 'home-to-metalworks-full-bleed',
+      variant: 'h3',
+      dpr
+    });
+    visual.pixels = await analyzeH3MediaPixels(filename, visual);
+    const usable = await waitUntilUsable(6500);
+    const faultHits = serverFault.hits;
+    clearFault();
+    results.push({ dpr, arrived, revealing, usable: Boolean(usable), direct, faultHits, filename, visual });
+  }
+  await setViewport(1440, 900, false, 1);
+  record('transition.full-bleed-placeholder-dpr', results.length === 2 && results.every((result) => (
+    result.arrived && result.revealing && result.usable
+    && result.direct.placeholderUrl && !result.direct.placeholderRequested
+    && result.faultHits === 1
+    && result.visual.placeholderLoaded
+    && result.visual.placeholderNaturalWidth >= 1400
+    && result.visual.placeholderBytes > 0 && result.visual.placeholderBytes <= 500 * 1024
+    && result.visual.placeholderFetchPriority !== 'high'
+    && result.visual.semanticFetchPriority === 'high'
+    && result.visual.highImageCount === 1
+    && result.visual.semanticPending && result.visual.hostState === 'pending'
+    && result.visual.hostRect?.width >= result.visual.viewport.width * 0.95
+    && result.visual.hostRect?.height >= result.visual.viewport.height * 0.95
+    && result.visual.pixels?.darkRatio > 0.08
+    && result.visual.pixels?.chromaticRatio > 0.05
+  )), { results });
 };
 
 const transitionMobileVisualContractAudit = async () => {
@@ -2973,6 +3332,10 @@ const compactIncomingHandoffAudit = async ({
     const trace = await getTrace();
     const state = await stateSnapshot();
     const headerStyles = await evaluate('window.__smu1H4CompactHeaderStyles || []');
+    const compactPlaceholderState = await evaluate(`({
+      images: document.querySelectorAll('[data-v2-transition-placeholder-image]').length,
+      preloads: document.querySelectorAll('[data-v2-transition-placeholder-preload]').length
+    })`);
     const eventRows = trace.filter((row) => row.kind === 'event');
     const readyRows = traceEvents(trace, 'v2:entrance-ready');
     const startRows = traceEvents(trace, 'v2:entrance-start');
@@ -3027,10 +3390,12 @@ const compactIncomingHandoffAudit = async ({
     ));
     record(`accessibility.${profile}-incoming-${variant}-handoff`, compactActivation && pageImmediateFailOpen
       && state.pageVariant === variant && state.motionProfile === profile && state.token === null
+      && compactPlaceholderState.images === 0 && compactPlaceholderState.preloads === 0
       && noNormalFlash && compactDurationOk && noLegacyHeaderMotion && cleanupContract(state),
     { fixture, expectedDuration, compactElapsed, compactActivation, activationIds,
       pageImmediateFailOpen, forbiddenTimedPageStates, eventOrder: eventRows.map((row) => row.eventName),
-      noNormalFlash, compactDurationOk, compactDurations, noLegacyHeaderMotion, headerStyles, state });
+      noNormalFlash, compactDurationOk, compactDurations, noLegacyHeaderMotion, headerStyles,
+      compactPlaceholderState, state });
   } finally {
     await cdp.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: injected.identifier }).catch(() => {});
     await setReducedMotion(false);
@@ -3748,12 +4113,35 @@ const githubBaseAudit = async () => {
       try { const url = new URL(value); return url.origin === location.origin && !url.pathname.startsWith(${JSON.stringify(options.githubBase)}); }
       catch { return false; }
     }).slice(0, 20)`);
+  const baseMedia = await evaluate(`(async () => {
+    const placeholder = document.querySelector('[data-v2-transition-placeholder-image]');
+    const semantic = document.querySelector('.immersive-direction-hero__media [data-v2-page-critical]')
+      || document.querySelector('[data-v2-page-critical]');
+    const placeholderUrl = placeholder?.currentSrc || placeholder?.src || '';
+    let placeholderStatus = null;
+    if (placeholderUrl) {
+      try { placeholderStatus = (await fetch(placeholderUrl, { method: 'HEAD', cache: 'no-store' })).status; }
+      catch { placeholderStatus = 0; }
+    }
+    return {
+      placeholderUrl,
+      placeholderPathname: placeholderUrl ? new URL(placeholderUrl).pathname : '',
+      placeholderLoaded: Boolean(placeholder?.complete && placeholder.naturalWidth > 0),
+      placeholderStatus,
+      semanticUrl: semantic?.currentSrc || semantic?.src || '',
+      semanticPathname: semantic ? new URL(semantic.currentSrc || semantic.src, location.href).pathname : ''
+    };
+  })()`);
   record('base.github-pages', arrived && snapshot.pathname.startsWith(options.githubBase)
     && token?.version === TOKEN_VERSION && token?.variant === 'h3'
     && token?.target === targetValue(baseTargetHref) && token?.nonce === token?.navigationId
     && snapshot.token === null && lifecycle.ok
-    && assetIssues.length === 0 && cleanupContract(snapshot),
-  { base: options.githubBase, token, lifecycle, snapshot, assetIssues });
+    && assetIssues.length === 0
+    && baseMedia.placeholderLoaded && baseMedia.placeholderStatus === 200
+    && baseMedia.placeholderPathname.startsWith(`${options.githubBase}_media/h5/`)
+    && baseMedia.semanticPathname.startsWith(`${options.githubBase}_media/h5/`)
+    && cleanupContract(snapshot),
+  { base: options.githubBase, token, lifecycle, snapshot, assetIssues, baseMedia });
 };
 
 try {
@@ -3807,6 +4195,7 @@ try {
   await hashEntrySkipAudit();
 
   await transitionFilmstripAudit();
+  await fullBleedTransitionMediaAudit();
   await transitionMobileVisualContractAudit();
   await transitionMobileFilmstripsAudit();
   await calmTransitionFilmstripAudit();

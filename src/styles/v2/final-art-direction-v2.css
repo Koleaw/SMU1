@@ -1217,6 +1217,42 @@
     clip-path var(--hv2-motion-reveal) var(--hv2-ease);
 }
 
+/* Keep H3's accepted incoming media frame meaningful while its selected
+ * responsive candidate is still decoding. The inert data URL is consumed
+ * only for a normal H3 arrival, so direct visits do not fetch this layer. */
+[data-v2-transition-placeholder-layer] {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+
+[data-v2-transition-placeholder-layer] > [data-v2-transition-placeholder-image] {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: var(--v2-transition-placeholder-fit, cover);
+  object-position: var(--v2-transition-placeholder-x, 50%) var(--v2-transition-placeholder-y, 50%);
+  transform: scale(var(--v2-transition-placeholder-scale, 1));
+  transform-origin: center;
+}
+
+[data-v2-transition-placeholder]:not(.v2-image-awaiting) > [data-v2-transition-placeholder-layer] {
+  display: none;
+}
+
+html[data-v2-page-bootstrap='arrival'][data-v2-page-state='revealing'][data-v2-motion-profile='normal']
+  [data-v2-reveal][data-v2-transition-placeholder].v2-image-awaiting {
+  opacity: 1 !important;
+}
+
+html[data-v2-page-bootstrap='arrival'][data-v2-motion-profile='normal']
+  [data-v2-reveal][data-v2-transition-placeholder].v2-image-awaiting > [data-v2-responsive-picture] {
+  position: relative;
+  z-index: 2;
+  visibility: hidden;
+}
+
 @media (scripting: enabled) {
   html:not([data-v2-public-route='true']) .hv2-header:not(.is-ready) :where(.hv2-header__brand, .hv2-header__nav, .hv2-header__actions, .hv2-header__menu-button) {
     opacity: 0;

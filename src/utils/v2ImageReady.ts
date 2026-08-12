@@ -10,7 +10,8 @@ const readiness = new WeakMap<HTMLElement, Promise<void>>();
 const fallbackCopy = 'Изображение не удалось загрузить';
 
 const revealImages = (element: HTMLElement) => Array.from(element.querySelectorAll<HTMLImageElement>('img'))
-  .filter((image) => !image.closest('dialog, .v2-product-gallery__thumbs')
+  .filter((image) => !image.hasAttribute('data-v2-image-readiness-ignore')
+    && !image.closest('dialog, .v2-product-gallery__thumbs')
     && !image.parentElement?.closest('[hidden]'));
 
 const isFallbackElement = (element: HTMLElement) => element.hasAttribute('data-v2-image-fallback')
