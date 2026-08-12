@@ -70,8 +70,18 @@ const mimeTypes = {
 };
 const imageDelayMs = Math.max(11_500, Number.parseInt(process.env.FINAL_QA_IMAGE_DELAY_MS || '12000', 10) || 12000);
 const delayedImagePath = new URL(premiumProduct.image, 'http://qa.local/').pathname;
+const responsiveManifestPath = path.join(distRoot, '_media', 'h5', 'manifest.json');
+const responsiveManifest = fs.existsSync(responsiveManifestPath)
+  ? JSON.parse(fs.readFileSync(responsiveManifestPath, 'utf8'))
+  : null;
+const responsiveImagePaths = (responsiveManifest?.entries?.[delayedImagePath]?.variants || [])
+  .map((variant) => new URL(variant.path, 'http://qa.local/').pathname)
+  .filter(Boolean);
+const delayedImagePaths = new Set(responsiveImagePaths.length ? responsiveImagePaths : [delayedImagePath]);
 let delayedImageRequestUsed = false;
+let delayedImageRequestPath = '';
 let invalidImageRequestPending = false;
+let invalidImageRequestPath = '';
 
 let server = null;
 let origin = options.externalOrigin;
@@ -110,8 +120,9 @@ if (origin) {
         }).end(request.method === 'HEAD' ? undefined : fallback);
         return;
       }
-      if (request.method !== 'HEAD' && pathname === delayedImagePath && invalidImageRequestPending) {
+      if (request.method !== 'HEAD' && delayedImagePaths.has(pathname) && invalidImageRequestPending) {
         invalidImageRequestPending = false;
+        invalidImageRequestPath = pathname;
         const invalidImage = Buffer.from('not-a-decodable-image');
         response.writeHead(200, {
           'cache-control': 'no-store',
@@ -121,8 +132,9 @@ if (origin) {
         return;
       }
       const body = request.method === 'HEAD' ? null : await readFile(filename);
-      if (request.method !== 'HEAD' && pathname === delayedImagePath && !delayedImageRequestUsed) {
+      if (request.method !== 'HEAD' && delayedImagePaths.has(pathname) && !delayedImageRequestUsed) {
         delayedImageRequestUsed = true;
+        delayedImageRequestPath = pathname;
         await delay(imageDelayMs);
       }
       response.writeHead(200, {
@@ -417,8 +429,9 @@ const runImageReadyAudit = async () => {
       opacity: style ? Number.parseFloat(style.opacity || '1') : 1
     };
   })()`);
-  record('image-ready.delayed-reveal', pending.observed && !pending.imageComplete && pending.awaiting
-    && !pending.ready && pending.opacity <= 0.05, pending);
+  record('image-ready.delayed-reveal', delayedImagePaths.has(delayedImageRequestPath)
+    && pending.observed && !pending.imageComplete && pending.awaiting
+    && !pending.ready && pending.opacity <= 0.05, { ...pending, interceptedPath: delayedImageRequestPath });
 
   await delay(Math.max(0, 6200 - 160));
   await settle(700);
@@ -445,11 +458,12 @@ const runImageReadyAudit = async () => {
       fallbackAriaHidden: fallback?.getAttribute('aria-hidden') || ''
     };
   })()`);
-  record('image-ready.timeout-fallback', !slowNetwork.imageComplete && slowNetwork.imageHidden
+  record('image-ready.timeout-fallback', delayedImagePaths.has(delayedImageRequestPath)
+    && !slowNetwork.imageComplete && slowNetwork.imageHidden
     && !slowNetwork.awaiting && !slowNetwork.ready && slowNetwork.fallbackState && slowNetwork.revealVisible
     && slowNetwork.readiness === 'fallback' && slowNetwork.mediaState === 'fallback'
     && slowNetwork.fallbackVisible && slowNetwork.fallbackText.length > 5
-    && slowNetwork.fallbackAriaHidden === 'false', slowNetwork);
+    && slowNetwork.fallbackAriaHidden === 'false', { ...slowNetwork, interceptedPath: delayedImageRequestPath });
 
   const loaded = await waitForCondition(`(() => {
     const image = document.querySelector('[data-product-presentation="premium"] [data-v2-image]');
@@ -474,10 +488,11 @@ const runImageReadyAudit = async () => {
       fallbackAriaHidden: fallback?.getAttribute('aria-hidden') || ''
     };
   })()`);
-  record('image-ready.final-state', final.loaded && final.complete && final.naturalWidth > 0
+  record('image-ready.final-state', delayedImagePaths.has(delayedImageRequestPath)
+    && final.loaded && final.complete && final.naturalWidth > 0
     && !final.imageHidden && final.ready && !final.awaiting && final.revealVisible
     && final.readiness === 'ready' && final.mediaState === 'ready'
-    && final.fallbackAriaHidden === 'true', final);
+    && final.fallbackAriaHidden === 'true', { ...final, interceptedPath: delayedImageRequestPath });
 };
 
 const runImageErrorAudit = async () => {
@@ -514,10 +529,11 @@ const runImageErrorAudit = async () => {
       fallbackAriaHidden: fallback?.getAttribute('aria-hidden') || ''
     };
   })()`);
-  record('image-ready.error-fallback', state.reachedFallback && state.imageComplete && state.naturalWidth === 0
+  record('image-ready.error-fallback', delayedImagePaths.has(invalidImageRequestPath)
+    && state.reachedFallback && state.imageComplete && state.naturalWidth === 0
     && state.imageHidden && state.readiness === 'fallback' && state.revealVisible
     && state.mediaState === 'fallback' && state.fallbackVisible && state.fallbackText.length > 5
-    && state.fallbackAriaHidden === 'false', state);
+    && state.fallbackAriaHidden === 'false', { ...state, interceptedPath: invalidImageRequestPath });
 };
 
 const runHeroScrollAudit = async (name, route) => {
