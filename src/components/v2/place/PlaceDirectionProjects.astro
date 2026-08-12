@@ -1,6 +1,7 @@
 ---
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 import type { V2ProjectMedia, V2ProjectPresentation } from '../mediaRoleAdapter';
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 
 interface Props {
   title: string;
@@ -46,23 +47,23 @@ const description = (project: V2ProjectPresentation) =>
         {featureMedia && (
           <div class="place-projects__media" data-v2-reveal>
             <figure class="place-projects__feature" data-v2-media>
-              <img
-                src={withBase(featureMedia.src)}
+              <V2ResponsiveImage
+                src={featureMedia.src}
                 alt={featureMedia.alt || featured.project.title}
-                width="1920"
-                height="1080"
-                loading="eager"
+                role="project"
+                sizes="(max-width: 760px) calc(100vw - 32px), 58vw"
+                loading="lazy"
                 decoding="async"
                 data-v2-image
               />
             </figure>
             {evidenceMedia && (
               <figure class="place-projects__evidence" data-v2-media>
-                <img
-                  src={withBase(evidenceMedia.src)}
+                <V2ResponsiveImage
+                  src={evidenceMedia.src}
                   alt={evidenceMedia.alt || featured.project.title}
-                  width="1920"
-                  height="1080"
+                  role="project"
+                  sizes="(max-width: 760px) calc(100vw - 32px), 32vw"
                   loading="lazy"
                   decoding="async"
                   data-v2-image

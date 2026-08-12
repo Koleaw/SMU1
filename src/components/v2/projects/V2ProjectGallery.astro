@@ -2,6 +2,8 @@
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import type { V2ProjectMedia } from '../mediaRoleAdapter';
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import { resolveV2ResponsiveMedia, type V2MediaRole } from '../../../utils/v2ResponsiveMedia';
 import '../../../styles/v2/projects-v2.css';
 
 interface Props {
@@ -34,7 +36,30 @@ const galleryId = `v2-project-gallery-${safeKey}`;
 const lightboxTitleId = `${galleryId}-lightbox-title`;
 const lightboxCaptionId = `${galleryId}-lightbox-caption`;
 const first = galleryImages[0];
-const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(image.src) }));
+const gallerySizes = variant === 'proof'
+  ? '(max-width: 760px) calc(100vw - 32px), 55vw'
+  : '(max-width: 760px) calc(100vw - 32px), min(1360px, calc(100vw - 64px))';
+const responsivePayload = (source: string, role: V2MediaRole, sizes: string) => {
+  const media = resolveV2ResponsiveMedia(source, role);
+  const serialise = (items: Array<{ path: string; width: number }>) => items
+    .map((item) => `${withBase(item.path)} ${item.width}w`)
+    .join(', ');
+  return {
+    src: withBase(media.src),
+    avif: serialise(media.avif),
+    webp: serialise(media.webp),
+    fallback: serialise(media.fallback),
+    sizes,
+    width: media.width,
+    height: media.height
+  };
+};
+const galleryData = galleryImages.map((image) => ({
+  alt: image.alt,
+  caption: image.caption,
+  main: responsivePayload(image.src, 'gallery', gallerySizes),
+  lightbox: responsivePayload(image.src, 'lightbox', '100vw')
+}));
 ---
 
 {hasImages && (
@@ -52,15 +77,16 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
           aria-label="Открыть текущее изображение на весь экран"
           data-v2-project-gallery-open
         >
-          <img
-            src={withBase(first.src)}
+          <V2ResponsiveImage
+            src={first.src}
             alt={first.alt}
-            width="1600"
-            height="1100"
+            role="gallery"
+            sizes={gallerySizes}
             loading={eagerFirst ? 'eager' : 'lazy'}
             fetchpriority={eagerFirst ? 'high' : 'auto'}
             decoding="async"
             data-v2-project-gallery-main
+            data-v2-page-critical={eagerFirst ? '' : undefined}
           />
           <span class="v2-project-gallery__zoom" aria-hidden="true">Развернуть</span>
           <span class="v2-project-gallery__fallback" data-v2-project-gallery-fallback hidden>
@@ -93,7 +119,16 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
             data-v2-project-gallery-thumb
             data-v2-project-gallery-index={index}
           >
-            <img src={withBase(image.src)} alt="" width="180" height="132" loading="lazy" decoding="async" />
+            <V2ResponsiveImage
+              src={image.src}
+              alt=""
+              role="thumbnail"
+              sizes="(max-width: 760px) 88px, 104px"
+              width="180"
+              height="132"
+              loading="lazy"
+              decoding="async"
+            />
           </button>
         ))}
       </div>
@@ -131,7 +166,9 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
           </div>
         </header>
         <div class="v2-project-lightbox__media" data-v2-project-gallery-swipe>
-          <img alt="" data-v2-project-lightbox-image />
+          <picture data-v2-project-lightbox-picture>
+            <img alt="" data-v2-project-lightbox-image />
+          </picture>
           <p class="v2-project-lightbox__fallback" hidden data-v2-project-lightbox-fallback>
             Изображение не удалось загрузить
           </p>
@@ -145,7 +182,21 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
 )}
 
 <script>
-  type V2GalleryImage = { src: string; alt: string; caption?: string };
+  type ResponsiveCandidate = {
+    src: string;
+    avif?: string;
+    webp?: string;
+    fallback?: string;
+    sizes?: string;
+    width?: number;
+    height?: number;
+  };
+  type V2GalleryImage = {
+    alt: string;
+    caption?: string;
+    main: ResponsiveCandidate;
+    lightbox: ResponsiveCandidate;
+  };
 
   const initV2ProjectGalleries = () => {
     document.querySelectorAll<HTMLElement>('[data-v2-project-gallery]').forEach((gallery) => {
@@ -159,7 +210,7 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
       } catch {
         parsed = {};
       }
-      const images = Array.isArray(parsed.images) ? parsed.images.filter((image) => image?.src) : [];
+      const images = Array.isArray(parsed.images) ? parsed.images.filter((image) => image?.main?.src) : [];
       if (images.length === 0) return;
 
       const mainImage = gallery.querySelector<HTMLImageElement>('[data-v2-project-gallery-main]');
@@ -188,6 +239,33 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
         element.hidden = !value;
       };
 
+      const setResponsiveSource = (image: HTMLImageElement, candidate: ResponsiveCandidate) => {
+        const picture = image.closest('picture');
+        const setSource = (format: string, value = '') => {
+          let source = picture?.querySelector<HTMLSourceElement>(`[data-v2-source-format="${format}"]`);
+          if (!source && value && picture) {
+            source = document.createElement('source');
+            source.dataset.v2SourceFormat = format;
+            if (format === 'avif') source.type = 'image/avif';
+            if (format === 'webp') source.type = 'image/webp';
+            picture.insertBefore(source, image);
+          }
+          if (!source) return;
+          if (value) source.srcset = value;
+          else source.removeAttribute('srcset');
+          if (candidate.sizes) source.sizes = candidate.sizes;
+        };
+        setSource('avif', candidate.avif);
+        setSource('webp', candidate.webp);
+        setSource('fallback', candidate.fallback);
+        if (candidate.fallback) image.srcset = candidate.fallback;
+        else image.removeAttribute('srcset');
+        if (candidate.sizes) image.sizes = candidate.sizes;
+        if (candidate.width) image.width = candidate.width;
+        if (candidate.height) image.height = candidate.height;
+        image.src = candidate.src;
+      };
+
       const setMainImage = (image: V2GalleryImage) => {
         media.classList.remove('is-broken');
         mainFallback?.setAttribute('hidden', '');
@@ -203,7 +281,7 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
           media.classList.add('is-broken');
           mainFallback?.removeAttribute('hidden');
         };
-        mainImage.src = image.src;
+        setResponsiveSource(mainImage, image.main);
       };
 
       const syncLightbox = () => {
@@ -220,7 +298,7 @@ const galleryData = galleryImages.map((image) => ({ ...image, src: withBase(imag
           lightboxImage.hidden = true;
           lightboxFallback?.removeAttribute('hidden');
         };
-        lightboxImage.src = image.src;
+        setResponsiveSource(lightboxImage, image.lightbox);
         if (lightboxStatus) lightboxStatus.textContent = `${current + 1} / ${images.length}`;
         syncCaption(lightboxCaption, image.caption || '');
       };

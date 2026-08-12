@@ -1,6 +1,7 @@
 ---
 import { v2Href } from '../../../utils/v2Routes';
 import type { V2ProjectMedia, V2ProjectPresentation } from '../mediaRoleAdapter';
+import { resolveV2ResponsiveMedia } from '../../../utils/v2ResponsiveMedia';
 import { loadPublishedV2ProjectPresentations } from './projectV2Data';
 import '../../../styles/v2/project-archive-gateway.css';
 
@@ -16,21 +17,15 @@ interface Props {
 type GatewayFrame = {
   src: string;
   position: string;
+  avifSrcset?: string;
   webpSrcset?: string;
+  fallbackSrcset?: string;
+  width?: number;
+  height?: number;
 };
 
 const FRAME_INTERVAL_MS = 3000;
 const CROSSFADE_MS = 700;
-const GATEWAY_IMAGE_WIDTHS = [768, 1360, 1600, 2080, 3200] as const;
-const GATEWAY_MEDIA_STEMS: Readonly<Record<string, string>> = {
-  '/uploads/project-da0872c68d9a09f0a7d2f995.jpg': 'project-da0872c68d9a09f0a7d2f995',
-  '/uploads/img-20250724-134235-1783272745917.jpg': 'img-20250724-134235-1783272745917',
-  '/uploads/project-05c77513c1a391e5a71a7dee.jpg': 'project-05c77513c1a391e5a71a7dee',
-  '/uploads/project-248f17177df30b29ab9b231a.jpg': 'project-248f17177df30b29ab9b231a',
-  '/uploads/img-20231102-142552-1783272745634.jpg': 'img-20231102-142552-1783272745634',
-  '/uploads/img-20231223-222338-1783272745821.jpg': 'img-20231223-222338-1783272745821',
-  '/uploads/img-20250724-133811-1783272616313.jpg': 'img-20250724-133811-1783272616313'
-};
 
 const {
   variant,
@@ -110,15 +105,18 @@ const responsiveSizes = variant === 'home'
       'calc(100vw - 24px)'
     ].join(', ');
 const frames = orderedFrames.map((frame): GatewayFrame => {
-  const derivativeStem = GATEWAY_MEDIA_STEMS[frame.src];
+  const media = resolveV2ResponsiveMedia(frame.src, 'gateway', responsiveSizes);
+  const serialize = (items: Array<{ path: string; width: number }>) => items
+    .map((item) => `${v2Href(item.path, Astro.url.pathname)} ${item.width}w`)
+    .join(', ');
   return {
-    ...frame,
-    src: v2Href(frame.src, Astro.url.pathname),
-    webpSrcset: derivativeStem
-      ? GATEWAY_IMAGE_WIDTHS
-          .map((width) => `${v2Href(`/assets/images/gateway/${derivativeStem}-w${width}.webp`, Astro.url.pathname)} ${width}w`)
-          .join(', ')
-      : undefined
+    position: frame.position,
+    src: v2Href(media.src, Astro.url.pathname),
+    avifSrcset: serialize(media.avif) || undefined,
+    webpSrcset: serialize(media.webp) || undefined,
+    fallbackSrcset: serialize(media.fallback) || undefined,
+    width: media.width,
+    height: media.height
   };
 });
 const firstFrame = frames[0];
@@ -160,20 +158,37 @@ const canRotate = frames.length > 1;
         {firstFrame && (
           <span class="v2-project-archive-gateway__media" aria-hidden="true" data-gateway-media>
             <picture class="v2-project-archive-gateway__picture" data-gateway-current-picture>
+              {firstFrame.avifSrcset && (
+                <source
+                  type="image/avif"
+                  srcset={firstFrame.avifSrcset}
+                  sizes={responsiveSizes}
+                  data-gateway-format="avif"
+                />
+              )}
               {firstFrame.webpSrcset && (
                 <source
                   type="image/webp"
                   srcset={firstFrame.webpSrcset}
                   sizes={responsiveSizes}
-                  data-gateway-current-source
+                  data-gateway-format="webp"
+                />
+              )}
+              {firstFrame.fallbackSrcset && (
+                <source
+                  srcset={firstFrame.fallbackSrcset}
+                  sizes={responsiveSizes}
+                  data-gateway-format="fallback"
                 />
               )}
               <img
                 class="v2-project-archive-gateway__image is-current"
                 src={firstFrame.src}
+                srcset={firstFrame.fallbackSrcset}
+                sizes={responsiveSizes}
                 alt=""
-                width="1920"
-                height="1200"
+                width={firstFrame.width || 1920}
+                height={firstFrame.height || 1200}
                 loading="lazy"
                 decoding="async"
                 style={`object-position: ${firstFrame.position};`}
@@ -217,10 +232,17 @@ const canRotate = frames.length > 1;
 </section>
 
 <script>
-  type GatewayFrame = { src: string; position: string; webpSrcset?: string };
+  type GatewayFrame = {
+    src: string;
+    position: string;
+    avifSrcset?: string;
+    webpSrcset?: string;
+    fallbackSrcset?: string;
+    width?: number;
+    height?: number;
+  };
   type GatewaySlot = {
     picture: HTMLPictureElement;
-    source: HTMLSourceElement | null;
     image: HTMLImageElement;
   };
 
@@ -234,7 +256,6 @@ const canRotate = frames.length > 1;
     const link = root.querySelector<HTMLAnchorElement>('[data-gateway-link]');
     const media = root.querySelector<HTMLElement>('[data-gateway-media]');
     const initialPicture = root.querySelector<HTMLPictureElement>('[data-gateway-current-picture]');
-    const initialSource = root.querySelector<HTMLSourceElement>('[data-gateway-current-source]');
     const initialImage = root.querySelector<HTMLImageElement>('[data-gateway-current-image]');
     const toggle = root.querySelector<HTMLButtonElement>('[data-gateway-toggle]');
     const pauseIcon = root.querySelector<SVGElement>('[data-gateway-pause-icon]');
@@ -279,9 +300,6 @@ const canRotate = frames.length > 1;
     const standbyPicture = document.createElement('picture');
     standbyPicture.className = 'v2-project-archive-gateway__picture';
     standbyPicture.setAttribute('aria-hidden', 'true');
-    const standbySource = document.createElement('source');
-    standbySource.type = 'image/webp';
-    standbySource.setAttribute('sizes', responsiveSizes);
     const standbyImage = document.createElement('img');
     standbyImage.className = 'v2-project-archive-gateway__image';
     standbyImage.alt = '';
@@ -290,16 +308,14 @@ const canRotate = frames.length > 1;
     standbyImage.loading = 'eager';
     standbyImage.decoding = 'async';
     standbyImage.setAttribute('aria-hidden', 'true');
-    standbyPicture.append(standbySource, standbyImage);
+    standbyPicture.append(standbyImage);
 
     let currentSlot: GatewaySlot = {
       picture: initialPicture,
-      source: initialSource,
       image: initialImage
     };
     let standbySlot: GatewaySlot = {
       picture: standbyPicture,
-      source: standbySource,
       image: standbyImage
     };
     let currentIndex = 0;
@@ -376,23 +392,31 @@ const canRotate = frames.length > 1;
       return -1;
     };
 
-    const ensureSource = (slot: GatewaySlot) => {
-      if (slot.source) return slot.source;
+    const ensureSource = (slot: GatewaySlot, format: string, type?: string) => {
+      const existing = slot.picture.querySelector<HTMLSourceElement>(`source[data-gateway-format="${format}"]`);
+      if (existing) return existing;
       const source = document.createElement('source');
-      source.type = 'image/webp';
+      source.dataset.gatewayFormat = format;
+      if (type) source.type = type;
       slot.picture.insertBefore(source, slot.image);
-      slot.source = source;
       return source;
     };
 
     const applyFrame = (slot: GatewaySlot, frame: GatewayFrame) => {
-      const source = ensureSource(slot);
-      source.setAttribute('sizes', responsiveSizes);
-      if (frame.webpSrcset) {
-        source.setAttribute('srcset', frame.webpSrcset);
-      } else {
-        source.removeAttribute('srcset');
-      }
+      const applySource = (format: string, type: string | undefined, srcset = '') => {
+        const source = ensureSource(slot, format, type);
+        source.setAttribute('sizes', responsiveSizes);
+        if (srcset) source.setAttribute('srcset', srcset);
+        else source.removeAttribute('srcset');
+      };
+      applySource('avif', 'image/avif', frame.avifSrcset);
+      applySource('webp', 'image/webp', frame.webpSrcset);
+      applySource('fallback', undefined, frame.fallbackSrcset);
+      if (frame.fallbackSrcset) slot.image.srcset = frame.fallbackSrcset;
+      else slot.image.removeAttribute('srcset');
+      slot.image.sizes = responsiveSizes;
+      if (frame.width) slot.image.width = frame.width;
+      if (frame.height) slot.image.height = frame.height;
       slot.image.src = frame.src;
       slot.image.style.objectPosition = frame.position;
     };

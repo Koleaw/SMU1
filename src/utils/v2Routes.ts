@@ -3,7 +3,7 @@ import { withBase } from './withBase';
 export type V2Scope = 'production' | 'design-lab';
 
 const EXTERNAL_OR_FRAGMENT = /^(?:#|[a-z][a-z\d+.-]*:|\/\/)/i;
-const MEDIA_OR_TOOL_PATH = /^\/(?:assets|uploads|admin)(?:\/|$)/;
+const MEDIA_OR_TOOL_PATH = /^\/(?:_media|assets|uploads|admin)(?:\/|$)/;
 
 const normalizeRoute = (value: string) => {
   if (value === '/') return '/';

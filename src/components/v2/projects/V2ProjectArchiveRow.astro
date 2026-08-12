@@ -2,6 +2,7 @@
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 import type { V2ProjectPresentation } from '../mediaRoleAdapter';
 import V2ProjectMeta from './V2ProjectMeta.astro';
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 
 interface Props {
   presentation: V2ProjectPresentation;
@@ -35,16 +36,17 @@ const description = project.whatWasDone?.trim() || project.shortDescription;
         style={`--v2-project-archive-position: ${archiveCoverPosition};`}
         data-v2-media
       >
-        <img
+        <V2ResponsiveImage
           class="v2-project-archive-row__image"
-          src={withBase(archiveCoverMedia.src)}
+          src={archiveCoverMedia.src}
           alt={archiveCoverMedia.alt}
-          width={archiveCoverOrientation === 'portrait' ? 900 : 1200}
-          height={archiveCoverOrientation === 'portrait' ? 1200 : 900}
+          role="project"
+          sizes="(max-width: 760px) calc(100vw - 32px), 58vw"
           loading={eager ? 'eager' : 'lazy'}
           fetchpriority={eager ? 'high' : 'auto'}
           decoding="async"
           data-v2-image
+          data-v2-page-critical={eager ? '' : undefined}
         />
       </figure>
     )}

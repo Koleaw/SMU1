@@ -147,9 +147,9 @@ const sectionNavItems = [
           </header>
 
         <div class="v2-product-grid" role="list" aria-label={`Товары категории ${category.title}`}>
-          {displayProducts.map((product, index) => (
+          {displayProducts.map((product) => (
             <div role="listitem">
-              <V2ProductCard product={product} href={productHref(product)} loading={index < 4 ? 'eager' : 'lazy'} />
+              <V2ProductCard product={product} href={productHref(product)} loading="lazy" />
             </div>
           ))}
         </div>
@@ -176,6 +176,7 @@ const sectionNavItems = [
                 title={category.title}
                 imageView={category.imageView}
                 entityLabel="категории"
+                mediaSizes="(max-width: 760px) calc(100vw - 32px), min(1120px, calc(100vw - 64px))"
               />
             </div>
           </div>

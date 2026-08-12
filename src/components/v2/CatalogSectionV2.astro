@@ -130,7 +130,7 @@ const rootClass = fenceHubEnabled
                 href={categoryHref(category)}
                 productCount={categoryProductCounts[category.slug] || 0}
                 featured={index === 0}
-                loading={index < 3 ? 'eager' : 'lazy'}
+                loading="lazy"
               />
             </div>
           ))}

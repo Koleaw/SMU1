@@ -2,6 +2,7 @@
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 import { imageViewStyle } from '../catalogV2Data';
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 
 interface BreadcrumbItem {
   title: string;
@@ -111,11 +112,11 @@ const mediaStyle = [
       data-v2-reveal-stage="media"
       data-v2-entrance-role="media"
     >
-      <img
-        src={withBase(image)}
+      <V2ResponsiveImage
+        src={image}
         alt={imageAlt || title}
-        width="1920"
-        height="1280"
+        role="hero"
+        sizes="100vw"
         loading="eager"
         fetchpriority="high"
         decoding="async"

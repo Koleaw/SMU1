@@ -4,6 +4,7 @@ import { getV2TelegramLabel } from '../../../utils/v2SiteSettings';
 import settings from '../../../content/site-settings/global.json';
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import V2HeroHandoff from '../V2HeroHandoff.astro';
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 import type { CustomOrderV2Data } from './customOrderV2Data';
 import '../../../styles/v2/custom-order-v2.css';
 
@@ -54,11 +55,11 @@ const heroMedia = data.heroMedia[0];
           </div>
 
           <div class="custom-order-hero__media" data-v2-media data-v2-entrance-role="media">
-            <img
-              src={withBase(heroMedia.src)}
+            <V2ResponsiveImage
+              src={heroMedia.src}
               alt={heroMedia.alt}
-              width="3072"
-              height="4096"
+              role="hero"
+              sizes="(max-width: 760px) 100vw, 50vw"
               loading="eager"
               decoding="async"
               fetchpriority="high"

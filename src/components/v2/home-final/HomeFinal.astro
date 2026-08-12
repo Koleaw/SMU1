@@ -8,6 +8,7 @@ import HomeV2Footer from '../home-v2/HomeV2Footer.astro';
 import HomeV2Header from '../home-v2/HomeV2Header.astro';
 import { getHomeV2Presentation } from '../home-v2/homeV2Presentation';
 import V2ProjectArchiveGateway from '../projects/V2ProjectArchiveGateway.astro';
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 import '../../../styles/v2/home-final.css';
 
 const path = (value: string) => v2Href(value, Astro.url.pathname);
@@ -119,11 +120,11 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
         <div class="hf-directions__layout">
           {directionCards.map(({ direction, className, kicker }) => direction && (
             <a class={`hf-direction hf-direction--${className}`} href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="media">
-              {direction.image && <img
-                src={path(direction.image)}
+              {direction.image && <V2ResponsiveImage
+                src={direction.image}
                 alt=""
-                width="1920"
-                height="1200"
+                role="card"
+                sizes="(max-width: 760px) calc(100vw - 32px), (max-width: 1180px) 50vw, 42vw"
                 loading="lazy"
                 decoding="async"
                 style={`object-fit:${direction.imageFit};object-position:${direction.imagePosition};`}
@@ -156,11 +157,11 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
             data-reveal
             data-v2-reveal="media"
           >
-            {landscapingDirection.image && <img
-              src={path(landscapingDirection.image)}
+            {landscapingDirection.image && <V2ResponsiveImage
+              src={landscapingDirection.image}
               alt=""
-              width="1920"
-              height="1200"
+              role="card"
+              sizes="(max-width: 760px) calc(100vw - 32px), 86vw"
               loading="lazy"
               decoding="async"
               style={`object-fit:${landscapingDirection.imageFit};object-position:${landscapingDirection.imagePosition};`}

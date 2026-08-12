@@ -503,7 +503,8 @@
   cursor: zoom-in;
 }
 
-.v2-project-gallery__open > img {
+.v2-project-gallery__open > img,
+.v2-project-gallery__open > picture > img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -514,7 +515,9 @@
 }
 
 .v2-project-gallery__open:hover > img,
-.v2-project-gallery__open:focus-visible > img {
+.v2-project-gallery__open:focus-visible > img,
+.v2-project-gallery__open:hover > picture > img,
+.v2-project-gallery__open:focus-visible > picture > img {
   opacity: 0.94;
 }
 
@@ -770,10 +773,14 @@
   touch-action: pan-y pinch-zoom;
 }
 
+.v2-project-lightbox__media picture,
 .v2-project-lightbox__media img {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.v2-project-lightbox__media img {
   object-fit: contain;
 }
 

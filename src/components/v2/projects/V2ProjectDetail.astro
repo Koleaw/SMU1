@@ -8,6 +8,7 @@ import { projectTextItems } from './projectV2Data';
 import V2ProjectGallery from './V2ProjectGallery.astro';
 import V2ProjectMeta from './V2ProjectMeta.astro';
 import V2SectionNav from '../V2SectionNav.astro';
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 import '../../../styles/v2/projects-v2.css';
 
 interface Props {
@@ -78,11 +79,11 @@ const sectionNavItems = [
           data-v2-reveal
           data-v2-entrance-role="media"
         >
-          <img
-            src={withBase(heroMedia.src)}
+          <V2ResponsiveImage
+            src={heroMedia.src}
             alt={heroMedia.alt}
-            width="1600"
-            height="1200"
+            role="hero"
+            sizes="(max-width: 760px) calc(100vw - 32px), 56vw"
             loading="eager"
             fetchpriority="high"
             decoding="async"

@@ -70,7 +70,8 @@
   content: '';
 }
 
-.place-hero__media > img {
+.place-hero__media > img,
+.place-hero__media > picture > img {
   width: 100%;
   height: 100%;
 }
@@ -98,7 +99,8 @@
   text-align: center;
 }
 
-.place-hero__media.is-broken > img {
+.place-hero__media.is-broken > img,
+.place-hero__media.is-broken > picture > img {
   display: none;
 }
 
@@ -373,7 +375,8 @@
   background: var(--hv2-dark-olive, #20352b);
 }
 
-.place-projects__gallery .v2-product-gallery__open > img {
+.place-projects__gallery .v2-product-gallery__open > img,
+.place-projects__gallery .v2-product-gallery__open > picture > img {
   background: var(--hv2-dark-olive, #20352b);
 }
 

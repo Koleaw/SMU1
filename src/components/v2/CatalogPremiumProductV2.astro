@@ -5,6 +5,7 @@ import CatalogV2Layout from './CatalogV2Layout.astro';
 import V2Breadcrumbs from './V2Breadcrumbs.astro';
 import V2ProductGallery from './V2ProductGallery.astro';
 import V2ProductCard from './V2ProductCard.astro';
+import V2ResponsiveImage from './V2ResponsiveImage.astro';
 import V2DirectContact from './V2DirectContact.astro';
 import V2HeroHandoff from './V2HeroHandoff.astro';
 import V2SectionNav from './V2SectionNav.astro';
@@ -176,11 +177,11 @@ const sectionNavItems = [
           style={imageVariableStyle}
         >
           {primaryImage ? (
-            <img
-              src={withBase(primaryImage)}
+            <V2ResponsiveImage
+              src={primaryImage}
               alt={`${product.title} — общий вид`}
-              width="1800"
-              height="1280"
+              role="hero"
+              sizes="(max-width: 760px) 100vw, 50vw"
               loading="eager"
               fetchpriority="high"
               decoding="async"
@@ -247,7 +248,13 @@ const sectionNavItems = [
             <div><p class="hv2-eyebrow">Масштаб и детали</p><h2 id="premium-gallery-title">Галерея решения</h2></div>
           </header>
           <div class="v2-premium-gallery__viewer" data-v2-reveal="section-media" style={imageVariableStyle}>
-            <V2ProductGallery images={images} title={product.title} imageView={product.imageView} entityLabel="решения" />
+            <V2ProductGallery
+              images={images}
+              title={product.title}
+              imageView={product.imageView}
+              entityLabel="решения"
+              mediaSizes="(max-width: 760px) calc(100vw - 32px), calc(100vw - 64px)"
+            />
           </div>
         </div>
       </section>

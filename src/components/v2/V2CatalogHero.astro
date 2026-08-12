@@ -2,6 +2,7 @@
 import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import V2Breadcrumbs from './V2Breadcrumbs.astro';
+import V2ResponsiveImage from './V2ResponsiveImage.astro';
 import {
   catalogMediaPresentation,
   imageViewStyle,
@@ -108,11 +109,11 @@ const imagePresentationStyle = [
         data-v2-reveal="entry-media"
         data-v2-entrance-role="media"
       >
-        <img
-          src={withBase(image)}
+        <V2ResponsiveImage
+          src={image}
           alt={imageAlt || title}
-          width="1200"
-          height="900"
+          role="hero"
+          sizes="(max-width: 760px) calc(100vw - 32px), (max-width: 1180px) 48vw, 44vw"
           loading="eager"
           fetchpriority="high"
           decoding="async"

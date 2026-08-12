@@ -116,7 +116,8 @@
   background: var(--hv2-surface);
 }
 
-.direction-hero__media > img {
+.direction-hero__media > img,
+.direction-hero__media > picture > img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -441,7 +442,8 @@
   background: var(--hv2-graphite, #1d2421);
 }
 
-.direction-gallery .v2-product-gallery__open > img {
+.direction-gallery .v2-product-gallery__open > img,
+.direction-gallery .v2-product-gallery__open > picture > img {
   background: var(--hv2-graphite, #1d2421);
 }
 

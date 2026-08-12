@@ -2,6 +2,7 @@
 import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import { formatProductPrice, imageViewStyle, productGalleryImages, type ProductData } from './catalogV2Data';
+import V2ResponsiveImage from './V2ResponsiveImage.astro';
 
 interface Props {
   product: ProductData;
@@ -27,11 +28,11 @@ const isPremium = product.presentationType === 'premium';
 >
   <div class="v2-product-card__media" data-v2-media>
     {cardImage ? (
-      <img
-        src={withBase(cardImage)}
+      <V2ResponsiveImage
+        src={cardImage}
         alt={product.title}
-        width="800"
-        height="640"
+        role="card"
+        sizes="(max-width: 760px) calc(100vw - 48px), (max-width: 1180px) 44vw, 24vw"
         loading={loading}
         decoding="async"
         style={imageViewStyle(product.imageView)}

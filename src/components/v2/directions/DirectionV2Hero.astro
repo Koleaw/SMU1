@@ -2,6 +2,7 @@
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import { imageViewStyle } from '../catalogV2Data';
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 
 interface Props {
   eyebrow?: string;
@@ -52,11 +53,11 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
 
     {resolvedLayout !== 'no-media' && (
       <figure class="direction-hero__media" data-v2-media data-v2-reveal>
-        <img
-          src={withBase(image)}
+        <V2ResponsiveImage
+          src={image}
           alt={imageAlt || title}
-          width="1448"
-          height="1086"
+          role="hero"
+          sizes="(max-width: 760px) calc(100vw - 32px), 54vw"
           loading="eager"
           fetchpriority="high"
           decoding="async"

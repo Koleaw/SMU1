@@ -1,9 +1,7 @@
 ---
-import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 import { imageViewStyle } from '../catalogV2Data';
 import type { DirectionCardItem } from './directionV2Data';
-
-const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 
 interface Props {
   eyebrow?: string;
@@ -76,7 +74,15 @@ const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
             >
               {item.image ? (
                 <figure class="direction-type-card__media" data-v2-media>
-                  <img src={withBase(item.image)} alt="" width="720" height="540" loading="lazy" decoding="async" data-v2-image />
+                  <V2ResponsiveImage
+                    src={item.image}
+                    alt=""
+                    role="card"
+                    sizes="(max-width: 760px) calc(100vw - 32px), 30vw"
+                    loading="lazy"
+                    decoding="async"
+                    data-v2-image
+                  />
                 </figure>
               ) : null}
               <div class="direction-type-card__body">
@@ -124,11 +130,11 @@ const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
               >
                 {item.image ? (
                   <figure class="direction-type-editorial__media" data-v2-media>
-                    <img
-                      src={withBase(item.image)}
+                    <V2ResponsiveImage
+                      src={item.image}
                       alt={item.imageAlt || item.title}
-                      width="720"
-                      height="540"
+                      role="card"
+                      sizes="(max-width: 760px) calc(100vw - 32px), 48vw"
                       loading="lazy"
                       decoding="async"
                       style={imageViewStyle(item.imageView)}

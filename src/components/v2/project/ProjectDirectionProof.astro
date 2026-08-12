@@ -2,6 +2,7 @@
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import type { V2ProjectMedia } from '../mediaRoleAdapter';
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 
 interface FeaturedProject {
   title: string;
@@ -48,12 +49,12 @@ const sequence = featured.images.filter((_, index) => index !== safeFeatureIndex
     <article class="project-proof__featured">
       <div class="project-proof__media" data-v2-reveal>
         <figure class="project-proof__feature" data-v2-media>
-          <img
-            src={withBase(featureImage.src)}
+          <V2ResponsiveImage
+            src={featureImage.src}
             alt={featureImage.alt || featured.title}
-            width="1920"
-            height="1080"
-            loading="eager"
+            role="project"
+            sizes="(max-width: 760px) calc(100vw - 32px), 58vw"
+            loading="lazy"
             decoding="async"
             data-v2-image
           />
@@ -62,11 +63,11 @@ const sequence = featured.images.filter((_, index) => index !== safeFeatureIndex
           <div class="project-proof__sequence">
             {sequence.map((image) => (
               <figure data-v2-media>
-                <img
-                  src={withBase(image.src)}
+                <V2ResponsiveImage
+                  src={image.src}
                   alt={image.alt || featured.title}
-                  width="1440"
-                  height="1080"
+                  role="project"
+                  sizes="(max-width: 760px) calc(100vw - 32px), 32vw"
                   loading="lazy"
                   decoding="async"
                   data-v2-image

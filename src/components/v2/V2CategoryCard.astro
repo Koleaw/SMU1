@@ -7,6 +7,7 @@ import {
   isPlaceholderCatalogMedia,
   type ProductCategoryData
 } from './catalogV2Data';
+import V2ResponsiveImage from './V2ResponsiveImage.astro';
 
 interface Props {
   category: ProductCategoryData;
@@ -28,6 +29,9 @@ const productNoun = productCount % 10 === 1 && productCount % 100 !== 11
     ? 'опубликованных изделия'
     : 'опубликованных изделий';
 const state = productCount > 0 ? 'products' : hasMedia ? 'sparse' : 'minimal';
+const mediaSizes = featured
+  ? '(max-width: 760px) calc(100vw - 64px), (max-width: 1180px) 44vw, 47vw'
+  : '(max-width: 760px) calc(100vw - 64px), (max-width: 1180px) 44vw, 24vw';
 const stateLabel = productCount > 0
   ? `${productCount} ${productNoun}`
   : hasMedia
@@ -44,11 +48,11 @@ const stateLabel = productCount > 0
 >
   <div class="v2-category-card__media" data-v2-media>
     {cardImage ? (
-      <img
-        src={withBase(cardImage)}
+      <V2ResponsiveImage
+        src={cardImage}
         alt={category.title}
-        width="900"
-        height="680"
+        role="card"
+        sizes={mediaSizes}
         loading={loading}
         decoding="async"
         style={imageViewStyle(category.imageView)}

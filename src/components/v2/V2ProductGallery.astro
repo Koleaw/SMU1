@@ -2,6 +2,8 @@
 import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import { imageViewStyle } from './catalogV2Data';
+import V2ResponsiveImage from './V2ResponsiveImage.astro';
+import { resolveV2ResponsiveMedia, type V2MediaRole } from '../../utils/v2ResponsiveMedia';
 
 interface Props {
   images: string[];
@@ -10,6 +12,7 @@ interface Props {
   caption?: string;
   entityLabel?: string;
   pageCritical?: boolean;
+  mediaSizes?: string;
 }
 
 const {
@@ -18,7 +21,8 @@ const {
   imageView,
   caption = '',
   entityLabel = 'товара',
-  pageCritical = false
+  pageCritical = false,
+  mediaSizes = '(max-width: 760px) calc(100vw - 32px), min(1120px, calc(100vw - 64px))'
 } = Astro.props as Props;
 const galleryImages = Array.from(new Set(images.map((item) => item.trim()).filter(Boolean)));
 const hasImages = galleryImages.length > 0;
@@ -26,6 +30,25 @@ const hasMultipleImages = galleryImages.length > 1;
 const galleryId = 'v2-product-gallery';
 const lightboxTitleId = 'v2-product-lightbox-title';
 const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galleryImages.length}` : `${title} — фото`;
+const responsivePayload = (source: string, role: V2MediaRole, sizes: string) => {
+  const media = resolveV2ResponsiveMedia(source, role);
+  const serialise = (items: Array<{ path: string; width: number }>) => items
+    .map((item) => `${withBase(item.path)} ${item.width}w`)
+    .join(', ');
+  return {
+    src: withBase(media.src),
+    avif: serialise(media.avif),
+    webp: serialise(media.webp),
+    fallback: serialise(media.fallback),
+    sizes,
+    width: media.width,
+    height: media.height
+  };
+};
+const galleryPayload = galleryImages.map((source) => ({
+  main: responsivePayload(source, 'gallery', mediaSizes),
+  lightbox: responsivePayload(source, 'lightbox', '100vw')
+}));
 ---
 
 <section
@@ -39,13 +62,13 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
     <div class="v2-product-gallery__media" data-v2-media>
       {hasImages ? (
         <button class="v2-product-gallery__open" type="button" aria-label="Открыть текущее изображение на весь экран" data-v2-gallery-open>
-          <img
-            src={withBase(galleryImages[0])}
+          <V2ResponsiveImage
+            src={galleryImages[0]}
             alt={firstImageAlt}
-            width="1400"
-            height="1100"
-            loading="eager"
-            fetchpriority="high"
+            role="gallery"
+            sizes={mediaSizes}
+            loading={pageCritical ? 'eager' : 'lazy'}
+            fetchpriority={pageCritical ? 'high' : 'auto'}
             decoding="async"
             style={imageViewStyle(imageView)}
             data-v2-gallery-main
@@ -83,9 +106,17 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
           aria-pressed={index === 0 ? 'true' : 'false'}
           data-v2-gallery-thumb
           data-v2-gallery-index={index}
-          data-v2-gallery-src={withBase(image)}
         >
-          <img src={withBase(image)} alt="" width="180" height="140" loading="lazy" decoding="async" />
+          <V2ResponsiveImage
+            src={image}
+            alt=""
+            role="thumbnail"
+            sizes="(max-width: 760px) 84px, 92px"
+            width="180"
+            height="140"
+            loading="lazy"
+            decoding="async"
+          />
         </button>
       ))}
     </div>
@@ -114,7 +145,9 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
           </div>
         </header>
         <div class="v2-product-lightbox__media" data-v2-lightbox-media>
-          <img alt="" data-v2-lightbox-image />
+          <picture data-v2-lightbox-picture>
+            <img alt="" data-v2-lightbox-image />
+          </picture>
           <div class="v2-product-lightbox__fallback" hidden>Изображение не удалось загрузить</div>
         </div>
       </div>
@@ -123,7 +156,7 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
   <script
     type="application/json"
     data-v2-gallery-data
-    set:html={JSON.stringify({ images: galleryImages.map(withBase), title })}
+    set:html={JSON.stringify({ images: galleryPayload, title })}
     is:inline
   />
 </section>
@@ -134,13 +167,26 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
       if (gallery.dataset.ready === 'true') return;
       gallery.dataset.ready = 'true';
       const dataElement = gallery.querySelector<HTMLScriptElement>('[data-v2-gallery-data]');
-      let data: { images?: string[]; title?: string } = {};
+      type ResponsiveCandidate = {
+        src: string;
+        avif?: string;
+        webp?: string;
+        fallback?: string;
+        sizes?: string;
+        width?: number;
+        height?: number;
+      };
+      type GalleryCandidate = {
+        main: ResponsiveCandidate;
+        lightbox: ResponsiveCandidate;
+      };
+      let data: { images?: GalleryCandidate[]; title?: string } = {};
       try {
         data = JSON.parse(dataElement?.textContent || '{}');
       } catch {
         data = {};
       }
-      const sources = Array.isArray(data.images) ? data.images.filter(Boolean) : [];
+      const sources = Array.isArray(data.images) ? data.images.filter((item) => item?.main?.src) : [];
       const galleryTitle = data.title || 'Изображение товара';
       const mainImage = gallery.querySelector<HTMLImageElement>('[data-v2-gallery-main]');
       const media = gallery.querySelector<HTMLElement>('[data-v2-media]');
@@ -167,7 +213,33 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
       const altFor = (index: number) => sources.length > 1
         ? `${galleryTitle} — фото ${index + 1} из ${sources.length}`
         : `${galleryTitle} — фото`;
-      const setImageState = (image: HTMLImageElement, container: HTMLElement, src: string, alt: string) => {
+      const setResponsiveSource = (image: HTMLImageElement, candidate: ResponsiveCandidate) => {
+        const picture = image.closest('picture');
+        const setSource = (format: string, value = '') => {
+          let source = picture?.querySelector<HTMLSourceElement>(`[data-v2-source-format="${format}"]`);
+          if (!source && value && picture) {
+            source = document.createElement('source');
+            source.dataset.v2SourceFormat = format;
+            if (format === 'avif') source.type = 'image/avif';
+            if (format === 'webp') source.type = 'image/webp';
+            picture.insertBefore(source, image);
+          }
+          if (!source) return;
+          if (value) source.srcset = value;
+          else source.removeAttribute('srcset');
+          if (candidate.sizes) source.sizes = candidate.sizes;
+        };
+        setSource('avif', candidate.avif);
+        setSource('webp', candidate.webp);
+        setSource('fallback', candidate.fallback);
+        if (candidate.fallback) image.srcset = candidate.fallback;
+        else image.removeAttribute('srcset');
+        if (candidate.sizes) image.sizes = candidate.sizes;
+        if (candidate.width) image.width = candidate.width;
+        if (candidate.height) image.height = candidate.height;
+        image.src = candidate.src;
+      };
+      const setImageState = (image: HTMLImageElement, container: HTMLElement, candidate: ResponsiveCandidate, alt: string) => {
         container.classList.remove('is-broken');
         emptyState?.setAttribute('aria-hidden', 'true');
         image.hidden = false;
@@ -181,7 +253,7 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
           container.classList.add('is-broken');
           emptyState?.setAttribute('aria-hidden', 'false');
         };
-        image.src = src;
+        setResponsiveSource(image, candidate);
       };
 
       const syncLightbox = () => {
@@ -197,7 +269,7 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
           lightboxImage.hidden = true;
           if (lightboxFallback) lightboxFallback.hidden = false;
         };
-        lightboxImage.src = sources[current];
+        setResponsiveSource(lightboxImage, sources[current].lightbox);
         if (lightboxStatus) lightboxStatus.textContent = `${current + 1} / ${sources.length}`;
       };
 
@@ -222,7 +294,7 @@ const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galler
       const setCurrent = (index: number, revealThumb = true) => {
         current = normalizedIndex(index);
         gallery.dataset.v2GalleryCurrent = String(current);
-        setImageState(mainImage, media, sources[current], altFor(current));
+        setImageState(mainImage, media, sources[current].main, altFor(current));
         thumbs.forEach((thumb, thumbIndex) => {
           const isCurrent = thumbIndex === current;
           thumb.classList.toggle('is-current', isCurrent);

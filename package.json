@@ -7,7 +7,8 @@
     "dev": "astro dev",
     "admin:api": "node tools/admin-api/server.mjs",
     "test:admin-import": "node --test tools/admin-api/content-json.test.mjs tools/admin-api/project-media.test.mjs tools/admin-api/server-routes.test.mjs",
-    "build": "astro build",
+    "media:prepare": "node tools/performance/prepare-media.mjs",
+    "build": "npm run media:prepare && astro build",
     "preview": "astro preview",
     "check": "astro check",
     "qa:deploy-isolation": "node tools/migration/deploy-isolation-qa.mjs",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
+    "sharp": "0.34.5",
     "typescript": "^5.9.3"
   }
 }

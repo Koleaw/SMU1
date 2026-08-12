@@ -1,0 +1,89 @@
+---
+import { v2Href as resolveV2Href } from '../../utils/v2Routes';
+import {
+  resolveV2ResponsiveMedia,
+  type V2MediaRole
+} from '../../utils/v2ResponsiveMedia';
+
+interface Props {
+  src: string;
+  alt: string;
+  role: V2MediaRole;
+  sizes: string;
+  loading?: 'eager' | 'lazy';
+  fetchpriority?: 'high' | 'low' | 'auto';
+  decoding?: 'async' | 'sync' | 'auto';
+  width?: number | string;
+  height?: number | string;
+  class?: string;
+  style?: string;
+  [key: `data-${string}`]: string | boolean | undefined;
+}
+
+const {
+  src,
+  alt,
+  role,
+  sizes,
+  loading = 'lazy',
+  fetchpriority = 'auto',
+  decoding = 'async',
+  width,
+  height,
+  class: className,
+  style,
+  ...attributes
+} = Astro.props as Props;
+const media = resolveV2ResponsiveMedia(src, role);
+const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+const srcset = (items: Array<{ path: string; width: number }>) => items
+  .map((item) => `${withBase(item.path)} ${item.width}w`)
+  .join(', ');
+const resolvedWidth = width ?? media.width;
+const resolvedHeight = height ?? media.height;
+---
+
+<picture data-v2-responsive-picture={role}>
+  {media.avif.length > 0 && (
+    <source type="image/avif" srcset={srcset(media.avif)} sizes={sizes} data-v2-source-format="avif" />
+  )}
+  {media.webp.length > 0 && (
+    <source type="image/webp" srcset={srcset(media.webp)} sizes={sizes} data-v2-source-format="webp" />
+  )}
+  {media.fallback.length > 0 && (
+    <source
+      type={media.fallbackType}
+      srcset={srcset(media.fallback)}
+      sizes={sizes}
+      data-v2-source-format="fallback"
+    />
+  )}
+  <img
+    src={withBase(media.src)}
+    srcset={media.fallback.length > 0 ? srcset(media.fallback) : undefined}
+    sizes={media.fallback.length > 0 ? sizes : undefined}
+    alt={alt}
+    width={resolvedWidth}
+    height={resolvedHeight}
+    loading={loading}
+    fetchpriority={fetchpriority}
+    decoding={decoding}
+    class={className}
+    style={style}
+    {...attributes}
+  />
+</picture>
+
+<style>
+  :global([data-v2-responsive-picture]) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  :global([data-v2-responsive-picture] > img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+</style>

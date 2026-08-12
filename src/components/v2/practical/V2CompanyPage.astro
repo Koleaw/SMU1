@@ -9,6 +9,7 @@ import V2ProjectArchiveGateway from '../projects/V2ProjectArchiveGateway.astro';
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import V2DirectContact from '../V2DirectContact.astro';
 import V2SectionNav from '../V2SectionNav.astro';
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 
 interface Props {
   page: CollectionEntry<'static-pages'>['data'];
@@ -101,19 +102,24 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
     style={`--company-hero-position: ${heroPosition};`}
   >
     {heroMedia && (
-      <img
+      <div
         class="practical-company__hero-image"
-        src={withBase(heroMedia.src)}
-        alt={heroMedia.alt}
-        width="4096"
-        height="3072"
-        loading="eager"
-        fetchpriority="high"
-        decoding="async"
-        data-v2-image
-        data-v2-page-critical
+        data-v2-media
         data-v2-entrance-role="media"
-      />
+      >
+        <V2ResponsiveImage
+          src={heroMedia.src}
+          alt={heroMedia.alt}
+          role="hero"
+          sizes="100vw"
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+          data-v2-image
+          data-v2-page-critical
+        />
+        <div class="v2-media-empty" aria-hidden="true"><p>Изображение компании недоступно</p></div>
+      </div>
     )}
     <div class="practical-company__hero-edge" aria-hidden="true"></div>
 

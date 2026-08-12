@@ -2,6 +2,7 @@
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import { imageViewStyle } from '../catalogV2Data';
+import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 
 interface MediaItem {
   src: string;
@@ -51,11 +52,11 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
       <div class:list={['project-hero__media', { 'project-hero__media--single': visibleMedia.length === 1 }]} data-v2-reveal>
         {visibleMedia.map((item, index) => (
           <figure class:list={['project-hero__figure', `project-hero__figure--${index + 1}`]} data-v2-media>
-            <img
-              src={withBase(item.src)}
+            <V2ResponsiveImage
+              src={item.src}
               alt={item.alt}
-              width="1600"
-              height="1100"
+              role="hero"
+              sizes="(max-width: 760px) calc(100vw - 32px), 34vw"
               loading={index === 0 ? 'eager' : 'lazy'}
               fetchpriority={index === 0 ? 'high' : undefined}
               decoding="async"
