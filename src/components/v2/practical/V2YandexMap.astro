@@ -14,15 +14,14 @@ const { title } = Astro.props as Props;
   aria-label={title}
   data-v2-yandex-map
   data-v2-map-title={title}
+  data-v2-map-constructor={yandex.map.constructorSrc}
 >
-  <script
-    is:inline
-    type="text/javascript"
-    charset="utf-8"
-    async
-    src={yandex.map.constructorSrc}
-  ></script>
-  <noscript>Для просмотра карты включите JavaScript.</noscript>
+  <div class="practical-yandex-map__placeholder" data-v2-map-placeholder>
+    <p>Интерактивная карта загружается по запросу.</p>
+    <button type="button" data-v2-map-activate>Показать карту</button>
+    <span role="status" aria-live="polite" data-v2-map-status></span>
+  </div>
+  <noscript>Адрес и ссылка «Открыть в Яндекс Картах» доступны рядом с картой.</noscript>
 </div>
 
 <script is:inline>
@@ -31,18 +30,58 @@ const { title } = Astro.props as Props;
       if (map.dataset.v2MapReady === 'true') return;
       map.dataset.v2MapReady = 'true';
       const title = map.dataset.v2MapTitle || 'Яндекс Карта';
+      const constructorSrc = map.dataset.v2MapConstructor || '';
+      const activateButton = map.querySelector('[data-v2-map-activate]');
+      const placeholder = map.querySelector('[data-v2-map-placeholder]');
+      const status = map.querySelector('[data-v2-map-status]');
+      let started = false;
+      let intersectionObserver;
       const labelFrames = () => {
         const frames = map.querySelectorAll('iframe');
         frames.forEach((frame) => frame.setAttribute('title', title));
+        if (frames.length > 0) {
+          placeholder?.setAttribute('hidden', '');
+          map.dataset.v2MapState = 'ready';
+        }
         return frames.length > 0;
       };
-      if (labelFrames()) return;
-      const observer = new MutationObserver(() => {
-        if (!labelFrames()) return;
-        observer.disconnect();
-      });
-      observer.observe(map, { childList: true, subtree: true });
-      window.setTimeout(() => observer.disconnect(), 15000);
+      const activate = () => {
+        if (started || !constructorSrc) return;
+        started = true;
+        intersectionObserver?.disconnect();
+        map.dataset.v2MapState = 'loading';
+        if (status) status.textContent = 'Загружаем карту…';
+        if (activateButton) activateButton.disabled = true;
+        const script = document.createElement('script');
+        script.async = true;
+        script.setAttribute('charset', 'utf-8');
+        script.src = constructorSrc;
+        const observer = new MutationObserver(() => {
+          if (!labelFrames()) return;
+          observer.disconnect();
+        });
+        observer.observe(map, { childList: true, subtree: true });
+        window.setTimeout(() => observer.disconnect(), 15000);
+        script.addEventListener('error', () => {
+          started = false;
+          observer.disconnect();
+          map.dataset.v2MapState = 'error';
+          if (status) status.textContent = 'Карту не удалось загрузить. Используйте ссылку ниже.';
+          if (activateButton) activateButton.disabled = false;
+          script.remove();
+        }, { once: true });
+        map.append(script);
+      };
+
+      activateButton?.addEventListener('click', activate);
+      const saveData = Boolean(navigator.connection?.saveData);
+      if (!saveData && 'IntersectionObserver' in window) {
+        intersectionObserver = new IntersectionObserver((entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          activate();
+        }, { rootMargin: '480px 0px', threshold: 0 });
+        intersectionObserver.observe(map);
+      }
     });
   })();
 </script>
