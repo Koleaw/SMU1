@@ -4,8 +4,8 @@ import HomeV2Header from './home-v2/HomeV2Header.astro';
 import HomeV2Footer from './home-v2/HomeV2Footer.astro';
 import V2PaletteSwitch from './V2PaletteSwitch.astro';
 import { getV2Scope } from '../../utils/v2Routes';
-import '../../styles/v2/catalog-v2.css';
-import '../../styles/v2/product-final-stage-a.css';
+import catalogStylesheetUrl from '../../styles/v2/catalog-v2.css?url';
+import productFinalStylesheetUrl from '../../styles/v2/product-final-stage-a.css?url';
 
 interface Props {
   title: string;
@@ -63,6 +63,10 @@ const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
   noindex={noindex}
   robots={robots}
   refreshTarget={refreshTarget}
+  blockingStylesheetUrls={[
+    catalogStylesheetUrl,
+    ...(productFinalEnabled ? [productFinalStylesheetUrl] : [])
+  ]}
 >
   <div
     class:list={['home-v2', 'catalog-v2', rootClass]}

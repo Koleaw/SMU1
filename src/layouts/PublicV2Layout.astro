@@ -29,6 +29,7 @@ interface Props {
   structuredData?: Record<string, unknown> | Record<string, unknown>[];
   refreshTarget?: string;
   entryMotion?: 'preview';
+  blockingStylesheetUrls?: string[];
 }
 
 const {
@@ -42,7 +43,8 @@ const {
   noCanonical = false,
   structuredData,
   refreshTarget = '',
-  entryMotion
+  entryMotion,
+  blockingStylesheetUrls = []
 } = Astro.props as Props;
 
 const isProduction = scope === 'production';
@@ -437,6 +439,9 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <link rel="stylesheet" href={finalArtDirectionUrl} data-final-art-direction />
     {isPublicV2Motion && <link rel="stylesheet" href={entranceV2Url} data-v2-entrance-styles />}
     {isPublicV2Motion && <link rel="stylesheet" href={h4ScaleV2Url} data-v2-h4-scale-styles />}
+    {blockingStylesheetUrls.map((href) => (
+      <link rel="stylesheet" href={href} data-v2-route-styles />
+    ))}
   </head>
   <body class="home-v2-body">
     {isPublicV2Motion && <V2PageTransition />}
