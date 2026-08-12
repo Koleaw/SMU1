@@ -582,15 +582,23 @@ const navigateHref = async (href, { complete = true, settleMs = 80 } = {}) => {
   await settle(settleMs);
 };
 const screenshot = async (name, metadata = {}) => {
-  const result = await cdp.send('Page.captureScreenshot', {
+  const viewport = await evaluate(`({ width: innerWidth, height: innerHeight, dpr: devicePixelRatio })`).catch(() => ({}));
+  const outputScale = Number.isFinite(metadata.outputScale) ? metadata.outputScale : 1;
+  const capture = /** @type {Record<string, unknown>} */ ({
     format: 'png', fromSurface: true, captureBeyondViewport: false
-  }, 40_000);
+  });
+  // Chrome 151 on Windows can close the CDP target while allocating a single
+  // 2880x1800 PNG surface. Keep the page rendered at DPR 2, but allow a
+  // downsampled evidence file for that one visual audit.
+  if (outputScale !== 1 && viewport.width > 0 && viewport.height > 0) {
+    capture.clip = { x: 0, y: 0, width: viewport.width, height: viewport.height, scale: outputScale };
+  }
+  const result = await cdp.send('Page.captureScreenshot', capture, 40_000);
   const directory = String(metadata.directory || '').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
   const safeName = String(name).replace(/[^a-z0-9а-яё._-]+/gi, '-').replace(/^-+|-+$/g, '');
   const filename = path.join(artifactRoot, directory, `${safeName}.png`);
   await mkdir(path.dirname(filename), { recursive: true });
   await writeFile(filename, Buffer.from(result.data, 'base64'));
-  const viewport = await evaluate(`({ width: innerWidth, height: innerHeight, dpr: devicePixelRatio })`).catch(() => ({}));
   const href = await evaluate('location.href').catch(() => '');
   captureManifest.push({
     branch: gitHead.branch,
@@ -599,6 +607,7 @@ const screenshot = async (name, metadata = {}) => {
     route: metadata.route || href,
     flow: metadata.flow || name,
     viewport,
+    outputScale,
     activationSource: metadata.activationSource || '',
     variant: metadata.variant || '',
     captureOffset: Number.isFinite(metadata.offset) ? metadata.offset : null,
@@ -2050,9 +2059,16 @@ const fullBleedTransitionMediaAudit = async () => {
       directory: 'final/transitions/h3',
       flow: 'home-to-metalworks-full-bleed',
       variant: 'h3',
-      dpr
+      dpr,
+      outputScale: dpr === 2 ? 0.5 : 1
     });
     visual.pixels = await analyzeH3MediaPixels(filename, visual);
+    const captureMetadata = await sharp(filename).metadata();
+    visual.capture = {
+      width: captureMetadata.width || 0,
+      height: captureMetadata.height || 0,
+      outputScale: dpr === 2 ? 0.5 : 1
+    };
     const usable = await waitUntilUsable(6500);
     const faultHits = serverFault.hits;
     clearFault();
@@ -2072,6 +2088,8 @@ const fullBleedTransitionMediaAudit = async () => {
     && result.visual.semanticPending && result.visual.hostState === 'pending'
     && result.visual.hostRect?.width >= result.visual.viewport.width * 0.95
     && result.visual.hostRect?.height >= result.visual.viewport.height * 0.95
+    && result.visual.capture?.width === 1440
+    && result.visual.capture?.height === 900
     && result.visual.pixels?.darkRatio > 0.08
     && result.visual.pixels?.chromaticRatio > 0.05
   )), { results });
