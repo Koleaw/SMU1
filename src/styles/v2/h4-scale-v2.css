@@ -60,8 +60,7 @@
 
 :root[data-v2-public-route='true'] .home-v2-body :is(
   .hv2-header__phone,
-  .hv2-header__telegram,
-  .hv2-header__telegram-label
+  .hv2-header__telegram
 ) {
   min-height: 44px;
   font-size: 12px;

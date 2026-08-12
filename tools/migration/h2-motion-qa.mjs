@@ -3372,7 +3372,10 @@ const responsiveHeaderTypographyAudit = async () => {
     const brand = header?.querySelector('.hv2-header__brand');
     const brandImage = brand?.querySelector('img,svg');
     const navLink = header?.querySelector('.hv2-header__nav-link,[data-hv2-dropdown-trigger]');
+    const actions = header?.querySelector('.hv2-header__actions');
     const phone = header?.querySelector('.hv2-header__phone');
+    const telegram = header?.querySelector('.hv2-header__telegram');
+    const telegramLabel = telegram?.querySelector('.hv2-header__telegram-label');
     const cta = header?.querySelector('.hv2-button--header');
     const menu = header?.querySelector('[data-hv2-mobile-open]');
     const main = document.querySelector('main');
@@ -3472,6 +3475,14 @@ const responsiveHeaderTypographyAudit = async () => {
         fontSize: Number.parseFloat(style.fontSize), minHeight: Number.parseFloat(style.minHeight) || 0,
         color: style.color, background: style.backgroundColor, display: style.display };
     };
+    const textRangeMetric = (element) => {
+      if (!(element instanceof HTMLElement)) return null;
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const rect = range.getBoundingClientRect();
+      return { left: rect.left, top: rect.top, width: rect.width, height: rect.height,
+        centerX: rect.left + rect.width / 2, centerY: rect.top + rect.height / 2 };
+    };
     const headerStyle = header ? getComputedStyle(header) : null;
     return {
       href: location.href,
@@ -3488,7 +3499,11 @@ const responsiveHeaderTypographyAudit = async () => {
         brand: rectMetric(brand),
         brandImage: rectMetric(brandImage),
         nav: rectMetric(navLink),
+        actions: rectMetric(actions),
         phone: rectMetric(phone),
+        telegram: rectMetric(telegram),
+        telegramLabel: rectMetric(telegramLabel),
+        telegramText: textRangeMetric(telegramLabel),
         cta: rectMetric(cta),
         menu: rectMetric(menu),
         background: headerStyle.backgroundColor,
@@ -3605,13 +3620,33 @@ const responsiveHeaderTypographyAudit = async () => {
           && initial.header.menu.width >= (viewport.width <= 760 ? 44 : 87)
         : fullNavVisible && initial.header.nav.fontSize >= 12.5 && initial.header.nav.fontSize <= 15
           && initial.header.nav.height >= 44 && initial.header.cta?.height >= 44;
+      const telegramVisible = Boolean(initial.header?.actions
+        && initial.header.actions.display !== 'none'
+        && initial.header.actions.width > 0 && initial.header.actions.height > 0);
+      const telegramGeometryOk = !telegramVisible || Boolean(
+        initial.header.telegram && initial.header.telegramText && scrolled.header.telegram && scrolled.header.telegramText
+        && initial.header.telegram.width >= 44 && initial.header.telegram.height >= 44
+        && scrolled.header.telegram.width >= 44 && scrolled.header.telegram.height >= 44
+        && Math.abs(initial.header.telegramText.centerY
+          - (initial.header.telegram.top + initial.header.telegram.height / 2)) <= 1
+        && Math.abs((initial.header.telegram.top + initial.header.telegram.height / 2)
+          - (initial.header.actions.top + initial.header.actions.height / 2)) <= 1
+        && Math.abs(scrolled.header.telegramText.centerY
+          - (scrolled.header.telegram.top + scrolled.header.telegram.height / 2)) <= 1
+        && Math.abs((scrolled.header.telegram.top + scrolled.header.telegram.height / 2)
+          - (scrolled.header.actions.top + scrolled.header.actions.height / 2)) <= 1
+        && Math.abs(scrolled.header.phone.top - initial.header.phone.top) <= 1
+        && Math.abs(scrolled.header.phone.height - initial.header.phone.height) <= 1
+        && Math.abs(scrolled.header.cta.top - initial.header.cta.top) <= 1
+        && Math.abs(scrolled.header.cta.height - initial.header.cta.height) <= 1
+      );
       const headerOk = Boolean(initial.header && scrolled.header)
         && Math.abs(initial.header.cssHeight - headerExpected) <= .5
         && Math.abs(initial.header.rect.height - headerExpected) <= 1
         && Math.abs(scrolled.header.rect.height - initial.header.rect.height) <= 1
         && Math.abs(initial.header.brand.width - logoExpected) <= 9
         && Math.abs(scrolled.header.brand.width - initial.header.brand.width) <= 1
-        && controlsOk
+        && controlsOk && telegramGeometryOk
         && (viewport.width > 760 || menuVisible);
       const visualContract = (header) => {
         if (!header) return false;
@@ -3658,6 +3693,7 @@ const responsiveHeaderTypographyAudit = async () => {
         viewport: `${viewport.width}x${viewport.height}`,
         expected: { headerHeight: headerExpected, logoWidth: logoExpected, typeScale },
         headerOk,
+        telegramGeometryOk,
         headerVisualOk,
         typeOk,
         overflowOk,
@@ -3677,8 +3713,8 @@ const responsiveHeaderTypographyAudit = async () => {
     templates: representatives.map(({ routeKind, pathname }) => ({ routeKind, pathname })),
     audited: responsiveMetrics.length,
     failures: responsiveMetrics.filter((row) => !row.headerOk || !row.headerVisualOk || !row.typeOk || !row.overflowOk || !row.evidenceOk)
-      .map(({ route, routeKind, viewport, headerOk, headerVisualOk, typeOk, overflowOk, evidenceOk }) => (
-        { route, routeKind, viewport, headerOk, headerVisualOk, typeOk, overflowOk, evidenceOk }
+      .map(({ route, routeKind, viewport, headerOk, telegramGeometryOk, headerVisualOk, typeOk, overflowOk, evidenceOk }) => (
+        { route, routeKind, viewport, headerOk, telegramGeometryOk, headerVisualOk, typeOk, overflowOk, evidenceOk }
       )),
     longTextIssues });
   await setViewport(1440, 900, false, 1);
