@@ -1,4 +1,5 @@
 ---
+import { safeInlineJson } from '../utils/safeInlineJson.mjs';
 import { withBase } from '../utils/withBase';
 
 interface Item { title: string; href?: string }
@@ -35,4 +36,4 @@ const breadcrumbSchema = items.length > 1
     </>
   ))}
 </nav>
-{breadcrumbSchema && <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />}
+{breadcrumbSchema && <script type="application/ld+json" set:html={safeInlineJson(breadcrumbSchema)} />}

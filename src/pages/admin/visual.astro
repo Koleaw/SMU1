@@ -257,6 +257,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
     <script type="module" define:vars={{ adminApiBase, baseUrl, adminHome }}>
       const API_BASE = adminApiBase;
+      let csrfToken = '';
       const PRODUCTION_NOT_READY_MESSAGE = 'Боевой сайт пока не настроен. Используйте тестовую публикацию.';
       const DEFAULT_MEDIA_VIEW = { fit: 'cover', positionX: 50, positionY: 50, scale: 1 };
       const COLLECTIONS = [
@@ -474,46 +475,6 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       const getRecord = (ref) => state.records[ref];
       const getMainRef = () => state.selectedSlug ? keyOf(state.collection, state.selectedSlug) : null;
 
-      const PRESENTATION_FIELD_KEYS = new Set([
-        'heroTitleStyle',
-        'heroDescriptionStyle',
-        'heroLayout',
-        'descriptionTextStyle',
-        'descriptionLayout',
-        'titleStyle',
-        'textStyle',
-        'layout',
-        'fontSize',
-        'fontWeight',
-        'italic',
-        'align',
-        'textAlign',
-        'lineHeight',
-        'color',
-        'textColor',
-        'width',
-        'widthPercent',
-        'maxWidth',
-        'position',
-        'padding',
-        'verticalPadding',
-        'sectionSpacing',
-        'textBlockWidth',
-        'textWidth',
-        'textSize',
-        'titleSize',
-        'textWeight',
-        'textItalic'
-      ]);
-
-      function stripPresentationFields(value) {
-        if (Array.isArray(value)) return value.map((item) => stripPresentationFields(item));
-        if (!value || typeof value !== 'object') return value;
-        return Object.fromEntries(Object.entries(value)
-          .filter(([key]) => !PRESENTATION_FIELD_KEYS.has(key))
-          .map(([key, item]) => [key, stripPresentationFields(item)]));
-      }
-
       function normalizeMediaItem(item) {
         if (typeof item === 'string') {
           const src = item.trim();
@@ -605,7 +566,12 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         let cursor = record.draft;
         for (let i = 0; i < parts.length - 1; i += 1) {
           const part = parts[i];
-          if (cursor[part] === undefined || cursor[part] === null) cursor[part] = /^\d+$/.test(parts[i + 1]) ? [] : {};
+          if (cursor[part] === undefined || cursor[part] === null) {
+            cursor[part] = /^\d+$/.test(parts[i + 1]) ? [] : {};
+          } else if (typeof cursor[part] !== 'object') {
+            const previous = cursor[part];
+            cursor[part] = /^\d+$/.test(parts[i + 1]) ? [] : (typeof previous === 'string' ? { src: previous } : {});
+          }
           cursor = cursor[part];
         }
         cursor[parts[parts.length - 1]] = value;
@@ -647,10 +613,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       async function api(path, options = {}) {
         let response;
         try {
+          const method = String(options.method || 'GET').toUpperCase();
+          const headers = options.body instanceof FormData ? { ...(options.headers || {}) } : { 'Content-Type': 'application/json', ...(options.headers || {}) };
+          if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && path !== '/login' && csrfToken) headers['X-Admin-CSRF'] = csrfToken;
           response = await fetch(`${API_BASE}${path}`, {
             ...options,
             credentials: 'include',
-            headers: options.body instanceof FormData ? (options.headers || {}) : { 'Content-Type': 'application/json', ...(options.headers || {}) }
+            headers
           });
         } catch {
           throw new Error('Не удалось подключиться к backend API. Запустите npm run admin:api.');
@@ -661,6 +630,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           error.data = data;
           throw error;
         }
+        if (data.csrfToken) csrfToken = data.csrfToken;
         return data;
       }
 
@@ -746,12 +716,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       async function contentJsonApi(pathname, options, debugContext) {
         const endpoint = `${API_BASE}${pathname}`;
-        const method = options?.method || 'GET';
+        const method = String(options?.method || 'GET').toUpperCase();
+        const headers = { 'Content-Type': 'application/json', ...(options?.headers || {}) };
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && csrfToken) headers['X-Admin-CSRF'] = csrfToken;
         let response;
         try {
           response = await fetch(endpoint, {
             ...options, method, credentials: 'include',
-            headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) }
+            headers
           });
         } catch (cause) {
           throw createJsonApiError({ ...debugContext, endpoint, method, cause });
@@ -760,6 +732,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         let data = {};
         try { data = responseBody ? JSON.parse(responseBody) : {}; } catch { data = {}; }
         if (!response.ok) throw createJsonApiError({ ...debugContext, endpoint, method, status: response.status, responseBody });
+        if (data.csrfToken) csrfToken = data.csrfToken;
         return data;
       }
 
@@ -1376,7 +1349,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const key = keyOf(collection, slug);
         if (state.records[key]) return state.records[key];
         const data = await api(`/content/${collection}/${slug}`);
-        state.records[key] = { collection, slug, original: clone(data.content), draft: clone(data.content) };
+        state.records[key] = {
+          collection,
+          slug,
+          original: clone(data.content),
+          draft: clone(data.content),
+          revision: data.revision,
+          schemaVersion: data.schemaVersion
+        };
         return state.records[key];
       }
 
@@ -1403,6 +1383,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const items = normalizeNavigationItems(data.items || []);
         state.navigationItems = clone(items);
         state.navigationOriginal = clone(items);
+        state.navigationRevision = data.revision;
         state.navigationLoaded = true;
         return items;
       }
@@ -2088,12 +2069,13 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           }
           try {
             if (row.action === 'create') {
-              const data = await api('/content/products', { method: 'POST', body: JSON.stringify({ slug: row.normalized.slug, content: row.normalized }) });
-              state.records[keyOf('products', data.slug)] = { collection: 'products', slug: data.slug, original: clone(data.content), draft: clone(data.content) };
+              const data = await api('/content/products', { method: 'POST', body: JSON.stringify({ slug: row.normalized.slug, content: row.normalized, baseRevision: 'missing' }) });
+              state.records[keyOf('products', data.slug)] = { collection: 'products', slug: data.slug, original: clone(data.content), draft: clone(data.content), revision: data.revision };
               result.created += 1;
             } else if (row.action === 'update') {
-              const data = await api(`/content/products/${encodeURIComponent(row.slug)}`, { method: 'PUT', body: JSON.stringify(row.normalized) });
-              state.records[keyOf('products', row.slug)] = { collection: 'products', slug: row.slug, original: clone(data.content), draft: clone(data.content) };
+              const record = getRecord(keyOf('products', row.slug));
+              const data = await api(`/content/products/${encodeURIComponent(row.slug)}`, { method: 'PUT', body: JSON.stringify({ content: row.normalized, baseRevision: record?.revision }) });
+              state.records[keyOf('products', row.slug)] = { collection: 'products', slug: row.slug, original: clone(data.content), draft: clone(data.content), revision: data.revision };
               result.updated += 1;
             }
           } catch (error) {
@@ -2446,6 +2428,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         if (typeof item === 'string') return { src: item, alt: '', caption: '' };
         if (item && typeof item === 'object') {
           return {
+            ...item,
             src: cleanMediaPath(item.src),
             alt: typeof item.alt === 'string' ? item.alt : '',
             caption: typeof item.caption === 'string' ? item.caption : ''
@@ -2458,7 +2441,6 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const record = getRecord(ref);
         const sourceItems = Array.isArray(getPath(record, path)) ? getPath(record, path) : [];
         const items = sourceItems.map(normalizeStructuredGalleryItem);
-        if (items !== sourceItems) setPath(record, path, items);
         return `<div class="admin-product-details"><strong>${esc(title)}</strong><p class="admin-field-hint">Изображения из этого списка выводятся на внутренней странице направления в блоке «Примеры решений». Основная картинка карточки на странице категории хранится отдельно.</p><div class="admin-gallery-list">${items.map((item, index) => {
           const itemPath = `${path}.${index}`;
           const imagePath = `${itemPath}.src`;
@@ -2976,7 +2958,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const serviceDirections = Object.values(state.records)
           .filter((record) => record.collection === 'services' && record.draft.showOnHome && record.draft.isActive)
           .sort((a, b) => (a.draft.order ?? 0) - (b.draft.order ?? 0));
-        const pathways = Array.isArray(page.pathwayCards) ? page.pathwayCards : (page.pathwayCards = []);
+        const pathways = Array.isArray(page.pathwayCards) ? page.pathwayCards : [];
         return `
           ${renderStaticHero(ref, 'hero--media')}
           ${renderHeroMediaPanel(ref)}
@@ -3033,7 +3015,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
       function renderPageBlocks(ref) {
         const record = getRecord(ref);
-        const blocks = Array.isArray(record.draft.pageBlocks) ? record.draft.pageBlocks : (record.draft.pageBlocks = []);
+        const blocks = Array.isArray(record.draft.pageBlocks) ? record.draft.pageBlocks : [];
         return `
           <section class="admin-create"><div class="container"><div class="admin-create-panel"><strong>Секции страницы</strong><p class="admin-muted">Добавляйте, скрывайте, удаляйте и меняйте порядок блоков. Кнопки «Выше» и «Ниже» сразу переставляют секцию в данных.</p><div class="admin-create-grid"><select id="newBlockType" class="admin-select">${SECTION_TYPES.map(([type, label]) => `<option value="${type}">${label}</option>`).join('')}</select><button class="admin-btn admin-btn--primary" type="button" data-action="add-block" data-ref="${ref}">Добавить секцию</button></div></div></div></section>
           ${blocks.map((block, index) => renderBlock(ref, block, index)).join('')}`;
@@ -3174,13 +3156,24 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         panel.querySelectorAll('[data-create-field]').forEach((input) => { fields[input.dataset.createField] = input.value; });
         const content = defaultContent(collection, fields);
         if (!content.slug) throw new Error('Заполните slug латиницей');
-        const cleanContent = stripPresentationFields(content);
-        const data = await api(`/content/${collection}`, { method: 'POST', body: JSON.stringify({ slug: cleanContent.slug, content: cleanContent }) });
-        state.records[keyOf(collection, data.slug)] = { collection, slug: data.slug, original: clone(data.content), draft: clone(data.content) };
+        if ('isActive' in content) content.isActive = false;
+        if ('showInCatalog' in content) content.showInCatalog = false;
+        if ('showInSectionGrid' in content) content.showInSectionGrid = false;
+        if ('showOnHome' in content) content.showOnHome = false;
+        if ('showInMenu' in content) content.showInMenu = false;
+        const data = await api(`/content/${collection}`, { method: 'POST', body: JSON.stringify({ slug: content.slug, content, baseRevision: 'missing' }) });
+        state.records[keyOf(collection, data.slug)] = {
+          collection,
+          slug: data.slug,
+          original: clone(data.content),
+          draft: clone(data.content),
+          revision: data.revision,
+          schemaVersion: data.schemaVersion
+        };
         await loadCollection(collection);
         if (state.collection === collection && collection !== 'jobs' && collection !== 'projects') state.selectedSlug = data.slug;
         renderApp();
-        await publishSavedChanges('Запись создана.');
+        setAlert('Запись создана локально и скрыта до явной публикации.');
       }
 
       async function deleteRecord(ref) {
@@ -3196,7 +3189,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         await loadCollection(record.collection);
         if (state.selectedSlug === record.slug && state.collection === record.collection) state.selectedSlug = '';
         renderApp();
-        await publishSavedChanges('Запись удалена.');
+        setAlert('Запись удалена локально. Публикация не запускалась.');
       }
 
       function visibleSelectedProductRefs() {
@@ -3226,7 +3219,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       }
 
       async function deleteProductRecord(ref, options = {}) {
-        const { confirmDelete = true, publish = true } = options;
+        const { confirmDelete = true } = options;
         const record = getRecord(ref);
         if (!record || record.collection !== 'products') return { ok: false, error: 'Товар не найден.' };
         if (confirmDelete && !confirm(`Удалить товар "${record.draft.title || record.slug}"?`)) return { ok: false, cancelled: true };
@@ -3245,7 +3238,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           renderApp();
         }
 
-        if (publish) await publishSavedChanges('Товар удален.');
+        setAlert('Товар удален локально. Публикация не запускалась.');
         return { ok: true };
       }
 
@@ -3279,13 +3272,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         syncProductSelectionUi();
         markDirty();
 
-        const published = result.deleted
-          ? await publishSavedChanges(`Удалено товаров: ${result.deleted}. Ошибок: ${result.errors.length}.`)
-          : false;
         if (result.errors.length) {
           setAlert(`Удалено: ${result.deleted}, ошибок: ${result.errors.length}. ${result.errors.join('; ')}`, true);
-        } else if (published || !result.deleted) {
-          setAlert(`Удалено: ${result.deleted}, ошибок: 0.`);
+        } else {
+          setAlert(`Удалено локально: ${result.deleted}, ошибок: 0. Публикация не запускалась.`);
         }
       }
 
@@ -3332,13 +3322,14 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         setAlert('Сохраняем порядок типов изделий...');
         try {
           for (const item of reordered) {
-          const data = await api(`/content/product-categories/${encodeURIComponent(item.slug)}`, { method: 'PUT', body: JSON.stringify(stripPresentationFields(item.draft)) });
+          const data = await api(`/content/product-categories/${encodeURIComponent(item.slug)}`, { method: 'PUT', body: JSON.stringify({ content: item.draft, baseRevision: item.revision }) });
             item.original = clone(data.content);
             item.draft = clone(data.content);
+            item.revision = data.revision;
           }
           await loadCollection('product-categories');
           renderApp();
-          await publishSavedChanges('Порядок типов изделий сохранен.');
+          setAlert('Порядок типов изделий сохранен локально. Публикация не запускалась.');
         } catch (error) {
           previousOrders.forEach((order, itemRef) => {
             const item = getRecord(itemRef);
@@ -3381,46 +3372,29 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         setAlert('Сохраняем...');
         try {
           for (const record of dirty) {
-            const data = await api(`/content/${record.collection}/${record.slug}`, { method: 'PUT', body: JSON.stringify(stripPresentationFields(record.draft)) });
+            const data = await api(`/content/${record.collection}/${record.slug}`, {
+              method: 'PUT',
+              body: JSON.stringify({ content: record.draft, baseRevision: record.revision })
+            });
             record.original = clone(data.content);
             record.draft = clone(data.content);
+            record.revision = data.revision;
           }
           if (navigationDirty) {
-            const data = await api('/navigation', { method: 'PUT', body: JSON.stringify({ items: state.navigationItems }) });
+            const data = await api('/navigation', {
+              method: 'PUT',
+              body: JSON.stringify({ items: state.navigationItems, baseRevision: state.navigationRevision })
+            });
             const items = normalizeNavigationItems(data.items || []);
             state.navigationItems = clone(items);
             state.navigationOriginal = clone(items);
+            state.navigationRevision = data.revision;
           }
           renderApp({ preserveScroll: true });
-          await publishSavedChanges('Изменения сохранены.');
+          setAlert('Изменения сохранены локально. Публикация не запускалась.');
         } catch (error) {
           setAlert(error.message || 'Ошибка сохранения', true);
           markDirty();
-        }
-      }
-
-      async function publishSavedChanges(savedMessage) {
-        setAlert(`${savedMessage} Публикуем тестовую версию на GitHub...`);
-        try {
-          const publish = await api('/publish', { method: 'POST', body: JSON.stringify({ target: 'test', source: 'visual-auto-save-test' }) });
-          setPublishStatus({ ...publish, status: publish.status || 'queued', reportAvailable: false });
-          startPublishPolling(publish);
-          setAlert(publish.message || 'Изменения опубликованы в тестовую версию.');
-          return true;
-        } catch (publishError) {
-          const status = {
-            mode: 'test',
-            target: 'test',
-            requestedTarget: 'test',
-            publishSource: 'visual-auto-save-test',
-            status: 'failure',
-            error: publishError.message || 'ошибка Git push',
-            code: publishError.data?.code || '',
-            reportAvailable: true
-          };
-          setPublishStatus(status);
-          setAlert(`${savedMessage} Но тестовая публикация не прошла: ${status.error}`, true);
-          return false;
         }
       }
 

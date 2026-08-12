@@ -1,4 +1,5 @@
 ---
+import { safeInlineJson } from '../../utils/safeInlineJson.mjs';
 import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import { imageViewStyle } from './catalogV2Data';
@@ -156,7 +157,7 @@ const galleryPayload = galleryImages.map((source) => ({
   <script
     type="application/json"
     data-v2-gallery-data
-    set:html={JSON.stringify({ images: galleryPayload, title })}
+    set:html={safeInlineJson({ images: galleryPayload, title })}
     is:inline
   />
 </section>

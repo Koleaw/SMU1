@@ -170,6 +170,7 @@ const adminHome = withBase('/admin/');
 
     <script type="module" define:vars={{ adminApiBase }}>
       const API_BASE = adminApiBase;
+      let csrfToken = '';
       const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
       const ROUTE_COLLECTIONS = ['static-pages', 'product-sections', 'services'];
       const PAGE_LABELS = {
@@ -197,13 +198,17 @@ const adminHome = withBase('/admin/');
       const pagesBody = document.getElementById('pagesBody');
 
       const api = async (path, options = {}) => {
+        const method = String(options.method || 'GET').toUpperCase();
+        const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && path !== '/login' && csrfToken) headers['X-Admin-CSRF'] = csrfToken;
         const response = await fetch(`${API_BASE}${path}`, {
           ...options,
           credentials: 'include',
-          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+          headers
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        if (data.csrfToken) csrfToken = data.csrfToken;
         return data;
       };
 
@@ -250,17 +255,8 @@ const adminHome = withBase('/admin/');
         const entries = list.entries ?? [];
         return Promise.all(entries.map(async (entry) => {
           const item = await api(`/content/${collection}/${encodeURIComponent(entry.slug)}`);
-          return { collection, originalSlug: entry.slug, content: item.content };
+          return { collection, originalSlug: entry.slug, content: item.content, revision: item.revision };
         }));
-      }
-
-      async function publishAfterSave() {
-        try {
-          const result = await api('/publish', { method: 'POST', body: JSON.stringify({ target: 'test', source: 'catalog-auto-save-test' }) });
-          return result.message || 'Сохранено и отправлено на публикацию.';
-        } catch (error) {
-          return `Сохранено локально. Публикация не выполнена: ${error.message}`;
-        }
       }
 
       async function loadData() {
@@ -423,19 +419,19 @@ const adminHome = withBase('/admin/');
         const affectedProducts = state.products.filter((product) => product.content.productCategorySlug === oldSlug);
         const result = await api(`/content/product-categories/${encodeURIComponent(source.originalSlug)}`, {
           method: 'PUT',
-          body: JSON.stringify(content)
+          body: JSON.stringify({ content, baseRevision: source.revision })
         });
 
         if (oldSlug !== content.slug && typeof result.updatedProductCount !== 'number') {
           for (const product of affectedProducts) {
             await api(`/content/products/${encodeURIComponent(product.originalSlug)}`, {
               method: 'PUT',
-              body: JSON.stringify({ ...product.content, productCategorySlug: content.slug })
+              body: JSON.stringify({ content: { ...product.content, productCategorySlug: content.slug }, baseRevision: product.revision })
             });
           }
         }
 
-        const publishMessage = await publishAfterSave();
+        const publishMessage = 'Публикация не запускалась.';
         await loadData();
         const movedCount = oldSlug === content.slug
           ? 0
@@ -447,9 +443,9 @@ const adminHome = withBase('/admin/');
         const { source, content } = readPageRow(row);
         await api(`/content/${source.collection}/${encodeURIComponent(source.originalSlug)}`, {
           method: 'PUT',
-          body: JSON.stringify(content)
+          body: JSON.stringify({ content, baseRevision: source.revision })
         });
-        const publishMessage = await publishAfterSave();
+        const publishMessage = 'Публикация не запускалась.';
         await loadData();
         setStatus(`Страница сохранена. ${publishMessage}`);
       }
@@ -472,10 +468,10 @@ const adminHome = withBase('/admin/');
         for (const item of reordered) {
           await api(`/content/product-categories/${encodeURIComponent(item.originalSlug)}`, {
             method: 'PUT',
-            body: JSON.stringify(item.content)
+            body: JSON.stringify({ content: item.content, baseRevision: item.revision })
           });
         }
-        const publishMessage = await publishAfterSave();
+        const publishMessage = 'Публикация не запускалась.';
         await loadData();
         setStatus(`Порядок сохранен. ${publishMessage}`);
       }
@@ -496,8 +492,8 @@ const adminHome = withBase('/admin/');
           heroTitle: title,
           heroDescription: 'Описание первого экрана.',
           order,
-          showInSectionGrid: true,
-          isActive: true,
+          showInSectionGrid: false,
+          isActive: false,
           image: '/assets/images/placeholders/street-furniture.svg',
           placeholderLabel: 'Фото будут добавлены позже.',
           mode: 'catalog-list',
@@ -507,9 +503,9 @@ const adminHome = withBase('/admin/');
 
         await api('/content/product-categories', {
           method: 'POST',
-          body: JSON.stringify({ slug, content })
+          body: JSON.stringify({ slug, content, baseRevision: 'missing' })
         });
-        const publishMessage = await publishAfterSave();
+        const publishMessage = 'Публикация не запускалась.';
         document.getElementById('createCategoryForm').reset();
         await loadData();
         setStatus(`Категория создана. ${publishMessage}`);

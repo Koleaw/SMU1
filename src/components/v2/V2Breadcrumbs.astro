@@ -1,4 +1,5 @@
 ---
+import { safeInlineJson } from '../../utils/safeInlineJson.mjs';
 import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 
@@ -44,4 +45,4 @@ const schema = {
     </nav>
   </div>
 </div>
-<script type="application/ld+json" set:html={JSON.stringify(schema)} is:inline />
+<script type="application/ld+json" set:html={safeInlineJson(schema)} is:inline />

@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "admin": "node tools/admin-api/launcher.mjs --open",
+    "admin:setup": "node tools/admin-api/setup.mjs",
     "admin:api": "node tools/admin-api/server.mjs",
+    "test:admin-foundation": "node --test tools/admin-api/content-store.test.mjs tools/admin-api/content-normalization.test.mjs tools/admin-api/content-registry.test.mjs tools/admin-api/content-validation.test.mjs tools/admin-api/url-policy.test.mjs tools/admin-api/security.test.mjs tools/admin-api/server-security.test.mjs tools/admin-api/setup.test.mjs src/utils/safeInlineJson.test.mjs",
     "test:admin-import": "node --test tools/admin-api/content-json.test.mjs tools/admin-api/project-media.test.mjs tools/admin-api/server-routes.test.mjs",
     "media:prepare": "node tools/performance/prepare-media.mjs",
     "build": "npm run media:prepare && astro build",

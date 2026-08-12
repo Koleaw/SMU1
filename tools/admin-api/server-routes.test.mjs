@@ -10,6 +10,8 @@ import {
   validateProductContentForWrite
 } from './product-presentation.mjs';
 
+const TEST_ORIGIN = 'http://127.0.0.1:4321';
+
 async function freePort() {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -28,9 +30,15 @@ async function startServer(t, options = {}) {
     env: {
       ...process.env,
       ADMIN_API_PORT: String(port),
+      ADMIN_API_HOST: '127.0.0.1',
+      ADMIN_UI_HOST: '127.0.0.1',
+      ADMIN_UI_PORT: '4321',
+      ADMIN_ALLOWED_ORIGINS: TEST_ORIGIN,
+      ADMIN_TEST_MODE: 'true',
+      CONTENT_WRITE_MODE: 'local',
       ADMIN_USERNAME: 'route-test-admin',
       ADMIN_PASSWORD: 'route-test-password',
-      SESSION_SECRET: 'route-test-session-secret',
+      SESSION_SECRET: 'route-test-session-secret-at-least-32-bytes',
       ...(options.contentRoot ? { ADMIN_TEST_CONTENT_ROOT: options.contentRoot } : {})
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -56,7 +64,7 @@ async function startServer(t, options = {}) {
 async function login(base) {
   const response = await fetch(`${base}/login`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', origin: TEST_ORIGIN },
     body: JSON.stringify({ login: 'route-test-admin', password: 'route-test-password' })
   });
   assert.equal(response.status, 200);
@@ -122,7 +130,7 @@ test('registered JSON routes export home and preview the same file without chang
   assert.equal(JSON.parse(rawJson).slug, 'home');
 
   const preview = await fetch(`${base}/json-import/preview`, {
-    method: 'POST', headers: { cookie, 'content-type': 'application/json' },
+    method: 'POST', headers: { cookie, 'content-type': 'application/json', origin: TEST_ORIGIN, 'x-admin-csrf': session.csrfToken },
     body: JSON.stringify({ collection: 'static-pages', scope: 'single', currentSlug: 'home', writeMode: 'merge', rawJson })
   });
   assert.equal(preview.status, 200);
@@ -145,7 +153,7 @@ test('registered JSON routes export home and preview the same file without chang
   assert.ok(fullPayload.singletons.navigation);
 
   const fullPreviewResponse = await fetch(`${base}/json-import/preview`, {
-    method: 'POST', headers: { cookie, 'content-type': 'application/json' },
+    method: 'POST', headers: { cookie, 'content-type': 'application/json', origin: TEST_ORIGIN, 'x-admin-csrf': session.csrfToken },
     body: JSON.stringify({ scope: 'full-site', writeMode: 'merge', rawJson: JSON.stringify(fullPayload) })
   });
   assert.equal(fullPreviewResponse.status, 200);
@@ -157,13 +165,13 @@ test('registered JSON routes export home and preview the same file without chang
 test('product writes validate presentation data and catalog export round-trips through productImport', async (t) => {
   const contentRoot = await createContentRoot(t);
   const { base } = await startServer(t, { contentRoot });
-  const { cookie } = await login(base);
-  const headers = { cookie, 'content-type': 'application/json' };
+  const { payload: session, cookie } = await login(base);
+  const headers = { cookie, 'content-type': 'application/json', origin: TEST_ORIGIN, 'x-admin-csrf': session.csrfToken };
 
   const createResponse = await fetch(`${base}/content/products`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ slug: 'test-product', content: product() })
+    body: JSON.stringify({ slug: 'test-product', content: product(), baseRevision: 'missing' })
   });
   assert.equal(createResponse.status, 201);
   const created = await createResponse.json();
@@ -179,10 +187,11 @@ test('product writes validate presentation data and catalog export round-trips t
   const premiumResponse = await fetch(`${base}/content/products/test-product`, {
     method: 'PUT',
     headers,
-    body: JSON.stringify(premium)
+    body: JSON.stringify({ content: premium, baseRevision: created.revision })
   });
   assert.equal(premiumResponse.status, 200);
-  const savedPremium = (await premiumResponse.json()).content;
+  const premiumPayload = await premiumResponse.json();
+  const savedPremium = premiumPayload.content;
   assert.equal(savedPremium.presentationType, 'premium');
   assert.equal(savedPremium.solutionKicker, premium.solutionKicker);
   assert.deepEqual(savedPremium.applicationItems, premium.applicationItems);
@@ -192,7 +201,7 @@ test('product writes validate presentation data and catalog export round-trips t
   const invalidResponse = await fetch(`${base}/content/products/test-product`, {
     method: 'PUT',
     headers,
-    body: JSON.stringify({ ...premium, presentationType: 'featured' })
+    body: JSON.stringify({ content: { ...premium, presentationType: 'featured' }, baseRevision: premiumPayload.revision })
   });
   assert.equal(invalidResponse.status, 400);
   const invalidPayload = await invalidResponse.json();

@@ -6,6 +6,28 @@ import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createContentJsonService } from './content-json.mjs';
+import { createContentStore, MISSING_REVISION } from './content-store.mjs';
+import { loadAdminConfig, assertSecureOperation } from './config.mjs';
+import {
+  assertValidContentRecord,
+  assertValidSingleton
+} from './content-validation.mjs';
+import {
+  ADMIN_SESSION_COOKIE,
+  LoginLimiter,
+  MUTATING_METHODS,
+  SessionStore,
+  apiSecurityHeaders,
+  applyHeaders,
+  assertCsrf,
+  buildSessionCookie,
+  clearSessionCookie as clearSessionCookieHeader,
+  createLocalRequestPolicy,
+  loginLimiterKey,
+  parseCookies as parseSecureCookies,
+  timingSafeEqualText,
+  verifyCredentials
+} from './security.mjs';
 import {
   buildProductImportPayload,
   validateProductContentForWrite
@@ -28,26 +50,6 @@ const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ROUTE_SLUG_COLLECTIONS = new Set(['static-pages', 'product-sections', 'services']);
 const LOCKED_STATIC_PAGE_SLUGS = new Set(['home', 'custom-order', 'vypolnennye-obekty']);
 const RESERVED_TOP_LEVEL_SLUGS = new Set(['admin', 'izgotovlenie-na-zakaz', '404']);
-const DEV_DEFAULTS = {
-  ADMIN_USERNAME: 'admin',
-  ADMIN_PASSWORD: 'admin',
-  SESSION_SECRET: 'dev-session-secret-change-me',
-  ADMIN_API_PORT: '8787',
-  ADMIN_ALLOWED_ORIGIN: '',
-  CONTENT_WRITE_MODE: 'local',
-  ADMIN_PREVIEW_BRANCH: 'preview',
-  ADMIN_PRODUCTION_BRANCH: 'main',
-  ADMIN_DEFAULT_DEPLOY_TARGET: 'test',
-  ADMIN_GIT_REMOTE: 'origin',
-  ADMIN_ALLOW_PRODUCTION_PUBLISH: 'false',
-  PRODUCTION_DEPLOY_ENABLED: 'false',
-  SITE_URL: '',
-  TEST_SITE_URL: '',
-  GITHUB_REPOSITORY: '',
-  GITHUB_TOKEN: '',
-  GITHUB_DEPLOY_TOKEN: ''
-};
-
 const COLLECTIONS = {
   'product-sections': {
     label: 'Страницы каталога',
@@ -97,7 +99,6 @@ const DATA_SINGLETONS = {
   yandex: { path: path.join(repoRoot, 'src/data/yandex.json') }
 };
 
-const sessions = new Map();
 const NAVIGATION_PATH = path.join(repoRoot, 'src', 'data', 'navigation.json');
 const UPLOADS_DIR = path.join(repoRoot, 'public', 'uploads');
 const MAX_IMAGE_UPLOAD_SIZE = 10 * 1024 * 1024;
@@ -125,108 +126,13 @@ const FULL_PUBLISH_PATHS = [
 const DEPLOY_TARGETS = new Set(['test', 'production']);
 const MAX_JSON_IMPORT_BODY_SIZE = 12 * 1024 * 1024;
 const API_CAPABILITIES = { contentJson: 1, contentBundles: 1 };
-const PRODUCTION_NOT_READY_MESSAGE = 'Боевой домен пока не настроен. Используйте тестовую публикацию.';
+const CONTENT_SCHEMA_VERSION = 'h6-content-v1';
 const REPORT_LOG_LINES = 200;
 const DEFAULT_PREVIEW_BRANCH = 'preview';
 const DEFAULT_PRODUCTION_BRANCH = 'main';
 
 function formatUploadLimit(bytes) {
   return Math.round(bytes / (1024 * 1024));
-}
-
-function parseEnvText(source = '') {
-  const lines = source.split(/\r?\n/);
-  const result = {};
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eqIndex = trimmed.indexOf('=');
-    if (eqIndex < 1) continue;
-    const key = trimmed.slice(0, eqIndex).trim();
-    const value = trimmed.slice(eqIndex + 1).trim().replace(/^['\"]|['\"]$/g, '');
-    result[key] = value;
-  }
-  return result;
-}
-
-async function loadEnvConfig() {
-  const files = ['.env.local', '.env.admin.local'];
-  const merged = {};
-
-  for (const filename of files) {
-    const fullPath = path.join(repoRoot, filename);
-    try {
-      const content = await fs.readFile(fullPath, 'utf8');
-      Object.assign(merged, parseEnvText(content));
-    } catch {
-      // optional env file
-    }
-  }
-  Object.assign(merged, Object.fromEntries(
-    Object.entries(process.env).filter(([, value]) => typeof value === 'string' && value.length > 0)
-  ));
-
-  let usingDevCredentials = false;
-  const config = {
-    ADMIN_USERNAME: merged.ADMIN_USERNAME ?? DEV_DEFAULTS.ADMIN_USERNAME,
-    ADMIN_PASSWORD: merged.ADMIN_PASSWORD ?? DEV_DEFAULTS.ADMIN_PASSWORD,
-    SESSION_SECRET: merged.SESSION_SECRET ?? DEV_DEFAULTS.SESSION_SECRET,
-    ADMIN_API_PORT: Number(merged.ADMIN_API_PORT ?? DEV_DEFAULTS.ADMIN_API_PORT),
-    ADMIN_ALLOWED_ORIGIN: merged.ADMIN_ALLOWED_ORIGIN ?? DEV_DEFAULTS.ADMIN_ALLOWED_ORIGIN,
-    CONTENT_WRITE_MODE: merged.CONTENT_WRITE_MODE ?? DEV_DEFAULTS.CONTENT_WRITE_MODE,
-    ADMIN_PREVIEW_BRANCH: merged.ADMIN_PREVIEW_BRANCH ?? DEV_DEFAULTS.ADMIN_PREVIEW_BRANCH,
-    ADMIN_PRODUCTION_BRANCH: merged.ADMIN_PRODUCTION_BRANCH ?? DEV_DEFAULTS.ADMIN_PRODUCTION_BRANCH,
-    ADMIN_DEFAULT_DEPLOY_TARGET: merged.ADMIN_DEFAULT_DEPLOY_TARGET ?? DEV_DEFAULTS.ADMIN_DEFAULT_DEPLOY_TARGET,
-    ADMIN_GIT_REMOTE: merged.ADMIN_GIT_REMOTE ?? DEV_DEFAULTS.ADMIN_GIT_REMOTE,
-    ADMIN_ALLOW_PRODUCTION_PUBLISH: merged.ADMIN_ALLOW_PRODUCTION_PUBLISH ?? DEV_DEFAULTS.ADMIN_ALLOW_PRODUCTION_PUBLISH,
-    PRODUCTION_DEPLOY_ENABLED: merged.PRODUCTION_DEPLOY_ENABLED ?? DEV_DEFAULTS.PRODUCTION_DEPLOY_ENABLED,
-    SITE_URL: merged.SITE_URL ?? DEV_DEFAULTS.SITE_URL,
-    TEST_SITE_URL: merged.TEST_SITE_URL ?? DEV_DEFAULTS.TEST_SITE_URL,
-    GITHUB_REPOSITORY: merged.GITHUB_REPOSITORY ?? DEV_DEFAULTS.GITHUB_REPOSITORY,
-    GITHUB_TOKEN: merged.GITHUB_TOKEN ?? DEV_DEFAULTS.GITHUB_TOKEN,
-    GITHUB_DEPLOY_TOKEN: merged.GITHUB_DEPLOY_TOKEN ?? DEV_DEFAULTS.GITHUB_DEPLOY_TOKEN
-  };
-
-  if (!merged.ADMIN_USERNAME || !merged.ADMIN_PASSWORD || !merged.SESSION_SECRET) {
-    usingDevCredentials = true;
-  }
-
-  return { config, usingDevCredentials };
-}
-
-function parseCookies(request) {
-  const header = request.headers.cookie;
-  if (!header) return {};
-
-  return Object.fromEntries(
-    header
-      .split(';')
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((pair) => {
-        const [key, ...rest] = pair.split('=');
-        return [key, decodeURIComponent(rest.join('='))];
-      })
-  );
-}
-
-function buildAllowedOrigins(extraOrigin) {
-  const defaults = new Set(['http://localhost:4321', 'http://127.0.0.1:4321']);
-  const normalizedExtraOrigin = String(extraOrigin ?? '').trim();
-  if (normalizedExtraOrigin) {
-    defaults.add(normalizedExtraOrigin);
-  }
-  return defaults;
-}
-
-function setCorsHeaders(req, res, allowedOrigins) {
-  const requestOrigin = req.headers.origin;
-  if (requestOrigin && allowedOrigins.has(requestOrigin)) {
-    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  }
 }
 
 function sendJson(res, statusCode, payload) {
@@ -305,7 +211,7 @@ function branchKey(value) {
 }
 
 function isProductionDeployEnabled() {
-  return String(config?.PRODUCTION_DEPLOY_ENABLED || '').trim().toLowerCase() === 'true';
+  return false;
 }
 
 function isSiteUrlConfigured() {
@@ -420,10 +326,10 @@ function getPublishBranch(target) {
 }
 
 function assertProductionReady() {
-  if (isProductionDeployEnabled() && isSiteUrlConfigured()) return;
-  const error = new Error(PRODUCTION_NOT_READY_MESSAGE);
-  error.code = 'PRODUCTION_NOT_READY';
-  error.productionDeployEnabled = isProductionDeployEnabled();
+  const error = new Error('Публикация в production запрещена политикой H6. Доступна только тестовая preview-ветка; main не изменяется.');
+  error.code = 'PRODUCTION_PUBLISH_FORBIDDEN';
+  error.status = 403;
+  error.productionDeployEnabled = false;
   error.siteUrlConfigured = isSiteUrlConfigured();
   throw error;
 }
@@ -456,7 +362,7 @@ async function publishPaths(paths, scope, options = {}) {
     return { published: false, target, mode: target, requestedTarget, publishSource, branch, ref, sourceBranch, ...publishConfig, message: 'Нет путей для публикации.' };
   }
 
-  await runGit(['add', '-A', '--', ...pathspecs]);
+  await runGit(['add', '--', ...pathspecs]);
 
   try {
     await runGit(['diff', '--cached', '--quiet', '--', ...pathspecs]);
@@ -882,16 +788,6 @@ function parseMultipartFile(buffer, contentType) {
   throw new Error('Файл не найден в multipart-запросе');
 }
 
-function normalizeOrderItems(items) {
-  if (!Array.isArray(items)) return items;
-  return items.map((item, index) => {
-    if (item && typeof item === 'object' && !Array.isArray(item) && 'order' in item) {
-      return { ...item, order: (index + 1) * 10 };
-    }
-    return item;
-  });
-}
-
 function sanitizeSlug(slug) {
   const value = String(slug ?? '').trim().toLowerCase();
   if (!value) {
@@ -998,63 +894,6 @@ function getEntrySlug(entry) {
   return entry.fileSlug;
 }
 
-const PRESENTATION_FIELD_KEYS = new Set([
-  'heroTitleStyle',
-  'heroDescriptionStyle',
-  'heroLayout',
-  'descriptionTextStyle',
-  'descriptionLayout',
-  'titleStyle',
-  'textStyle',
-  'layout',
-  'fontSize',
-  'fontWeight',
-  'italic',
-  'align',
-  'textAlign',
-  'lineHeight',
-  'color',
-  'textColor',
-  'width',
-  'widthPercent',
-  'maxWidth',
-  'position',
-  'padding',
-  'verticalPadding',
-  'sectionSpacing',
-  'textBlockWidth',
-  'textWidth',
-  'textSize',
-  'titleSize',
-  'textWeight',
-  'textItalic'
-]);
-
-function stripPresentationFields(value, options = {}) {
-  const { removeEmpty = false } = options;
-  if (Array.isArray(value)) {
-    const items = value
-      .map((item) => stripPresentationFields(item, options))
-      .filter((item) => item !== undefined);
-    return removeEmpty && !items.length ? undefined : items;
-  }
-  if (!value || typeof value !== 'object') {
-    if (removeEmpty && (value === undefined || value === null || value === '')) return undefined;
-    return value;
-  }
-
-  const result = {};
-  for (const [key, item] of Object.entries(value)) {
-    if (PRESENTATION_FIELD_KEYS.has(key)) continue;
-    const nextValue = stripPresentationFields(item, options);
-    if (nextValue === undefined) continue;
-    if (removeEmpty && Array.isArray(nextValue) && !nextValue.length) continue;
-    if (removeEmpty && nextValue && typeof nextValue === 'object' && !Array.isArray(nextValue) && !Object.keys(nextValue).length) continue;
-    result[key] = nextValue;
-  }
-  return removeEmpty && !Object.keys(result).length ? undefined : result;
-}
-
 function catalogSortValue(value) {
   return typeof value === 'number' && Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
 }
@@ -1072,8 +911,7 @@ function sortCatalogItems(left, right) {
 async function exportCollection(collection) {
   const entries = await listJsonEntries(collection);
   return entries
-    .map((entry) => stripPresentationFields({ ...entry.json, slug: getEntrySlug(entry) }, { removeEmpty: true }))
-    .filter(Boolean)
+    .map((entry) => ({ ...entry.json, slug: getEntrySlug(entry) }))
     .sort(sortCatalogItems);
 }
 
@@ -1099,8 +937,28 @@ async function buildCatalogExport() {
   };
 }
 
-function validateContentForWrite(collection, content) {
-  return collection === 'products' ? validateProductContentForWrite(content) : content;
+function validateContentForWrite(collection, content, options = {}) {
+  const productValidated = collection === 'products' ? validateProductContentForWrite(content) : content;
+  return assertValidContentRecord({
+    collection,
+    slug: collection === 'site-settings' ? 'global' : productValidated?.slug,
+    value: productValidated,
+    previous: options.previous,
+    operation: options.operation ?? 'update'
+  });
+}
+
+function requireBaseRevision(value, { create = false } = {}) {
+  const revision = typeof value === 'string' ? value.trim() : '';
+  if (!revision || (create && revision !== MISSING_REVISION)) {
+    const error = new Error(create
+      ? 'Для создания записи нужен baseRevision="missing".'
+      : 'Для сохранения нужен baseRevision из последнего чтения записи.');
+    error.code = 'BASE_REVISION_REQUIRED';
+    error.status = 428;
+    throw error;
+  }
+  return revision;
 }
 
 async function assertSlugIsUnique(collection, slug, currentPath = null) {
@@ -1141,20 +999,6 @@ async function validateDirectoryContentSlug(collection, content, currentPath = n
   await assertSlugIsUnique(collection, slug, currentPath);
   await assertTopLevelRouteIsAvailable(collection, slug, currentPath);
   return slug;
-}
-
-async function updateProductsCategorySlug(previousSlug, nextSlug) {
-  if (previousSlug === nextSlug) return 0;
-
-  const entries = await listJsonEntries('products');
-  let updatedCount = 0;
-  for (const entry of entries) {
-    if (entry.json?.productCategorySlug !== previousSlug) continue;
-    const updated = { ...entry.json, productCategorySlug: nextSlug };
-    await fs.writeFile(entry.filePath, `${JSON.stringify(updated, null, 2)}\n`, 'utf8');
-    updatedCount += 1;
-  }
-  return updatedCount;
 }
 
 async function listCollectionEntries(collection) {
@@ -1229,56 +1073,58 @@ async function resolveJsonPath(collection, slug) {
   return fullPath;
 }
 
-function getAuthUser(req) {
-  const cookies = parseCookies(req);
-  const token = cookies['admin_session'];
+function getAuthSession(req, { touch = true } = {}) {
+  const cookies = parseSecureCookies(req);
+  const token = cookies[ADMIN_SESSION_COOKIE];
   if (!token) return null;
-  const session = sessions.get(token);
-  if (!session) return null;
-  return session.username;
+  const result = sessions.get(token, { touch });
+  return result.ok ? { token, ...result.session } : null;
 }
 
 function requireAuth(req, res) {
-  const username = getAuthUser(req);
-  if (!username) {
+  const session = getAuthSession(req);
+  if (!session) {
     sendJson(res, 401, { error: 'Требуется авторизация' });
     return null;
   }
-  return username;
-}
-
-function buildSessionToken(secret, username) {
-  const randomPart = crypto.randomBytes(32).toString('hex');
-  const signature = crypto
-    .createHmac('sha256', secret)
-    .update(`${username}:${randomPart}`)
-    .digest('hex');
-  return `${randomPart}.${signature}`;
+  return session;
 }
 
 function writeSessionCookie(res, token) {
-  res.setHeader('Set-Cookie', `admin_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax`);
+  res.setHeader('Set-Cookie', buildSessionCookie(token, {
+    path: '/api/admin',
+    secure: false,
+    maxAgeSeconds: 8 * 60 * 60
+  }));
 }
 
 function clearSessionCookie(res) {
-  res.setHeader('Set-Cookie', 'admin_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  res.setHeader('Set-Cookie', clearSessionCookieHeader({ path: '/api/admin', secure: false }));
 }
 
-const { config, usingDevCredentials } = await loadEnvConfig();
-const allowedOrigins = buildAllowedOrigins(config.ADMIN_ALLOWED_ORIGIN);
+const { config } = await loadAdminConfig({ repoRoot });
+assertSecureOperation(config, 'startup');
+const allowedHosts = [`${config.ADMIN_API_HOST}:${config.ADMIN_API_PORT}`];
+const requestPolicy = createLocalRequestPolicy({
+  allowedOrigins: config.ADMIN_ALLOWED_ORIGINS,
+  allowedHosts,
+  allowIpv6: config.ADMIN_ALLOW_IPV6_LOOPBACK === true,
+  allowLocalhost: false
+});
+const sessions = new SessionStore({ secret: config.SESSION_SECRET });
+const loginLimiter = new LoginLimiter({ secret: config.SESSION_SECRET });
 const contentJson = createContentJsonService({ repoRoot, collections: COLLECTIONS, singletons: DATA_SINGLETONS });
-
-if (usingDevCredentials) {
-  console.warn('[admin-api] WARNING: используются dev credentials (admin/admin). Добавьте .env.local или .env.admin.local');
-}
-
-if (config.CONTENT_WRITE_MODE !== 'local') {
-  console.warn(`[admin-api] WARNING: CONTENT_WRITE_MODE=${config.CONTENT_WRITE_MODE}. Stage 1 поддерживает только local.`);
-}
+const contentStore = createContentStore({ repoRoot, collections: COLLECTIONS, singletons: DATA_SINGLETONS });
 
 const server = http.createServer(async (req, res) => {
   try {
-    setCorsHeaders(req, res, allowedOrigins);
+    applyHeaders(res, apiSecurityHeaders());
+    const policy = requestPolicy.evaluate(req);
+    if (!policy.ok) {
+      sendJson(res, policy.status || 403, { error: 'Локальный запрос отклонён политикой безопасности.', code: policy.code });
+      return;
+    }
+    applyHeaders(res, policy.corsHeaders);
 
     if (req.method === 'OPTIONS') {
       res.statusCode = 204;
@@ -1298,56 +1144,98 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const username = String(body.login ?? '').trim();
       const password = String(body.password ?? '');
+      const limiterKey = loginLimiterKey(req, username);
+      const rate = loginLimiter.check(limiterKey);
+      if (!rate.allowed) {
+        res.setHeader('Retry-After', String(rate.retryAfterSeconds));
+        sendJson(res, 429, { error: 'Слишком много попыток входа. Повторите позже.', code: rate.code, retryAfterSeconds: rate.retryAfterSeconds });
+        return;
+      }
 
-      if (username !== config.ADMIN_USERNAME || password !== config.ADMIN_PASSWORD) {
+      const credentialsValid = config.ADMIN_TEST_MODE
+        ? timingSafeEqualText(username, config.ADMIN_USERNAME) && timingSafeEqualText(password, config.ADMIN_PASSWORD)
+        : await verifyCredentials(
+            { username: config.ADMIN_USERNAME, passwordHash: config.ADMIN_PASSWORD_HASH },
+            { username, password }
+          );
+      if (!credentialsValid) {
+        loginLimiter.recordFailure(limiterKey);
         sendJson(res, 401, { error: 'Неверный логин или пароль' });
         return;
       }
 
-      const token = buildSessionToken(config.SESSION_SECRET, username);
-      sessions.set(token, { username, createdAt: Date.now() });
-      writeSessionCookie(res, token);
-      sendJson(res, 200, { ok: true, username, publishConfig: getPublishConfigPayload(), capabilities: API_CAPABILITIES });
+      loginLimiter.recordSuccess(limiterKey);
+      const issued = sessions.issue(username);
+      writeSessionCookie(res, issued.token);
+      sendJson(res, 200, {
+        ok: true,
+        username,
+        csrfToken: issued.session.csrfToken,
+        publishConfig: getPublishConfigPayload(),
+        capabilities: API_CAPABILITIES
+      });
       return;
     }
 
     if (pathname === '/api/admin/logout' && req.method === 'POST') {
-      const cookies = parseCookies(req);
-      const token = cookies.admin_session;
-      if (token) sessions.delete(token);
+      const session = getAuthSession(req, { touch: false });
+      if (session) {
+        assertCsrf(req, session.csrfToken);
+        sessions.logout(session.token);
+      }
       clearSessionCookie(res);
       sendJson(res, 200, { ok: true });
       return;
     }
 
     if (pathname === '/api/admin/me' && req.method === 'GET') {
-      const username = getAuthUser(req);
-      if (!username) {
+      const session = getAuthSession(req);
+      if (!session) {
         sendJson(res, 200, { authenticated: false, capabilities: API_CAPABILITIES });
         return;
       }
-      sendJson(res, 200, { authenticated: true, username, publishConfig: getPublishConfigPayload(), capabilities: API_CAPABILITIES });
+      sendJson(res, 200, {
+        authenticated: true,
+        username: session.username,
+        csrfToken: session.csrfToken,
+        publishConfig: getPublishConfigPayload(),
+        capabilities: API_CAPABILITIES
+      });
       return;
     }
 
-    const authUser = requireAuth(req, res);
-    if (!authUser) {
+    const authSession = requireAuth(req, res);
+    if (!authSession) {
       return;
     }
+    if (MUTATING_METHODS.has(String(req.method || '').toUpperCase())) {
+      assertCsrf(req, authSession.csrfToken);
+    }
+    const authUser = authSession.username;
 
     if (pathname === '/api/admin/navigation' && req.method === 'GET') {
       const items = await readNavigationItems();
-      sendJson(res, 200, { items });
+      const raw = await fs.readFile(NAVIGATION_PATH);
+      sendJson(res, 200, {
+        items,
+        revision: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
+        schemaVersion: CONTENT_SCHEMA_VERSION
+      });
       return;
     }
 
     if (pathname === '/api/admin/navigation' && req.method === 'PUT') {
       const body = await readBody(req);
+      const current = await contentStore.read('navigation', 'navigation');
       const items = normalizeNavigationItems(body?.items ?? body);
-      await fs.mkdir(path.dirname(NAVIGATION_PATH), { recursive: true });
-      await fs.writeFile(NAVIGATION_PATH, `${JSON.stringify(items, null, 2)}\n`, 'utf8');
-      const saved = await readNavigationItems();
-      sendJson(res, 200, { ok: true, items: saved });
+      const validated = assertValidSingleton({ singleton: 'navigation', value: items, operation: 'update' });
+      const result = await contentStore.save({
+        collection: 'navigation',
+        slug: 'navigation',
+        content: validated,
+        baseRevision: body?.baseRevision ?? current.revision
+      });
+      sendJson(res, 200, { ok: true, items: result.content, ...result });
       return;
     }
 
@@ -1536,11 +1424,10 @@ const server = http.createServer(async (req, res) => {
       }
 
       const body = await readBody(req);
-      const content = stripPresentationFields(
-        body?.content && typeof body.content === 'object' && !Array.isArray(body.content)
-          ? body.content
-          : body
-      );
+      const baseRevision = requireBaseRevision(body?.baseRevision, { create: true });
+      const content = body?.content && typeof body.content === 'object' && !Array.isArray(body.content)
+        ? body.content
+        : body;
 
       if (!content || typeof content !== 'object' || Array.isArray(content)) {
         sendJson(res, 400, { error: 'Ожидается JSON-объект' });
@@ -1561,11 +1448,15 @@ const server = http.createServer(async (req, res) => {
         // file does not exist yet
       }
 
-      const savedContent = validateContentForWrite(collection, { ...content, slug });
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, `${JSON.stringify(savedContent, null, 2)}\n`, 'utf8');
-      const saved = await readJsonFile(filePath);
-      sendJson(res, 201, { ok: true, slug, content: saved });
+      const savedContent = validateContentForWrite(collection, { ...content, slug }, { operation: 'create' });
+      const saved = await contentStore.save({
+        collection,
+        slug,
+        content: savedContent,
+        baseRevision,
+        create: true
+      });
+      sendJson(res, 201, { ok: true, slug, ...saved });
       return;
     }
 
@@ -1574,7 +1465,14 @@ const server = http.createServer(async (req, res) => {
       const [, collection, slug] = matchEntry;
       const filePath = await resolveJsonPath(collection, slug);
       const content = await readJsonFile(filePath);
-      sendJson(res, 200, { content });
+      const raw = await fs.readFile(filePath);
+      const stat = await fs.stat(filePath);
+      sendJson(res, 200, {
+        content,
+        revision: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
+        schemaVersion: CONTENT_SCHEMA_VERSION,
+        lastModified: stat.mtime.toISOString()
+      });
       return;
     }
 
@@ -1583,44 +1481,39 @@ const server = http.createServer(async (req, res) => {
       const config = getCollectionConfig(collection);
       const filePath = await resolveJsonPath(collection, slug);
       const previousContent = await readJsonFile(filePath);
-      const body = stripPresentationFields(await readBody(req));
+      const requestBody = await readBody(req);
+      const baseRevision = requireBaseRevision(requestBody?.baseRevision);
+      const body = requestBody?.content && typeof requestBody.content === 'object' && !Array.isArray(requestBody.content)
+        ? requestBody.content
+        : requestBody;
 
       if (!body || typeof body !== 'object' || Array.isArray(body)) {
         sendJson(res, 400, { error: 'Ожидается JSON-объект' });
         return;
       }
 
-      if (config.type === 'single-file') {
-        await fs.writeFile(filePath, `${JSON.stringify(body, null, 2)}\n`, 'utf8');
-        const saved = await readJsonFile(filePath);
-        sendJson(res, 200, { ok: true, content: saved });
-        return;
-      }
-
       const previousSlug = sanitizeSlug(previousContent?.slug ?? slug);
-      const nextSlug = await validateDirectoryContentSlug(collection, body, filePath, previousSlug);
-      const savedContent = validateContentForWrite(collection, { ...body, slug: nextSlug });
-      const nextPath = getDirectoryEntryPath(config, nextSlug);
-
-      if (!isSamePath(filePath, nextPath)) {
-        try {
-          await fs.access(nextPath);
-          sendJson(res, 409, { error: 'Запись с таким slug уже существует' });
-          return;
-        } catch {
-          // target file does not exist yet
-        }
-        await fs.writeFile(nextPath, `${JSON.stringify(savedContent, null, 2)}\n`, 'utf8');
-        await fs.unlink(filePath);
-      } else {
-        await fs.writeFile(filePath, `${JSON.stringify(savedContent, null, 2)}\n`, 'utf8');
+      const nextSlug = config.type === 'single-file'
+        ? config.slug
+        : await validateDirectoryContentSlug(collection, body, filePath, previousSlug);
+      if (config.type !== 'single-file' && nextSlug !== previousSlug) {
+        const error = new Error('Изменение slug выполняется только через транзакционный preview/apply с планом ссылок.');
+        error.code = 'SLUG_RENAME_REQUIRES_TRANSACTION';
+        error.status = 409;
+        throw error;
       }
-
-      const updatedProductCount = collection === 'product-categories'
-        ? await updateProductsCategorySlug(previousSlug, nextSlug)
-        : 0;
-      const saved = await readJsonFile(nextPath);
-      sendJson(res, 200, { ok: true, content: saved, previousSlug, slug: nextSlug, updatedProductCount });
+      const contentForValidation = config.type === 'single-file' ? body : { ...body, slug: nextSlug };
+      const savedContent = validateContentForWrite(collection, contentForValidation, { previous: previousContent, operation: 'update' });
+      const storageSlug = config.type === 'single-file'
+        ? config.slug
+        : path.basename(filePath, '.json');
+      const saved = await contentStore.save({
+        collection,
+        slug: storageSlug,
+        content: savedContent,
+        baseRevision
+      });
+      sendJson(res, 200, { ok: true, previousSlug, slug: nextSlug, updatedProductCount: 0, ...saved });
       return;
     }
 
@@ -1642,7 +1535,7 @@ const server = http.createServer(async (req, res) => {
   } catch (error) {
     const message = error instanceof Error ? maskSecrets(error.message) : 'Неизвестная ошибка';
     const isProductionNotReady = error?.code === 'PRODUCTION_NOT_READY';
-    sendJson(res, error?.code === 'PRODUCTION_NOT_READY' ? 409 : 400, {
+    sendJson(res, error?.status ?? (error?.code === 'PRODUCTION_NOT_READY' ? 409 : 400), {
       error: message,
       code: error?.code || 'ADMIN_API_ERROR',
       ...(Array.isArray(error?.validationIssues) ? { validationIssues: error.validationIssues } : {}),
@@ -1651,7 +1544,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(config.ADMIN_API_PORT, () => {
+server.listen(config.ADMIN_API_PORT, config.ADMIN_API_HOST, () => {
   console.log(`[admin-api] running on http://127.0.0.1:${config.ADMIN_API_PORT}/api/admin`);
-  console.log(`[admin-api] CORS origins: ${Array.from(allowedOrigins).join(', ')}`);
+  console.log(`[admin-api] CORS origins: ${config.ADMIN_ALLOWED_ORIGINS.join(', ')}`);
 });

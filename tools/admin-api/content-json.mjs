@@ -121,12 +121,14 @@ function findSensitivePaths(value, parts = [], result = []) {
   return result;
 }
 
-function stripSensitive(value) {
-  if (Array.isArray(value)) return value.map(stripSensitive);
-  if (!isPlainObject(value)) return value;
-  return Object.fromEntries(Object.entries(value)
-    .filter(([key]) => !SENSITIVE_KEY_RE.test(key))
-    .map(([key, item]) => [key, stripSensitive(item)]));
+function assertNoSensitiveContent(value) {
+  const sensitive = findSensitivePaths(value);
+  if (sensitive.length) {
+    const error = new Error(`Экспорт заблокирован: запрещённые секретные поля в ${sensitive.join(', ')}.`);
+    error.code = 'SENSITIVE_CONTENT_BLOCKED';
+    error.sensitivePaths = sensitive;
+    throw error;
+  }
 }
 
 function collectMediaValues(value, parts = [], activeMediaKey = false, result = []) {
@@ -262,7 +264,8 @@ function sortItems(items) {
 }
 
 function collectionEnvelope(collection, items, exportedAt = new Date().toISOString()) {
-  return { type: 'smu1_content_collection', version: 1, collection, exportedAt, items: sortItems(items.map(stripSensitive)) };
+  items.forEach(assertNoSensitiveContent);
+  return { type: 'smu1_content_collection', version: 1, collection, exportedAt, items: sortItems(items.map(clone)) };
 }
 
 function exportFilename(collection, slug = '') {
@@ -413,7 +416,8 @@ export function createContentJsonService({
   async function exportSingle(collection, slug) {
     const entry = await readEntry(collection, slug);
     assertExportPathsAreSafe(entry.content);
-    return { payload: stripSensitive(entry.content), filename: exportFilename(collection, slug) };
+    assertNoSensitiveContent(entry.content);
+    return { payload: clone(entry.content), filename: exportFilename(collection, slug) };
   }
 
   async function exportCollection(collection) {
@@ -441,11 +445,13 @@ export function createContentJsonService({
     }
     const settings = await readEntry('site-settings', 'global');
     assertExportPathsAreSafe(settings.content);
-    payload.singletons['site-settings'] = stripSensitive(settings.content);
+    assertNoSensitiveContent(settings.content);
+    payload.singletons['site-settings'] = clone(settings.content);
     for (const name of FULL_SINGLETONS.filter((item) => item !== 'site-settings')) {
       const singleton = await readDataSingleton(name);
       assertExportPathsAreSafe(singleton.content);
-      payload.singletons[name] = stripSensitive(singleton.content);
+      assertNoSensitiveContent(singleton.content);
+      payload.singletons[name] = clone(singleton.content);
     }
     return { payload, filename: `export-smu1-full-site-${exportedAt.slice(0, 10)}.json` };
   }
@@ -491,6 +497,7 @@ export function createContentJsonService({
     }
 
     assertExportPathsAreSafe(pageEntry.content);
+    assertNoSensitiveContent(pageEntry.content);
     const relatedCollections = {};
     for (const [name, entries] of related) {
       const values = [...entries.values()];
@@ -500,7 +507,7 @@ export function createContentJsonService({
     return {
       payload: {
         type: 'smu1_page_bundle', version: 1, exportedAt,
-        page: { kind, slug, route: pageRoute(collection, pageEntry.content, lookups), data: stripSensitive(pageEntry.content) },
+        page: { kind, slug, route: pageRoute(collection, pageEntry.content, lookups), data: clone(pageEntry.content) },
         related: { collections: relatedCollections }
       },
       filename: `export-page-${slug}.json`

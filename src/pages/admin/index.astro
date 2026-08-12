@@ -101,19 +101,24 @@ const cards = [
 
     <script type="module" define:vars={{ adminApiBase }}>
       const API_BASE = adminApiBase;
+      let csrfToken = '';
       const loginView = document.getElementById('loginView');
       const appView = document.getElementById('appView');
       const loginStatus = document.getElementById('loginStatus');
       const loginForm = document.getElementById('loginForm');
 
       const api = async (path, options = {}) => {
+        const method = String(options.method || 'GET').toUpperCase();
+        const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && path !== '/login' && csrfToken) headers['X-Admin-CSRF'] = csrfToken;
         const response = await fetch(`${API_BASE}${path}`, {
           ...options,
           credentials: 'include',
-          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+          headers
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        if (data.csrfToken) csrfToken = data.csrfToken;
         return data;
       };
 

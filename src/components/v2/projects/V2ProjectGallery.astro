@@ -1,4 +1,5 @@
 ---
+import { safeInlineJson } from '../../../utils/safeInlineJson.mjs';
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import type { V2ProjectMedia } from '../mediaRoleAdapter';
@@ -177,7 +178,7 @@ const galleryData = galleryImages.map((image) => ({
       </div>
     </dialog>
 
-    <script type="application/json" data-v2-project-gallery-data set:html={JSON.stringify({ images: galleryData, title })} is:inline />
+    <script type="application/json" data-v2-project-gallery-data set:html={safeInlineJson({ images: galleryData, title })} is:inline />
   </section>
 )}
 

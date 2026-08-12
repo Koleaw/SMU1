@@ -1,4 +1,5 @@
 ---
+import { safeInlineJson } from '../utils/safeInlineJson.mjs';
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -104,7 +105,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <meta name="twitter:description" content={pageDescription} />
     <meta name="twitter:image" content={ogImageUrl} />
     {!isTestDeploy && !noindex && (
-      <script type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', '@graph': jsonLdGraph })} />
+      <script type="application/ld+json" set:html={safeInlineJson({ '@context': 'https://schema.org', '@graph': jsonLdGraph })} />
     )}
     {isMetrikaEnabled && <script
       is:inline

@@ -846,6 +846,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
 
     <script type="module" define:vars={{ adminApiBase, publicNavesyPath, baseUrl }}>
       const API_BASE = adminApiBase;
+      let csrfToken = '';
       const PUBLIC_PAGE_PATH = publicNavesyPath;
       const DEFAULT_MEDIA_VIEW = { fit: 'cover', positionX: 50, positionY: 50, scale: 1 };
       const DEFAULT_CONTACT = {
@@ -868,6 +869,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       const state = {
         original: null,
         draft: null,
+        revision: null,
         alert: '',
         alertError: false,
         crop: null,
@@ -976,16 +978,20 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
       async function api(path, options = {}) {
         let response;
         try {
+          const method = String(options.method || 'GET').toUpperCase();
+          const headers = options.body instanceof FormData ? { ...(options.headers || {}) } : { 'Content-Type': 'application/json', ...(options.headers || {}) };
+          if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && path !== '/login' && csrfToken) headers['X-Admin-CSRF'] = csrfToken;
           response = await fetch(`${API_BASE}${path}`, {
             ...options,
             credentials: 'include',
-            headers: options.body instanceof FormData ? (options.headers || {}) : { 'Content-Type': 'application/json', ...(options.headers || {}) }
+            headers
           });
         } catch {
           throw new Error('Не удалось подключиться к backend API. Запустите npm run admin:api.');
         }
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        if (data.csrfToken) csrfToken = data.csrfToken;
         return data;
       }
 
@@ -1014,6 +1020,7 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
         const data = await api('/content/product-sections/navesy');
         state.original = prepareDraft(data.content);
         state.draft = prepareDraft(data.content);
+        state.revision = data.revision;
         state.crop = null;
         renderPage();
       }
@@ -1876,9 +1883,10 @@ const baseUrl = import.meta.env.BASE_URL ?? '/';
           setAlert('Сохраняем...');
           $('saveBtn').disabled = true;
           try {
-            const data = await api('/content/product-sections/navesy', { method: 'PUT', body: JSON.stringify(state.draft) });
+            const data = await api('/content/product-sections/navesy', { method: 'PUT', body: JSON.stringify({ content: state.draft, baseRevision: state.revision }) });
             state.original = prepareDraft(data.content);
             state.draft = prepareDraft(data.content);
+            state.revision = data.revision;
             state.crop = null;
             setAlert('Изменения сохранены в navesy.json.');
             renderPage();
