@@ -30,8 +30,8 @@ const productNoun = productCount % 10 === 1 && productCount % 100 !== 11
     : 'опубликованных изделий';
 const state = productCount > 0 ? 'products' : hasMedia ? 'sparse' : 'minimal';
 const mediaSizes = featured
-  ? '(max-width: 760px) calc(100vw - 64px), (max-width: 1180px) 44vw, 47vw'
-  : '(max-width: 760px) calc(100vw - 64px), (max-width: 1180px) 44vw, 24vw';
+  ? '(max-width: 560px) calc(100vw - 32px), (max-width: 768px) calc(100vw - 40px), (max-width: 1240px) 66vw, 50vw'
+  : '(max-width: 560px) calc(100vw - 32px), (max-width: 768px) calc(50vw - 29px), (max-width: 1240px) 33vw, 25vw';
 const stateLabel = productCount > 0
   ? `${productCount} ${productNoun}`
   : hasMedia
