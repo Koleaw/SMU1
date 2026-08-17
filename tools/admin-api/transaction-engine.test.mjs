@@ -376,6 +376,126 @@ test('repo lock uses exclusive creation and only takes over a verified expired l
   assert.equal((await fs.readdir(fixture.runtimeDir)).some((name) => name.includes('.stale-')), false);
 });
 
+test('repo lock metadata becomes visible atomically to concurrent readers', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-transaction-lock-atomic-'));
+  const repoRoot = path.join(root, 'repo');
+  const runtimeDir = path.join(root, 'runtime');
+  const lockPath = path.join(runtimeDir, 'repo.lock');
+  await fs.mkdir(repoRoot, { recursive: true });
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+  let announceVisible;
+  let releaseOwner;
+  let announced = false;
+  const finalPathVisible = new Promise((resolve) => { announceVisible = resolve; });
+  const ownerMayContinue = new Promise((resolve) => { releaseOwner = resolve; });
+  const pauseAfterFinalPathAppears = async () => {
+    if (announced) return;
+    announced = true;
+    announceVisible();
+    await ownerMayContinue;
+  };
+  const instrumentedFileSystem = new Proxy(fs, {
+    get(target, property, receiver) {
+      if (property === 'open') {
+        return async (targetPath, flags, ...args) => {
+          const handle = await target.open(targetPath, flags, ...args);
+          // This branch makes the previous open(final, 'wx') implementation fail
+          // deterministically by exposing its empty file to the contender.
+          if (path.resolve(String(targetPath)) === path.resolve(lockPath) && flags === 'wx') {
+            await pauseAfterFinalPathAppears();
+          }
+          return handle;
+        };
+      }
+      if (property === 'link') {
+        return async (existingPath, newPath) => {
+          await target.link(existingPath, newPath);
+          if (path.resolve(String(newPath)) === path.resolve(lockPath)) {
+            await pauseAfterFinalPathAppears();
+          }
+        };
+      }
+      return Reflect.get(target, property, receiver);
+    }
+  });
+
+  const owner = createTransactionEngine({
+    repoRoot,
+    runtimeDir,
+    lockTtlMs: 2_000,
+    fileSystem: instrumentedFileSystem
+  });
+  const contender = createTransactionEngine({ repoRoot, runtimeDir, lockTtlMs: 2_000 });
+  const ownerInitialization = owner.initialize();
+  await finalPathVisible;
+  try {
+    await assert.rejects(contender.initialize(), (error) => error.code === 'TRANSACTION_LOCKED');
+  } finally {
+    releaseOwner();
+  }
+  await ownerInitialization;
+});
+
+test('repo lock acquisition retries bounded Windows sharing violations', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-transaction-lock-retry-'));
+  const repoRoot = path.join(root, 'repo');
+  const runtimeDir = path.join(root, 'runtime');
+  const lockPath = path.join(runtimeDir, 'repo.lock');
+  await fs.mkdir(repoRoot, { recursive: true });
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+  const owner = createTransactionEngine({
+    repoRoot,
+    runtimeDir,
+    lockTtlMs: 2_000,
+    lockAcquireTimeoutMs: 500,
+    lockRetryMs: 2
+  });
+  await owner.initialize();
+
+  let announceOwner;
+  let releaseOwner;
+  const ownerEntered = new Promise((resolve) => { announceOwner = resolve; });
+  const ownerMayFinish = new Promise((resolve) => { releaseOwner = resolve; });
+  const ownerRead = owner.withStableRead(async () => {
+    announceOwner();
+    await ownerMayFinish;
+  });
+  await ownerEntered;
+
+  let transientReads = 0;
+  const instrumentedFileSystem = new Proxy(fs, {
+    get(target, property, receiver) {
+      if (property === 'readFile') {
+        return async (targetPath, ...args) => {
+          if (path.resolve(String(targetPath)) === path.resolve(lockPath) && transientReads < 3) {
+            transientReads += 1;
+            if (transientReads === 3) releaseOwner();
+            const error = new Error('simulated Windows sharing violation');
+            error.code = 'EPERM';
+            throw error;
+          }
+          return target.readFile(targetPath, ...args);
+        };
+      }
+      return Reflect.get(target, property, receiver);
+    }
+  });
+  const contender = createTransactionEngine({
+    repoRoot,
+    runtimeDir,
+    lockTtlMs: 2_000,
+    lockAcquireTimeoutMs: 500,
+    lockRetryMs: 2,
+    fileSystem: instrumentedFileSystem
+  });
+
+  assert.equal(await contender.withStableRead(() => 'stable'), 'stable');
+  assert.equal(transientReads, 3);
+  await ownerRead;
+});
+
 test('stable read boundary blocks during apply and requires recovery after a simulated crash', async (t) => {
   let enteredApplying;
   let releaseApplying;

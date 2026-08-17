@@ -83,6 +83,10 @@ function isExistsError(error) {
   return error?.code === 'EEXIST';
 }
 
+function isTransientLockIoError(error) {
+  return ['EPERM', 'EACCES', 'EBUSY'].includes(error?.code);
+}
+
 function isSimulatedCrash(error) {
   return error instanceof SimulatedCrashError
     || error?.simulateCrash === true
@@ -826,6 +830,7 @@ export function createTransactionEngine(options = {}) {
   async function createLockFile() {
     const ownerToken = `${instanceId}:${crypto.randomUUID()}`;
     const acquiredAtMs = now();
+    const pendingLockPath = `${lockPath}.pending-${process.pid}-${crypto.randomUUID()}`;
     const metadata = {
       version: 1,
       ownerToken,
@@ -838,14 +843,22 @@ export function createTransactionEngine(options = {}) {
     };
     let handle;
     try {
-      handle = await fileSystem.open(lockPath, 'wx', 0o600);
+      handle = await fileSystem.open(pendingLockPath, 'wx', 0o600);
       await handle.writeFile(`${JSON.stringify(metadata)}\n`, 'utf8');
       await handle.sync();
       await handle.close();
       handle = null;
+      // Publish only a fully written lease. Creating the hard link is atomic and
+      // fails with EEXIST when another process already owns the repository lock.
+      await fileSystem.link(pendingLockPath, lockPath);
     } catch (error) {
       await handle?.close().catch(() => {});
       throw error;
+    } finally {
+      await fileSystem.unlink(pendingLockPath).catch(() => {
+        // A leftover pending file is inert: it is never treated as a lock.
+        // Do not turn an acquired, valid lock into an ambiguous failed acquire.
+      });
     }
 
     const refresh = async () => {
@@ -866,8 +879,10 @@ export function createTransactionEngine(options = {}) {
           expiresAtMs: refreshedAtMs + lockTtlMs
         };
         const serialized = Buffer.from(`${JSON.stringify(next)}\n`, 'utf8');
-        await lockHandle.truncate(0);
+        // Keep the previous valid lease visible until replacement bytes exist.
+        // Acquisition performs a bounded reread if it catches a mixed short write.
         await lockHandle.write(serialized, 0, serialized.length, 0);
+        await lockHandle.truncate(serialized.length);
         await lockHandle.sync();
       } finally {
         await lockHandle?.close().catch(() => {});
@@ -937,11 +952,19 @@ export function createTransactionEngine(options = {}) {
 
   async function acquireRepoLock() {
     const startedAt = now();
+    const retryTransientLockIo = async (error) => {
+      if (!isTransientLockIoError(error) || now() - startedAt >= lockAcquireTimeoutMs) return false;
+      await new Promise((resolve) => setTimeout(resolve, Math.max(1, lockRetryMs)));
+      return true;
+    };
     while (true) {
       try {
         return await createLockFile();
       } catch (error) {
-        if (!isExistsError(error)) throw error;
+        if (!isExistsError(error)) {
+          if (await retryTransientLockIo(error)) continue;
+          throw error;
+        }
       }
 
       let raw;
@@ -949,14 +972,25 @@ export function createTransactionEngine(options = {}) {
         raw = await fileSystem.readFile(lockPath, 'utf8');
       } catch (error) {
         if (isMissingError(error)) continue;
+        if (await retryTransientLockIo(error)) continue;
         throw error;
       }
       const lock = parseLock(raw);
       if (!lock) {
+        if (now() - startedAt < lockAcquireTimeoutMs) {
+          await new Promise((resolve) => setTimeout(resolve, Math.max(1, lockRetryMs)));
+          continue;
+        }
         fail('TRANSACTION_LOCK_INVALID', 'Файл блокировки повреждён; автоматический захват запрещён.');
       }
       if (lock.expiresAtMs <= now()) {
-        const removed = await takeoverExpiredLock(raw);
+        let removed;
+        try {
+          removed = await takeoverExpiredLock(raw);
+        } catch (error) {
+          if (await retryTransientLockIo(error)) continue;
+          throw error;
+        }
         if (removed) continue;
       }
       if (now() - startedAt >= lockAcquireTimeoutMs) {
