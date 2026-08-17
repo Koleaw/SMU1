@@ -15,7 +15,7 @@ import {
   verifyCredentials,
   verifyPassword
 } from './security.mjs';
-import { assertSecureOperation, validateAdminConfig } from './config.mjs';
+import { assertSecureOperation, serializeEnv, validateAdminConfig } from './config.mjs';
 
 const fastScrypt = { N: 16384, r: 8, p: 1, keyLength: 32, salt: Buffer.alloc(24, 7) };
 
@@ -136,6 +136,9 @@ test('local request policy requires exact loopback Host and Origin', () => {
     }
   });
   assert.equal(preflight.ok, true);
+  assert.match(preflight.corsHeaders['Access-Control-Allow-Headers'], /X-Admin-CSRF/u);
+  assert.match(preflight.corsHeaders['Access-Control-Allow-Headers'], /X-Admin-Recovery-Client-Id/u);
+  assert.match(preflight.corsHeaders['Access-Control-Allow-Headers'], /X-Admin-Session-Fingerprint/u);
   assert.equal(policy.evaluate({
     method: 'OPTIONS',
     headers: {
@@ -208,4 +211,39 @@ test('normal config rejects insecure defaults, external bind and non-local write
   });
   assert.equal(testConfig.ADMIN_TEST_MODE, true);
   assert.throws(() => assertSecureOperation(testConfig, 'publish'), { code: 'INSECURE_PUBLISH_DENIED' });
+});
+
+test('env serialization keeps publish and Pages configuration in a stable preferred order', () => {
+  const serialized = serializeEnv({
+    SITE_URL: 'https://www.example.test',
+    TEST_BASE_PATH: '/preview',
+    GITHUB_TOKEN: 'read-token',
+    ADMIN_ALLOW_PRODUCTION_PUBLISH: 'false',
+    GITHUB_REPOSITORY: 'owner/repo',
+    ADMIN_GIT_REMOTE: 'origin',
+    TEST_SITE_URL: 'https://owner.github.io',
+    GITHUB_DEPLOY_TOKEN: 'deploy-token',
+    PRODUCTION_DEPLOY_ENABLED: 'false',
+    BASE_PATH: '/production',
+    ADMIN_TEST_MODE: 'false',
+    ADMIN_EXPECTED_BRANCH: 'candidate',
+    Z_EXTRA: 'last',
+    A_EXTRA: 'first'
+  }, { header: false });
+  assert.deepEqual(serialized.trimEnd().split('\n').map((line) => line.slice(0, line.indexOf('='))), [
+    'ADMIN_EXPECTED_BRANCH',
+    'ADMIN_GIT_REMOTE',
+    'GITHUB_REPOSITORY',
+    'GITHUB_DEPLOY_TOKEN',
+    'GITHUB_TOKEN',
+    'TEST_SITE_URL',
+    'TEST_BASE_PATH',
+    'BASE_PATH',
+    'ADMIN_TEST_MODE',
+    'PRODUCTION_DEPLOY_ENABLED',
+    'ADMIN_ALLOW_PRODUCTION_PUBLISH',
+    'SITE_URL',
+    'A_EXTRA',
+    'Z_EXTRA'
+  ]);
 });

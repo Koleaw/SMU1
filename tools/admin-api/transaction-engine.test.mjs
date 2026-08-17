@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,6 +12,7 @@ import {
   hashPayload,
   revisionForBytes
 } from './transaction-engine.mjs';
+import { createTransactionPayloadStore } from './transaction-payload-store.mjs';
 
 async function createFixture(t, options = {}) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-transaction-engine-'));
@@ -192,6 +194,11 @@ test('preview persists validated history metadata and restore plan exposes exact
   const metadata = {
     userSummary: 'Обновлена карточка объекта',
     affectedRoutes: ['/objects/b/', '/objects/a/', '/objects/a/'],
+    routeExpectations: [
+      { route: '/objects/b/', expected: 'html' },
+      { route: '/objects/a/', expected: 'html' },
+      { route: '/objects/a/', expected: 'html' }
+    ],
     baseHead: 'a'.repeat(40),
     relationImpact: { products: 2 }
   };
@@ -207,6 +214,10 @@ test('preview persists validated history metadata and restore plan exposes exact
     affectedRoutes: ['/objects/a/', '/objects/b/'],
     baseHead: 'a'.repeat(40),
     relationImpact: { products: 2 },
+    routeExpectations: [
+      { expected: 'html', route: '/objects/a/' },
+      { expected: 'html', route: '/objects/b/' }
+    ],
     userSummary: 'Обновлена карточка объекта'
   });
   await fixture.engine.apply(applyRequest(preview, key));
@@ -220,7 +231,8 @@ test('preview persists validated history metadata and restore plan exposes exact
   assert.equal(restoreExisting.operation, 'write');
   assert.equal(restoreCreated.operation, 'delete');
   assert.equal(restore.metadata.restoresTransactionId, preview.transactionId);
-  assert.deepEqual(restore.metadata.affectedRoutes, ['/objects/a/', '/objects/b/']);
+  assert.equal(restore.metadata.affectedRoutes, undefined, 'generic engine cannot safely infer inverse route semantics');
+  assert.equal(restore.metadata.routeExpectations, undefined);
 
   const restorePreview = await fixture.engine.preview({
     ...request('apply-restore', restore.mutations),
@@ -234,6 +246,20 @@ test('preview persists validated history metadata and restore plan exposes exact
     fixture.engine.preview({
       ...request('bad-metadata', [{ path: 'content/x.json', operation: 'write', content: '{}' }]),
       metadata: { userSummary: ' bad ', affectedRoutes: ['//evil.example'], baseHead: 'short' }
+    }),
+    (error) => error.code === 'TRANSACTION_METADATA_INVALID'
+  );
+
+  await assert.rejects(
+    fixture.engine.preview({
+      ...request('conflicting-expectations', [{ path: 'content/y.json', operation: 'write', content: '{}' }]),
+      metadata: {
+        affectedRoutes: ['/objects/a/'],
+        routeExpectations: [
+          { route: '/objects/a/', expected: 'html' },
+          { route: '/objects/a/', expected: 'not-found' }
+        ]
+      }
     }),
     (error) => error.code === 'TRANSACTION_METADATA_INVALID'
   );
@@ -708,4 +734,254 @@ test('hash helpers are deterministic and distinguish missing from empty bytes', 
   assert.equal(hashPayload({ b: 2, a: 1 }), hashPayload({ a: 1, b: 2 }));
   assert.equal(revisionForBytes(null), 'missing');
   assert.notEqual(revisionForBytes(Buffer.alloc(0)), 'missing');
+});
+
+test('large payload journals stay bounded and startup/history never hydrate blob bytes', async (t) => {
+  const fixture = await createFixture(t);
+  const largePayload = Buffer.alloc(6 * 1024 * 1024, 0x5a);
+  const key = 'large-cas-payload';
+  const preview = await fixture.engine.preview(request(key, [
+    { path: 'public/assets/images/large-video.mp4', operation: 'write', bytes: largePayload }
+  ]));
+
+  const journalPath = path.join(fixture.engine.runtimePaths.journalDir, `${preview.transactionId}.json`);
+  const journalBytes = await fs.readFile(journalPath);
+  assert.ok(journalBytes.length < 16 * 1024, `journal grew to ${journalBytes.length} bytes`);
+  const persisted = JSON.parse(journalBytes.toString('utf8'));
+  assert.equal(persisted.version, 3);
+  assert.equal(JSON.stringify(persisted).includes('contentBase64'), false);
+  assert.equal(JSON.stringify(persisted).includes(largePayload.toString('base64').slice(0, 256)), false);
+  assert.deepEqual(persisted.mutations[0].payloadRef, {
+    sha256: revisionForBytes(largePayload).split(':')[1],
+    size: largePayload.length
+  });
+  const blobPath = path.join(
+    fixture.engine.runtimePaths.payloadRoot,
+    persisted.mutations[0].payloadRef.sha256.slice(0, 2),
+    `${persisted.mutations[0].payloadRef.sha256}.blob`
+  );
+  assert.equal((await fs.stat(blobPath)).size, largePayload.length);
+  assert.equal(Object.hasOwn((await fixture.engine.getTransaction(preview.transactionId)).mutations[0], 'contentBase64'), false);
+
+  await fixture.engine.apply(applyRequest(preview, key));
+  let blobBodyReads = 0;
+  const instrumentedFileSystem = new Proxy(fs, {
+    get(target, property, receiver) {
+      if (property === 'readFile') {
+        return async (targetPath, ...args) => {
+          if (String(targetPath).endsWith('.blob')) blobBodyReads += 1;
+          return target.readFile(targetPath, ...args);
+        };
+      }
+      if (property === 'open') {
+        return async (targetPath, ...args) => {
+          if (String(targetPath).endsWith('.blob')) blobBodyReads += 1;
+          return target.open(targetPath, ...args);
+        };
+      }
+      return Reflect.get(target, property, receiver);
+    }
+  });
+  const restarted = createTransactionEngine({
+    repoRoot: fixture.repoRoot,
+    runtimeDir: fixture.runtimeDir,
+    lockTtlMs: 2_000,
+    fileSystem: instrumentedFileSystem
+  });
+  await restarted.initialize();
+  assert.equal(blobBodyReads, 0, 'startup must inspect references without reading payload bodies');
+  assert.equal((await restarted.listHistory()).length, 1);
+  assert.equal(blobBodyReads, 0, 'history must be metadata-only');
+  await restarted.getTransaction(preview.transactionId);
+  assert.equal(blobBodyReads, 0, 'journal inspection must expose refs without hydrating payload bodies');
+});
+
+test('CAS committed journal preserves exact revisions for a publish manifest without inline hydration', async (t) => {
+  const fixture = await createFixture(t);
+  const before = Buffer.from('{"slug":"item","title":"before"}\n');
+  const after = Buffer.from('{"slug":"item","title":"after"}\n');
+  const relativePath = 'src/content/products/item.json';
+  await fixture.write(relativePath, before);
+  const key = 'cas-to-publish-manifest';
+  const preview = await fixture.engine.preview({
+    ...request(key, [{ path: relativePath, operation: 'write', bytes: after }]),
+    metadata: {
+      service: 'content-transaction',
+      serviceVersion: 2,
+      baseHead: 'a'.repeat(40),
+      affectedRoutes: ['/catalog/item/'],
+      routeExpectations: [{ route: '/catalog/item/', expected: 'html' }]
+    }
+  });
+  await fixture.engine.apply(applyRequest(preview, key));
+  const committed = await fixture.engine.getTransaction(preview.transactionId);
+  assert.equal(Object.hasOwn(committed.mutations[0], 'contentBase64'), false);
+  assert.deepEqual(committed.mutations[0].payloadRef, {
+    sha256: revisionForBytes(after).split(':')[1],
+    size: after.length
+  });
+
+  const { createManifestFromCommittedTransaction } = await import('./publish-service.mjs');
+  const manifest = createManifestFromCommittedTransaction(committed);
+  assert.deepEqual(manifest.mutations, [{
+    path: relativePath,
+    operation: 'write',
+    beforeHash: revisionForBytes(before),
+    afterHash: revisionForBytes(after)
+  }]);
+});
+
+test('version-2 inline journal migrates atomically and remains recoverable, idempotent and restorable', async (t) => {
+  let crashed = false;
+  const fixture = await createFixture(t, {
+    engineOptions: {
+      faultInjector(event) {
+        if (!crashed && event.phase === 'apply:before-mutation') {
+          crashed = true;
+          throw new SimulatedCrashError(event.phase);
+        }
+      }
+    }
+  });
+  const original = Buffer.from('legacy-original\0bytes', 'utf8');
+  const replacement = Buffer.from('legacy-replacement\0bytes', 'utf8');
+  await fixture.write('content/legacy.bin', original);
+  const key = 'legacy-v2-recovery';
+  const originalRequest = request(key, [
+    { path: 'content/legacy.bin', operation: 'write', bytes: replacement }
+  ]);
+  const preview = await fixture.engine.preview(originalRequest);
+  await assert.rejects(
+    fixture.engine.apply(applyRequest(preview, key)),
+    (error) => error.code === 'SIMULATED_TRANSACTION_CRASH'
+  );
+
+  const journalPath = path.join(fixture.engine.runtimePaths.journalDir, `${preview.transactionId}.json`);
+  const legacyJournal = JSON.parse(await fs.readFile(journalPath, 'utf8'));
+  const oldRef = legacyJournal.mutations[0].payloadRef;
+  legacyJournal.version = 2;
+  delete legacyJournal.mutations[0].payloadRef;
+  legacyJournal.mutations[0].contentBase64 = replacement.toString('base64');
+  const legacyPayloadHash = hashPayload({
+    mutations: [{
+      path: 'content/legacy.bin',
+      operation: 'write',
+      expectedRevision: null,
+      contentBase64: replacement.toString('base64')
+    }],
+    readSet: [],
+    metadata: {}
+  });
+  legacyJournal.payloadHash = legacyPayloadHash;
+  await fs.writeFile(journalPath, `${JSON.stringify(legacyJournal, null, 2)}\n`);
+  const idempotency = JSON.parse(await fs.readFile(fixture.engine.runtimePaths.idempotencyPath, 'utf8'));
+  const [idempotencyEntry] = Object.values(idempotency.entries);
+  idempotencyEntry.payloadHash = legacyPayloadHash;
+  await fs.writeFile(fixture.engine.runtimePaths.idempotencyPath, `${JSON.stringify(idempotency, null, 2)}\n`);
+  await fs.unlink(path.join(
+    fixture.engine.runtimePaths.payloadRoot,
+    oldRef.sha256.slice(0, 2),
+    `${oldRef.sha256}.blob`
+  ));
+
+  const restarted = createTransactionEngine({
+    repoRoot: fixture.repoRoot,
+    runtimeDir: fixture.runtimeDir,
+    lockTtlMs: 2_000,
+    recoveryMode: 'complete'
+  });
+  const recovery = await restarted.initialize();
+  assert.deepEqual(recovery.recovered, [{ transactionId: preview.transactionId, state: TRANSACTION_STATES.COMMITTED }]);
+  assert.deepEqual(await fixture.read('content/legacy.bin'), replacement);
+  const migrated = JSON.parse(await fs.readFile(journalPath, 'utf8'));
+  assert.equal(migrated.version, 3);
+  assert.equal(Object.hasOwn(migrated.mutations[0], 'contentBase64'), false);
+  assert.deepEqual(migrated.mutations[0].payloadRef, oldRef);
+
+  const reused = await restarted.preview(originalRequest);
+  assert.equal(reused.transactionId, preview.transactionId);
+  assert.equal(reused.payloadHash, legacyPayloadHash);
+  assert.equal(reused.reused, true);
+
+  const restore = await restarted.createRestorePlan(preview.transactionId);
+  const restorePreview = await restarted.preview(request('restore-migrated-v2', restore.mutations));
+  await restarted.apply(applyRequest(restorePreview, 'restore-migrated-v2'));
+  assert.deepEqual(await fixture.read('content/legacy.bin'), original);
+});
+
+test('missing or corrupt referenced payload fails closed without committing unverified bytes', async (t) => {
+  for (const variant of ['missing', 'corrupt']) {
+    await t.test(variant, async (t) => {
+      const fixture = await createFixture(t);
+      await fixture.write('content/value.bin', Buffer.from('before'));
+      const key = `payload-${variant}`;
+      const next = Buffer.from('after!');
+      const preview = await fixture.engine.preview(request(key, [
+        { path: 'content/value.bin', operation: 'write', bytes: next }
+      ]));
+      const journal = await fixture.engine.getTransaction(preview.transactionId);
+      const ref = journal.mutations[0].payloadRef;
+      const blobPath = path.join(fixture.engine.runtimePaths.payloadRoot, ref.sha256.slice(0, 2), `${ref.sha256}.blob`);
+      if (variant === 'missing') await fs.unlink(blobPath);
+      else await fs.writeFile(blobPath, Buffer.alloc(ref.size, 0x78));
+
+      await assert.rejects(
+        fixture.engine.apply(applyRequest(preview, key)),
+        (error) => error.code === (variant === 'missing' ? 'TRANSACTION_PAYLOAD_MISSING' : 'TRANSACTION_PAYLOAD_CORRUPT')
+      );
+      assert.equal((await fixture.read('content/value.bin')).toString(), 'before');
+      assert.equal((await fixture.engine.getTransaction(preview.transactionId)).state, TRANSACTION_STATES.ROLLED_BACK);
+    });
+  }
+});
+
+test('payload GC removes only proven orphans and crash temps while retaining history/restore refs', async (t) => {
+  const fixture = await createFixture(t);
+  const before = Buffer.from('before-retained');
+  const after = Buffer.from('after-retained');
+  await fixture.write('content/retained.bin', before);
+  const key = 'retained-payload';
+  const preview = await fixture.engine.preview(request(key, [
+    { path: 'content/retained.bin', operation: 'write', bytes: after }
+  ]));
+  await fixture.engine.apply(applyRequest(preview, key));
+  const journal = await fixture.engine.getTransaction(preview.transactionId);
+  const retainedRef = journal.mutations[0].payloadRef;
+  const retainedPath = path.join(
+    fixture.engine.runtimePaths.payloadRoot,
+    retainedRef.sha256.slice(0, 2),
+    `${retainedRef.sha256}.blob`
+  );
+
+  const store = createTransactionPayloadStore({
+    fileSystem: fs,
+    runtimeDir: fixture.runtimeDir,
+    payloadRoot: fixture.engine.runtimePaths.payloadRoot
+  });
+  await store.ensureLayout();
+  const orphanRef = await store.put(Buffer.from('orphan-payload'));
+  const orphanPath = path.join(
+    fixture.engine.runtimePaths.payloadRoot,
+    orphanRef.sha256.slice(0, 2),
+    `${orphanRef.sha256}.blob`
+  );
+  const tempPath = path.join(
+    path.dirname(orphanPath),
+    `.payload-${orphanRef.sha256}-${process.pid}-${crypto.randomUUID()}.tmp`
+  );
+  await fs.writeFile(tempPath, 'crash-temp');
+
+  const restarted = createTransactionEngine({
+    repoRoot: fixture.repoRoot,
+    runtimeDir: fixture.runtimeDir,
+    lockTtlMs: 2_000
+  });
+  await restarted.initialize();
+  assert.equal(await fs.access(orphanPath).then(() => true, () => false), false);
+  assert.equal(await fs.access(tempPath).then(() => true, () => false), false);
+  assert.equal(await fs.access(retainedPath).then(() => true, () => false), true);
+  assert.deepEqual(await restarted.garbageCollectPayloads(), { removed: 0 });
+  assert.equal((await restarted.listHistory()).length, 1);
+  const restore = await restarted.createRestorePlan(preview.transactionId);
+  assert.deepEqual(Buffer.from(restore.mutations[0].bytesBase64, 'base64'), before);
 });

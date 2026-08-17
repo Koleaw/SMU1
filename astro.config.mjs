@@ -68,6 +68,7 @@ if (!rawSiteUrl) {
 const siteUrl = normalizeSiteUrl(rawSiteUrl);
 const basePath = normalizeBasePath(process.env.BASE_PATH ?? (!IS_PRODUCTION_DEPLOY && process.env.CI === 'true' ? githubPagesBasePath() : '/'));
 const normalizedBasePath = basePath.endsWith('/') ? basePath : `${basePath}/`;
+const adminApiProxyTarget = `http://${process.env.ADMIN_API_HOST || '127.0.0.1'}:${process.env.ADMIN_API_PORT || '8787'}`;
 
 if (STRICT_SITE_URL_REQUIRED) {
   const isSyntheticProductionQa = process.env.SYNTHETIC_PRODUCTION_BUILD === 'true';
@@ -113,6 +114,14 @@ export default defineConfig({
       filter: isSitemapPageAllowed
     })],
   vite: {
+    server: {
+      proxy: {
+        '/api/admin': {
+          target: adminApiProxyTarget,
+          changeOrigin: true
+        }
+      }
+    },
     define: {
       'import.meta.env.SMU1_DEPLOY_TARGET': JSON.stringify(DEPLOY_TARGET)
     }

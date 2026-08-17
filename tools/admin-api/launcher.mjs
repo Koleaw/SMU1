@@ -6,6 +6,13 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ADMIN_ENV_FILE, loadAdminConfig } from './config.mjs';
+import {
+  createAdminHealthIdentity,
+  createAdminRepoIdentity,
+  createAdminShutdownMessage,
+  createAdminUiHealthMarker,
+  createSafeNodeChildEnvironment
+} from './runtime-identity.mjs';
 import { redactText } from './security.mjs';
 
 const THIS_FILE = fileURLToPath(import.meta.url);
@@ -18,6 +25,77 @@ export class AdminLauncherError extends Error {
     this.code = code;
     if (details !== undefined) this.details = details;
   }
+}
+
+const LAUNCHER_SIGNALS = Object.freeze(['SIGINT', 'SIGTERM', 'SIGHUP']);
+const UI_PARENT_IDENTITY_ENV = 'SMU1_ADMIN_LAUNCHER_REPO_IDENTITY';
+const UI_PARENT_BOOTSTRAP = [
+  "import { pathToFileURL } from 'node:url';",
+  `const expectedRepoIdentity = String(process.env.${UI_PARENT_IDENTITY_ENV} || '');`,
+  "if (!/^[a-f0-9]{64}$/u.test(expectedRepoIdentity)) process.exit(1);",
+  'let exiting = false;',
+  'const finish = (code) => { if (exiting) return; exiting = true; process.exit(code); };',
+  "process.once('disconnect', () => finish(1));",
+  `process.on('message', (message) => { if (message && message.type === 'smu1-admin-runtime-shutdown' && message.version === 1 && message.repoIdentity === expectedRepoIdentity) finish(0); });`,
+  'await import(pathToFileURL(process.argv[1]).href);'
+].join('\n');
+
+export function createParentBoundNodeArgs(entryPoint, args = []) {
+  return Object.freeze([
+    '--input-type=module',
+    '--eval',
+    UI_PARENT_BOOTSTRAP,
+    path.resolve(entryPoint),
+    ...args.map(String)
+  ]);
+}
+
+export function installLauncherSignalHandlers(stop, options = {}) {
+  if (typeof stop !== 'function') throw new TypeError('Launcher stop callback is required.');
+  const processRef = options.processRef || process;
+  let triggered = false;
+  const cleanup = () => {
+    for (const signal of LAUNCHER_SIGNALS) processRef.off(signal, handler);
+  };
+  const handler = () => {
+    if (triggered) return;
+    triggered = true;
+    cleanup();
+    void Promise.resolve().then(stop).then(
+      () => { processRef.exitCode = 0; },
+      () => { processRef.exitCode = 1; }
+    );
+  };
+  for (const signal of LAUNCHER_SIGNALS) processRef.once(signal, handler);
+  return cleanup;
+}
+
+export async function settleAdminSession(initial, options = {}) {
+  let state = { ui: Boolean(initial?.ui), api: Boolean(initial?.api) };
+  if (!state.ui && !state.api) return Object.freeze({ state: 'empty', ...state });
+  const probe = options.probe;
+  if (typeof probe !== 'function') throw new TypeError('Admin session probe callback is required.');
+  const settleMs = options.settleMs ?? 1_200;
+  const healthyConfirmMs = options.healthyConfirmMs ?? 250;
+  const intervalMs = options.intervalMs ?? 100;
+  const now = options.now || Date.now;
+  const delay = options.delay || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const startedAt = now();
+  let healthySince = state.ui && state.api ? startedAt : null;
+
+  while (now() - startedAt < settleMs) {
+    await delay(intervalMs);
+    state = await probe();
+    state = { ui: Boolean(state?.ui), api: Boolean(state?.api) };
+    if (!state.ui && !state.api) return Object.freeze({ state: 'empty', ...state });
+    if (state.ui && state.api) {
+      if (healthySince === null) healthySince = now();
+      if (now() - healthySince >= healthyConfirmMs) return Object.freeze({ state: 'existing', ...state });
+    } else {
+      healthySince = null;
+    }
+  }
+  return Object.freeze({ state: state.ui && state.api ? 'existing' : 'partial', ...state });
 }
 
 function parseArguments(argv) {
@@ -76,30 +154,84 @@ export async function checkPortAvailable(host, port) {
 
 export async function probeHttp(url, options = {}) {
   const timeoutMs = options.timeoutMs ?? 1_000;
+  const service = String(options.service || '').toLowerCase();
+  let expectedIdentity;
+  let expectedUiMarker;
+  try {
+    expectedIdentity = createAdminHealthIdentity(service, options.repoIdentity);
+    expectedUiMarker = service === 'ui' ? createAdminUiHealthMarker(options.repoIdentity) : '';
+  } catch {
+    return false;
+  }
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
     let parsed;
     try {
       parsed = new URL(url);
     } catch {
-      resolve(false);
+      finish(false);
       return;
     }
     if (parsed.protocol !== 'http:') {
-      resolve(false);
+      finish(false);
       return;
     }
     const request = http.get(parsed, {
       headers: {
         Host: parsed.host,
-        Accept: 'application/json,text/html;q=0.9',
-        Origin: parsed.origin
+        Accept: service === 'api' ? 'application/json' : 'text/html'
       }
     }, (response) => {
-      response.resume();
-      resolve(response.statusCode >= 200 && response.statusCode < 500);
+      if (response.statusCode !== 200) {
+        response.resume();
+        finish(false);
+        return;
+      }
+      const responseContentType = String(response.headers['content-type'] || '').toLowerCase();
+      if ((service === 'api' && !responseContentType.includes('application/json'))
+        || (service === 'ui' && !responseContentType.includes('text/html'))) {
+        response.resume();
+        finish(false);
+        return;
+      }
+      const chunks = [];
+      let length = 0;
+      const maxBytes = service === 'api' ? 64 * 1024 : 1024 * 1024;
+      response.on('data', (chunk) => {
+        length += chunk.length;
+        if (length > maxBytes) {
+          response.destroy();
+          finish(false);
+          return;
+        }
+        chunks.push(chunk);
+      });
+      response.once('error', () => finish(false));
+      response.once('end', () => {
+        if (settled) return;
+        const body = Buffer.concat(chunks).toString('utf8');
+        if (service === 'api') {
+          let payload;
+          try { payload = JSON.parse(body); }
+          catch { finish(false); return; }
+          finish(Boolean(payload && typeof payload === 'object'
+            && payload.kind === expectedIdentity.kind
+            && payload.version === expectedIdentity.version
+            && payload.service === expectedIdentity.service
+            && payload.repoIdentity === expectedIdentity.repoIdentity));
+          return;
+        }
+        const exactMarker = `<meta name="smu1-admin-health" content="${expectedUiMarker}">`;
+        finish(body.includes(exactMarker));
+      });
     });
-    request.setTimeout(timeoutMs, () => request.destroy());
-    request.once('error', () => resolve(false));
+    request.setTimeout(timeoutMs, () => request.destroy(new Error('Admin health probe timed out.')));
+    request.once('error', () => finish(false));
   });
 }
 
@@ -108,12 +240,12 @@ export async function waitForHttp(url, child, options = {}) {
   const intervalMs = options.intervalMs ?? 200;
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
-    if (child && child.exitCode !== null) {
+    if (child && (child.exitCode !== null || child.signalCode !== null)) {
       throw new AdminLauncherError(`Процесс завершился до готовности (${child.exitCode}).`, {
         code: 'PROCESS_EARLY_EXIT'
       });
     }
-    if (await probeHttp(url, { timeoutMs: Math.min(1_000, intervalMs * 4) })) return true;
+    if (await probeHttp(url, { ...options, timeoutMs: Math.min(1_000, intervalMs * 4) })) return true;
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
   throw new AdminLauncherError(`Сервис не стал доступен вовремя: ${url}`, { code: 'HEALTH_TIMEOUT' });
@@ -130,9 +262,15 @@ function openBrowser(url) {
   child.unref();
 }
 
-function childEnvironment(raw, config) {
-  return {
-    ...process.env,
+function hostForUrl(host) {
+  return host === '::1' ? '[::1]' : host;
+}
+
+export function createChildEnvironments(raw, config, options = {}) {
+  const sourceEnvironment = options.environment || process.env;
+  const repoIdentity = options.repoIdentity || createAdminRepoIdentity(options.repoRoot || DEFAULT_REPO_ROOT);
+  const api = {
+    ...sourceEnvironment,
     ...raw,
     ADMIN_API_HOST: config.ADMIN_API_HOST,
     ADMIN_API_PORT: String(config.ADMIN_API_PORT),
@@ -141,33 +279,108 @@ function childEnvironment(raw, config) {
     CONTENT_WRITE_MODE: 'local',
     PUBLIC_ADMIN_API_BASE: config.PUBLIC_ADMIN_API_BASE
   };
+  const ui = {
+    ...createSafeNodeChildEnvironment(sourceEnvironment),
+    NODE_ENV: 'development',
+    CI: 'false',
+    DEPLOY_TARGET: 'development',
+    REQUIRE_SITE_URL: 'false',
+    PRODUCTION_DEPLOY_ENABLED: 'false',
+    BASE_PATH: '/',
+    TEST_SITE_URL: `http://${hostForUrl(config.ADMIN_UI_HOST)}:${config.ADMIN_UI_PORT}`,
+    ADMIN_API_HOST: config.ADMIN_API_HOST,
+    ADMIN_API_PORT: String(config.ADMIN_API_PORT),
+    ADMIN_UI_HOST: config.ADMIN_UI_HOST,
+    ADMIN_UI_PORT: String(config.ADMIN_UI_PORT),
+    PUBLIC_ADMIN_API_BASE: config.PUBLIC_ADMIN_API_BASE,
+    PUBLIC_ADMIN_HEALTH_MARKER: createAdminUiHealthMarker(repoIdentity),
+    [UI_PARENT_IDENTITY_ENV]: repoIdentity,
+    ASTRO_TELEMETRY_DISABLED: '1'
+  };
+  return Object.freeze({ api: Object.freeze(api), ui: Object.freeze(ui) });
 }
 
 function spawnService(command, args, options) {
   return spawn(command, args, {
     cwd: options.repoRoot,
     env: options.env,
-    stdio: 'inherit',
+    stdio: options.ipc ? ['inherit', 'inherit', 'inherit', 'ipc'] : 'inherit',
     windowsHide: true,
     shell: false
   });
 }
 
-async function stopChild(child) {
-  if (!child || child.exitCode !== null || child.killed) return;
-  if (process.platform === 'win32') {
-    spawnSync('taskkill', ['/pid', String(child.pid), '/t', '/f'], {
-      windowsHide: true,
-      stdio: 'ignore'
-    });
-    return;
+function childHasExited(child) {
+  return !child || child.exitCode !== null || child.signalCode !== null;
+}
+
+export async function waitForChildExit(child, timeoutMs = 5_000) {
+  if (childHasExited(child)) return true;
+  return new Promise((resolve) => {
+    let timer;
+    const onExit = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    child.once('exit', onExit);
+    if (childHasExited(child)) {
+      child.off('exit', onExit);
+      resolve(true);
+      return;
+    }
+    timer = setTimeout(() => {
+      child.off('exit', onExit);
+      resolve(childHasExited(child));
+    }, timeoutMs);
+  });
+}
+
+function forceKillWindows(child) {
+  return spawnSync('taskkill', ['/pid', String(child.pid), '/t', '/f'], {
+    windowsHide: true,
+    stdio: 'ignore'
+  });
+}
+
+export async function stopChild(child, options = {}) {
+  if (childHasExited(child)) return Object.freeze({ exited: true, forced: false });
+  const role = options.role || 'service';
+  const platform = options.platform || process.platform;
+  const gracefulTimeoutMs = options.gracefulTimeoutMs ?? 6_500;
+  const forceExitTimeoutMs = options.forceExitTimeoutMs ?? 5_000;
+  let forced = false;
+
+  if (child.connected && typeof child.send === 'function') {
+    try { child.send(createAdminShutdownMessage(options.repoIdentity), () => {}); }
+    catch { /* force fallback below */ }
+    if (await waitForChildExit(child, gracefulTimeoutMs)) {
+      return Object.freeze({ exited: true, forced: false });
+    }
   }
-  child.kill('SIGTERM');
-  await Promise.race([
-    new Promise((resolve) => child.once('exit', resolve)),
-    new Promise((resolve) => setTimeout(resolve, 5_000))
-  ]);
-  if (child.exitCode === null) child.kill('SIGKILL');
+
+  if (platform !== 'win32') {
+    try { child.kill('SIGTERM'); } catch { /* force fallback below */ }
+    if (await waitForChildExit(child, options.signalTimeoutMs ?? 2_000)) {
+      return Object.freeze({ exited: true, forced: false });
+    }
+    forced = true;
+    try { child.kill('SIGKILL'); } catch { /* checked below */ }
+  } else {
+    forced = true;
+    const forceKill = options.forceKillWindows || forceKillWindows;
+    if (!Number.isSafeInteger(child.pid) || child.pid < 1) {
+      throw new AdminLauncherError('Не удалось безопасно определить PID процесса для остановки.', { code: 'PROCESS_PID_INVALID' });
+    }
+    forceKill(child);
+  }
+
+  if (!await waitForChildExit(child, forceExitTimeoutMs)) {
+    throw new AdminLauncherError(
+      `Не удалось подтвердить остановку процесса ${role}.`,
+      { code: 'PROCESS_STOP_UNCONFIRMED', details: { role, pid: child.pid } }
+    );
+  }
+  return Object.freeze({ exited: true, forced });
 }
 
 function printHelp() {
@@ -192,17 +405,30 @@ export async function runAdminLauncher(options = {}) {
   const loaded = await loadAdminConfig({ repoRoot });
   const { config, raw } = loaded;
   assertBranch(repoRoot, config.ADMIN_EXPECTED_BRANCH);
+  const repoIdentity = createAdminRepoIdentity(repoRoot);
 
-  const adminUrl = `http://${config.ADMIN_UI_HOST}:${config.ADMIN_UI_PORT}/admin/`;
-  const apiHealthUrl = `http://${config.ADMIN_API_HOST}:${config.ADMIN_API_PORT}/api/admin/me`;
-  const existingUi = await probeHttp(adminUrl);
-  const existingApi = await probeHttp(apiHealthUrl);
-  if (existingUi && existingApi) {
+  const adminUrl = `http://${hostForUrl(config.ADMIN_UI_HOST)}:${config.ADMIN_UI_PORT}/admin/`;
+  const apiHealthUrl = `http://${hostForUrl(config.ADMIN_API_HOST)}:${config.ADMIN_API_PORT}/api/admin/health`;
+  const probeSession = async () => {
+    const [ui, api] = await Promise.all([
+      probeHttp(adminUrl, { service: 'ui', repoIdentity }),
+      probeHttp(apiHealthUrl, { service: 'api', repoIdentity })
+    ]);
+    return { ui, api };
+  };
+  const initialSession = await probeSession();
+  const session = await settleAdminSession(initialSession, {
+    probe: probeSession,
+    settleMs: options.partialSessionSettleMs,
+    healthyConfirmMs: options.healthySessionConfirmMs,
+    intervalMs: options.sessionProbeIntervalMs
+  });
+  if (session.state === 'existing') {
     if (options.open === true) openBrowser(adminUrl);
     process.stdout.write(`Админка уже запущена: ${adminUrl}\n`);
     return { existing: true, adminUrl, stop: async () => {} };
   }
-  if (existingUi !== existingApi) {
+  if (session.state === 'partial') {
     throw new AdminLauncherError('Один из портов занят посторонним/устаревшим процессом. Закройте старое окно и повторите.', {
       code: 'PARTIAL_SESSION_DETECTED'
     });
@@ -219,33 +445,41 @@ export async function runAdminLauncher(options = {}) {
     );
   }
 
-  const env = childEnvironment(raw, config);
-  const api = spawnService(process.execPath, [path.join(repoRoot, 'tools', 'admin-api', 'server.mjs')], { repoRoot, env });
-  const ui = spawnService(process.execPath, [
-    path.join(repoRoot, 'node_modules', 'astro', 'astro.js'),
+  const environments = createChildEnvironments(raw, config, { repoRoot, repoIdentity });
+  const api = spawnService(process.execPath, [path.join(repoRoot, 'tools', 'admin-api', 'server.mjs')], {
+    repoRoot,
+    env: environments.api,
+    ipc: true
+  });
+  const ui = spawnService(process.execPath, createParentBoundNodeArgs(
+    path.join(repoRoot, 'node_modules', 'astro', 'astro.js'), [
     'dev',
     '--host', config.ADMIN_UI_HOST,
     '--port', String(config.ADMIN_UI_PORT)
-  ], { repoRoot, env });
+    ]
+  ), { repoRoot, env: environments.ui, ipc: true });
 
-  let stopping = false;
-  const stop = async () => {
-    if (stopping) return;
-    stopping = true;
-    await Promise.all([stopChild(api), stopChild(ui)]);
+  let stopPromise = null;
+  const stop = () => {
+    if (stopPromise) return stopPromise;
+    stopPromise = Promise.all([
+      stopChild(api, { role: 'api', repoIdentity }),
+      stopChild(ui, { role: 'ui', repoIdentity })
+    ]);
+    return stopPromise;
   };
   const abortOnExit = (name, child) => child.once('exit', (code, signal) => {
-    if (stopping) return;
+    if (stopPromise) return;
     process.stderr.write(`${name} неожиданно завершён (${code ?? signal}). Останавливаю связанную сессию.\n`);
-    void stop().then(() => { process.exitCode = 1; });
+    void stop().then(() => { process.exitCode = 1; }, () => { process.exitCode = 1; });
   });
   abortOnExit('Admin API', api);
   abortOnExit('Astro', ui);
 
   try {
     await Promise.all([
-      waitForHttp(apiHealthUrl, api, { timeoutMs: options.timeoutMs }),
-      waitForHttp(adminUrl, ui, { timeoutMs: options.timeoutMs })
+      waitForHttp(apiHealthUrl, api, { timeoutMs: options.timeoutMs, service: 'api', repoIdentity }),
+      waitForHttp(adminUrl, ui, { timeoutMs: options.timeoutMs, service: 'ui', repoIdentity })
     ]);
   } catch (error) {
     await stop();
@@ -256,15 +490,17 @@ export async function runAdminLauncher(options = {}) {
   if (options.open === true) openBrowser(adminUrl);
   if (options.keepAlive === false) return { existing: false, adminUrl, api, ui, stop };
 
-  const signalHandler = () => { void stop().then(() => { process.exitCode = 0; }); };
-  process.once('SIGINT', signalHandler);
-  process.once('SIGTERM', signalHandler);
-  await Promise.race([
-    new Promise((resolve) => api.once('exit', resolve)),
-    new Promise((resolve) => ui.once('exit', resolve))
-  ]);
-  await stop();
-  return { existing: false, adminUrl, stop };
+  const removeSignalHandlers = installLauncherSignalHandlers(stop);
+  try {
+    await Promise.race([
+      new Promise((resolve) => api.once('exit', resolve)),
+      new Promise((resolve) => ui.once('exit', resolve))
+    ]);
+    await stop();
+    return { existing: false, adminUrl, stop };
+  } finally {
+    removeSignalHandlers();
+  }
 }
 
 export async function runLauncherCli(argv = process.argv.slice(2)) {

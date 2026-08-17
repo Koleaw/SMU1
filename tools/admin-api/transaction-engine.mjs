@@ -1,6 +1,10 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {
+  createTransactionPayloadStore,
+  normalizePayloadRef
+} from './transaction-payload-store.mjs';
 
 export const TRANSACTION_STATES = Object.freeze({
   PREPARED: 'prepared',
@@ -32,7 +36,8 @@ export const TRANSACTION_FAULT_PHASES = Object.freeze([
   'recovery:after'
 ]);
 
-const JOURNAL_VERSION = 1;
+const JOURNAL_VERSION = 3;
+const LEGACY_INLINE_JOURNAL_VERSIONS = new Set([1, 2]);
 const IDEMPOTENCY_VERSION = 1;
 const DEFAULT_LOCK_TTL_MS = 30_000;
 const DEFAULT_TRANSACTION_TTL_MS = 30 * 60_000;
@@ -194,7 +199,8 @@ function decodeWriteBytes(mutation) {
 
 function normalizeAffectedRoute(value, index) {
   if (typeof value !== 'string' || !value || value !== value.trim() || value.length > 2_048
-    || CONTROL_CHARACTER_RE.test(value) || value.includes('\\') || value.startsWith('//') || !value.startsWith('/')) {
+    || CONTROL_CHARACTER_RE.test(value) || /[\\?#]/u.test(value) || /%(?:2e|2f|5c)/iu.test(value)
+    || value.startsWith('//') || !value.startsWith('/')) {
     fail('TRANSACTION_METADATA_INVALID', 'affectedRoutes содержит некорректный внутренний маршрут.', {
       field: `metadata.affectedRoutes[${index}]`
     });
@@ -206,6 +212,38 @@ function normalizeAffectedRoute(value, index) {
     });
   }
   return value;
+}
+
+function normalizeRouteExpectations(value) {
+  if (!Array.isArray(value) || value.length > 500) {
+    fail('TRANSACTION_METADATA_INVALID', 'metadata.routeExpectations должно быть массивом типизированных ожиданий.', {
+      field: 'metadata.routeExpectations'
+    });
+  }
+  const byRoute = new Map();
+  value.forEach((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)
+      || Object.keys(item).sort().join(',') !== 'expected,route') {
+      fail('TRANSACTION_METADATA_INVALID', 'routeExpectations содержит некорректное ожидание.', {
+        field: `metadata.routeExpectations[${index}]`
+      });
+    }
+    const route = normalizeAffectedRoute(item.route, index);
+    if (!['html', 'not-found'].includes(item.expected)) {
+      fail('TRANSACTION_METADATA_INVALID', 'routeExpectations.expected должен быть html или not-found.', {
+        field: `metadata.routeExpectations[${index}].expected`
+      });
+    }
+    const previous = byRoute.get(route);
+    if (previous && previous !== item.expected) {
+      fail('TRANSACTION_METADATA_INVALID', 'Один маршрут содержит противоречивые smoke-ожидания.', {
+        field: `metadata.routeExpectations[${index}]`, route
+      });
+    }
+    byRoute.set(route, item.expected);
+  });
+  return [...byRoute].sort(([left], [right]) => left.localeCompare(right))
+    .map(([route, expected]) => ({ route, expected }));
 }
 
 function normalizeMetadata(value) {
@@ -239,6 +277,19 @@ function normalizeMetadata(value) {
       });
     }
     cloned.affectedRoutes = [...new Set(cloned.affectedRoutes.map(normalizeAffectedRoute))].sort();
+  }
+  if (cloned.routeExpectations !== undefined) {
+    cloned.routeExpectations = normalizeRouteExpectations(cloned.routeExpectations);
+  }
+  if (cloned.affectedRoutes !== undefined || cloned.routeExpectations !== undefined) {
+    const routes = cloned.affectedRoutes ?? [];
+    const expectationRoutes = (cloned.routeExpectations ?? []).map((item) => item.route);
+    if (routes.length !== expectationRoutes.length
+      || routes.some((route, index) => route !== expectationRoutes[index])) {
+      fail('TRANSACTION_METADATA_INVALID', 'affectedRoutes и routeExpectations должны описывать один точный набор маршрутов.', {
+        field: 'metadata.routeExpectations'
+      });
+    }
   }
   if (cloned.baseHead !== undefined && (typeof cloned.baseHead !== 'string' || !GIT_OBJECT_ID_RE.test(cloned.baseHead))) {
     fail('TRANSACTION_METADATA_INVALID', 'metadata.baseHead должно содержать полный Git SHA.', {
@@ -278,11 +329,16 @@ function normalizeRequest({ owner, recoveryClientId, idempotencyKey, mutations, 
       return { path: relativePath, operation, expectedRevision };
     }
     const bytes = decodeWriteBytes(mutation);
+    const payloadRef = {
+      sha256: hashBytes(bytes),
+      size: bytes.length
+    };
     return {
       path: relativePath,
       operation,
       expectedRevision,
-      contentBase64: bytes.toString('base64'),
+      contentBytes: bytes,
+      payloadRef,
       nextRevision: revisionForBytes(bytes)
     };
   }).sort((left, right) => left.path.localeCompare(right.path, 'en'));
@@ -311,7 +367,7 @@ function normalizeRequest({ owner, recoveryClientId, idempotencyKey, mutations, 
       path: mutation.path,
       operation: mutation.operation,
       expectedRevision: mutation.expectedRevision ?? null,
-      contentBase64: mutation.operation === 'write' ? mutation.contentBase64 : null
+      payloadRef: mutation.operation === 'write' ? mutation.payloadRef : null
     })),
     readSet: normalizedReadSet.map((entry) => ({
       path: entry.path,
@@ -320,6 +376,20 @@ function normalizeRequest({ owner, recoveryClientId, idempotencyKey, mutations, 
     metadata: normalizeMetadata(metadata)
   };
 
+  const legacyPayloadHash = () => hashPayload({
+    mutations: normalizedMutations.map((mutation) => ({
+      path: mutation.path,
+      operation: mutation.operation,
+      expectedRevision: mutation.expectedRevision ?? null,
+      contentBase64: mutation.operation === 'write' ? mutation.contentBytes.toString('base64') : null
+    })),
+    readSet: normalizedReadSet.map((entry) => ({
+      path: entry.path,
+      expectedRevision: entry.expectedRevision ?? null
+    })),
+    metadata: payloadDescriptor.metadata
+  });
+
   return {
     owner: normalizedOwner,
     recoveryClientId: normalizedClientId,
@@ -327,7 +397,8 @@ function normalizeRequest({ owner, recoveryClientId, idempotencyKey, mutations, 
     mutations: normalizedMutations,
     readSet: normalizedReadSet,
     metadata: payloadDescriptor.metadata,
-    payloadHash: hashPayload(payloadDescriptor)
+    payloadHash: hashPayload(payloadDescriptor),
+    legacyPayloadHash
   };
 }
 
@@ -377,6 +448,7 @@ export function createTransactionEngine(options = {}) {
   const runtimeDir = path.resolve(options.runtimeDir ?? path.join(repoRoot, '.admin-runtime', 'transactions'));
   const journalDir = path.join(runtimeDir, 'journals');
   const backupRoot = path.join(runtimeDir, 'backups');
+  const payloadRoot = path.join(runtimeDir, 'payloads', 'sha256');
   const idempotencyPath = path.join(runtimeDir, 'idempotency.json');
   const lockPath = path.join(runtimeDir, 'repo.lock');
   const lockTtlMs = Number(options.lockTtlMs ?? DEFAULT_LOCK_TTL_MS);
@@ -387,6 +459,12 @@ export function createTransactionEngine(options = {}) {
   const now = typeof options.now === 'function' ? options.now : Date.now;
   const faultInjector = typeof options.faultInjector === 'function' ? options.faultInjector : null;
   const instanceId = options.instanceId ?? crypto.randomUUID();
+  const payloadStore = createTransactionPayloadStore({
+    fileSystem,
+    runtimeDir,
+    payloadRoot,
+    syncDirectory: (directory) => syncDirectory(directory)
+  });
 
   if (!Number.isFinite(lockTtlMs) || lockTtlMs < 100 || !Number.isFinite(transactionTtlMs) || transactionTtlMs < 1) {
     fail('TRANSACTION_CONFIG_INVALID', 'Некорректные TTL-настройки transaction engine.');
@@ -414,6 +492,7 @@ export function createTransactionEngine(options = {}) {
     await fileSystem.mkdir(repoRoot, { recursive: true });
     await fileSystem.mkdir(journalDir, { recursive: true });
     await fileSystem.mkdir(backupRoot, { recursive: true });
+    await payloadStore.ensureLayout();
     repoRealRoot = await fileSystem.realpath(repoRoot);
   }
 
@@ -536,7 +615,75 @@ export function createTransactionEngine(options = {}) {
     return path.join(journalDir, `${transactionId}.json`);
   }
 
-  async function loadJournal(transactionId) {
+  function validatePersistedJournal(journal, transactionId, { allowLegacy = false } = {}) {
+    const supportedVersion = journal?.version === JOURNAL_VERSION
+      || (allowLegacy && LEGACY_INLINE_JOURNAL_VERSIONS.has(journal?.version));
+    if (!supportedVersion || journal.transactionId !== transactionId
+      || !Object.values(TRANSACTION_STATES).includes(journal.state)
+      || !Array.isArray(journal.mutations)) {
+      fail('TRANSACTION_JOURNAL_CORRUPT', 'Журнал транзакции имеет неизвестный формат.', { transactionId });
+    }
+    for (const mutation of journal.mutations) {
+      if (!mutation || typeof mutation !== 'object' || Array.isArray(mutation)
+        || !['write', 'delete'].includes(mutation.operation)) {
+        fail('TRANSACTION_JOURNAL_CORRUPT', 'Журнал транзакции содержит некорректную mutation.', { transactionId });
+      }
+      try {
+        normalizeRelativePath(mutation.path);
+      } catch {
+        fail('TRANSACTION_JOURNAL_CORRUPT', 'Журнал транзакции содержит небезопасный путь.', { transactionId });
+      }
+      if (mutation.operation === 'delete') {
+        if (Object.hasOwn(mutation, 'payloadRef') || Object.hasOwn(mutation, 'contentBase64')
+          || Object.hasOwn(mutation, 'bytesBase64')) {
+          fail('TRANSACTION_JOURNAL_CORRUPT', 'Delete mutation содержит payload.', { transactionId });
+        }
+        continue;
+      }
+      if (journal.version === JOURNAL_VERSION) {
+        if (Object.hasOwn(mutation, 'contentBase64') || Object.hasOwn(mutation, 'bytesBase64')) {
+          fail(
+            'TRANSACTION_JOURNAL_INLINE_PAYLOAD_FORBIDDEN',
+            'Новый формат transaction journal не может содержать inline payload.',
+            { transactionId, path: mutation.path }
+          );
+        }
+        const ref = normalizePayloadRef(mutation.payloadRef);
+        if (mutation.nextRevision !== `sha256:${ref.sha256}:${ref.size}`) {
+          fail('TRANSACTION_JOURNAL_CORRUPT', 'Payload reference не совпадает с nextRevision.', {
+            transactionId,
+            path: mutation.path
+          });
+        }
+        mutation.payloadRef = { ...ref };
+      } else {
+        const inlineFields = ['contentBase64', 'bytesBase64'].filter((field) => Object.hasOwn(mutation, field));
+        if (inlineFields.length !== 1 || Object.hasOwn(mutation, 'payloadRef')) {
+          fail('TRANSACTION_JOURNAL_CORRUPT', 'Legacy transaction journal не содержит exact inline payload.', {
+            transactionId,
+            path: mutation.path
+          });
+        }
+        const encoded = mutation[inlineFields[0]];
+        if (typeof encoded !== 'string' || !BASE64_RE.test(encoded)) {
+          fail('TRANSACTION_JOURNAL_CORRUPT', 'Legacy transaction journal содержит некорректный Base64.', {
+            transactionId,
+            path: mutation.path
+          });
+        }
+        const bytes = Buffer.from(encoded, 'base64');
+        if (bytes.toString('base64') !== encoded || revisionForBytes(bytes) !== mutation.nextRevision) {
+          fail('TRANSACTION_JOURNAL_CORRUPT', 'Legacy inline payload не совпадает с nextRevision.', {
+            transactionId,
+            path: mutation.path
+          });
+        }
+      }
+    }
+    return journal;
+  }
+
+  async function loadJournal(transactionId, options = {}) {
     let raw;
     try {
       raw = await fileSystem.readFile(journalPath(transactionId), 'utf8');
@@ -552,11 +699,7 @@ export function createTransactionEngine(options = {}) {
     } catch {
       fail('TRANSACTION_JOURNAL_CORRUPT', 'Журнал транзакции повреждён.', { transactionId });
     }
-    if (journal?.version !== JOURNAL_VERSION || journal.transactionId !== transactionId
-      || !Object.values(TRANSACTION_STATES).includes(journal.state)) {
-      fail('TRANSACTION_JOURNAL_CORRUPT', 'Журнал транзакции имеет неизвестный формат.', { transactionId });
-    }
-    return journal;
+    return validatePersistedJournal(journal, transactionId, options);
   }
 
   async function saveJournal(journal) {
@@ -565,7 +708,7 @@ export function createTransactionEngine(options = {}) {
     return journal;
   }
 
-  async function listJournals() {
+  async function listJournalIds() {
     let names;
     try {
       names = await fileSystem.readdir(journalDir);
@@ -573,12 +716,39 @@ export function createTransactionEngine(options = {}) {
       if (isMissingError(error)) return [];
       throw error;
     }
-    const journals = [];
+    const transactionIds = [];
     for (const name of names.filter((entry) => entry.endsWith('.json')).sort()) {
       const transactionId = name.slice(0, -'.json'.length);
-      journals.push(await loadJournal(transactionId));
+      if (!TRANSACTION_ID_RE.test(transactionId)) {
+        fail('TRANSACTION_JOURNAL_CORRUPT', 'Каталог journals содержит некорректное имя.', { name });
+      }
+      transactionIds.push(transactionId);
     }
-    return journals;
+    return transactionIds;
+  }
+
+  async function* iterateJournals() {
+    for (const transactionId of await listJournalIds()) yield await loadJournal(transactionId);
+  }
+
+  async function migrateLegacyJournalsUnderLock() {
+    let migrated = 0;
+    for (const transactionId of await listJournalIds()) {
+      const journal = await loadJournal(transactionId, { allowLegacy: true });
+      if (journal.version === JOURNAL_VERSION) continue;
+      for (let index = 0; index < journal.mutations.length; index += 1) {
+        const mutation = journal.mutations[index];
+        if (mutation.operation === 'delete') continue;
+        const encoded = mutation.contentBase64 ?? mutation.bytesBase64;
+        const payloadRef = await payloadStore.put(Buffer.from(encoded, 'base64'));
+        const { contentBase64, bytesBase64, ...metadata } = mutation;
+        journal.mutations[index] = { ...metadata, payloadRef: { ...payloadRef } };
+      }
+      journal.version = JOURNAL_VERSION;
+      await atomicWriteJson(journalPath(transactionId), journal);
+      migrated += 1;
+    }
+    return migrated;
   }
 
   async function readIdempotency() {
@@ -622,7 +792,7 @@ export function createTransactionEngine(options = {}) {
   async function reconcileIdempotencyUnderLock() {
     const store = await readIdempotency();
     let changed = false;
-    for (const journal of await listJournals()) {
+    for await (const journal of iterateJournals()) {
       const entryId = idempotencyEntryId(journal.recoveryClientId, journal.idempotencyKey);
       const current = store.entries[entryId];
       if (current && (current.payloadHash !== journal.payloadHash
@@ -891,7 +1061,7 @@ export function createTransactionEngine(options = {}) {
     return path.join(path.dirname(target), `.${path.basename(target)}.admin-tx-${transactionId}-${index}.tmp`);
   }
 
-  async function atomicWriteTarget(mutation, journal, index, mode = 0o644) {
+  async function atomicWriteTarget(mutation, journal, index, mode = 0o644, writeSource = null) {
     const { target } = await assertManagedPathSafe(mutation.path);
     await fileSystem.mkdir(path.dirname(target), { recursive: true });
     const temporary = targetTemporaryPath(target, journal.transactionId, index);
@@ -899,7 +1069,17 @@ export function createTransactionEngine(options = {}) {
     let handle;
     try {
       handle = await fileSystem.open(temporary, 'wx', mode || 0o644);
-      await handle.writeFile(Buffer.from(mutation.contentBase64, 'base64'));
+      if (writeSource) {
+        await writeSource(handle);
+      } else if (mutation.payloadRef) {
+        await payloadStore.writeToHandle(mutation.payloadRef, handle);
+      } else if (Buffer.isBuffer(mutation.bytes)) {
+        await handle.writeFile(mutation.bytes);
+      } else {
+        fail('TRANSACTION_PAYLOAD_REF_INVALID', 'Write mutation does not contain an exact payload source.', {
+          path: mutation.path
+        });
+      }
       await handle.sync();
       await handle.close();
       handle = null;
@@ -939,9 +1119,25 @@ export function createTransactionEngine(options = {}) {
 
   async function readBackupBytes(journal, backup) {
     if (!backup.exists || !backup.file) return null;
+    if (typeof backup.file !== 'string' || !/^\d{4,}\.bin$/u.test(backup.file)) {
+      fail('TRANSACTION_BACKUP_CORRUPT', 'Backup contains an unsafe file name.', {
+        transactionId: journal.transactionId,
+        path: backup.path
+      });
+    }
     let bytes;
+    const source = path.join(backupRoot, journal.transactionId, backup.file);
     try {
-      bytes = await fileSystem.readFile(path.join(backupRoot, journal.transactionId, backup.file));
+      const stats = await fileSystem.lstat(source);
+      const real = await fileSystem.realpath(source);
+      if (stats.isSymbolicLink() || !stats.isFile()
+        || !isInsideOrEqual(path.join(backupRoot, journal.transactionId), real)) {
+        fail('TRANSACTION_BACKUP_CORRUPT', 'Backup path is unsafe.', {
+          transactionId: journal.transactionId,
+          path: backup.path
+        });
+      }
+      bytes = await fileSystem.readFile(source);
     } catch (error) {
       if (isMissingError(error)) {
         fail('TRANSACTION_BACKUP_MISSING', 'Не найдена обязательная резервная копия.', {
@@ -958,6 +1154,66 @@ export function createTransactionEngine(options = {}) {
       });
     }
     return bytes;
+  }
+
+  async function writeBackupToHandle(journal, backup, destinationHandle) {
+    if (!backup.exists || typeof backup.file !== 'string' || !/^\d{4,}\.bin$/u.test(backup.file)) {
+      fail('TRANSACTION_BACKUP_CORRUPT', 'Backup contains an unsafe file name.', {
+        transactionId: journal.transactionId,
+        path: backup.path
+      });
+    }
+    const source = path.join(backupRoot, journal.transactionId, backup.file);
+    let sourceHandle;
+    const digest = crypto.createHash('sha256');
+    let total = 0;
+    try {
+      const stats = await fileSystem.lstat(source);
+      const real = await fileSystem.realpath(source);
+      if (stats.isSymbolicLink() || !stats.isFile() || stats.size !== backup.bytes
+        || !isInsideOrEqual(path.join(backupRoot, journal.transactionId), real)) {
+        fail('TRANSACTION_BACKUP_CORRUPT', 'Backup is corrupt.', {
+          transactionId: journal.transactionId,
+          path: backup.path
+        });
+      }
+      sourceHandle = await fileSystem.open(source, 'r');
+      const chunk = Buffer.allocUnsafe(64 * 1024);
+      while (true) {
+        const { bytesRead } = await sourceHandle.read(chunk, 0, chunk.length, null);
+        if (bytesRead === 0) break;
+        const bytes = chunk.subarray(0, bytesRead);
+        digest.update(bytes);
+        total += bytesRead;
+        let offset = 0;
+        while (offset < bytes.length) {
+          const { bytesWritten } = await destinationHandle.write(bytes, offset, bytes.length - offset, null);
+          if (!Number.isInteger(bytesWritten) || bytesWritten <= 0) {
+            fail('TRANSACTION_BACKUP_CORRUPT', 'Could not restore exact bytes from backup.', {
+              transactionId: journal.transactionId,
+              path: backup.path
+            });
+          }
+          offset += bytesWritten;
+        }
+      }
+    } catch (error) {
+      if (isMissingError(error)) {
+        fail('TRANSACTION_BACKUP_MISSING', 'Required backup is missing.', {
+          transactionId: journal.transactionId,
+          path: backup.path
+        });
+      }
+      throw error;
+    } finally {
+      await sourceHandle?.close().catch(() => {});
+    }
+    if (`sha256:${digest.digest('hex')}:${total}` !== backup.revision || total !== backup.bytes) {
+      fail('TRANSACTION_BACKUP_CORRUPT', 'Backup is corrupt.', {
+        transactionId: journal.transactionId,
+        path: backup.path
+      });
+    }
   }
 
   async function removeCreatedDirectories(journal) {
@@ -1000,8 +1256,13 @@ export function createTransactionEngine(options = {}) {
     for (let index = 0; index < reverseBackups.length; index += 1) {
       const backup = reverseBackups[index];
       if (backup.exists) {
-        const bytes = await readBackupBytes(journal, backup);
-        await atomicWriteTarget({ path: backup.path, contentBase64: bytes.toString('base64') }, journal, index, backup.mode ?? 0o644);
+        await atomicWriteTarget(
+          { path: backup.path },
+          journal,
+          index,
+          backup.mode ?? 0o644,
+          (handle) => writeBackupToHandle(journal, backup, handle)
+        );
       } else {
         await deleteTarget({ path: backup.path });
       }
@@ -1076,10 +1337,55 @@ export function createTransactionEngine(options = {}) {
     return journal;
   }
 
+  function collectEmbeddedPayloadRefs(value, referenced) {
+    if (!value || typeof value !== 'object') return;
+    if (!Array.isArray(value) && Object.hasOwn(value, 'payloadRef')) {
+      try {
+        referenced.add(normalizePayloadRef(value.payloadRef).sha256);
+      } catch {
+        // Unknown metadata is not trusted as a reference and cannot make a blob collectible.
+      }
+    }
+    for (const item of Array.isArray(value) ? value : Object.values(value)) {
+      collectEmbeddedPayloadRefs(item, referenced);
+    }
+  }
+
+  async function referencedPayloadDigestsUnderLock() {
+    const referenced = new Set();
+    const journalIds = new Set();
+    for await (const journal of iterateJournals()) {
+      journalIds.add(journal.transactionId);
+      for (const mutation of journal.mutations) {
+        if (mutation.operation === 'write') referenced.add(normalizePayloadRef(mutation.payloadRef).sha256);
+      }
+      collectEmbeddedPayloadRefs(journal.metadata, referenced);
+      collectEmbeddedPayloadRefs(journal.result, referenced);
+    }
+    const idempotency = await readIdempotency();
+    for (const entry of Object.values(idempotency.entries)) {
+      if (entry?.transactionId !== null && entry?.transactionId !== undefined
+        && (!TRANSACTION_ID_RE.test(String(entry.transactionId)) || !journalIds.has(entry.transactionId))) {
+        fail('IDEMPOTENCY_STORE_CORRUPT', 'Idempotency entry references a missing transaction journal.', {
+          transactionId: String(entry?.transactionId ?? '')
+        });
+      }
+    }
+    collectEmbeddedPayloadRefs(idempotency, referenced);
+    return referenced;
+  }
+
+  async function garbageCollectPayloadsUnderLock() {
+    const referenced = await referencedPayloadDigestsUnderLock();
+    return payloadStore.garbageCollect(referenced);
+  }
+
   async function recoverUnderLock(lease) {
+    await payloadStore.cleanupTemporaryFiles();
+    await migrateLegacyJournalsUnderLock();
     await invokeFault('recovery:before', {});
     const recovered = [];
-    for (const journal of await listJournals()) {
+    for await (const journal of iterateJournals()) {
       if (journal.state !== TRANSACTION_STATES.APPLYING) continue;
       await lease.refresh();
       if (recoveryMode === 'complete') {
@@ -1090,14 +1396,17 @@ export function createTransactionEngine(options = {}) {
       recovered.push({ transactionId: journal.transactionId, state: journal.state });
     }
     await reconcileIdempotencyUnderLock();
+    await garbageCollectPayloadsUnderLock();
     await invokeFault('recovery:after', { recovered: clone(recovered) });
     return Object.freeze({ recovered: Object.freeze(recovered) });
   }
 
   async function applyingTransactions() {
-    return (await listJournals())
-      .filter((journal) => journal.state === TRANSACTION_STATES.APPLYING)
-      .map((journal) => journal.transactionId);
+    const transactionIds = [];
+    for await (const journal of iterateJournals()) {
+      if (journal.state === TRANSACTION_STATES.APPLYING) transactionIds.push(journal.transactionId);
+    }
+    return transactionIds;
   }
 
   async function assertNoApplyingTransactions() {
@@ -1139,6 +1448,14 @@ export function createTransactionEngine(options = {}) {
     return result;
   }
 
+  async function garbageCollectPayloads() {
+    await ensureInitialized();
+    return withRepoLock(async () => {
+      await assertNoApplyingTransactions();
+      return garbageCollectPayloadsUnderLock();
+    });
+  }
+
   async function preview(request) {
     await ensureInitialized();
     const normalized = normalizeRequest(request ?? {});
@@ -1151,7 +1468,8 @@ export function createTransactionEngine(options = {}) {
       if (existing) {
         if (existing.recoveryClientId !== normalized.recoveryClientId
           || existing.idempotencyKey !== normalized.idempotencyKey
-          || existing.payloadHash !== normalized.payloadHash) {
+          || (existing.payloadHash !== normalized.payloadHash
+            && existing.payloadHash !== normalized.legacyPayloadHash())) {
           fail('IDEMPOTENCY_KEY_REUSED', 'Этот ключ уже использован для другого набора изменений.', {
             recoveryClientId: normalized.recoveryClientId,
             idempotencyKey: normalized.idempotencyKey
@@ -1211,6 +1529,22 @@ export function createTransactionEngine(options = {}) {
         return publicNoOp(noOpEntry);
       }
 
+      const persistedMutations = [];
+      for (const mutation of mutations) {
+        if (mutation.operation === 'delete') {
+          persistedMutations.push({ ...mutation });
+          continue;
+        }
+        const payloadRef = await payloadStore.put(mutation.contentBytes);
+        if (payloadRef.sha256 !== mutation.payloadRef.sha256 || payloadRef.size !== mutation.payloadRef.size) {
+          fail('TRANSACTION_PAYLOAD_CORRUPT', 'Stored payload reference differs from the normalized transaction intent.', {
+            path: mutation.path
+          });
+        }
+        const { contentBytes, ...persistentMutation } = mutation;
+        persistedMutations.push({ ...persistentMutation, payloadRef: { ...payloadRef } });
+      }
+
       const createdAtMs = now();
       const transactionId = crypto.randomUUID();
       const journal = {
@@ -1227,7 +1561,7 @@ export function createTransactionEngine(options = {}) {
         expiresAt: timestamp(() => createdAtMs + transactionTtlMs),
         expiresAtMs: createdAtMs + transactionTtlMs,
         revisions,
-        mutations,
+        mutations: persistedMutations,
         backups: [],
         createdDirectories: [],
         appliedCount: 0,
@@ -1241,6 +1575,16 @@ export function createTransactionEngine(options = {}) {
       await invokeFault('preview:after-idempotency', { transactionId, state: journal.state });
       return publicPreview(journal);
     });
+  }
+
+  async function journalForBeforeApply(journal) {
+    const projection = clone(journal);
+    for (const mutation of projection.mutations) {
+      if (mutation.operation !== 'write') continue;
+      const bytes = await payloadStore.read(mutation.payloadRef);
+      mutation.contentBase64 = bytes.toString('base64');
+    }
+    return projection;
   }
 
   async function apply(request = {}, hooks = {}) {
@@ -1290,9 +1634,10 @@ export function createTransactionEngine(options = {}) {
           if (typeof hooks.beforeApply !== 'function') {
             fail('TRANSACTION_INPUT_INVALID', 'beforeApply должен быть функцией проверки транзакции.');
           }
+          const hookJournal = await journalForBeforeApply(journal);
           await hooks.beforeApply(Object.freeze({
             transactionId,
-            journal: Object.freeze(clone(journal)),
+            journal: Object.freeze(hookJournal),
             repoRoot,
             refreshLease: lease.refresh
           }));
@@ -1358,10 +1703,10 @@ export function createTransactionEngine(options = {}) {
   async function listHistory() {
     await ensureInitialized();
     const finalStates = new Set([TRANSACTION_STATES.COMMITTED, TRANSACTION_STATES.ROLLED_BACK]);
-    return Object.freeze((await listJournals())
-      .filter((journal) => finalStates.has(journal.state))
-      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-      .map((journal) => Object.freeze({
+    const history = [];
+    for await (const journal of iterateJournals()) {
+      if (!finalStates.has(journal.state)) continue;
+      history.push(Object.freeze({
         transactionId: journal.transactionId,
         state: journal.state,
         owner: journal.owner,
@@ -1370,7 +1715,10 @@ export function createTransactionEngine(options = {}) {
         updatedAt: journal.updatedAt,
         metadata: Object.freeze(clone(journal.metadata ?? {})),
         changedPaths: Object.freeze(journal.mutations.filter((item) => item.willChange).map((item) => item.path))
-      })));
+      }));
+    }
+    history.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    return Object.freeze(history);
   }
 
   async function assertStable() {
@@ -1426,7 +1774,6 @@ export function createTransactionEngine(options = {}) {
       }
       const restoreMetadata = {
         userSummary: `Восстановление версии до транзакции ${transactionId}`,
-        affectedRoutes: Object.freeze([...(journal.metadata?.affectedRoutes ?? [])]),
         restoresTransactionId: transactionId
       };
       if (journal.metadata?.baseHead) restoreMetadata.baseHead = journal.metadata.baseHead;
@@ -1445,9 +1792,10 @@ export function createTransactionEngine(options = {}) {
     apply,
     getTransaction,
     listHistory,
+    garbageCollectPayloads,
     assertStable,
     withStableRead,
     createRestorePlan,
-    runtimePaths: Object.freeze({ repoRoot, runtimeDir, journalDir, backupRoot, idempotencyPath, lockPath })
+    runtimePaths: Object.freeze({ repoRoot, runtimeDir, journalDir, backupRoot, payloadRoot, idempotencyPath, lockPath })
   });
 }

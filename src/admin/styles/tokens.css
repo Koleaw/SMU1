@@ -1,0 +1,41 @@
+:root {
+  color-scheme: light;
+  --admin-font: "Manrope", "Segoe UI", Arial, sans-serif;
+  --admin-bg: #f4f5f2;
+  --admin-surface: #ffffff;
+  --admin-surface-muted: #f8f9f7;
+  --admin-surface-strong: #edf1ed;
+  --admin-text: #18211d;
+  --admin-text-muted: #647069;
+  --admin-text-soft: #7b857f;
+  --admin-border: #d9ded9;
+  --admin-border-strong: #bdc7c0;
+  --admin-green-950: #063e2f;
+  --admin-green-900: #074c39;
+  --admin-green-800: #0a6048;
+  --admin-green-700: #147456;
+  --admin-green-100: #e7f2ed;
+  --admin-green-50: #f1f7f4;
+  --admin-amber-800: #965207;
+  --admin-amber-100: #fff0d7;
+  --admin-amber-50: #fff8ec;
+  --admin-red-800: #a33131;
+  --admin-red-100: #f9dede;
+  --admin-red-50: #fff5f5;
+  --admin-blue-800: #2c5f83;
+  --admin-blue-50: #f1f6fa;
+  --admin-shadow-sm: 0 1px 2px rgb(15 35 26 / 6%);
+  --admin-shadow-md: 0 14px 32px rgb(15 35 26 / 10%);
+  --admin-radius-sm: 7px;
+  --admin-radius: 10px;
+  --admin-radius-lg: 14px;
+  --admin-control-height: 44px;
+  --admin-sidebar-width: 264px;
+  --admin-list-width: 336px;
+  --admin-topbar-height: 64px;
+  --admin-ease: 170ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --admin-ease: 0ms linear; }
+}

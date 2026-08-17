@@ -471,7 +471,12 @@ export function createLocalRequestPolicy(options = {}) {
     throw new AdminSecurityError('Host and Origin allowlists cannot be empty', { code: 'LOCAL_POLICY_EMPTY' });
   }
 
-  const allowedHeaders = Object.freeze(['Content-Type', 'X-Admin-CSRF']);
+  const allowedHeaders = Object.freeze([
+    'Content-Type',
+    'X-Admin-CSRF',
+    'X-Admin-Recovery-Client-Id',
+    'X-Admin-Session-Fingerprint'
+  ]);
   const allowedMethods = Object.freeze(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
 
   function evaluate(request) {

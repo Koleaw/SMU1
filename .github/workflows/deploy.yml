@@ -69,15 +69,23 @@ jobs:
                 deploy_kind="check-only"
                 deploy_reason="workflow_dispatch requested production, but production deploy is disabled."
               fi
-            else
+            elif [ "${GITHUB_REF_NAME}" = "preview" ]; then
               target="test"
               deploy_kind="test"
-              deploy_reason="workflow_dispatch requested test."
+              deploy_reason="workflow_dispatch requested test for the protected preview ref."
+            else
+              target="test"
+              deploy_kind="check-only"
+              deploy_reason="workflow_dispatch test may deploy only the preview ref; this ref is check-only."
             fi
-          elif [ "${GITHUB_REF_NAME}" = "preview" ] || [ "${GITHUB_REF_NAME}" = "develop" ]; then
+          elif [ "${GITHUB_REF_NAME}" = "preview" ]; then
             target="test"
             deploy_kind="test"
-            deploy_reason="preview/develop branches always use test deployment."
+            deploy_reason="preview branch uses the test deployment."
+          elif [ "${GITHUB_REF_NAME}" = "develop" ]; then
+            target="test"
+            deploy_kind="check-only"
+            deploy_reason="develop is check-only; only preview may update GitHub Pages."
           elif [ "${GITHUB_REF_NAME}" = "main" ] || [ "${GITHUB_REF_NAME}" = "master" ]; then
             if [ "$production_enabled" = "true" ]; then
               target="production"
@@ -162,6 +170,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Run H6 admin tests (non-browser)
+        run: npm run test:admin-h6:ci
+
       - name: Restore responsive media build cache
         uses: actions/cache@v4
         with:
@@ -207,6 +218,11 @@ jobs:
         env:
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
 
+      - name: Validate final source and rendered contracts
+        run: npm run qa:final:static
+        env:
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
       - name: Prepare proven reachable Pages artifact
         run: npm run deploy:prepare
         env:
@@ -219,6 +235,22 @@ jobs:
 
       - name: Assert test/production SEO and analytics isolation
         run: npm run qa:deploy-isolation
+
+      - name: Verify exact candidate and preview ref pair
+        if: steps.deploy-meta.outputs.deploy_kind == 'test'
+        shell: bash
+        run: |
+          candidate_sha="$(git ls-remote --refs origin refs/heads/v4-product-final-candidate | awk '{print $1}')"
+          preview_sha="$(git ls-remote --refs origin refs/heads/preview | awk '{print $1}')"
+          if [ -z "$candidate_sha" ] || [ -z "$preview_sha" ]; then
+            echo "::error::Candidate or preview ref is missing; refusing Pages artifact upload."
+            exit 1
+          fi
+          if [ "$candidate_sha" != "$preview_sha" ] || [ "$preview_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::Pages deploy requires candidate == preview == tested GITHUB_SHA."
+            echo "candidate=$candidate_sha preview=$preview_sha tested=$GITHUB_SHA"
+            exit 1
+          fi
 
       - uses: actions/upload-pages-artifact@v3
         if: steps.deploy-meta.outputs.deploy_kind == 'test'
@@ -233,5 +265,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Reconcile exact refs immediately before Pages deployment
+        shell: bash
+        run: |
+          candidate_sha="$(git ls-remote --refs origin refs/heads/v4-product-final-candidate | awk '{print $1}')"
+          preview_sha="$(git ls-remote --refs origin refs/heads/preview | awk '{print $1}')"
+          if [ -z "$candidate_sha" ] || [ -z "$preview_sha" ]; then
+            echo "::error::Candidate or preview ref is missing; refusing Pages deployment."
+            exit 1
+          fi
+          if [ "$candidate_sha" != "$preview_sha" ] || [ "$preview_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::Candidate/preview refs changed after validation; refusing Pages deployment."
+            echo "candidate=$candidate_sha preview=$preview_sha tested=$GITHUB_SHA"
+            exit 1
+          fi
+
       - id: deployment
         uses: actions/deploy-pages@v4

@@ -167,16 +167,31 @@ const runSourceChecks = () => {
   }, {});
   addCheck('content.both-presentations-exist', counts.standard > 0 && counts.premium > 0, { counts });
 
+  const isAdminSourceFile = (file) => /\.(?:astro|ts|js|mjs)$/.test(file) && !/\.test\.(?:ts|js|mjs)$/.test(file);
   const adminFiles = [
-    ...walk(path.join(root, 'src', 'pages', 'admin')).filter((file) => /\.(?:astro|ts|js|mjs)$/.test(file)),
-    ...walk(path.join(root, 'tools', 'admin-api')).filter((file) => /\.(?:ts|js|mjs)$/.test(file))
+    ...walk(path.join(root, 'src', 'pages', 'admin')).filter(isAdminSourceFile),
+    ...walk(path.join(root, 'src', 'admin')).filter(isAdminSourceFile),
+    ...walk(path.join(root, 'tools', 'admin-api')).filter(isAdminSourceFile)
   ];
   const adminSource = adminFiles.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
-  addCheck('admin.presentation-select', /data-field-path\s*=\s*["'{][^\n}]*presentationType|data-field-path=["']presentationType["']/.test(adminSource), {
-    expected: 'select[data-field-path="presentationType"]'
+  const editorMetadataSource = read('src/admin/metadata/editor-fields.mjs');
+  const recordEditorSource = read('src/admin/editors/record-editor.mjs');
+  const legacyPresentationSelect = /data-field-path\s*=\s*["'{][^\n}]*presentationType|data-field-path=["']presentationType["']/.test(adminSource);
+  const metadataPresentationSelect = /field\(\s*['"]presentationType['"][\s\S]*?['"]select['"]/.test(editorMetadataSource)
+    && /definition\.kind\s*===\s*['"]select['"]/.test(recordEditorSource)
+    && /dataset\s*:\s*\{\s*fieldPath\s*:\s*definition\.path\s*\}/.test(recordEditorSource);
+  addCheck('admin.presentation-select', legacyPresentationSelect || metadataPresentationSelect, {
+    expected: 'presentationType select metadata rendered by a data-field-path control'
   });
   addCheck('admin.presentation-options', adminSource.includes('standard') && adminSource.includes('premium') && adminSource.includes('presentationType'));
-  addCheck('admin.premium-field-wrapper', adminSource.includes('data-premium-product-fields'));
+  const legacyPremiumFieldWrapper = adminSource.includes('data-premium-product-fields');
+  const metadataPremiumFieldWrapper = /premiumOnly\s*:\s*true/.test(editorMetadataSource)
+    && /fieldDefinition\.premiumOnly/.test(recordEditorSource)
+    && /presentationType\s*!==\s*['"]premium['"]/.test(recordEditorSource)
+    && /premiumOnlyNodes/.test(recordEditorSource);
+  addCheck('admin.premium-field-wrapper', legacyPremiumFieldWrapper || metadataPremiumFieldWrapper, {
+    expected: 'premiumOnly field metadata rendered only for presentationType=premium'
+  });
   addCheck('admin.new-product-default', /presentationType\s*:\s*['"]standard['"]/.test(adminSource));
   addCheck('admin.optional-premium-fields', ['solutionKicker', 'applicationItems', 'executionVariants'].every((field) => adminSource.includes(field)));
   const productPresentationSource = read('tools/admin-api/product-presentation.mjs');

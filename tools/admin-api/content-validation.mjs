@@ -11,6 +11,8 @@ import {
 import { URL_CONTEXTS, validateMediaPath, validateUrl } from './url-policy.mjs';
 
 const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+const IMAGE_MEDIA_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'svg']);
+const VIDEO_MEDIA_EXTENSIONS = new Set(['mp4', 'webm']);
 
 export const VALIDATION_SEVERITIES = Object.freeze({
   ERROR: 'error',
@@ -304,6 +306,25 @@ function validateRegisteredMedia(value, definition, context) {
             : checked.message,
           technicalDetail: checked.technicalDetail,
           severity
+        }));
+      }
+      const lowerPattern = pattern.toLowerCase();
+      const explicitVideo = lowerPattern.includes('video');
+      const explicitImage = ['products', 'product-categories', 'projects'].includes(context.collection)
+        || (!explicitVideo && !/(?:^|\.)(?:media|url|src)$/u.test(lowerPattern));
+      const extension = reference.value.split(/[?#]/u, 1)[0].match(/\.([a-z0-9]+)$/iu)?.[1]?.toLowerCase() || '';
+      const isVideo = VIDEO_MEDIA_EXTENSIONS.has(extension);
+      const isImage = IMAGE_MEDIA_EXTENSIONS.has(extension);
+      const roleMismatch = (explicitVideo && !isVideo) || (explicitImage && !isImage);
+      if (roleMismatch) {
+        issues.push(createValidationIssue({
+          ...context,
+          code: 'MEDIA_ROLE_FORMAT_MISMATCH',
+          path: reference.path,
+          userMessage: explicitVideo
+            ? 'Для поля видео выберите MP4 или WebM.'
+            : 'Видео нельзя использовать как фотографию, постер или элемент галереи.',
+          technicalDetail: `Media field ${pattern} expects ${explicitVideo ? 'video' : 'image'} but received .${extension || '(none)'}.`
         }));
       }
     }

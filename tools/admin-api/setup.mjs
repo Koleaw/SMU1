@@ -11,11 +11,30 @@ import {
   parseEnvText,
   serializeEnv
 } from './config.mjs';
-import { hashPassword, isPasswordHash } from './security.mjs';
+import {
+  checkPortAvailable as defaultCheckPortAvailable,
+  probeHttp as defaultProbeHttp
+} from './launcher.mjs';
+import { createAdminRepoIdentity as defaultCreateAdminRepoIdentity } from './runtime-identity.mjs';
+import { hashPassword, isLoopbackHostname, isPasswordHash } from './security.mjs';
 
 const THIS_FILE = fileURLToPath(import.meta.url);
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(THIS_FILE), '..', '..');
 const REQUIRED_CHECKOUT_FILES = ['package.json', 'tools/admin-api/server.mjs'];
+const GIT_REMOTE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/u;
+const GITHUB_REPOSITORY_PART_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
+const BLOCKED_GIT_ENVIRONMENT_KEYS = new Set([
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_COMMON_DIR',
+  'GIT_CONFIG',
+  'GIT_CONFIG_COUNT',
+  'GIT_CONFIG_GLOBAL',
+  'GIT_CONFIG_SYSTEM',
+  'GIT_DIR',
+  'GIT_INDEX_FILE',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_WORK_TREE'
+]);
 const BLOCKED_PASSWORDS = new Set([
   'admin',
   'adminadmin',
@@ -84,9 +103,21 @@ async function assertCheckout(repoRoot) {
   }
 }
 
+function gitEnvironment(environment = process.env) {
+  const result = {};
+  for (const [key, value] of Object.entries(environment)) {
+    if (BLOCKED_GIT_ENVIRONMENT_KEYS.has(key)
+      || /^GIT_CONFIG_(?:KEY|VALUE)_\d+$/u.test(key)) continue;
+    result[key] = value;
+  }
+  result.GIT_TERMINAL_PROMPT = '0';
+  return result;
+}
+
 function git(repoRoot, args) {
   return spawnSync('git', ['-C', repoRoot, ...args], {
     encoding: 'utf8',
+    env: gitEnvironment(),
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -95,6 +126,65 @@ function git(repoRoot, args) {
 export function currentBranch(repoRoot) {
   const result = git(repoRoot, ['branch', '--show-current']);
   return result.status === 0 ? result.stdout.trim() : '';
+}
+
+function validatedGitRemoteName(value) {
+  const remoteName = String(value ?? '').trim();
+  if (!GIT_REMOTE_NAME_PATTERN.test(remoteName)) {
+    throw new AdminSetupError('Имя Git remote содержит недопустимые символы.', { code: 'GIT_REMOTE_INVALID' });
+  }
+  return remoteName;
+}
+
+function githubRepositoryFromRemote(value) {
+  const remote = String(value ?? '').trim();
+  let owner;
+  let repository;
+  const scpMatch = remote.match(/^git@github\.com:([^/]+)\/([^/]+)$/iu);
+  if (scpMatch) {
+    [, owner, repository] = scpMatch;
+  } else {
+    let url;
+    try {
+      url = new URL(remote);
+    } catch {
+      return null;
+    }
+    const isHttps = url.protocol === 'https:' && !url.username;
+    const isSsh = url.protocol === 'ssh:' && url.username.toLowerCase() === 'git';
+    if (url.hostname.toLowerCase() !== 'github.com'
+      || (!isHttps && !isSsh)
+      || url.password
+      || url.search
+      || url.hash
+      || (url.port && !(isSsh && url.port === '22'))) return null;
+    const parts = url.pathname.replace(/^\//u, '').replace(/\/$/u, '').split('/');
+    if (parts.length !== 2) return null;
+    [owner, repository] = parts;
+  }
+
+  repository = repository.replace(/\.git$/iu, '');
+  if (!GITHUB_REPOSITORY_PART_PATTERN.test(owner)
+    || !GITHUB_REPOSITORY_PART_PATTERN.test(repository)
+    || owner === '.'
+    || owner === '..'
+    || repository === '.'
+    || repository === '..') return null;
+  return { owner, repository };
+}
+
+export function inferGitHubPagesConfig(repoRoot, remoteName = 'origin') {
+  const normalizedRemoteName = validatedGitRemoteName(remoteName);
+  const result = git(repoRoot, ['config', '--local', '--get', `remote.${normalizedRemoteName}.url`]);
+  if (result.status !== 0) return null;
+  const parsed = githubRepositoryFromRemote(result.stdout);
+  if (!parsed) return null;
+  const { owner, repository } = parsed;
+  return Object.freeze({
+    repository: `${owner}/${repository}`,
+    siteUrl: `https://${owner.toLowerCase()}.github.io`,
+    basePath: repository.toLowerCase() === `${owner.toLowerCase()}.github.io` ? '/' : `/${repository}`
+  });
 }
 
 export function assertAdminEnvIgnored(repoRoot, envPath = path.join(repoRoot, ADMIN_ENV_FILE)) {
@@ -151,6 +241,93 @@ async function atomicWrite(filePath, content, { createOnly }) {
   }
 }
 
+function configuredPort(value, fallback, key) {
+  const text = String(value ?? fallback).trim();
+  if (!/^\d{1,5}$/u.test(text)) {
+    throw new AdminSetupError(`Не удалось безопасно проверить ${key}: в настройке указан некорректный порт.`, {
+      code: 'ADMIN_RUNTIME_STATE_UNCONFIRMED'
+    });
+  }
+  const port = Number(text);
+  if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
+    throw new AdminSetupError(`Не удалось безопасно проверить ${key}: порт вне диапазона 1–65535.`, {
+      code: 'ADMIN_RUNTIME_STATE_UNCONFIRMED'
+    });
+  }
+  return port;
+}
+
+function hostForUrl(value) {
+  const host = String(value ?? '127.0.0.1').trim().replace(/^\[|\]$/gu, '');
+  if (!host || /[/?#@]/u.test(host)) {
+    throw new AdminSetupError('Не удалось безопасно проверить ADMIN_API_HOST.', {
+      code: 'ADMIN_RUNTIME_STATE_UNCONFIRMED'
+    });
+  }
+  return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
+}
+
+export async function assertAdminRuntimeStopped(options = {}) {
+  const repoRoot = path.resolve(options.repoRoot ?? DEFAULT_REPO_ROOT);
+  const envPath = path.join(repoRoot, ADMIN_ENV_FILE);
+  let values = options.values;
+  if (!values) {
+    try {
+      values = parseEnvText(await fs.readFile(envPath, 'utf8'));
+    } catch (error) {
+      if (error?.code === 'ENOENT') {
+        throw new AdminSetupError(`${ADMIN_ENV_FILE} ещё не создан. Сначала выполните обычный setup.`, {
+          code: 'SETUP_MISSING'
+        });
+      }
+      throw error;
+    }
+  }
+
+  const host = String(values.ADMIN_API_HOST || '127.0.0.1').trim().replace(/^\[|\]$/gu, '');
+  const allowIpv6 = values.ADMIN_ALLOW_IPV6_LOOPBACK === 'true';
+  if (!isLoopbackHostname(host, { allowIpv6, allowLocalhost: false })) {
+    throw new AdminSetupError('Не удалось безопасно проверить ADMIN_API_HOST: разрешён только настроенный loopback.', {
+      code: 'ADMIN_RUNTIME_STATE_UNCONFIRMED'
+    });
+  }
+  const port = configuredPort(values.ADMIN_API_PORT, 8787, 'ADMIN_API_PORT');
+  const healthUrl = `http://${hostForUrl(host)}:${port}/api/admin/health`;
+  const repoIdentityFactory = options.createAdminRepoIdentity ?? defaultCreateAdminRepoIdentity;
+  const probe = options.probeHttp ?? defaultProbeHttp;
+  const checkPort = options.checkPortAvailable ?? defaultCheckPortAvailable;
+  let repoIdentity;
+  let exactRuntimeActive;
+  let portAvailable;
+  try {
+    repoIdentity = repoIdentityFactory(repoRoot);
+    [exactRuntimeActive, portAvailable] = await Promise.all([
+      probe(healthUrl, { service: 'api', repoIdentity }),
+      checkPort(host, port)
+    ]);
+  } catch (error) {
+    throw new AdminSetupError(
+      'Не удалось подтвердить, что локальная админка полностью остановлена. Настройки не изменены.',
+      { code: 'ADMIN_RUNTIME_STATE_UNCONFIRMED', summary: { cause: error?.code || error?.name || 'UNKNOWN' } }
+    );
+  }
+
+  if (exactRuntimeActive === true) {
+    throw new AdminSetupError(
+      'Локальная админка запущена. Полностью закройте окно launcher и только затем меняйте пароль; настройки не изменены.',
+      { code: 'ADMIN_RUNTIME_ACTIVE' }
+    );
+  }
+  if (portAvailable !== true) {
+    throw new AdminSetupError(
+      `Порт локального Admin API ${host}:${port} занят неизвестным или ещё работающим процессом. Закройте его; настройки не изменены.`,
+      { code: 'ADMIN_API_PORT_OCCUPIED' }
+    );
+  }
+
+  return Object.freeze({ stopped: true, healthUrl, repoIdentity });
+}
+
 export async function setupAdmin(options = {}) {
   const repoRoot = path.resolve(options.repoRoot ?? DEFAULT_REPO_ROOT);
   const envPath = path.join(repoRoot, ADMIN_ENV_FILE);
@@ -175,10 +352,22 @@ export async function setupAdmin(options = {}) {
     });
   }
 
+  if (action === 'update-password' || action === 'rotate') {
+    await assertAdminRuntimeStopped({
+      repoRoot,
+      values: existing,
+      probeHttp: options.probeHttp,
+      checkPortAvailable: options.checkPortAvailable,
+      createAdminRepoIdentity: options.createAdminRepoIdentity
+    });
+  }
+
   const username = validateAdminUsername(options.username ?? existing.ADMIN_USERNAME ?? 'owner');
   const password = validateAdminPassword(options.password, username);
   const passwordHash = await hashPassword(password, options.scrypt);
   const branch = options.expectedBranch ?? existing.ADMIN_EXPECTED_BRANCH ?? currentBranch(repoRoot);
+  const remote = validatedGitRemoteName(options.gitRemote ?? existing.ADMIN_GIT_REMOTE ?? 'origin');
+  const inferredGitHub = inferGitHubPagesConfig(repoRoot, remote);
   if (options.validateCheckout !== false && !branch) {
     throw new AdminSetupError('Не удалось определить рабочую ветку; detached HEAD для owner launcher запрещён.', {
       code: 'BRANCH_UNAVAILABLE'
@@ -197,9 +386,19 @@ export async function setupAdmin(options = {}) {
     ADMIN_UI_HOST: existing.ADMIN_UI_HOST || '127.0.0.1',
     ADMIN_UI_PORT: existing.ADMIN_UI_PORT || '4321',
     ADMIN_ALLOWED_ORIGINS: existing.ADMIN_ALLOWED_ORIGINS || 'http://127.0.0.1:4321',
-    PUBLIC_ADMIN_API_BASE: existing.PUBLIC_ADMIN_API_BASE || 'http://127.0.0.1:8787/api/admin',
+    PUBLIC_ADMIN_API_BASE: existing.PUBLIC_ADMIN_API_BASE || '/api/admin',
     CONTENT_WRITE_MODE: 'local',
     ...(branch ? { ADMIN_EXPECTED_BRANCH: branch } : {}),
+    ADMIN_GIT_REMOTE: remote,
+    ...(existing.GITHUB_REPOSITORY || inferredGitHub?.repository
+      ? { GITHUB_REPOSITORY: existing.GITHUB_REPOSITORY || inferredGitHub.repository }
+      : {}),
+    ...(existing.TEST_SITE_URL || inferredGitHub?.siteUrl
+      ? { TEST_SITE_URL: existing.TEST_SITE_URL || inferredGitHub.siteUrl }
+      : {}),
+    ...(existing.TEST_BASE_PATH || inferredGitHub?.basePath
+      ? { TEST_BASE_PATH: existing.TEST_BASE_PATH || inferredGitHub.basePath }
+      : {}),
     ADMIN_TEST_MODE: 'false',
     PRODUCTION_DEPLOY_ENABLED: existing.PRODUCTION_DEPLOY_ENABLED || 'false',
     ADMIN_ALLOW_PRODUCTION_PUBLISH: existing.ADMIN_ALLOW_PRODUCTION_PUBLISH || 'false'
@@ -208,6 +407,16 @@ export async function setupAdmin(options = {}) {
   if (values.PRODUCTION_DEPLOY_ENABLED === 'true' || values.ADMIN_ALLOW_PRODUCTION_PUBLISH === 'true') {
     throw new AdminSetupError('Setup не включает production publish автоматически. Отключите legacy production flags.', {
       code: 'PRODUCTION_FLAG_PRESENT'
+    });
+  }
+
+  if (action === 'update-password' || action === 'rotate') {
+    await assertAdminRuntimeStopped({
+      repoRoot,
+      values: existing,
+      probeHttp: options.probeHttp,
+      checkPortAvailable: options.checkPortAvailable,
+      createAdminRepoIdentity: options.createAdminRepoIdentity
     });
   }
 
@@ -296,32 +505,43 @@ function printHelp() {
     '',
     'Пароль не принимается через аргумент командной строки и не выводится в лог.',
     '--password-stdin предназначен только для контролируемой автоматизации.',
+    'Перед --update-password или --rotate полностью остановите owner launcher.',
     ''
   ].join('\n'));
 }
 
-export async function runSetupCli(argv = process.argv.slice(2)) {
+export async function runSetupCli(argv = process.argv.slice(2), options = {}) {
   const args = parseArguments(argv);
   if (args.help) {
     printHelp();
     return 0;
   }
 
-  const current = await inspectAdminSetup({ repoRoot: DEFAULT_REPO_ROOT });
+  const repoRoot = path.resolve(options.repoRoot ?? DEFAULT_REPO_ROOT);
+  const current = await inspectAdminSetup({ repoRoot });
   if (current.exists && args.action === 'create') {
     process.stdout.write([
       `${ADMIN_ENV_FILE} уже настроен; secret values не показаны.`,
       `Настроенные поля: ${current.configuredKeys.join(', ')}`,
       'Файл не изменён. Для смены пароля используйте --update-password.',
-      'Для смены пароля и session secret используйте --rotate (это завершит активные сессии).',
+      'Для смены пароля и session secret используйте --rotate только после полной остановки launcher.',
+      'После следующего запуска старые cookies будут недействительны.',
       ''
     ].join('\n'));
     return 2;
   }
+  if (args.action === 'rotate' || args.action === 'update-password') {
+    await assertAdminRuntimeStopped({
+      repoRoot,
+      probeHttp: options.probeHttp,
+      checkPortAvailable: options.checkPortAvailable,
+      createAdminRepoIdentity: options.createAdminRepoIdentity
+    });
+  }
   if ((args.action === 'rotate' || args.action === 'update-password') && !args.yes) {
     const warning = args.action === 'rotate'
-      ? 'Rotate завершит активные сессии. Убедитесь, что browser draft сохранён/recoverable. Продолжить? [yes/N] '
-      : 'Сменить password hash? Активную работу сначала сохраните на компьютере. Продолжить? [yes/N] ';
+      ? 'Rotate сменит пароль и session secret. После следующего запуска все старые cookies будут недействительны. Продолжить? [yes/N] '
+      : 'Сменить password hash? Новые учётные данные вступят в силу при следующем запуске. Продолжить? [yes/N] ';
     const confirmed = await promptText(warning);
     if (confirmed.toLowerCase() !== 'yes') {
       process.stdout.write('Настройка отменена, файл не изменён.\n');
@@ -337,14 +557,23 @@ export async function runSetupCli(argv = process.argv.slice(2)) {
   }
 
   const result = await setupAdmin({
-    repoRoot: DEFAULT_REPO_ROOT,
+    repoRoot,
     action: args.action,
     username,
-    password
+    password,
+    probeHttp: options.probeHttp,
+    checkPortAvailable: options.checkPortAvailable,
+    createAdminRepoIdentity: options.createAdminRepoIdentity
   });
   process.stdout.write([
     result.created ? 'Локальная настройка создана.' : 'Локальная настройка безопасно обновлена.',
     'Пароль не сохранён в открытом виде.',
+    ...(result.created
+      ? []
+      : ['Новые учётные данные вступят в силу при следующем запуске админки.']),
+    ...(result.rotatedSessionSecret
+      ? ['Session secret сменён; при следующем запуске все старые cookies будут недействительны.']
+      : []),
     `Админка после запуска: ${result.localUrl}`,
     'Запуск: npm run admin (или Windows owner launcher двойным кликом).',
     ''

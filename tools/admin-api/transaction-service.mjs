@@ -17,6 +17,7 @@ import {
   validateContentRecord,
   validateSingleton
 } from './content-validation.mjs';
+import { validateProjectedPublicCompleteness } from './content-completeness.mjs';
 import { buildRelationGraph, previewRelationImpact } from './relation-graph.mjs';
 import { diffContentPaths, serializeContent } from './content-store.mjs';
 
@@ -28,7 +29,7 @@ const RECORD_OPERATION_TYPES = new Set([
   'archive-record',
   'delete-record'
 ]);
-const SERVICE_METADATA_VERSION = 1;
+const SERVICE_METADATA_VERSION = 2;
 const STAGED_MEDIA_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg', '.mp4', '.webm']);
 
 function clone(value) {
@@ -218,12 +219,122 @@ function publicRecord(entry) {
     slug: entry.slug,
     content: entry.content,
     revision: entry.revision,
+    lastModified: entry.lastModified ?? null,
     fileName: path.posix.basename(entry.relativePath)
   };
 }
 
 function routeSet(graph) {
   return new Set(graph.routes.filter((item) => item.owner?.kind === 'record').map((item) => item.path));
+}
+
+function graphRecord(graph, collection, slug) {
+  return graph?.records?.find((record) => record.collection === collection && record.slug === slug) ?? null;
+}
+
+function routeAvailable(graph, record) {
+  if (!record?.route || record.content?.isActive === false) return false;
+  if (record.collection === 'product-categories') {
+    const section = graphRecord(graph, 'product-sections', record.content?.parentSectionSlug);
+    return Boolean(section) && section.content?.isActive !== false;
+  }
+  if (record.collection === 'products') {
+    const category = graphRecord(graph, 'product-categories', record.content?.productCategorySlug);
+    if (!category || category.content?.isActive === false) return false;
+    const section = graphRecord(graph, 'product-sections', category.content?.parentSectionSlug);
+    return Boolean(section) && section.content?.isActive !== false;
+  }
+  return true;
+}
+
+function deriveRouteExpectations(validation, plan) {
+  const expectations = new Map();
+  const add = (route, expected, source) => {
+    if (typeof route !== 'string' || !route.startsWith('/')) {
+      throw new ContentTransactionError(
+        'CONTENT_ROUTE_EXPECTATION_UNRESOLVED',
+        'Не удалось вывести безопасное smoke-ожидание для изменённого маршрута.',
+        { status: 409, details: { route: String(route ?? ''), source } }
+      );
+    }
+    const previous = expectations.get(route);
+    if (previous && previous !== expected) {
+      throw new ContentTransactionError(
+        'CONTENT_ROUTE_EXPECTATION_CONFLICT',
+        'Для одного маршрута выведены противоречивые smoke-ожидания.',
+        { status: 409, details: { route, previous, expected, source } }
+      );
+    }
+    expectations.set(route, expected);
+  };
+
+  for (const impact of validation.affectedRoutes) {
+    if (!impact || typeof impact !== 'object' || Array.isArray(impact)) {
+      throw new ContentTransactionError(
+        'CONTENT_ROUTE_EXPECTATION_UNRESOLVED',
+        'Изменённый маршрут не содержит типизированного relation impact.',
+        { status: 409 }
+      );
+    }
+    const from = impact.from ?? impact.oldRoute ?? null;
+    const to = impact.to ?? impact.newRoute ?? null;
+    if (from && to && from === to) {
+      const record = validation.afterGraph.records.find((item) => item.route === to);
+      add(to, routeAvailable(validation.afterGraph, record) ? 'html' : 'not-found', 'relation-impact-same-route');
+      continue;
+    }
+    if (from) add(from, 'not-found', 'relation-impact-from');
+    if (to) {
+      const record = validation.afterGraph.records.find((item) => item.route === to);
+      if (!record) {
+        throw new ContentTransactionError(
+          'CONTENT_ROUTE_EXPECTATION_UNRESOLVED',
+          'Новый маршрут отсутствует в projected relation graph.',
+          { status: 409, details: { route: to } }
+        );
+      }
+      add(to, routeAvailable(validation.afterGraph, record) ? 'html' : 'not-found', 'relation-impact-to');
+    }
+  }
+
+  for (const diff of plan.diffs) {
+    const entity = diff?.entity;
+    if (!entity?.collection || !entity?.slug) continue;
+    const before = graphRecord(validation.beforeGraph, entity.collection, entity.slug);
+    const after = graphRecord(validation.afterGraph, entity.collection, entity.slug);
+    const beforeRoute = before?.route ?? null;
+    const afterRoute = after?.route ?? null;
+    const afterAvailable = routeAvailable(validation.afterGraph, after);
+    if (beforeRoute && (!afterAvailable || beforeRoute !== afterRoute)) {
+      add(beforeRoute, 'not-found', 'record-before');
+    }
+    if (afterRoute) add(afterRoute, afterAvailable ? 'html' : 'not-found', 'record-after');
+  }
+
+  if (expectations.size === 0 && plan.mutations.length > 0) {
+    add('/', 'html', 'non-route-content-fallback');
+  }
+  return [...expectations].sort(([left], [right]) => left.localeCompare(right))
+    .map(([route, expected]) => ({ route, expected }));
+}
+
+function deriveRouteTransitions(validation) {
+  const beforeByKey = new Map(validation.beforeGraph.records.map((record) => [recordKey(record.collection, record.slug), record]));
+  const afterByKey = new Map(validation.afterGraph.records.map((record) => [recordKey(record.collection, record.slug), record]));
+  const state = (graph, record) => record ? {
+    collection: record.collection,
+    slug: record.slug,
+    route: record.route || null,
+    expected: routeAvailable(graph, record) ? 'html' : 'not-found'
+  } : null;
+  const transitions = [];
+  for (const key of [...new Set([...beforeByKey.keys(), ...afterByKey.keys()])].sort()) {
+    const before = state(validation.beforeGraph, beforeByKey.get(key));
+    const after = state(validation.afterGraph, afterByKey.get(key));
+    if (JSON.stringify(before) === JSON.stringify(after)) continue;
+    transitions.push({ before, after });
+  }
+  return transitions;
 }
 
 function compareIssue(issue) {
@@ -324,7 +435,11 @@ export function createContentTransactionService({
     return {
       owner,
       sessionFingerprint,
-      engineOwner: `content-session:${digest({ owner, sessionFingerprint })}`
+      // Saved history belongs to the authenticated local owner, not to one
+      // ephemeral cookie. Session fingerprints still authorize each HTTP
+      // request at the server boundary; keeping them out of persistent
+      // ownership makes restart, re-login and owner handoff recoverable.
+      engineOwner: `content-owner:${digest({ owner })}`
     };
   }
 
@@ -684,6 +799,9 @@ export function createContentTransactionService({
         }
         promotions.push({
           stagedId: raw.stagedId,
+          batchId: raw.batchId,
+          leaseId: raw.leaseId,
+          stagingOwner: raw.stagingOwner,
           sourcePath,
           sourceBytes,
           sourceRevision: revisionForBytes(sourceBytes),
@@ -720,6 +838,10 @@ export function createContentTransactionService({
       const entry = projected.singletons[name];
       if (!entry) continue;
       validationIssues.push(...validateSingleton({ singleton: name, value: entry.content }).issues);
+    }
+    const beforePublicCompleteness = new Set(validateProjectedPublicCompleteness(initial).map(compareIssue));
+    for (const issue of validateProjectedPublicCompleteness(projected)) {
+      if (!beforePublicCompleteness.has(compareIssue(issue))) validationIssues.push(issue);
     }
 
     const beforeGraph = graphFor(initial);
@@ -819,11 +941,6 @@ export function createContentTransactionService({
         bytesBase64: promotion.bytes.toString('base64'),
         expectedRevision: promotion.destinationRevision
       });
-      mutations.push({
-        path: promotion.sourcePath,
-        operation: 'delete',
-        expectedRevision: promotion.sourceRevision
-      });
       diffs.push({
         path: promotion.destinationPath,
         entity: { media: promotion.publicPath },
@@ -832,16 +949,6 @@ export function createContentTransactionService({
         afterRevision: revisionForBytes(promotion.bytes),
         beforeBytesBase64: promotion.destinationBytes?.toString('base64') ?? null,
         afterBytesBase64: promotion.bytes.toString('base64'),
-        changedPaths: ['(bytes)']
-      });
-      diffs.push({
-        path: promotion.sourcePath,
-        entity: { stagedMedia: promotion.stagedId },
-        action: 'delete-staged',
-        beforeRevision: promotion.sourceRevision,
-        afterRevision: 'missing',
-        beforeBytesBase64: promotion.sourceBytes.toString('base64'),
-        afterBytesBase64: null,
         changedPaths: ['(bytes)']
       });
     }
@@ -954,18 +1061,27 @@ export function createContentTransactionService({
           }
         };
       }
-      const affectedRouteNames = [...new Set(validation.affectedRoutes.flatMap((item) => (
-        typeof item === 'string' ? [item] : [item?.from, item?.to, item?.oldRoute, item?.newRoute]
-      )).filter((item) => typeof item === 'string' && item.startsWith('/')))];
+      const routeExpectations = deriveRouteExpectations(validation, plan);
+      const routeTransitions = deriveRouteTransitions(validation);
+      const affectedRouteNames = routeExpectations.map((item) => item.route);
+      const recordRenames = (request.operations || [])
+        .filter((operation) => operation?.type === 'rename-record')
+        .map((operation) => ({ collection: operation.collection, fromSlug: operation.slug, toSlug: operation.nextSlug }));
       const metadata = {
         service: 'content-transaction',
         serviceVersion: SERVICE_METADATA_VERSION,
         operationDigest: digest(request.operations ?? exactMutations),
         userSummary: String(request.metadata?.userSummary || request.userSummary || 'Изменение контента').slice(0, 500),
         affectedRoutes: affectedRouteNames,
+        routeExpectations,
+        routeTransitions,
+        recordRenames,
         diff: plan.diffs.map(({ beforeBytesBase64, afterBytesBase64, changedPaths, ...item }) => item),
         mediaPromotions: (operationResult.promotions || []).map((item) => ({
           stagedId: item.stagedId,
+          batchId: item.batchId,
+          leaseId: item.leaseId,
+          stagingOwner: item.stagingOwner,
           publicPath: item.publicPath
         })),
         stagingpaths: [
@@ -1047,13 +1163,28 @@ export function createContentTransactionService({
     const recoveryClientId = request.recoveryClientId || journal.recoveryClientId;
     const idempotencyKey = request.idempotencyKey || journal.idempotencyKey;
     const authorizedStagingPaths = journal.metadata?.stagingpaths || [];
-    return engine.apply({
+    const result = await engine.apply({
       owner: context.engineOwner,
       recoveryClientId,
       idempotencyKey,
       transactionId,
       payloadHash: request.payloadHash
     }, { beforeApply: ({ journal: lockedJournal }) => validateJournalProjection(lockedJournal, authorizedStagingPaths) });
+    const mediaPromotionWarnings = [];
+    if (typeof stagingAdapter?.markPromoted === 'function') {
+      for (const promotion of journal.metadata?.mediaPromotions || []) {
+        try {
+          await stagingAdapter.markPromoted(promotion);
+        } catch (error) {
+          mediaPromotionWarnings.push({
+            code: error?.code || 'STAGED_MEDIA_FINALIZE_FAILED',
+            stagedId: promotion.stagedId,
+            message: error?.message || 'Canonical media сохранено, но staging status не обновлён.'
+          });
+        }
+      }
+    }
+    return mediaPromotionWarnings.length ? { ...result, mediaPromotionWarnings } : result;
   }
 
   async function getTransaction(request = {}) {
@@ -1125,6 +1256,22 @@ export function createContentTransactionService({
     });
   }
 
+  async function withRecordStableRead(request = {}, callback) {
+    if (typeof callback !== 'function') {
+      throw new ContentTransactionError('CONTENT_STABLE_READ_CALLBACK_REQUIRED', 'Для стабильного чтения нужна callback-функция.', { status: 500 });
+    }
+    const collection = String(request.collection || '');
+    const definition = getCollectionDefinition(collection);
+    if (!definition) throw new ContentTransactionError('CONTENT_COLLECTION_UNKNOWN', 'Коллекция не разрешена.', { status: 404 });
+    const slug = definition.fixedSlug || safeSlug(request.slug);
+    return engine.withStableRead(async (context) => {
+      const corpus = await loadCorpus();
+      const entry = corpus.entries.get(recordKey(collection, slug));
+      if (!entry) throw new ContentTransactionError('CONTENT_RECORD_NOT_FOUND', 'Запись не найдена.', { status: 404 });
+      return callback(publicRecord(entry), context);
+    });
+  }
+
   async function readSingleton(request = {}) {
     const singleton = String(request.singleton || '');
     if (!getSingletonDefinition(singleton)) throw new ContentTransactionError('CONTENT_SINGLETON_UNKNOWN', 'Singleton не разрешён.', { status: 404 });
@@ -1148,6 +1295,7 @@ export function createContentTransactionService({
     listHistory,
     previewRestore,
     readRecord,
+    withRecordStableRead,
     readSingleton,
     withStableRead
   });

@@ -85,9 +85,17 @@ export function serializeEnv(values, options = {}) {
     'PUBLIC_ADMIN_API_BASE',
     'CONTENT_WRITE_MODE',
     'ADMIN_EXPECTED_BRANCH',
+    'ADMIN_GIT_REMOTE',
+    'GITHUB_REPOSITORY',
+    'GITHUB_DEPLOY_TOKEN',
+    'GITHUB_TOKEN',
+    'TEST_SITE_URL',
+    'TEST_BASE_PATH',
+    'BASE_PATH',
     'ADMIN_TEST_MODE',
     'PRODUCTION_DEPLOY_ENABLED',
-    'ADMIN_ALLOW_PRODUCTION_PUBLISH'
+    'ADMIN_ALLOW_PRODUCTION_PUBLISH',
+    'SITE_URL'
   ];
   const keys = [
     ...preferredOrder.filter((key) => Object.hasOwn(values, key)),
@@ -274,7 +282,7 @@ export function validateAdminConfig(rawValues = {}, options = {}) {
   const allowedOrigins = [...new Set((configuredOrigins.length ? configuredOrigins : [defaultUiOrigin])
     .map((origin) => exactLoopbackOrigin(origin, allowIpv6)))];
   const browserApiBase = validateBrowserApiBase(
-    raw.PUBLIC_ADMIN_API_BASE || `http://${hostForUrl(apiHost)}:${apiPort}/api/admin`,
+    raw.PUBLIC_ADMIN_API_BASE || '/api/admin',
     allowIpv6
   );
 

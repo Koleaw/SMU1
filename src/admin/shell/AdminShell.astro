@@ -1,0 +1,203 @@
+---
+import '../styles/admin.css';
+import { withBase } from '../../utils/withBase';
+
+interface Props {
+  initialView?: string;
+  initialCollection?: string;
+  initialSlug?: string;
+  legacyNotice?: string;
+}
+
+const {
+  initialView = 'overview',
+  initialCollection = '',
+  initialSlug = '',
+  legacyNotice = ''
+} = Astro.props;
+const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE || '/api/admin';
+const adminHealthMarker = import.meta.env.PUBLIC_ADMIN_HEALTH_MARKER || '';
+const adminBase = withBase('/admin/');
+const brandIcon = withBase('/assets/brand/favicon.svg');
+---
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive" />
+    <meta name="theme-color" content="#063e2f" />
+    {adminHealthMarker && <meta name="smu1-admin-health" content={adminHealthMarker} />}
+    <link rel="icon" href={brandIcon} />
+    <title>Редактор сайта · СМУ-1</title>
+  </head>
+  <body>
+    <a class="admin-skip-link" href="#adminMain">Перейти к рабочей области</a>
+    <noscript><p class="admin-noscript">Для редактирования нужен JavaScript. Публичный сайт при этом продолжает работать без JavaScript.</p></noscript>
+
+    <div
+      id="adminRoot"
+      data-api-base={adminApiBase}
+      data-admin-base={adminBase}
+      data-site-base={import.meta.env.BASE_URL}
+      data-initial-view={initialView}
+      data-initial-collection={initialCollection}
+      data-initial-slug={initialSlug}
+      data-legacy-notice={legacyNotice}
+    >
+      <section id="adminLogin" class="admin-login" aria-labelledby="adminLoginTitle">
+        <div class="admin-login__brand">
+          <img class="admin-login__brand-mark" src={brandIcon} alt="" />
+          <h1>Редактор сайта СМУ-1</h1>
+          <p>Тексты, товары, объекты и фотографии — в одной локальной рабочей области с безопасным сохранением и восстановлением.</p>
+        </div>
+        <div class="admin-login__panel">
+          <form id="adminLoginForm" class="admin-login__form">
+            <h2 id="adminLoginTitle">Вход</h2>
+            <p>Данные остаются на этом компьютере. Админка не предназначена для доступа из интернета.</p>
+            <div class="admin-field">
+              <label class="admin-field__label" for="adminLoginName">Логин владельца</label>
+              <input id="adminLoginName" name="login" autocomplete="username" required />
+            </div>
+            <div class="admin-field" style="margin-top:16px">
+              <label class="admin-field__label" for="adminLoginPassword">Пароль</label>
+              <input id="adminLoginPassword" name="password" type="password" autocomplete="current-password" required />
+            </div>
+            <button id="adminLoginSubmit" class="admin-btn admin-btn--primary" type="submit" style="width:100%;margin-top:22px">Войти</button>
+            <p id="adminLoginStatus" class="admin-field__hint" role="status" aria-live="polite" style="margin-top:14px"></p>
+          </form>
+        </div>
+      </section>
+
+      <div id="adminApp" class="admin-app" hidden>
+        <header class="admin-topbar">
+          <button id="adminNavToggle" class="admin-btn admin-btn--quiet admin-btn--icon admin-menu-button" type="button" aria-label="Открыть меню" aria-controls="adminNav" aria-expanded="false"></button>
+          <a class="admin-topbar__brand" href={adminBase} data-route-view="overview">
+            <img src={brandIcon} alt="" />
+            <span>СМУ-1 · Редактор сайта</span>
+          </a>
+          <span class="admin-topbar__spacer"></span>
+          <span class="admin-topbar__status">Работаем локально</span>
+          <button id="adminHelp" class="admin-btn admin-btn--quiet admin-topbar__help" type="button">Справка</button>
+          <button id="adminLogout" class="admin-btn admin-btn--quiet" type="button">Выйти</button>
+        </header>
+
+        <div class="admin-shell">
+          <button id="adminNavScrim" class="admin-nav-scrim" type="button" aria-label="Закрыть меню" hidden></button>
+          <nav id="adminNav" class="admin-nav" aria-label="Разделы редактора">
+            <div class="admin-nav__group">
+              <button class="admin-nav__item" type="button" data-view="overview">Обзор</button>
+              <button class="admin-nav__item" type="button" data-view="pages">Страницы сайта</button>
+              <button class="admin-nav__item" type="button" data-view="catalog">Каталог</button>
+              <button class="admin-nav__item" type="button" data-view="projects">Выполненные объекты</button>
+              <button class="admin-nav__item" type="button" data-view="preview">Тестовый сайт</button>
+            </div>
+            <div class="admin-nav__group">
+              <p class="admin-nav__label">Инструменты</p>
+              <button class="admin-nav__item" type="button" data-view="media">Медиа</button>
+              <button class="admin-nav__item" type="button" data-view="history">История и восстановление</button>
+              <button class="admin-nav__item" type="button" data-view="settings">Настройки и дополнительно</button>
+            </div>
+            <div class="admin-nav__footer">
+              <div class="admin-nav__user">
+                <span id="adminAvatar" class="admin-avatar" aria-hidden="true">В</span>
+                <span><strong id="adminUsername">Владелец</strong><small>Локальная сессия</small></span>
+              </div>
+            </div>
+          </nav>
+
+          <main id="adminMain" class="admin-main" tabindex="-1"></main>
+        </div>
+      </div>
+
+      <dialog id="adminDirtyDialog" class="admin-dialog" aria-labelledby="adminDirtyTitle">
+        <div class="admin-dialog__header"><div><h2 id="adminDirtyTitle">Есть несохранённые изменения</h2><p id="adminDirtyCopy">Что сделать перед переходом?</p></div><button class="admin-btn admin-btn--quiet admin-btn--icon" type="button" data-dialog-close aria-label="Закрыть">×</button></div>
+        <div class="admin-dialog__body"><p>Черновик останется в браузере, пока вы явно не сохраните или не отбросите его.</p></div>
+        <div class="admin-dialog__footer">
+          <button class="admin-btn admin-btn--primary" type="button" data-dirty-action="save">Сохранить на компьютере и перейти</button>
+          <button class="admin-btn" type="button" data-dirty-action="discard">Отбросить и перейти</button>
+          <button class="admin-btn admin-btn--quiet" type="button" data-dirty-action="stay" autofocus>Остаться</button>
+        </div>
+      </dialog>
+
+      <dialog id="adminRecoveryDialog" class="admin-dialog" aria-labelledby="adminRecoveryTitle">
+        <div class="admin-dialog__header"><div><h2 id="adminRecoveryTitle">Найден черновик</h2><p>Он был сохранён в этом браузере после предыдущей работы.</p></div><button class="admin-btn admin-btn--quiet admin-btn--icon" type="button" data-dialog-close aria-label="Закрыть">×</button></div>
+        <div id="adminRecoveryBody" class="admin-dialog__body"></div>
+        <div class="admin-dialog__footer">
+          <button class="admin-btn admin-btn--primary" type="button" data-recovery-action="restore">Восстановить</button>
+          <button class="admin-btn" type="button" data-recovery-action="compare">Посмотреть изменения</button>
+          <button class="admin-btn admin-btn--danger" type="button" data-recovery-action="discard">Отбросить черновик</button>
+        </div>
+      </dialog>
+
+      <dialog id="adminConflictDialog" class="admin-dialog" aria-labelledby="adminConflictTitle">
+        <div class="admin-dialog__header"><div><h2 id="adminConflictTitle">Запись изменилась в другой вкладке</h2><p>Ваш черновик сохранён. Слепая перезапись отключена.</p></div><button class="admin-btn admin-btn--quiet admin-btn--icon" type="button" data-dialog-close aria-label="Закрыть">×</button></div>
+        <div id="adminConflictBody" class="admin-dialog__body"></div>
+        <div class="admin-dialog__footer">
+          <button class="admin-btn admin-btn--primary" type="button" data-conflict-action="merge" disabled>Применить выбранное к черновику</button>
+          <button class="admin-btn admin-btn--primary" type="button" data-conflict-action="recreate" hidden>Восстановить как новую скрытую запись</button>
+          <button class="admin-btn admin-btn--primary" type="button" data-conflict-action="reload">Открыть актуальную версию</button>
+          <button class="admin-btn" type="button" data-conflict-action="download">Скачать мои изменения</button>
+          <button class="admin-btn admin-btn--quiet" type="button" data-dialog-close>Остаться с черновиком</button>
+        </div>
+      </dialog>
+
+      <dialog id="adminCreateDialog" class="admin-dialog" aria-labelledby="adminCreateTitle">
+        <form id="adminCreateForm" method="dialog">
+          <div class="admin-dialog__header"><div><h2 id="adminCreateTitle">Новая запись</h2><p>Новая сущность будет сохранена скрытой с сайта.</p></div><button class="admin-btn admin-btn--quiet admin-btn--icon" type="button" data-dialog-close aria-label="Закрыть">×</button></div>
+          <div class="admin-dialog__body admin-section-stack">
+            <div class="admin-field"><label class="admin-field__label" for="adminCreateType">Что создать</label><select id="adminCreateType" name="collection"><option value="products">Товар</option><option value="projects">Выполненный объект</option><option value="product-categories">Тип изделий</option><option value="jobs">Вакансию</option></select></div>
+            <div id="adminCreateParentField" class="admin-field"><label class="admin-field__label" for="adminCreateParent">Тип изделий / раздел</label><select id="adminCreateParent" name="parentSlug"></select></div>
+            <div id="adminCreatePresentationField" class="admin-field"><label class="admin-field__label" for="adminCreatePresentation">Подача товара</label><select id="adminCreatePresentation" name="presentationType"><option value="standard">Обычная карточка</option><option value="premium">Расширенная проектная подача</option></select></div>
+            <div class="admin-field"><label class="admin-field__label" for="adminCreateName">Название</label><input id="adminCreateName" name="title" required maxlength="140" /></div>
+            <div class="admin-alert admin-alert--warning"><span aria-hidden="true">!</span><p>Сохранение создаст скрытый материал на компьютере. Показ на сайте и обновление тестового сайта выполняются отдельно.</p></div>
+          </div>
+          <div class="admin-dialog__footer"><button class="admin-btn" type="button" data-dialog-close>Отмена</button><button class="admin-btn admin-btn--primary" type="submit">Создать скрытый черновик</button></div>
+        </form>
+      </dialog>
+
+      <dialog id="adminActionDialog" class="admin-dialog" aria-labelledby="adminActionTitle">
+        <form id="adminActionForm">
+          <div class="admin-dialog__header">
+            <div><h2 id="adminActionTitle">Подтверждение действия</h2><p id="adminActionCopy"></p></div>
+            <button class="admin-btn admin-btn--quiet admin-btn--icon" type="button" data-dialog-close aria-label="Закрыть">×</button>
+          </div>
+          <div class="admin-dialog__body admin-section-stack">
+            <div id="adminActionBody"></div>
+            <div id="adminActionInputField" class="admin-field" hidden>
+              <label id="adminActionInputLabel" class="admin-field__label" for="adminActionInput"></label>
+              <input id="adminActionInput" autocomplete="off" />
+              <p id="adminActionInputHint" class="admin-field__hint"></p>
+            </div>
+          </div>
+          <div class="admin-dialog__footer">
+            <button class="admin-btn" type="button" data-dialog-close>Отмена</button>
+            <button id="adminActionConfirm" class="admin-btn admin-btn--primary" type="submit">Продолжить</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="adminMediaDialog" class="admin-dialog" aria-labelledby="adminMediaTitle" style="width:min(1100px,calc(100vw - 32px))">
+        <div class="admin-dialog__header"><div><h2 id="adminMediaTitle">Добавить фотографии</h2><p id="adminMediaSubtitle">Сначала выберите, куда добавить фотографии.</p></div><button class="admin-btn admin-btn--quiet admin-btn--icon" type="button" data-dialog-close aria-label="Закрыть">×</button></div>
+        <div id="adminMediaBody" class="admin-dialog__body"></div>
+        <div class="admin-dialog__footer"><button class="admin-btn" type="button" data-dialog-close>Отмена</button><button id="adminMediaConfirm" class="admin-btn admin-btn--primary" type="button" disabled>Добавить в черновик</button></div>
+      </dialog>
+
+      <dialog id="adminHelpDialog" class="admin-dialog" aria-labelledby="adminHelpTitle">
+        <div class="admin-dialog__header"><div><h2 id="adminHelpTitle">Коротко о работе</h2><p>Три разных состояния не смешиваются.</p></div><button class="admin-btn admin-btn--quiet admin-btn--icon" type="button" data-dialog-close aria-label="Закрыть">×</button></div>
+        <div class="admin-dialog__body"><ol><li><strong>Черновик в браузере</strong> — виден только в этой программе на этом компьютере.</li><li><strong>Сохранено на компьютере</strong> — записано в общие локальные файлы, без GitHub.</li><li><strong>Тестовый сайт</strong> — обновляется отдельным действием после проверок.</li></ol><p>Production-публикация в H6 недоступна. Тестовый сайт имеет noindex, но не является приватным: не помещайте туда секреты и конфиденциальные документы.</p></div>
+        <div class="admin-dialog__footer"><button class="admin-btn admin-btn--primary" type="button" data-dialog-close>Понятно</button></div>
+      </dialog>
+
+      <div id="adminToastRegion" class="admin-toast-region" aria-live="polite" aria-atomic="false"></div>
+      <div id="adminLiveRegion" class="admin-sr-only" aria-live="polite" aria-atomic="true"></div>
+    </div>
+
+    <script>
+      import { startAdminApp } from './admin-app.mjs';
+      startAdminApp();
+    </script>
+  </body>
+</html>

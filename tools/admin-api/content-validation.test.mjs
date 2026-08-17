@@ -141,6 +141,18 @@ test('URL and canonical media policies run inside collection validation', () => 
     && issue.path === 'image'));
 });
 
+test('image galleries reject video paths and explicit video fields reject images', () => {
+  const product = readJson('src/content/products/besedka-kofe.json');
+  product.gallery = ['/uploads/not-an-image.mp4'];
+  const productResult = validateContentRecord({ collection: 'products', slug: product.slug, value: product });
+  assert.ok(productResult.errors.some((issue) => issue.code === 'MEDIA_ROLE_FORMAT_MISMATCH' && issue.path === 'gallery[0]'));
+
+  const page = aboutFixture();
+  page.heroMediaVideo = '/uploads/not-a-video.jpg';
+  const pageResult = validateContentRecord({ collection: 'static-pages', slug: page.slug, value: page });
+  assert.ok(pageResult.errors.some((issue) => issue.code === 'MEDIA_ROLE_FORMAT_MISMATCH' && issue.path === 'heroMediaVideo'));
+});
+
 test('unsafe values in opaque legacy blocks survive read/no-op but block a changed write', () => {
   const previous = aboutFixture();
   previous.pageBlocks.push({

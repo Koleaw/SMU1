@@ -4,12 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "npm run test:admin-h6:ci",
     "dev": "astro dev",
     "admin": "node tools/admin-api/launcher.mjs --open",
     "admin:setup": "node tools/admin-api/setup.mjs",
     "admin:api": "node tools/admin-api/server.mjs",
-    "test:admin-foundation": "node --test tools/admin-api/content-store.test.mjs tools/admin-api/content-normalization.test.mjs tools/admin-api/content-registry.test.mjs tools/admin-api/content-validation.test.mjs tools/admin-api/url-policy.test.mjs tools/admin-api/security.test.mjs tools/admin-api/server-security.test.mjs tools/admin-api/setup.test.mjs src/utils/safeInlineJson.test.mjs",
+    "test:admin-foundation": "node --test tools/admin-api/content-store.test.mjs tools/admin-api/content-normalization.test.mjs tools/admin-api/content-registry.test.mjs tools/admin-api/content-validation.test.mjs tools/admin-api/url-policy.test.mjs tools/admin-api/security.test.mjs tools/admin-api/server-security.test.mjs tools/admin-api/setup.test.mjs tools/admin-api/launcher.test.mjs tools/admin-api/local-preview.test.mjs tools/admin-api/writer-lease.test.mjs tools/admin-api/worktree-guard.test.mjs src/utils/safeInlineJson.test.mjs",
     "test:admin-import": "node --test tools/admin-api/content-json.test.mjs tools/admin-api/project-media.test.mjs tools/admin-api/server-routes.test.mjs",
+    "test:admin-coverage": "node --test tools/admin-api/content-coverage-registry.test.mjs tools/admin-api/content-completeness.test.mjs",
+    "test:admin-transactions": "node --test tools/admin-api/transaction-engine.test.mjs tools/admin-api/transaction-service.test.mjs tools/admin-api/relation-graph.test.mjs",
+    "test:admin-media": "node --test tools/admin-api/media-validation.test.mjs tools/admin-api/media-staging.test.mjs tools/admin-api/media-scheduler.test.mjs tools/admin-api/media-library.test.mjs tools/admin-api/media-server-integration.test.mjs",
+    "test:admin-publish": "node --test tools/admin-api/publish-planner.test.mjs tools/admin-api/publish-runner.test.mjs tools/admin-api/publish-runtime.test.mjs tools/admin-api/publish-status.test.mjs tools/admin-api/publish-service.test.mjs",
+    "test:admin-client-state": "node --test src/admin/core/api-client.test.mjs src/admin/media/media-selection.test.mjs src/admin/metadata/editor-fields.test.mjs src/admin/state/draft-store.test.mjs src/admin/state/history-store.test.mjs",
+    "test:admin-h6:ci": "npm run test:admin-foundation && npm run test:admin-import && npm run test:admin-coverage && npm run test:admin-transactions && npm run test:admin-media && npm run test:admin-publish && npm run test:admin-client-state",
     "media:prepare": "node tools/performance/prepare-media.mjs",
     "build": "npm run media:prepare && astro build",
     "deploy:prepare": "node tools/performance/deploy-media-reachability.mjs --apply",
@@ -21,7 +28,8 @@
     "qa:h2:motion": "node tools/migration/h2-motion-qa.mjs && npm run qa:deploy-isolation",
     "qa:final:browser": "node tools/migration/browser-final-design-qa.mjs && npm run qa:h2:motion",
     "qa:admin-browser": "node tools/admin-api/admin-browser-roundtrip.mjs",
-    "qa:final": "npm run check && npm run test:admin-import && npm run build && npm run qa:performance && npm run qa:final:static && npm run qa:final:browser"
+    "qa:h6:admin": "npm run test:admin-h6:ci && npm run qa:admin-browser",
+    "qa:final": "npm run check && npm run qa:h6:admin && npm run build && npm run qa:performance && npm run qa:final:static && npm run qa:final:browser"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.2.1",

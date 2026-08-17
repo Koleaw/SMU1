@@ -39,7 +39,8 @@ async function startServer(t, options = {}) {
       ADMIN_USERNAME: 'route-test-admin',
       ADMIN_PASSWORD: 'route-test-password',
       SESSION_SECRET: 'route-test-session-secret-at-least-32-bytes',
-      ...(options.contentRoot ? { ADMIN_TEST_CONTENT_ROOT: options.contentRoot } : {})
+      ...(options.contentRoot ? { ADMIN_TEST_CONTENT_ROOT: options.contentRoot } : {}),
+      ...(options.env || {})
     },
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true
@@ -109,14 +110,17 @@ function product(overrides = {}) {
   };
 }
 
-async function createContentRoot(t) {
+async function createContentRoot(t, { full = false } = {}) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-admin-routes-'));
+  if (full) {
+    await fs.cp(path.join(process.cwd(), 'src', 'content'), root, { recursive: true, force: true });
+  }
   await Promise.all([
-    'product-categories', 'product-sections', 'products', 'static-pages', 'services', 'projects', 'jobs'
+    'product-categories', 'product-sections', 'products', 'static-pages', 'services', 'projects', 'jobs', '.admin-data'
   ].map((collection) => (
     fs.mkdir(path.join(root, collection), { recursive: true })
   )));
-  await Promise.all([
+  if (!full) await Promise.all([
     fs.copyFile(
       path.join(process.cwd(), 'src', 'content', 'product-categories', 'besedki-i-pergoly.json'),
       path.join(root, 'product-categories', 'besedki-i-pergoly.json')
@@ -126,14 +130,95 @@ async function createContentRoot(t) {
       path.join(root, 'product-sections', 'ulichnaya-mebel.json')
     )
   ]);
+  await Promise.all([
+    fs.copyFile(path.join(process.cwd(), 'src', 'data', 'navigation.json'), path.join(root, '.admin-data', 'navigation.json')),
+    fs.copyFile(path.join(process.cwd(), 'src', 'data', 'yandex.json'), path.join(root, '.admin-data', 'yandex.json'))
+  ]);
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   return root;
 }
 
+test('publish namespace is advertised but fails closed before Git/network side effects in ADMIN_TEST_MODE', async (t) => {
+  const contentRoot = await createContentRoot(t, { full: true });
+  const { base } = await startServer(t, {
+    contentRoot,
+    env: {
+      ADMIN_GIT_REMOTE: 'publish-test-remote-must-not-run',
+      GITHUB_REPOSITORY: 'invalid/nonexistent',
+      TEST_SITE_URL: 'https://owner.github.io',
+      TEST_BASE_PATH: '/repo'
+    }
+  });
+  const { payload: session, cookie } = await login(base);
+  assert.equal(session.capabilities.publish, 1);
+  const mutationHeaders = {
+    cookie,
+    'content-type': 'application/json',
+    origin: TEST_ORIGIN,
+    'x-admin-csrf': session.csrfToken,
+    'x-admin-recovery-client-id': 'route-test-browser'
+  };
+
+  const protectedRoutes = [
+    { method: 'POST', path: '/publish/preview-plan', body: { target: 'preview', transactionIds: [] } },
+    { method: 'POST', path: '/publish/preview-apply', body: { target: 'preview', planId: 'plan-route-test' } },
+    { method: 'GET', path: '/publish/status' },
+    { method: 'GET', path: '/publish/jobs/job-route-test' },
+    { method: 'POST', path: '/publish/jobs/job-route-test/poll', body: { target: 'preview' } },
+    { method: 'POST', path: '/publish/jobs/job-route-test/retry', body: { target: 'preview', recoveryClientId: 'route-test-browser' } },
+    { method: 'GET', path: '/publish/jobs/job-route-test/report' }
+  ];
+  for (const route of protectedRoutes) {
+    const response = await fetch(`${base}${route.path}`, {
+      method: route.method,
+      headers: route.method === 'GET' ? { cookie } : mutationHeaders,
+      ...(route.body ? { body: JSON.stringify(route.body) } : {})
+    });
+    assert.equal(response.status, 403, `${route.method} ${route.path}`);
+    const payload = await response.json();
+    assert.equal(payload.code, 'INSECURE_PUBLISH_DENIED', `${route.method} ${route.path}`);
+  }
+
+  const legacyRoutes = [
+    { method: 'POST', path: '/publish' },
+    { method: 'POST', path: '/publish-all' },
+    { method: 'GET', path: '/publish-status' },
+    { method: 'GET', path: '/publish-report' }
+  ];
+  for (const route of legacyRoutes) {
+    const response = await fetch(`${base}${route.path}`, {
+      method: route.method,
+      headers: route.method === 'GET' ? { cookie } : mutationHeaders,
+      ...(route.method === 'POST' ? { body: '{}' } : {})
+    });
+    assert.equal(response.status, 410, `${route.method} ${route.path}`);
+    assert.match((await response.json()).code, /^LEGACY_PUBLISH/u);
+  }
+
+  await assert.rejects(
+    fs.access(path.join(contentRoot, '.admin-runtime', 'publish')),
+    (error) => error?.code === 'ENOENT'
+  );
+});
+
 test('registered JSON routes export home and preview the same file without changes', async (t) => {
-  const { base } = await startServer(t);
+  const contentRoot = await createContentRoot(t, { full: true });
+  const { base } = await startServer(t, { contentRoot });
   const { payload: session, cookie } = await login(base);
   assert.equal(session.capabilities.contentJson, 1);
+  const mutationHeaders = { cookie, 'content-type': 'application/json', origin: TEST_ORIGIN, 'x-admin-csrf': session.csrfToken };
+
+  const yandexResponse = await fetch(`${base}/singletons/yandex`, { headers: { cookie } });
+  assert.equal(yandexResponse.status, 200);
+  const yandex = await yandexResponse.json();
+  const yandexSave = await fetch(`${base}/singletons/yandex`, {
+    method: 'PUT',
+    headers: mutationHeaders,
+    body: JSON.stringify({ content: { ...yandex.content, map: { ...yandex.content.map, height: yandex.content.map.height + 1 } }, baseRevision: yandex.revision })
+  });
+  assert.equal(yandexSave.status, 200);
+  assert.equal((await yandexSave.json()).content.map.height, yandex.content.map.height + 1);
+  assert.equal(JSON.parse(await fs.readFile(path.join(contentRoot, '.admin-data', 'yandex.json'), 'utf8')).map.height, yandex.content.map.height + 1);
 
   const exported = await fetch(`${base}/json-export/static-pages/home`, { method: 'GET', headers: { cookie } });
   assert.equal(exported.status, 200);
@@ -172,6 +257,27 @@ test('registered JSON routes export home and preview the same file without chang
   const fullPreview = await fullPreviewResponse.json();
   assert.equal(fullPreview.result, 'ready');
   assert.equal(fullPreview.canApply, false);
+});
+
+test('staged media batches can be renewed by the owning authenticated browser', async (t) => {
+  const contentRoot = await createContentRoot(t);
+  const { base } = await startServer(t, { contentRoot });
+  const { payload: session, cookie } = await login(base);
+  const response = await fetch(`${base}/media/staging/draft-batch-001/renew`, {
+    method: 'POST',
+    headers: {
+      cookie,
+      'content-type': 'application/json',
+      origin: TEST_ORIGIN,
+      'x-admin-csrf': session.csrfToken
+    },
+    body: '{}'
+  });
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.batchId, 'draft-batch-001');
+  assert.equal(payload.renewed, 0);
+  assert.deepEqual(payload.items, []);
 });
 
 test('product writes validate presentation data and catalog export round-trips through productImport', async (t) => {
@@ -327,8 +433,102 @@ test('product writes validate presentation data and catalog export round-trips t
   assert.match(oldCatalog.error, /не содержит совместимый productImport/);
   assert.equal(resolveProductImportEnvelope({ type: 'products_import', version: 1, items: [] }).ok, true);
 
-  const visualSource = await fs.readFile(path.join(process.cwd(), 'src/pages/admin/visual.astro'), 'utf8');
-  assert.match(visualSource, /payload\?\.type === 'catalog_export'/);
-  assert.match(visualSource, /payload\.productImport\?\.type === 'products_import'/);
-  assert.match(visualSource, /не содержит совместимый productImport/);
+});
+
+test('legacy admin routes stay thin adapters to the shared AdminShell', async () => {
+  const adapters = [
+    { file: ['src', 'pages', 'admin', 'index.astro'], view: 'overview', legacy: false },
+    { file: ['src', 'pages', 'admin', 'catalog.astro'], view: 'catalog', legacy: true },
+    { file: ['src', 'pages', 'admin', 'visual.astro'], view: 'pages', legacy: true },
+    { file: ['src', 'pages', 'admin', 'technical.astro'], view: 'settings', legacy: true },
+    {
+      file: ['src', 'pages', 'admin', 'pages', 'navesy.astro'],
+      view: 'catalog',
+      legacy: true,
+      collection: 'product-sections',
+      slug: 'navesy-i-kozyrki'
+    }
+  ];
+
+  for (const adapter of adapters) {
+    const source = await fs.readFile(path.join(process.cwd(), ...adapter.file), 'utf8');
+    const label = adapter.file.join('/');
+    assert.match(source, /import AdminShell from ['"][^'"]*admin\/shell\/AdminShell\.astro['"];/u, label);
+    assert.equal(source.match(/<AdminShell\b/gu)?.length, 1, `${label} must render exactly one shared shell`);
+    assert.match(source, new RegExp(`initialView=["']${adapter.view}["']`, 'u'), label);
+    assert.doesNotMatch(source, /<(?:script|style|form|button|dialog|section)\b/iu, `${label} must not restore a route-local editor`);
+
+    if (adapter.legacy) assert.match(source, /legacyNotice=["'][^"']+["']/u, `${label} must explain the legacy redirect`);
+    else assert.doesNotMatch(source, /legacyNotice=/u, `${label} is the canonical entry route`);
+    if (adapter.collection) assert.match(source, new RegExp(`initialCollection=["']${adapter.collection}["']`, 'u'), label);
+    if (adapter.slug) assert.match(source, new RegExp(`initialSlug=["']${adapter.slug}["']`, 'u'), label);
+  }
+});
+
+test('shared settings UI wires lossless full-site JSON export and preview-before-apply import', async () => {
+  const [shellSource, appSource, apiSource, dataToolsSource] = await Promise.all([
+    fs.readFile(path.join(process.cwd(), 'src', 'admin', 'shell', 'AdminShell.astro'), 'utf8'),
+    fs.readFile(path.join(process.cwd(), 'src', 'admin', 'shell', 'admin-app.mjs'), 'utf8'),
+    fs.readFile(path.join(process.cwd(), 'src', 'admin', 'core', 'api-client.mjs'), 'utf8'),
+    fs.readFile(path.join(process.cwd(), 'src', 'admin', 'settings', 'data-tools.mjs'), 'utf8')
+  ]);
+
+  assert.match(shellSource, /import \{ startAdminApp \} from ['"]\.\/admin-app\.mjs['"]/u);
+  assert.match(shellSource, /data-view=["']settings["']/u);
+  assert.match(appSource, /import \{ renderDataTools \} from ['"]\.\.\/settings\/data-tools\.mjs['"]/u);
+  assert.match(appSource, /route\.view === ['"]settings['"][\s\S]{0,300}renderDataTools\(/u);
+
+  for (const controlId of [
+    'adminJsonTools',
+    'adminJsonExportFullSite',
+    'adminJsonImportFile',
+    'adminJsonImportPreview',
+    'adminJsonImportApply'
+  ]) {
+    assert.match(dataToolsSource, new RegExp(`id: ["']${controlId}["']`, 'u'), `${controlId} must be rendered by the shared settings module`);
+  }
+  assert.match(dataToolsSource, /lossless/u);
+  assert.match(dataToolsSource, /api\.exportFullSite\(\)/u);
+  assert.match(dataToolsSource, /api\.importPreview\(/u);
+  assert.match(dataToolsSource, /api\.importApply\(/u);
+  assert.match(dataToolsSource, /disabled: true[^\n]+id: ['"]adminJsonImportApply['"]/u);
+
+  assert.match(apiSource, /exportFullSite:[^\n]+download\(['"]\/json-export\/full-site['"]\)/u);
+  assert.match(apiSource, /importPreview:[\s\S]{0,240}request\(['"]\/json-import\/preview['"]/u);
+  assert.match(apiSource, /importApply:[\s\S]{0,240}request\(['"]\/json-import\/apply['"]/u);
+});
+
+test('publish server wiring fixes ref ownership and exposes only the exact-SHA namespace', async () => {
+  const source = await fs.readFile(path.join(process.cwd(), 'tools', 'admin-api', 'server.mjs'), 'utf8');
+  assert.match(source, /createContentPublishGateRunner, createGitHubPublishProviders/u);
+  assert.match(source, /candidate:\s*['"]v4-product-final-candidate['"]/u);
+  assert.match(source, /preview:\s*['"]preview['"]/u);
+  assert.match(source, /protected:\s*['"]main['"]/u);
+  assert.match(source, /assertSecureOperation\(config, ['"]publish['"]\)/u);
+  assert.match(source, /pathname === ['"]\/api\/admin\/publish\/preview-plan['"]/u);
+  assert.match(source, /pathname === ['"]\/api\/admin\/publish\/preview-apply['"]/u);
+  assert.match(source, /pathname === ['"]\/api\/admin\/publish\/status['"]/u);
+  assert.match(source, /publish\/jobs/u);
+  assert.match(source, /previewUrl:\s*configuredPublishSite\(\)\.previewUrl/u);
+  assert.match(source, /routeExpectations:\s*\[\{\s*route:\s*['"]\/['"],\s*expected:\s*['"]html['"]\s*\}\]/u);
+  assert.match(source, /routeExpectations:[\s\S]{0,160}\bpages\b/u);
+  assert.match(source, /retryProvider:\s*providers\.retryProvider/u);
+  assert.match(source, /method === ['"]POST['"] && allowedWritePath/u);
+  assert.match(source, /PUBLISH_GITHUB_WRITE_TOKEN_REQUIRED/u);
+  assert.match(source, /rerun-failed-jobs\|rerun/u);
+  assert.match(source, /await publishService\?\.close\(\)/u);
+  assert.doesNotMatch(source, /runGit\(\[['"]push['"]/u);
+  assert.doesNotMatch(source, /git add -A|publishPaths\(|publishWholeSiteChanges\(|publishContentChanges\(/u);
+});
+
+test('Pages workflow deploys only an exact candidate-preview pair from preview', async () => {
+  const source = await fs.readFile(path.join(process.cwd(), '.github', 'workflows', 'deploy.yml'), 'utf8');
+  assert.match(source, /workflow_dispatch test may deploy only the preview ref/u);
+  assert.match(source, /develop is check-only; only preview may update GitHub Pages/u);
+  assert.match(source, /elif \[ "\$\{GITHUB_REF_NAME\}" = "preview" \]; then[\s\S]{0,160}deploy_kind="test"/u);
+  assert.doesNotMatch(source, /"preview" \] \|\| \[ "\$\{GITHUB_REF_NAME\}" = "develop"/u);
+  assert.equal((source.match(/git ls-remote --refs origin refs\/heads\/v4-product-final-candidate/gu) || []).length, 2);
+  assert.equal((source.match(/"\$candidate_sha" != "\$preview_sha"/gu) || []).length, 2);
+  assert.equal((source.match(/"\$preview_sha" != "\$GITHUB_SHA"/gu) || []).length, 2);
+  assert.match(source, /deploy-test:\s*\n\s*if: needs\.build\.outputs\.deploy_kind == 'test'/u);
 });

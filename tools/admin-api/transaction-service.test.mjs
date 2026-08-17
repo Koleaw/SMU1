@@ -74,10 +74,55 @@ test('typed multi-record preview has exact diff and apply writes through one jou
   assert.equal(preview.state, 'prepared');
   assert.equal(preview.diff.length, 2);
   assert.ok(preview.diff.every((item) => item.beforeBytesBase64 && item.afterBytesBase64));
+  assert.deepEqual(preview.metadata.routeExpectations.map((item) => item.route), preview.metadata.affectedRoutes);
+  assert.ok(preview.metadata.routeExpectations.every((item) => item.expected === 'html'));
   const applied = await service.apply({ ...context('multi'), transactionId: preview.transactionId, payloadHash: preview.payloadHash });
   assert.equal(applied.state, 'committed');
   assert.match((await service.readRecord({ collection: 'products', slug: first.slug })).content.title, / A$/);
   assert.equal((await service.listHistory(context('history'))).length, 1);
+  const afterRelogin = await service.listHistory({ ...context('history-relogin'), sessionFingerprint: 'session-after-relogin' });
+  assert.equal(afterRelogin.length, 1, 'the same authenticated owner retains recoverable history after re-login');
+  const anotherOwner = await service.listHistory({ ...context('history-other-owner'), owner: 'another-editor', sessionFingerprint: 'session-other' });
+  assert.equal(anotherOwner.length, 0, 'a different owner cannot enumerate history');
+});
+
+test('record snapshot callback stays inside the shared repository lease', async (t) => {
+  const { service } = await fixture(t);
+  const result = await service.withRecordStableRead(
+    { collection: 'products', slug: 'besedka-kofe' },
+    async (record, context) => {
+      assert.equal(record.slug, 'besedka-kofe');
+      assert.equal(typeof context.refreshLease, 'function');
+      await context.refreshLease();
+      return { revision: record.revision, root: context.repoRoot };
+    },
+  );
+  assert.match(result.revision, /^sha256:/u);
+  assert.ok(result.root);
+});
+
+test('active record creation receives a required HTML smoke expectation', async (t) => {
+  const { service } = await fixture(t);
+  const template = await service.readRecord({ collection: 'products', slug: 'besedka-kofe' });
+  const slug = 'smoke-created-product';
+  const preview = await service.preview({
+    ...context('create-active'),
+    operations: [{
+      type: 'upsert-record',
+      collection: 'products',
+      slug,
+      baseRevision: 'missing',
+      content: { ...template.content, slug, title: 'Smoke created product', isActive: true }
+    }]
+  });
+  assert.equal(preview.state, 'prepared');
+  assert.equal(preview.metadata.routeExpectations.length, 1);
+  assert.equal(preview.metadata.routeExpectations[0].expected, 'html');
+  assert.match(preview.metadata.routeExpectations[0].route, new RegExp(`/${slug}/$`, 'u'));
+  assert.ok(preview.metadata.routeTransitions.some((item) => item.before === null
+    && item.after?.collection === 'products'
+    && item.after?.slug === slug
+    && item.after?.expected === 'html'));
 });
 
 test('rename cascades a category slug into products and removes the physical alias', async (t) => {
@@ -96,6 +141,15 @@ test('rename cascades a category slug into products and removes the physical ali
   assert.equal(preview.state, 'prepared');
   assert.ok(preview.diff.some((item) => item.action === 'delete'));
   assert.ok(preview.diff.some((item) => item.action === 'create'));
+  assert.ok(preview.metadata.routeExpectations.some((item) => item.expected === 'not-found'));
+  assert.ok(preview.metadata.routeExpectations.some((item) => item.expected === 'html'));
+  assert.deepEqual(preview.metadata.recordRenames, [{
+    collection: 'product-categories', fromSlug: 'besedki-i-pergoly', toSlug: 'besedki-i-pergoly-new'
+  }]);
+  const cascadedProductRoute = preview.metadata.routeTransitions.find((item) => item.after?.collection === 'products' && item.after?.slug === 'besedka-kofe');
+  assert.equal(cascadedProductRoute?.before?.expected, 'html');
+  assert.equal(cascadedProductRoute?.after?.expected, 'html');
+  assert.notEqual(cascadedProductRoute?.before?.route, cascadedProductRoute?.after?.route);
   await service.apply({ ...context('rename'), transactionId: preview.transactionId });
   await assert.rejects(fs.access(path.join(root, 'src', 'content', 'product-categories', 'besedki-i-pergoly.json')));
   const product = await service.readRecord({ collection: 'products', slug: 'besedka-kofe' });
@@ -117,8 +171,28 @@ test('hard delete is blocked without a relation plan and archive is atomic', asy
     operations: [{ type: 'archive-record', collection: 'products', slug: product.slug, baseRevision: product.revision }]
   });
   assert.equal(archived.state, 'prepared');
+  assert.ok(archived.metadata.routeExpectations.length > 0);
+  assert.ok(archived.metadata.routeExpectations.every((item) => item.expected === 'not-found'));
   await service.apply({ ...context('archive'), transactionId: archived.transactionId });
-  assert.equal((await service.readRecord({ collection: 'products', slug: product.slug })).content.isActive, false);
+  const inactive = await service.readRecord({ collection: 'products', slug: product.slug });
+  assert.equal(inactive.content.isActive, false);
+
+  const activated = await service.preview({
+    ...context('activate'),
+    operations: [{
+      type: 'upsert-record',
+      collection: 'products',
+      slug: inactive.slug,
+      baseRevision: inactive.revision,
+      content: { ...inactive.content, isActive: true }
+    }]
+  });
+  assert.equal(activated.state, 'prepared');
+  assert.ok(activated.metadata.routeExpectations.length > 0);
+  assert.ok(activated.metadata.routeExpectations.every((item) => item.expected === 'html'));
+  assert.ok(activated.metadata.routeTransitions.some((item) => item.before?.expected === 'not-found'
+    && item.after?.expected === 'html'
+    && item.after?.slug === product.slug));
 });
 
 test('hard delete can be restored from exact backup through a normal preview/apply', async (t) => {
@@ -134,12 +208,20 @@ test('hard delete can be restored from exact backup through a normal preview/app
     }]
   });
   assert.equal(preview.state, 'prepared');
+  assert.deepEqual(preview.metadata.routeExpectations, [{
+    expected: 'not-found',
+    route: '/vakansii/svarshchik-metallokonstruktsiy/'
+  }]);
   await service.apply({ ...context('delete'), transactionId: preview.transactionId });
   const restore = await service.previewRestore({
     ...context('restore'),
     sourceTransactionId: preview.transactionId
   });
   assert.equal(restore.state, 'prepared');
+  assert.deepEqual(restore.metadata.routeExpectations, [{
+    expected: 'html',
+    route: '/vakansii/svarshchik-metallokonstruktsiy/'
+  }]);
   await service.apply({ ...context('restore'), transactionId: restore.transactionId });
   const restored = await fs.readFile(originalPath);
   assert.equal(revisionForBytes(restored), revisionForBytes(original));
@@ -180,6 +262,9 @@ test('staged media promotion derives a canonical destination and is exactly rest
   const operation = {
     type: 'promote-staged-media',
     stagedId,
+    batchId: 'batch-promotion-test',
+    leaseId: 'lease-promotion-test',
+    stagingOwner: 'owner-promotion-test',
     baseRevision: revisionForBytes(bytes),
     destinationBaseRevision: 'missing'
   };
@@ -188,6 +273,7 @@ test('staged media promotion derives a canonical destination and is exactly rest
     (error) => error.code === 'STAGED_MEDIA_ADAPTER_REQUIRED'
   );
 
+  let finalized = null;
   const service = createService({
     runtimeDir: path.join(root, '.runtime-adapter'),
     stagingAdapter: {
@@ -198,6 +284,9 @@ test('staged media promotion derives a canonical destination and is exactly rest
           sourcePath: path.relative(root, stagedPath),
           publicPath: `/uploads/${stagedId}.webp`
         };
+      },
+      async markPromoted(promotion) {
+        finalized = promotion;
       }
     }
   });
@@ -207,8 +296,9 @@ test('staged media promotion derives a canonical destination and is exactly rest
     operations: [operation]
   });
   assert.equal(preview.state, 'prepared');
+  assert.deepEqual(preview.metadata.routeExpectations, [{ expected: 'html', route: '/' }]);
   assert.deepEqual(preview.metadata.stagingpaths, [path.relative(root, stagedPath).split(path.sep).join('/')]);
-  assert.ok(preview.paths.includes(preview.metadata.stagingpaths[0]));
+  assert.ok(preview.readSet.some((item) => item.path === preview.metadata.stagingpaths[0]));
   assert.deepEqual(
     (await service.getTransaction({ ...context('promote'), transactionId: preview.transactionId })).metadata.stagingpaths,
     preview.metadata.stagingpaths
@@ -216,7 +306,8 @@ test('staged media promotion derives a canonical destination and is exactly rest
   const publicPath = preview.metadata.mediaPromotions[0].publicPath;
   assert.match(publicPath, /^\/uploads\/[a-f0-9]{64}\.webp$/);
   await service.apply({ ...context('promote'), transactionId: preview.transactionId });
-  await assert.rejects(fs.access(stagedPath));
+  assert.deepEqual(finalized, preview.metadata.mediaPromotions[0]);
+  assert.deepEqual(await fs.readFile(stagedPath), bytes, 'Shared staged bytes remain available to other draft leases.');
   const destination = path.join(root, 'public', ...publicPath.split('/').filter(Boolean));
   assert.deepEqual(await fs.readFile(destination), bytes);
 
