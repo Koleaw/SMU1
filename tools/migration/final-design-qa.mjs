@@ -456,11 +456,28 @@ const runDistChecks = () => {
     totalIssues: listingIssues.length
   });
 
-  const visualAdminHtml = htmlByRoute.get('/admin/visual/') || '';
-  const technicalAdminHtml = htmlByRoute.get('/admin/technical/') || '';
-  addCheck('rendering.admin-presentation-control', visualAdminHtml.includes('presentationType')
-    && visualAdminHtml.includes('data-premium-product-fields') && technicalAdminHtml.includes('presentationType'), {
-    routes: ['/admin/visual/', '/admin/technical/']
+  const adminRoutes = ['/admin/', '/admin/catalog/', '/admin/visual/', '/admin/technical/', '/admin/pages/navesy/'];
+  const adminPresentationIssues = [];
+  const adminShellAssets = new Set();
+  for (const route of adminRoutes) {
+    const html = htmlByRoute.get(route) || '';
+    const shellAsset = html.match(/<script\b[^>]*\bsrc=(?:"([^"]*AdminShell[^"]*)"|'([^']*AdminShell[^']*)')[^>]*>/iu);
+    if (!html.includes('id="adminRoot"') || !html.includes('data-admin-base=')) {
+      adminPresentationIssues.push(`${route}:missing-unified-shell`);
+    }
+    if (!html.includes('id="adminCreatePresentation"') || !html.includes('name="presentationType"')
+      || !html.includes('<option value="standard">') || !html.includes('<option value="premium">')) {
+      adminPresentationIssues.push(`${route}:missing-presentation-control`);
+    }
+    if (!shellAsset) adminPresentationIssues.push(`${route}:missing-admin-shell-script`);
+    else adminShellAssets.add(shellAsset[1] || shellAsset[2]);
+  }
+  if (adminShellAssets.size !== 1) {
+    adminPresentationIssues.push(`shared-shell-assets:${[...adminShellAssets].join('|') || '(missing)'}`);
+  }
+  addCheck('rendering.admin-presentation-control', adminPresentationIssues.length === 0, {
+    routes: adminRoutes,
+    issues: adminPresentationIssues
   });
   return { routes: uniqueExpectedRoutes.length, links: auditedLinks, media: auditedMedia };
 };
