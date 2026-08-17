@@ -72,6 +72,8 @@ const configuredBase = (() => {
   const prefixed = raw.startsWith('/') ? raw : `/${raw}`;
   return prefixed.endsWith('/') ? prefixed.slice(0, -1) : prefixed;
 })();
+const artifactDeployTarget = String(process.env.DEPLOY_TARGET || '').trim().toLowerCase();
+const isTestArtifact = artifactDeployTarget === 'test';
 const withoutBase = (pathname) => configuredBase !== '/' && (pathname === configuredBase || pathname.startsWith(`${configuredBase}/`))
   ? pathname.slice(configuredBase.length) || '/'
   : pathname;
@@ -302,7 +304,8 @@ const runDistChecks = () => {
     const refreshTag = openTags(html, 'meta').find((tag) => (attrs(tag)['http-equiv'] || '').toLowerCase() === 'refresh');
     const robotsTag = openTags(html, 'meta').find((tag) => (attrs(tag).name || '').toLowerCase() === 'robots');
     const robots = (attrs(robotsTag || '').content || '').toLowerCase();
-    if (canonical !== target || !attrs(refreshTag || '').content?.includes(target) || !robots.includes('noindex')) {
+    const canonicalMatchesArtifact = isTestArtifact ? canonical === '' : canonical === target;
+    if (!canonicalMatchesArtifact || !attrs(refreshTag || '').content?.includes(target) || !robots.includes('noindex')) {
       compatibilityIssues.push(`${route}:canonical=${canonical || '(missing)'}:target=${target}:robots=${robots || '(missing)'}`);
     }
   }
@@ -319,10 +322,15 @@ const runDistChecks = () => {
   const missingFromSitemap = uniqueExpectedRoutes.filter((route) => !sitemapRoutes.has(route));
   const forbiddenSitemapRoutes = [...sitemapRoutes].filter((route) => route.startsWith('/admin/') || route.startsWith('/design-lab/')
     || compatibilityRoutes.has(route) || route === '/404.html');
-  addCheck('routes.sitemap', sitemapFiles.length > 0 && missingFromSitemap.length === 0 && forbiddenSitemapRoutes.length === 0, {
+  const sitemapMatchesArtifact = isTestArtifact
+    ? sitemapFiles.length === 0
+    : sitemapFiles.length > 0 && missingFromSitemap.length === 0 && forbiddenSitemapRoutes.length === 0;
+  addCheck('routes.sitemap', sitemapMatchesArtifact, {
+    artifactDeployTarget: artifactDeployTarget || 'default',
+    expected: isTestArtifact ? 'disabled' : 'complete-production-route-set',
     files: sitemapFiles.map((file) => path.relative(root, file).replaceAll('\\', '/')),
     routes: sitemapRoutes.size,
-    missing: missingFromSitemap,
+    missing: isTestArtifact ? [] : missingFromSitemap,
     forbidden: forbiddenSitemapRoutes
   });
   const idsByRoute = new Map([...htmlByRoute].map(([route, html]) => [route,
@@ -344,7 +352,14 @@ const runDistChecks = () => {
 
     const canonicalTag = openTags(html, 'link').find((tag) => (attrs(tag).rel || '').toLowerCase() === 'canonical');
     const canonical = canonicalTag ? normalizeRoute(withoutBase(new URL(attrs(canonicalTag).href, 'http://qa.local/').pathname)) : '';
-    if (canonical !== route) pageIssues.push(`${route}:canonical:${canonical || '(missing)'}`);
+    const robotsTag = openTags(html, 'meta').find((tag) => (attrs(tag).name || '').toLowerCase() === 'robots');
+    const robots = (attrs(robotsTag || '').content || '').toLowerCase();
+    if (isTestArtifact) {
+      if (canonical) pageIssues.push(`${route}:unexpected-test-canonical:${canonical}`);
+      if (!robots.includes('noindex')) pageIssues.push(`${route}:test-missing-noindex`);
+    } else if (canonical !== route) {
+      pageIssues.push(`${route}:canonical:${canonical || '(missing)'}`);
+    }
     if (/\/design-lab\//.test(html)) pageIssues.push(`${route}:design-lab-reference`);
 
     for (const anchor of openTags(html, 'a')) {

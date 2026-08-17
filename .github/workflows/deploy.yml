@@ -221,6 +221,7 @@ jobs:
       - name: Validate final source and rendered contracts
         run: npm run qa:final:static
         env:
+          DEPLOY_TARGET: ${{ steps.deploy-meta.outputs.deploy_target }}
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
 
       - name: Prepare proven reachable Pages artifact
