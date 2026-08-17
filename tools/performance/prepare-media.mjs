@@ -64,6 +64,7 @@ const PIPELINE_HASH = createHash('sha256')
 const RASTER_EXTENSION = /\.(?:avif|jpe?g|png|webp)$/iu;
 const SOURCE_MEDIA_REFERENCE = /\/(?:uploads|assets\/images)\/[^"'`\s?#<>{}|\\]+?\.(?:avif|jpe?g|png|webp)\b/giu;
 const SOURCE_EXTENSIONS = new Set(['.astro', '.mjs', '.ts']);
+const SOURCE_TEST_FILE = /\.(?:test|spec)\.(?:astro|mjs|ts)$/iu;
 const ALLOWED_MISSING_SOURCE_REFERENCES = new Set(['/uploads/photo.jpg']);
 
 const posixPath = (value) => value.split(sep).join('/');
@@ -258,7 +259,10 @@ const sourceRoles = (relativePath) => {
 };
 
 const discoverSourceReferences = async () => {
-  const files = await walkFiles(SOURCE_ROOT, (file) => SOURCE_EXTENSIONS.has(extname(file).toLocaleLowerCase('en')));
+  const files = await walkFiles(SOURCE_ROOT, (file) => (
+    SOURCE_EXTENSIONS.has(extname(file).toLocaleLowerCase('en'))
+    && !SOURCE_TEST_FILE.test(file)
+  ));
   for (const file of files) {
     const relativePath = posixPath(relative(ROOT, file));
     const source = await readFile(file, 'utf8');
