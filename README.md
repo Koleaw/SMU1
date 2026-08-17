@@ -1,75 +1,76 @@
-# Сайт СМУ-1 (Astro + статический хостинг)
+# СМУ-1: публичный сайт и локальная админка
 
-Рабочий каркас сайта СМУ-1 под статическую публикацию на хостинге, который деплоит сайт из GitHub.
+Проект собирает статический сайт на Astro и публикует тестовую версию через GitHub Actions. Контент владелец редактирует в локальной админке H6: она работает только на настроенном компьютере и не добавляет серверную админку на публичный сайт.
 
-## Запуск локально
+## Владельцу сайта
+
+Первичную установку выполняет разработчик:
 
 ```bash
-npm install
+npm ci
+npm run admin:setup
+```
+
+После настройки запускайте админку двойным кликом по `tools/admin-api/SMU1-Admin-Start.cmd` или командой:
+
+```bash
+npm run admin
+```
+
+Рабочий адрес — `http://127.0.0.1:4321/admin/`. Логин и пароль создаются во время setup; стандартной пары `admin/admin` нет.
+
+Адрес доступен только на этом компьютере. Телефон и другие устройства к админке не подключаются; мобильные QA-скриншоты проверяют лишь адаптивность узкого окна и не означают публикацию admin backend в интернет.
+
+Главное правило: **«Сохранить на компьютере» не означает «Опубликовать»**. Сохранение создаёт локальную восстановимую транзакцию и не обращается к Git/GitHub. Тестовый сайт обновляется только отдельным действием публикации.
+
+Полная практическая инструкция: [docs/ADMIN_LOCAL_STAGE1.md](docs/ADMIN_LOCAL_STAGE1.md).
+
+## Разработчику
+
+Требуется Node.js 20 и Git. В новом checkout используйте воспроизводимую установку:
+
+```bash
+npm ci
 npm run dev
 ```
 
-Проверка типов и сборки:
+Основные проверки:
 
 ```bash
-npm run check
-npm run build
-npm run preview
+npm test                 # все H6 Node-тесты, без браузера и сборки
+npm run qa:h6:admin      # H6 Node-тесты + браузерный roundtrip админки
+npm run qa:final         # полный source/build/browser контур
 ```
 
-## Деплой из админки и GitHub
+`npm run qa:final` включает `astro check`, все H6-тесты, сборку, performance/static/browser QA и поэтому должен запускаться только в отдельном одноразовом clone/worktree на проверяемом commit. Не запускайте build- и browser-gates в рабочем checkout владельца: они создают служебные артефакты (`dist`, `.astro`, responsive media).
 
-Сейчас используется тестовая публикация: админка пушит изменения в ветку `preview`, GitHub Actions собирает сайт с `DEPLOY_TARGET=test` и не требует боевой `SITE_URL`. Обычный push в `main`/`master` без `PRODUCTION_DEPLOY_ENABLED=true` выполняет только тестовую/check-only сборку и не считается production deployment.
+Leaf-наборы для точной диагностики:
 
-Будущий боевой режим будет пушить в `main` и требовать `PRODUCTION_DEPLOY_ENABLED=true` вместе с `SITE_URL` после подключения домена и хостинга. Подробности: [docs/deploy.md](docs/deploy.md).
+- `test:admin-foundation` — storage, schemas, security и setup;
+- `test:admin-import` — JSON import/export и HTTP routes;
+- `test:admin-coverage` — реестр редактируемого контента и публичная полнота записей;
+- `test:admin-transactions` — транзакции и связи;
+- `test:admin-media` — проверка, staging, очередь и библиотека медиа;
+- `test:admin-publish` — plan/runner/status/service публикации;
+- `test:admin-client-state` — браузерные черновики и undo/redo.
 
-## Где менять контент
+## Источники данных
 
-- Тексты и базовые данные: `src/data/*.json`
-- Категории и подкатегории: `src/data/categories.json`, `src/data/product-categories.json`
-- Проектные страницы: `src/data/project-pages.json`
-- Объекты: `src/data/objects.json`
-- FAQ: `src/data/faqs.json`
-- Контакты компании: `src/data/site.json`
+Основной контент находится в `src/content/*/*.json`; зарегистрированные singletons навигации и Яндекса — в `src/data/navigation.json` и `src/data/yandex.json`. Постоянные новые загрузки попадают в `public/uploads` только вместе с успешным локальным сохранением.
 
-## Где менять фото
+Владельцу не нужно править эти файлы вручную. Для технического обслуживания source of truth остаются JSON-файлы и схемы проекта. Pages CMS выведен из эксплуатации, чтобы два редактора не писали в одни данные параллельно; подробности: [docs/PAGES_CMS_SETUP.md](docs/PAGES_CMS_SETUP.md).
 
-- Изделия: `public/assets/images/products/`
-- Объекты: `public/assets/images/objects/`
-- Производство: `public/assets/images/production/`
-- Временные заглушки: `public/assets/images/placeholders/`
+## Публикация H6
 
-## Где менять цены
+H6 поддерживает только тестовую публикацию. После прохождения gates один и тот же проверенный commit SHA атомарно отправляется в ветки `v4-product-final-candidate` и `preview`; защищённая `main` проверяется, но не изменяется. Production-публикация намеренно заблокирована до отдельного этапа H7.
 
-- Для товарных категорий: `src/data/product-categories.json` (`priceMode`, `priceLabel`, `priceValue`).
-- Для проектных страниц рекомендуем «по запросу» + CTA «Рассчитать стоимость».
+Технический runbook, веточный контракт и восстановление после ошибок: [docs/deploy.md](docs/deploy.md).
 
-## Где менять цвета и стили
+## Стек
 
-- Тема и дизайн-токены: `src/styles/global.css` (`:root` переменные).
-- Компоненты и сетка: `src/components/*.astro`.
+- Astro 5 + TypeScript;
+- JSON content layer и SCSS/CSS;
+- статическая публикация GitHub Actions → GitHub Pages для preview;
+- внешний form backend для публичных форм (сервер обработки форм в этом репозитории отсутствует).
 
-## Где менять формы
-
-- Архитектура форм: `src/components/LeadForm.astro`
-- Точка подключения внешнего form backend: `src/data/forms.json` (`endpoint`)
-
-### Важно по формам
-
-Статический хостинг не обрабатывает POST на сервере. Для реальной отправки:
-1. Выберите внешний обработчик (Formspree/Web3Forms/аналог).
-2. Вставьте его endpoint в `src/data/forms.json`.
-3. При необходимости добавьте юридический текст о согласии на обработку данных.
-
-## Логотип
-
-- Временный файл: `public/assets/brand/logo-full.svg`
-- Временный favicon: `public/assets/brand/favicon.svg`
-- После утверждения бренд-материалов замените эти файлы на финальные.
-
-## Что сейчас честно оставлено заглушками до мая
-
-- Часть фото изделий, объектов и производства.
-- Данные карточек некоторых объектов (без фейковых цифр и сроков).
-- Финальный логотип/иконка.
-- Подключение боевого внешнего form backend и юридический блок.
+Главная продуктовая спецификация: [docs/MASTER_SPEC.md](docs/MASTER_SPEC.md).
