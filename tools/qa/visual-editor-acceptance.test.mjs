@@ -53,6 +53,14 @@ test('secondary editor keeps reloadable History API routes on its own document',
   assert.match(source, /const adminBase = withBase\('\/admin\/all-materials\/'\);/u);
 });
 
+test('legacy final static gate enforces H6 public isolation and schema-owned premium copy', async () => {
+  const source = await readFile(new URL('../migration/final-design-qa.mjs', import.meta.url), 'utf8');
+  assert.match(source, /rendering\.admin-public-isolation/u);
+  assert.doesNotMatch(source, /rendering\.admin-presentation-control/u);
+  assert.match(source, /settings\.productUi\.cardPremiumLabel/u);
+  assert.match(source, /site-settings\/global\.json#productUi\.cardPremiumLabel/u);
+});
+
 test('visual acceptance origin parser is loopback-only and accepts no URL credentials or paths', () => {
   assert.equal(parseLoopbackOrigin('http://127.0.0.1:4321'), 'http://127.0.0.1:4321');
   assert.equal(parseLoopbackOrigin('http://localhost:4321/'), 'http://localhost:4321');

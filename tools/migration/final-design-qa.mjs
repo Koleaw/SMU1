@@ -100,6 +100,8 @@ const localFileForPathname = (pathname) => {
 
 const productRecords = records('products');
 const categoryRecords = records('product-categories');
+const siteSettings = JSON.parse(read('src/content/site-settings/global.json'));
+const premiumCardLabel = String(siteSettings.productUi?.cardPremiumLabel || '').trim();
 const categoryBySlug = new Map(categoryRecords.map((entry) => [entry.data.slug, entry.data]));
 const productRoute = (product) => {
   const category = categoryBySlug.get(product.productCategorySlug);
@@ -213,9 +215,15 @@ const runSourceChecks = () => {
   addCheck('rendering.presentation-selector', renderingSource.includes("presentationType === 'premium'") || renderingSource.includes('presentationType === "premium"'));
   addCheck('rendering.public-presentation-marker', renderingSource.includes('data-product-presentation'));
   addCheck('rendering.premium-section-marker', renderingSource.includes('data-premium-product-section'));
-  addCheck('rendering.premium-listing-indicator', renderingSource.includes('data-product-card-presentation')
-    && renderingSource.includes('data-product-presentation-indicator="premium"')
-    && renderingSource.includes('Решение для объекта'));
+  const productCardSource = read('src/components/v2/V2ProductCard.astro');
+  addCheck('rendering.premium-listing-indicator', premiumCardLabel.length > 0
+    && productCardSource.includes('data-product-card-presentation')
+    && productCardSource.includes('data-product-presentation-indicator="premium"')
+    && productCardSource.includes('settings.productUi.cardPremiumLabel')
+    && productCardSource.includes("productUiBinding('cardPremiumLabel')"), {
+    source: 'site-settings/global.json#productUi.cardPremiumLabel',
+    configuredLabel: premiumCardLabel
+  });
 
   const imageReadySource = fs.existsSync(path.join(root, 'src', 'utils', 'v2ImageReady.ts'))
     ? read('src/utils/v2ImageReady.ts')
@@ -456,7 +464,7 @@ const runDistChecks = () => {
       if (indicatorCount !== 0) listingIssues.push(`card-${index}:standard-has-premium-indicator`);
     } else if (card.presentation === 'premium') {
       listingCounts.premium += 1;
-      if (indicatorCount !== 1 || !text(card.body).includes('Решение для объекта')) {
+      if (indicatorCount !== 1 || !premiumCardLabel || !text(card.body).includes(premiumCardLabel)) {
         listingIssues.push(`card-${index}:premium-indicator-count-${indicatorCount}`);
       }
     } else {
@@ -471,28 +479,25 @@ const runDistChecks = () => {
     totalIssues: listingIssues.length
   });
 
-  const adminRoutes = ['/admin/', '/admin/catalog/', '/admin/visual/', '/admin/technical/', '/admin/pages/navesy/'];
-  const adminPresentationIssues = [];
-  const adminShellAssets = new Set();
+  const adminRoutes = ['/admin/', '/admin/all-materials/', '/admin/catalog/', '/admin/visual/', '/admin/technical/', '/admin/pages/navesy/'];
+  const actualAdminRoutes = [...htmlByRoute.keys()].filter((route) => route.startsWith('/admin/')).sort();
+  const adminIsolationIssues = [
+    ...adminRoutes.filter((route) => !actualAdminRoutes.includes(route)).map((route) => `${route}:missing-inert-route`),
+    ...actualAdminRoutes.filter((route) => !adminRoutes.includes(route)).map((route) => `${route}:unexpected-admin-route`)
+  ];
+  const forbiddenAdminHtml = /(?:id="(?:adminRoot|adminApp|adminLogin|veApp|veLogin)"|data-(?:api-base|admin-base|smu1-editor)|\/api\/admin|name="password"|<form\b)/iu;
   for (const route of adminRoutes) {
     const html = htmlByRoute.get(route) || '';
-    const shellAsset = html.match(/<script\b[^>]*\bsrc=(?:"([^"]*AdminShell[^"]*)"|'([^']*AdminShell[^']*)')[^>]*>/iu);
-    if (!html.includes('id="adminRoot"') || !html.includes('data-admin-base=')) {
-      adminPresentationIssues.push(`${route}:missing-unified-shell`);
-    }
-    if (!html.includes('id="adminCreatePresentation"') || !html.includes('name="presentationType"')
-      || !html.includes('<option value="standard">') || !html.includes('<option value="premium">')) {
-      adminPresentationIssues.push(`${route}:missing-presentation-control`);
-    }
-    if (!shellAsset) adminPresentationIssues.push(`${route}:missing-admin-shell-script`);
-    else adminShellAssets.add(shellAsset[1] || shellAsset[2]);
+    const robotsTag = openTags(html, 'meta').find((tag) => (attrs(tag).name || '').toLowerCase() === 'robots');
+    const robots = (attrs(robotsTag || '').content || '').toLowerCase();
+    if (!html.includes('Редактор доступен только на рабочем компьютере')) adminIsolationIssues.push(`${route}:missing-inert-instructions`);
+    if (!robots.includes('noindex')) adminIsolationIssues.push(`${route}:missing-noindex`);
+    if (forbiddenAdminHtml.test(html)) adminIsolationIssues.push(`${route}:active-admin-surface`);
   }
-  if (adminShellAssets.size !== 1) {
-    adminPresentationIssues.push(`shared-shell-assets:${[...adminShellAssets].join('|') || '(missing)'}`);
-  }
-  addCheck('rendering.admin-presentation-control', adminPresentationIssues.length === 0, {
-    routes: adminRoutes,
-    issues: adminPresentationIssues
+  addCheck('rendering.admin-public-isolation', adminIsolationIssues.length === 0, {
+    expectedRoutes: adminRoutes,
+    actualRoutes: actualAdminRoutes,
+    issues: adminIsolationIssues
   });
   return { routes: uniqueExpectedRoutes.length, links: auditedLinks, media: auditedMedia };
 };
