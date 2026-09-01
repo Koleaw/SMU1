@@ -162,7 +162,16 @@ const sectionNavItems = [
   ...(product.showDeliveryBlock !== false && deliveryParagraphs.length > 0
     ? [{ id: 'product-delivery', label: settings.productUi.standardNavDeliveryLabel, editor: productUiBinding('standardNavDeliveryLabel', 'short-text', 'nav-delivery') }]
     : []),
-  ...(relatedProducts.length > 0 || editorCanvas ? [{ id: 'related-products', label: settings.productUi.standardNavRelatedLabel, editor: productUiBinding('standardNavRelatedLabel', 'short-text', 'nav-related') }] : []),
+  ...(relatedProducts.length > 0 || editorCanvas ? [{
+    id: 'related-products',
+    label: settings.productUi.standardNavRelatedLabel,
+    editor: {
+      ...productUiBinding('standardNavRelatedLabel', 'short-text', 'nav-related'),
+      ...(editorCanvas && relatedProducts.length === 0
+        ? { 'data-smu1-editor-affordance': 'empty-related-products-nav' }
+        : {})
+    }
+  }] : []),
   { id: 'contact', label: settings.productUi.standardNavContactLabel, editor: productUiBinding('standardNavContactLabel', 'short-text', 'nav-contact') }
 ];
 const headerCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-label', 'header-desktop');

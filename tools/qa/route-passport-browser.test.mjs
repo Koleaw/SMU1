@@ -33,6 +33,7 @@ test('editor equivalence explicitly classifies runtime-only surfaces and uses st
   for (const marker of ['hv2-header__dropdown-indicator', 'v2-breadcrumbs i', 'v2-product-gallery__zoom', 'v2-project-gallery__zoom']) {
     assert.match(source, new RegExp(marker, 'u'));
   }
+  assert.match(source, /\.v2-media-empty\[aria-hidden="true"\]/u);
   assert.match(source, /comparableBusinessText\(snapshot\)/u);
   assert.match(source, /compareStableGeometry\(snapshot\.stableGeometry, editorSnapshot\.stableGeometry\)/u);
   assert.doesNotMatch(source, /editorSnapshot\.documentSize\.scrollHeight\s*!==\s*snapshot\.documentSize\.scrollHeight/u);
@@ -70,6 +71,7 @@ test('preview passport reconciles schema-backed optional fields, wildcard impact
   assert.match(source, /publicFontDiagnostics: snapshot\.fontDiagnostics/u);
   assert.match(source, /editorFontDiagnostics: editorSnapshot\.fontDiagnostics/u);
   assert.match(source, /item\.declaredSources\?\.length/u);
+  assert.match(source, /viewportIntersecting:/u);
   assert.match(source, /new URL\(expected\.pathname, `\$\{options\.editorOrigin\}\/`\)/u);
   assert.match(source, /new URL\(REAL_UNKNOWN_ROUTE, `\$\{options\.editorOrigin\}\/`\)/u);
   assert.doesNotMatch(source, /options\.editorOrigin\}\$\{withBase\(/u);

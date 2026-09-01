@@ -316,7 +316,7 @@ const inventoryExpression = `(() => {
     if (element.closest('.hv2-header__dropdown-indicator')) return 'navigation-control';
     if (element.closest('.v2-breadcrumbs i[aria-hidden="true"]')) return 'breadcrumb-separator';
     if (element.closest('.v2-product-gallery__zoom,.v2-project-gallery__zoom')) return 'gallery-control';
-    if (element.closest('[data-v2-image-fallback]')) return 'media-fallback-status';
+    if (element.closest('[data-v2-image-fallback],.v2-media-empty[aria-hidden="true"]')) return 'media-fallback-status';
     return '';
   };
   const parseBinding = (owner) => {
@@ -424,6 +424,10 @@ const inventoryExpression = `(() => {
     complete: element.tagName === 'IMG' ? element.complete : true,
     naturalWidth: element.tagName === 'IMG' ? element.naturalWidth : 0,
     naturalHeight: element.tagName === 'IMG' ? element.naturalHeight : 0,
+    viewportIntersecting: (() => {
+      const rect = element.getBoundingClientRect();
+      return rect.right > 0 && rect.bottom > 0 && rect.left < window.innerWidth && rect.top < window.innerHeight;
+    })(),
     visible: visuallyVisible(element), accessible: accessibilityVisible(element),
     runtimeSurface: runtimeSurfaceOf(element),
     gallery: Boolean(element.closest('[data-v2-product-gallery],[data-v2-project-gallery],[class*="gallery"]')),

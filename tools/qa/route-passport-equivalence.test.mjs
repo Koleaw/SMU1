@@ -273,7 +273,7 @@ test('currentSrc is validated within its media group and cannot swap candidates 
   assert.deepEqual(result.editorSelectionIssues.map((issue) => issue.mediaGroup), ['hero', 'gallery-1']);
 });
 
-test('currentSrc comparison rejects a visible settled image that is empty on one side', () => {
+test('currentSrc comparison tolerates only immutable H5 width variants and pending lazy selection', () => {
   const localOrigins = [
     { origin: 'http://127.0.0.1:4100', basePath: '/SMU1' },
     { origin: 'http://127.0.0.1:4200', basePath: '/' }
@@ -305,6 +305,23 @@ test('currentSrc comparison rejects a visible settled image that is empty on one
   assert.equal(differentResult.diff.selectionDifferences.length, 1);
   assert.deepEqual(differentResult.diff.selectionIssues, { public: [], editor: [] });
 
+  const h5Digest = 'a'.repeat(64);
+  const h5Public = structuredClone(publicSnapshot);
+  h5Public.media[0].src = `/SMU1/_media/h5/aa/${h5Digest}-123456789abc-w1280.jpg`;
+  h5Public.media[0].srcset = [
+    `/SMU1/_media/h5/aa/${h5Digest}-123456789abc-w480.avif 480w`,
+    `/SMU1/_media/h5/aa/${h5Digest}-123456789abc-w1440.avif 1440w`
+  ].join(', ');
+  h5Public.media[0].currentSrc = `/SMU1/_media/h5/aa/${h5Digest}-123456789abc-w480.avif`;
+  const h5Editor = structuredClone(h5Public);
+  h5Editor.location = selectedDifferent.location;
+  h5Editor.media[0].src = `/_media/h5/aa/${h5Digest}-123456789abc-w1280.jpg`;
+  h5Editor.media[0].srcset = h5Editor.media[0].srcset.replaceAll('/SMU1/', '/');
+  h5Editor.media[0].currentSrc = `/_media/h5/aa/${h5Digest}-123456789abc-w1440.avif`;
+  const h5WidthResult = compareMediaSnapshots(h5Public, h5Editor, { localOrigins });
+  assert.equal(h5WidthResult.match, true);
+  assert.equal(h5WidthResult.selectionDifferences.length, 0);
+
   const visibleButEmpty = structuredClone(selectedDifferent);
   visibleButEmpty.media[0].currentSrc = '';
   const visibleResult = compareMediaSnapshots(publicSnapshot, visibleButEmpty, { localOrigins });
@@ -317,6 +334,26 @@ test('currentSrc comparison rejects a visible settled image that is empty on one
   const crossVisibilityResult = compareMediaSnapshots(publicSnapshot, editorOnlyOffscreen, { localOrigins });
   assert.equal(crossVisibilityResult.match, false);
   assert.equal(crossVisibilityResult.selectionDifferences[0].kind, 'unexpected-empty-current-src');
+
+  const pendingLazy = structuredClone(visibleButEmpty);
+  pendingLazy.media[0].complete = false;
+  pendingLazy.media[0].naturalWidth = 0;
+  pendingLazy.media[0].viewportIntersecting = false;
+  const pendingLazyResult = compareMediaSnapshots(publicSnapshot, pendingLazy, { localOrigins });
+  assert.equal(pendingLazyResult.match, true);
+  assert.equal(pendingLazyResult.selectionDifferences.length, 0);
+
+  const hiddenPendingLazy = structuredClone(pendingLazy);
+  hiddenPendingLazy.media[0].visible = false;
+  const hiddenPendingLazyResult = compareMediaSnapshots(publicSnapshot, hiddenPendingLazy, { localOrigins });
+  assert.equal(hiddenPendingLazyResult.match, false);
+  assert.equal(hiddenPendingLazyResult.selectionDifferences[0].kind, 'unexpected-empty-current-src');
+
+  const stalledVisibleLazy = structuredClone(pendingLazy);
+  stalledVisibleLazy.media[0].viewportIntersecting = true;
+  const stalledVisibleResult = compareMediaSnapshots(publicSnapshot, stalledVisibleLazy, { localOrigins });
+  assert.equal(stalledVisibleResult.match, false);
+  assert.equal(stalledVisibleResult.selectionDifferences[0].kind, 'unexpected-empty-current-src');
 
   const publicOffscreenLazy = structuredClone(publicSnapshot);
   const editorOffscreenLazy = structuredClone(visibleButEmpty);

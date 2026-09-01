@@ -229,8 +229,24 @@ const comparableCurrentSelections = (snapshot, { localOrigins = [] } = {}) => {
       // lazy and not visible; otherwise one renderer may have accidentally
       // hidden or skipped a visible settled image.
       nonRenderingSource: String(item.tag || '').toLowerCase() === 'source',
-      lazyAndInvisible: item.loading === 'lazy' && item.visible === false
+      lazyAndInvisible: item.loading === 'lazy' && item.visible === false,
+      loading: String(item.loading || ''),
+      complete: item.complete === true,
+      naturalWidth: Number(item.naturalWidth || 0),
+      visible: item.visible === true,
+      viewportIntersecting: item.viewportIntersecting === true
     }));
+};
+
+const h5WidthVariantFamily = (value) => {
+  const match = String(value || '').match(/^\/_media\/h5\/([a-f0-9]{2})\/([a-f0-9]{64})-([a-f0-9]{12})-w\d+\.(avif|webp|jpe?g)([?#].*)?$/u);
+  if (!match || match[1] !== match[2].slice(0, 2)) return '';
+  return `${match[1]}/${match[2]}-${match[3]}.${match[4]}${match[5] || ''}`;
+};
+
+const sameH5WidthVariantFamily = (left, right) => {
+  const leftFamily = h5WidthVariantFamily(left);
+  return Boolean(leftFamily && leftFamily === h5WidthVariantFamily(right));
 };
 
 const currentSelectionDifferences = (publicSnapshot, editorSnapshot, options) => {
@@ -247,16 +263,23 @@ const currentSelectionDifferences = (publicSnapshot, editorSnapshot, options) =>
       differences.push({ index, publicSelection: publicSelection || null, editorSelection: editorSelection || null });
       continue;
     }
-    // A lazy non-rendering/source item may have no selection in one sequential
-    // visit. Once both renderers selected a candidate, it must be identical.
+    // `currentSrc` is selected by the browser, not the renderer. Chrome may
+    // retain a cached larger H5 derivative across sequential origin/viewport
+    // visits. Width variants are equivalent only when the immutable source
+    // digest, pipeline hash, format and query/hash remain identical. Generic
+    // art-direction candidates still fail closed.
     if (publicSelection.currentSrc && editorSelection.currentSrc
-      && publicSelection.currentSrc !== editorSelection.currentSrc) {
+      && publicSelection.currentSrc !== editorSelection.currentSrc
+      && !sameH5WidthVariantFamily(publicSelection.currentSrc, editorSelection.currentSrc)) {
       differences.push({ index, kind: 'different-selected-candidate', publicSelection, editorSelection });
       continue;
     }
     if (Boolean(publicSelection.currentSrc) !== Boolean(editorSelection.currentSrc)) {
+      const emptySelection = publicSelection.currentSrc ? editorSelection : publicSelection;
       const allowedMissingSelection = publicSelection.nonRenderingSource && editorSelection.nonRenderingSource
-        || (publicSelection.lazyAndInvisible && editorSelection.lazyAndInvisible);
+        || (publicSelection.lazyAndInvisible && editorSelection.lazyAndInvisible)
+        || (emptySelection.loading === 'lazy' && emptySelection.visible && !emptySelection.complete
+          && emptySelection.naturalWidth === 0 && !emptySelection.viewportIntersecting);
       if (!allowedMissingSelection) {
         differences.push({
           index,
