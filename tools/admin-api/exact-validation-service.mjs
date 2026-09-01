@@ -544,6 +544,33 @@ export async function hydrateExactMediaCache({ sourceRoot, destinationRoot, maxF
   return evidence;
 }
 
+export async function prepareExactDependencies({ sourceRoot, destinationRoot, platform = process.platform }) {
+  const source = path.resolve(sourceRoot);
+  const destination = path.resolve(destinationRoot);
+  const sourceStat = await fs.lstat(source).catch((error) => {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (!sourceStat || !sourceStat.isDirectory() || sourceStat.isSymbolicLink()) {
+    throw new ExactValidationError(
+      'EXACT_DEPENDENCIES_UNSAFE',
+      'Exact build требует установленный обычный каталог node_modules.',
+      { status: 500 }
+    );
+  }
+  if (platform === 'win32') {
+    const hydrated = await hydrateExactMediaCache({
+      sourceRoot: source,
+      destinationRoot: destination,
+      maxFiles: 200_000,
+      maxBytes: 4 * 1024 * 1024 * 1024
+    });
+    return { ...hydrated, mode: 'hardlink-copy-tree' };
+  }
+  await fs.symlink(source, destination, 'dir');
+  return { available: true, mode: 'directory-symlink', files: null, bytes: null, hardlinked: null, copied: null };
+}
+
 function safeOutput(value) {
   return String(value || '')
     .replace(/github_pat_[A-Za-z0-9_]+/gu, '[secret]')
@@ -582,8 +609,10 @@ export function exactBuildInvocation(options = {}) {
 
 export async function runExactSnapshot({ repoRoot, snapshot, environment = process.env, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   const workspace = path.join(snapshot.snapshotRoot, 'workspace');
+  const nodeModules = path.join(workspace, 'node_modules');
   if (!contained(snapshot.snapshotRoot, workspace)) throw new ExactValidationError('EXACT_WORKSPACE_ESCAPE', 'Exact workspace вышел за snapshot.', { status: 500 });
   let worktreeAdded = false;
+  let dependencyLinkInstalled = false;
   try {
     await execFileAsync('git', ['worktree', 'add', '--detach', workspace, snapshot.sourceSha], {
       cwd: repoRoot, windowsHide: true, timeout: 120_000, maxBuffer: 10 * 1024 * 1024
@@ -608,8 +637,11 @@ export async function runExactSnapshot({ repoRoot, snapshot, environment = proce
       await fs.mkdir(path.dirname(destination), { recursive: true });
       await fs.writeFile(destination, bytes);
     }
-    const nodeModules = path.join(workspace, 'node_modules');
-    await fs.symlink(path.join(repoRoot, 'node_modules'), nodeModules, process.platform === 'win32' ? 'junction' : 'dir');
+    const dependencies = await prepareExactDependencies({
+      sourceRoot: path.join(repoRoot, 'node_modules'),
+      destinationRoot: nodeModules
+    });
+    dependencyLinkInstalled = dependencies.mode === 'directory-symlink';
     const mediaCache = await hydrateExactMediaCache({
       sourceRoot: path.join(repoRoot, 'public', '_media', 'h5'),
       destinationRoot: path.join(workspace, 'public', '_media', 'h5')
@@ -715,6 +747,7 @@ export async function runExactSnapshot({ repoRoot, snapshot, environment = proce
       artifact: await artifactEvidence(distRoot),
       diagnostics: {
         mode: 'targeted-production-ssg',
+        dependencies,
         mediaCache,
         prerender: prerenderEvidence,
         routeChecks,
@@ -731,13 +764,30 @@ export async function runExactSnapshot({ repoRoot, snapshot, environment = proce
       cause: error
     });
   } finally {
-    if (worktreeAdded) {
+    let dependencyCleanupError = null;
+    if (dependencyLinkInstalled) {
+      try {
+        const linkStat = await fs.lstat(nodeModules);
+        if (!linkStat.isSymbolicLink()) throw new Error('dependency link was replaced');
+        await fs.unlink(nodeModules);
+      } catch (error) {
+        dependencyCleanupError = error;
+      }
+    }
+    if (worktreeAdded && !dependencyCleanupError) {
       await execFileAsync('git', ['worktree', 'remove', '--force', workspace], {
         cwd: repoRoot, windowsHide: true, timeout: 120_000, maxBuffer: 10 * 1024 * 1024
       }).catch(() => {});
       await execFileAsync('git', ['worktree', 'prune'], {
         cwd: repoRoot, windowsHide: true, timeout: 120_000, maxBuffer: 10 * 1024 * 1024
       }).catch(() => {});
+    }
+    if (dependencyCleanupError) {
+      throw new ExactValidationError(
+        'EXACT_DEPENDENCY_LINK_CLEANUP_FAILED',
+        'Exact workspace сохранён: безопасно удалить ссылку зависимостей не удалось.',
+        { status: 500, cause: dependencyCleanupError }
+      );
     }
   }
 }

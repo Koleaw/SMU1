@@ -12,6 +12,7 @@ import {
   exactBuildInvocation,
   hydrateExactMediaCache,
   installSnapshotBlobAtomically,
+  prepareExactDependencies,
   renameAtomicWithTransientRetry,
   proveExactRunIdentity,
   transactionWithCumulativeExactClosure,
@@ -47,6 +48,22 @@ test('exact build invokes npm without a Windows command shell', () => {
   });
   assert.equal(rejectedOverride.args[0], path.win32.normalize('C:\\Node\\node_modules\\npm\\bin\\npm-cli.js'));
   assert.deepEqual(exactBuildInvocation({ platform: 'linux' }), { command: 'npm', args: ['run', 'build:exact'] });
+});
+
+test('Windows exact dependencies use independent hardlinks and survive workspace cleanup', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-dependencies-'));
+  const source = path.join(root, 'source-node-modules');
+  const destination = path.join(root, 'workspace-node-modules');
+  await fs.mkdir(path.join(source, 'sharp'), { recursive: true });
+  await fs.writeFile(path.join(source, 'sharp', 'package.json'), '{"name":"sharp"}\n');
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+  const evidence = await prepareExactDependencies({ sourceRoot: source, destinationRoot: destination, platform: 'win32' });
+  assert.equal(evidence.mode, 'hardlink-copy-tree');
+  assert.equal(evidence.files, 1);
+  assert.equal(evidence.hardlinked, 1);
+  await fs.rm(destination, { recursive: true, force: true });
+  assert.equal(await fs.readFile(path.join(source, 'sharp', 'package.json'), 'utf8'), '{"name":"sharp"}\n');
 });
 
 test('exact state atomic rename retries transient Windows sharing failures without a non-atomic fallback', async () => {
