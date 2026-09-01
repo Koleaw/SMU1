@@ -1468,21 +1468,24 @@ const deterministicExactRunner = testFaultsEnabled && process.env.ADMIN_TEST_EXA
 const deterministicExactSnapshotBuilder = deterministicExactRunner
   ? async ({ runId, transaction }) => {
       const sourceSha = await currentGitHead();
-      const identity = crypto.createHash('sha256')
-        .update(JSON.stringify({ runId, transactionId: transaction.transactionId, metadata: transaction.metadata || {} }))
-        .digest('hex');
-      return {
+      const manifest = {
+        version: 1,
+        kind: 'smu1-exact-snapshot',
         runId,
         transactionId: transaction.transactionId,
         sourceSha,
         schemaHash: crypto.createHash('sha256').update('h6-test-schema').digest('hex'),
         bindingRegistryHash: crypto.createHash('sha256').update('h6-test-bindings').digest('hex'),
         h5PipelineHash: crypto.createHash('sha256').update('h6-test-h5').digest('hex'),
-        snapshotSha256: identity,
         affectedRoutes: transaction.metadata?.affectedRoutes || [],
         routeExpectations: transaction.metadata?.routeExpectations || [],
         closureTransactionIds: transaction.metadata?.exactClosureTransactionIds || [transaction.transactionId],
-        files: [],
+        files: []
+      };
+      const snapshotSha256 = crypto.createHash('sha256').update(JSON.stringify(manifest)).digest('hex');
+      return {
+        ...manifest,
+        snapshotSha256,
         snapshotRoot: path.join(exactValidationRuntimeDir, 'snapshots', runId)
       };
     }
@@ -1498,7 +1501,14 @@ const exactValidation = createExactValidationService({
   ...(deterministicExactRunner ? { identityValidator: async () => ({ ok: true, reasons: [] }) } : {}),
   ...(deterministicExactRunner
     ? { runner: deterministicExactRunner }
-    : { runner: (request) => runExactSnapshot({ repoRoot, environment: process.env, ...request }) })
+    : {
+        runner: (request) => runExactSnapshot({
+          ...request,
+          repoRoot: exactValidationRepoRoot,
+          runtimeDir: exactValidationRuntimeDir,
+          environment: process.env
+        })
+      })
 });
 await exactValidation.initialize();
 

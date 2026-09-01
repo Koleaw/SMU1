@@ -106,6 +106,7 @@ async function main() {
   try {
     exact = await runExactSnapshot({
       repoRoot: root,
+      runtimeDir: runtimeRoot,
       snapshot: {
         runId,
         transactionId,

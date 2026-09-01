@@ -1,19 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import {
+  cleanupExactWorkspace,
   createExactSnapshot,
   createExactValidationService,
   ExactValidationError,
   exactBuildInvocation,
+  garbageCollectExactRuntime,
   hydrateExactMediaCache,
   installSnapshotBlobAtomically,
   prepareExactDependencies,
   renameAtomicWithTransientRetry,
+  runExactSnapshot,
   proveExactRunIdentity,
   transactionWithCumulativeExactClosure,
   EXACT_BINDING_REGISTRY_PATHS,
@@ -64,6 +68,166 @@ test('Windows exact dependencies use independent hardlinks and survive workspace
   assert.equal(evidence.hardlinked, 1);
   await fs.rm(destination, { recursive: true, force: true });
   assert.equal(await fs.readFile(path.join(source, 'sharp', 'package.json'), 'utf8'), '{"name":"sharp"}\n');
+});
+
+test('exact cleanup unlinks a dependency symlink without following it', async (t) => {
+  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-cleanup-link-'));
+  t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
+  await execFileAsync('git', ['init'], { cwd: repoRoot });
+  const runtimeDir = path.join(repoRoot, '.admin-runtime', 'exact');
+  const runId = `exact-${'9'.repeat(32)}`;
+  const workspace = path.join(runtimeDir, 'snapshots', runId, 'workspace');
+  const external = path.join(repoRoot, 'external-dependencies');
+  await Promise.all([
+    fs.mkdir(workspace, { recursive: true }),
+    fs.mkdir(external, { recursive: true })
+  ]);
+  await fs.writeFile(path.join(external, 'sentinel.txt'), 'do not delete\n');
+  await fs.symlink(external, path.join(workspace, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+
+  const cleaned = await cleanupExactWorkspace({ repoRoot, runtimeDir, runId, dependencyLinkInstalled: true });
+  assert.deepEqual(cleaned, { removed: true, registered: false });
+  assert.equal(await fs.readFile(path.join(external, 'sentinel.txt'), 'utf8'), 'do not delete\n');
+  await assert.rejects(fs.lstat(workspace), (error) => error?.code === 'ENOENT');
+});
+
+test('registered exact cleanup retries transient Git removal and fails closed without orphaning registry state', async (t) => {
+  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-cleanup-failure-'));
+  t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
+  const runtimeDir = path.join(repoRoot, '.admin-runtime', 'exact');
+  const runId = `exact-${'8'.repeat(32)}`;
+  const workspace = path.join(runtimeDir, 'snapshots', runId, 'workspace');
+  await fs.mkdir(workspace, { recursive: true });
+  let attempts = 0;
+  await assert.rejects(
+    cleanupExactWorkspace({ repoRoot, runtimeDir, runId }, {
+      registeredWorktrees: [workspace],
+      delays: [0, 0],
+      wait: async () => {},
+      execFile: async (_command, args) => {
+        assert.deepEqual(args.slice(0, 3), ['worktree', 'remove', '--force']);
+        attempts += 1;
+        throw Object.assign(new Error('fixture lock'), { code: 'EBUSY' });
+      }
+    }),
+    (error) => error.code === 'EXACT_WORKTREE_REMOVE_FAILED'
+  );
+  assert.equal(attempts, 3, 'Git worktree removal is bounded and retried');
+  assert.equal((await fs.lstat(workspace)).isDirectory(), true, 'registered workspace remains diagnosable after cleanup failure');
+});
+
+test('stale exact registry reconciliation prunes only owned runtime entries', async (t) => {
+  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-stale-registry-'));
+  t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
+  const runtimeDir = path.join(repoRoot, '.admin-runtime', 'exact');
+  const runId = `exact-${'7'.repeat(32)}`;
+  const snapshotRoot = path.join(runtimeDir, 'snapshots', runId);
+  const workspace = path.join(snapshotRoot, 'workspace');
+  await fs.mkdir(snapshotRoot, { recursive: true });
+  let registered = true;
+  const commands = [];
+  const cleaned = await cleanupExactWorkspace({ repoRoot, runtimeDir, runId }, {
+    listWorktrees: async () => registered ? [{ path: workspace, prunable: true }] : [],
+    execFile: async (_command, args) => {
+      commands.push(args);
+      assert.deepEqual(args, ['worktree', 'prune', '--expire=now']);
+      registered = false;
+      return { stdout: '' };
+    }
+  });
+  assert.deepEqual(cleaned, { removed: false, registered: true });
+  assert.equal(commands.length, 1);
+
+  const foreign = path.join(repoRoot, 'foreign-missing-worktree');
+  registered = true;
+  await assert.rejects(
+    cleanupExactWorkspace({ repoRoot, runtimeDir, runId }, {
+      listWorktrees: async () => [
+        { path: workspace, prunable: true },
+        { path: foreign, prunable: true }
+      ],
+      execFile: async () => { throw new Error('must not prune foreign state'); }
+    }),
+    (error) => error.code === 'EXACT_WORKTREE_PRUNE_BLOCKED'
+  );
+});
+
+test('exact runner rejects a corrupted persisted snapshotRoot before Git or filesystem mutation', async (t) => {
+  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-root-boundary-'));
+  const external = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-foreign-root-'));
+  t.after(() => Promise.all([
+    fs.rm(repoRoot, { recursive: true, force: true }),
+    fs.rm(external, { recursive: true, force: true })
+  ]));
+  const runtimeDir = path.join(repoRoot, '.admin-runtime', 'exact');
+  await Promise.all([fs.mkdir(runtimeDir, { recursive: true }), fs.writeFile(path.join(external, 'sentinel.txt'), 'safe\n')]);
+  await assert.rejects(
+    runExactSnapshot({
+      repoRoot,
+      runtimeDir,
+      snapshot: {
+        runId: `exact-${'6'.repeat(32)}`,
+        transactionId: 'tx-corrupt-root',
+        sourceSha: 'a'.repeat(40),
+        snapshotRoot: external,
+        files: [],
+        affectedRoutes: ['/'],
+        routeExpectations: [{ route: '/', expected: 'html' }]
+      }
+    }),
+    (error) => error.code === 'EXACT_SNAPSHOT_ROOT_INVALID'
+  );
+  assert.equal(await fs.readFile(path.join(external, 'sentinel.txt'), 'utf8'), 'safe\n');
+});
+
+test('exact runtime GC retains live snapshots/blobs and removes only owned unreferenced data', async (t) => {
+  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-runtime-gc-'));
+  t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
+  await execFileAsync('git', ['init'], { cwd: repoRoot });
+  const runtimeDir = path.join(repoRoot, '.admin-runtime', 'exact');
+  const keepRunId = `exact-${'5'.repeat(32)}`;
+  const dropRunId = `exact-${'4'.repeat(32)}`;
+  const keepHash = 'a'.repeat(64);
+  const dropHash = 'b'.repeat(64);
+  await Promise.all([
+    fs.mkdir(path.join(runtimeDir, 'snapshots', keepRunId), { recursive: true }),
+    fs.mkdir(path.join(runtimeDir, 'snapshots', dropRunId), { recursive: true }),
+    fs.mkdir(path.join(runtimeDir, 'blobs', 'sha256', keepHash.slice(0, 2)), { recursive: true }),
+    fs.mkdir(path.join(runtimeDir, 'blobs', 'sha256', dropHash.slice(0, 2)), { recursive: true })
+  ]);
+  await Promise.all([
+    fs.writeFile(path.join(runtimeDir, 'blobs', 'sha256', keepHash.slice(0, 2), keepHash.slice(2)), 'keep'),
+    fs.writeFile(path.join(runtimeDir, 'blobs', 'sha256', dropHash.slice(0, 2), dropHash.slice(2)), 'drop')
+  ]);
+  await garbageCollectExactRuntime({
+    repoRoot,
+    runtimeDir,
+    retainedRuns: [{ runId: keepRunId, snapshot: { files: [{ operation: 'write', sha256: keepHash }] } }]
+  });
+  assert.equal((await fs.lstat(path.join(runtimeDir, 'snapshots', keepRunId))).isDirectory(), true);
+  await assert.rejects(fs.lstat(path.join(runtimeDir, 'snapshots', dropRunId)), (error) => error?.code === 'ENOENT');
+  assert.equal(await fs.readFile(path.join(runtimeDir, 'blobs', 'sha256', keepHash.slice(0, 2), keepHash.slice(2)), 'utf8'), 'keep');
+  await assert.rejects(
+    fs.lstat(path.join(runtimeDir, 'blobs', 'sha256', dropHash.slice(0, 2), dropHash.slice(2))),
+    (error) => error?.code === 'ENOENT'
+  );
+});
+
+test('exact runtime GC fails before deleting owned data when a foreign snapshot entry exists', async (t) => {
+  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-runtime-foreign-'));
+  t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
+  await execFileAsync('git', ['init'], { cwd: repoRoot });
+  const runtimeDir = path.join(repoRoot, '.admin-runtime', 'exact');
+  const ownedRunId = `exact-${'2'.repeat(32)}`;
+  const owned = path.join(runtimeDir, 'snapshots', ownedRunId);
+  const foreign = path.join(runtimeDir, 'snapshots', 'foreign-data');
+  await Promise.all([fs.mkdir(owned, { recursive: true }), fs.mkdir(foreign, { recursive: true })]);
+  await assert.rejects(
+    garbageCollectExactRuntime({ repoRoot, runtimeDir, retainedRuns: [] }),
+    (error) => error.code === 'EXACT_RUNTIME_FOREIGN_ENTRY'
+  );
+  assert.equal((await fs.lstat(owned)).isDirectory(), true);
+  assert.equal((await fs.lstat(foreign)).isDirectory(), true);
 });
 
 test('exact state atomic rename retries transient Windows sharing failures without a non-atomic fallback', async () => {
@@ -161,6 +325,173 @@ async function waitFor(predicate, timeoutMs = 2_000) {
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
 }
+
+test('service restart removes a crash orphan safely and resumes only the persisted queued snapshot', async (t) => {
+  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-crash-recovery-'));
+  t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
+  await fs.writeFile(path.join(repoRoot, '.gitignore'), '.admin-runtime/\n');
+  await execFileAsync('git', ['init'], { cwd: repoRoot });
+  await execFileAsync('git', ['config', 'user.email', 'exact@example.invalid'], { cwd: repoRoot });
+  await execFileAsync('git', ['config', 'user.name', 'Exact Fixture'], { cwd: repoRoot });
+  await execFileAsync('git', ['add', '.'], { cwd: repoRoot });
+  await execFileAsync('git', ['commit', '-m', 'baseline'], { cwd: repoRoot });
+  const sourceSha = (await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' })).stdout.trim();
+  const runtimeDir = path.join(repoRoot, '.admin-runtime', 'exact');
+  const runId = `exact-${'3'.repeat(32)}`;
+  const transactionId = 'tx-crash-recovery';
+  const snapshotRoot = path.join(runtimeDir, 'snapshots', runId);
+  const workspace = path.join(snapshotRoot, 'workspace');
+  const external = path.join(repoRoot, 'external-node-modules');
+  await Promise.all([fs.mkdir(workspace, { recursive: true }), fs.mkdir(external, { recursive: true })]);
+  await fs.writeFile(path.join(external, 'sentinel.txt'), 'survives restart\n');
+  await fs.symlink(external, path.join(workspace, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+  const snapshotManifest = {
+    version: 1,
+    kind: 'smu1-exact-snapshot',
+    runId,
+    transactionId,
+    sourceSha,
+    schemaHash: 'b'.repeat(64),
+    bindingRegistryHash: 'c'.repeat(64),
+    h5PipelineHash: 'd'.repeat(64),
+    affectedRoutes: ['/'],
+    routeExpectations: [{ route: '/', expected: 'html' }],
+    closureTransactionIds: [transactionId],
+    files: []
+  };
+  const snapshotSha256 = crypto.createHash('sha256').update(JSON.stringify(snapshotManifest)).digest('hex');
+  const snapshot = { ...snapshotManifest, snapshotSha256, snapshotRoot };
+  const ownerKey = crypto.createHash('sha256')
+    .update(`smu1-exact\0${OWNER.owner}\0${OWNER.recoveryClientId}`)
+    .digest('hex');
+  const timestamp = '2026-09-01T12:00:00.000Z';
+  await fs.mkdir(runtimeDir, { recursive: true });
+  await fs.writeFile(path.join(runtimeDir, 'state.json'), `${JSON.stringify({
+    version: 1,
+    sequence: 1,
+    currentRunId: runId,
+    activeRunId: runId,
+    pendingRunId: null,
+    runs: {
+      [runId]: {
+        runId,
+        transactionId,
+        revision: 'e'.repeat(64),
+        sourceSha,
+        schemaHash: snapshot.schemaHash,
+        bindingRegistryHash: snapshot.bindingRegistryHash,
+        h5PipelineHash: snapshot.h5PipelineHash,
+        snapshotSha256,
+        affectedRoutes: snapshot.affectedRoutes,
+        routeExpectations: snapshot.routeExpectations,
+        closureTransactionIds: snapshot.closureTransactionIds,
+        snapshot,
+        ownerKey,
+        status: 'running',
+        current: true,
+        message: 'interrupted',
+        requestSequence: 1,
+        requestedAt: timestamp,
+        startedAt: timestamp
+      }
+    }
+  }, null, 2)}\n`);
+
+  let resumed = 0;
+  const service = createExactValidationService({
+    repoRoot,
+    runtimeDir,
+    transactionService: {
+      async getTransaction() { throw new Error('resume must not rebuild the transaction'); },
+      async listHistory() { return []; },
+      async withStableRead(callback) { return callback(); }
+    },
+    runner: async ({ snapshot: resumedSnapshot }) => {
+      resumed += 1;
+      assert.equal(resumedSnapshot.runId, runId);
+      assert.equal(await fs.lstat(workspace).then(() => true).catch(() => false), false, 'orphan is removed before runner resumes');
+      return { artifact: { manifestSha256: 'f'.repeat(64), fileCount: 1, totalBytes: 1 }, diagnostics: { recovered: true } };
+    },
+    identityValidator: async () => ({ ok: true, reasons: [] })
+  });
+  t.after(() => service.close());
+  await service.initialize();
+  await waitFor(async () => (await service.get({ ...OWNER, runId })).status === 'passed');
+  assert.equal(resumed, 1);
+  assert.equal(await fs.readFile(path.join(external, 'sentinel.txt'), 'utf8'), 'survives restart\n');
+});
+
+test('corrupted persisted snapshotRoot blocks recovery without touching a foreign directory', async (t) => {
+  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-corrupt-state-'));
+  const foreign = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-corrupt-state-foreign-'));
+  t.after(() => Promise.all([
+    fs.rm(repoRoot, { recursive: true, force: true }),
+    fs.rm(foreign, { recursive: true, force: true })
+  ]));
+  const runtimeDir = path.join(repoRoot, '.admin-runtime', 'exact');
+  const runId = `exact-${'1'.repeat(32)}`;
+  const transactionId = 'tx-corrupt-state';
+  const manifest = {
+    version: 1,
+    kind: 'smu1-exact-snapshot',
+    runId,
+    transactionId,
+    sourceSha: 'a'.repeat(40),
+    schemaHash: 'b'.repeat(64),
+    bindingRegistryHash: 'c'.repeat(64),
+    h5PipelineHash: 'd'.repeat(64),
+    affectedRoutes: ['/'],
+    routeExpectations: [{ route: '/', expected: 'html' }],
+    closureTransactionIds: [transactionId],
+    files: []
+  };
+  const snapshotSha256 = crypto.createHash('sha256').update(JSON.stringify(manifest)).digest('hex');
+  await Promise.all([
+    fs.mkdir(runtimeDir, { recursive: true }),
+    fs.writeFile(path.join(foreign, 'sentinel.txt'), 'foreign survives\n')
+  ]);
+  await fs.writeFile(path.join(runtimeDir, 'state.json'), `${JSON.stringify({
+    version: 1,
+    sequence: 1,
+    currentRunId: runId,
+    activeRunId: runId,
+    pendingRunId: null,
+    runs: {
+      [runId]: {
+        runId,
+        transactionId,
+        revision: 'e'.repeat(64),
+        sourceSha: manifest.sourceSha,
+        schemaHash: manifest.schemaHash,
+        bindingRegistryHash: manifest.bindingRegistryHash,
+        h5PipelineHash: manifest.h5PipelineHash,
+        snapshotSha256,
+        affectedRoutes: manifest.affectedRoutes,
+        routeExpectations: manifest.routeExpectations,
+        closureTransactionIds: manifest.closureTransactionIds,
+        snapshot: { ...manifest, snapshotSha256, snapshotRoot: foreign },
+        ownerKey: 'f'.repeat(64),
+        status: 'running',
+        current: true,
+        message: 'corrupt',
+        requestSequence: 1,
+        requestedAt: '2026-09-01T12:00:00.000Z'
+      }
+    }
+  }, null, 2)}\n`);
+  const service = createExactValidationService({
+    repoRoot,
+    runtimeDir,
+    transactionService: {
+      async getTransaction() { throw new Error('unused'); },
+      async listHistory() { return []; },
+      async withStableRead(callback) { return callback(); }
+    },
+    runner: async () => { throw new Error('must not run'); }
+  });
+  await assert.rejects(service.initialize(), (error) => error.code === 'EXACT_STATE_CORRUPT');
+  assert.equal(await fs.readFile(path.join(foreign, 'sentinel.txt'), 'utf8'), 'foreign survives\n');
+});
 
 async function fixture(t, options = {}) {
   const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-service-'));

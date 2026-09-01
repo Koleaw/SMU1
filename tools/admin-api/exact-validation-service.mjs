@@ -11,6 +11,7 @@ const execFileAsync = promisify(execFile);
 const RUN_ID_RE = /^exact-[a-f0-9]{32}$/u;
 const TRANSACTION_ID_RE = /^[a-z0-9][a-z0-9-]{2,127}$/iu;
 const SHA_RE = /^[a-f0-9]{40}$/u;
+const SHA256_RE = /^[a-f0-9]{64}$/u;
 const TERMINAL = new Set(['passed', 'failed', 'stale', 'superseded']);
 const EDITABLE_ROOTS = Object.freeze([
   'src/content/',
@@ -156,6 +157,15 @@ function safeRunId(value) {
   const runId = String(value || '').toLowerCase();
   if (!RUN_ID_RE.test(runId)) throw new ExactValidationError('EXACT_RUN_NOT_FOUND', 'Exact-проверка не найдена.', { status: 404 });
   return runId;
+}
+
+function exactSnapshotRoot(runtimeDir, runId) {
+  return path.join(path.resolve(runtimeDir), 'snapshots', safeRunId(runId));
+}
+
+function sameResolvedPath(left, right) {
+  return typeof left === 'string' && typeof right === 'string'
+    && path.relative(path.resolve(left), path.resolve(right)) === '';
 }
 
 function publicRun(run) {
@@ -544,6 +554,308 @@ export async function hydrateExactMediaCache({ sourceRoot, destinationRoot, maxF
   return evidence;
 }
 
+async function assertOwnedRuntimeDirectory({ repoRoot, runtimeDir }) {
+  const repo = path.resolve(repoRoot);
+  const runtime = path.resolve(runtimeDir);
+  if (runtime === repo || !contained(repo, runtime)) {
+    throw new ExactValidationError('EXACT_RUNTIME_ESCAPE', 'Exact runtime вышел за границы repository.', { status: 500 });
+  }
+  const [repoStat, runtimeStat] = await Promise.all([
+    fs.lstat(repo),
+    fs.lstat(runtime)
+  ]);
+  if (!repoStat.isDirectory() || repoStat.isSymbolicLink()
+    || !runtimeStat.isDirectory() || runtimeStat.isSymbolicLink()) {
+    throw new ExactValidationError('EXACT_RUNTIME_UNSAFE', 'Exact runtime должен состоять из обычных каталогов.', { status: 500 });
+  }
+  const [repoReal, runtimeReal] = await Promise.all([
+    fs.realpath(repo),
+    fs.realpath(runtime)
+  ]);
+  if (runtimeReal === repoReal || !contained(repoReal, runtimeReal)) {
+    throw new ExactValidationError('EXACT_RUNTIME_ESCAPE', 'Exact runtime перенаправлен за границы repository.', { status: 500 });
+  }
+  return { repo, runtime, repoReal, runtimeReal };
+}
+
+async function assertOwnedExactRuntime({ repoRoot, runtimeDir, snapshotRoot }) {
+  const owned = await assertOwnedRuntimeDirectory({ repoRoot, runtimeDir });
+  const snapshot = path.resolve(snapshotRoot);
+  if (snapshot === owned.runtime || !contained(owned.runtime, snapshot)) {
+    throw new ExactValidationError('EXACT_RUNTIME_ESCAPE', 'Exact snapshot вышел за границы runtime.', { status: 500 });
+  }
+  const snapshotStat = await fs.lstat(snapshot);
+  if (!snapshotStat.isDirectory() || snapshotStat.isSymbolicLink()) {
+    throw new ExactValidationError('EXACT_RUNTIME_UNSAFE', 'Exact snapshot должен быть обычным каталогом.', { status: 500 });
+  }
+  const snapshotReal = await fs.realpath(snapshot);
+  if (snapshotReal === owned.runtimeReal || !contained(owned.runtimeReal, snapshotReal)) {
+    throw new ExactValidationError('EXACT_RUNTIME_ESCAPE', 'Exact snapshot перенаправлен за границы runtime.', { status: 500 });
+  }
+  return { ...owned, snapshot, snapshotReal };
+}
+
+async function removeOwnedTreeNoFollow(target, boundary, options = {}) {
+  const lstatFile = options.lstat || fs.lstat.bind(fs);
+  const readDirectory = options.readdir || fs.readdir.bind(fs);
+  const unlinkFile = options.unlink || fs.unlink.bind(fs);
+  const removeDirectory = options.rmdir || fs.rmdir.bind(fs);
+  const resolvedBoundary = path.resolve(boundary);
+  const resolvedTarget = path.resolve(target);
+  if (resolvedTarget === resolvedBoundary || !contained(resolvedBoundary, resolvedTarget)) {
+    throw new ExactValidationError('EXACT_CLEANUP_ESCAPE', 'Exact cleanup отклонил выход за owned runtime.', { status: 500 });
+  }
+  const details = await optionalLstat(resolvedTarget, lstatFile);
+  if (!details) return false;
+  if (details.isSymbolicLink() || details.isFile()) {
+    await executeWithTransientRetry(() => unlinkFile(resolvedTarget), options);
+    return true;
+  }
+  if (!details.isDirectory()) {
+    throw new ExactValidationError('EXACT_CLEANUP_UNSAFE', 'Exact cleanup обнаружил необычный filesystem entry.', {
+      status: 500,
+      details: { path: resolvedTarget }
+    });
+  }
+  const entries = await readDirectory(resolvedTarget, { withFileTypes: true });
+  for (const entry of entries) {
+    await removeOwnedTreeNoFollow(path.join(resolvedTarget, entry.name), resolvedBoundary, options);
+  }
+  await executeWithTransientRetry(() => removeDirectory(resolvedTarget), options);
+  return true;
+}
+
+async function listedWorktreeRecords(repoRoot, options = {}) {
+  if (typeof options.listWorktrees === 'function') return (await options.listWorktrees()).map((item) => ({
+    path: path.resolve(typeof item === 'string' ? item : item.path),
+    prunable: typeof item === 'object' && item?.prunable === true
+  }));
+  if (Array.isArray(options.registeredWorktrees)) return options.registeredWorktrees.map((item) => ({
+    path: path.resolve(typeof item === 'string' ? item : item.path),
+    prunable: typeof item === 'object' && item?.prunable === true
+  }));
+  const execute = options.execFile || execFileAsync;
+  const result = await executeWithTransientRetry(() => execute('git', ['worktree', 'list', '--porcelain', '-z'], {
+    cwd: repoRoot,
+    windowsHide: true,
+    timeout: 120_000,
+    maxBuffer: 10 * 1024 * 1024
+  }), { ...options, retryAll: true });
+  const output = Buffer.isBuffer(result?.stdout) ? result.stdout.toString('utf8') : String(result?.stdout || '');
+  return output.split('\0\0').flatMap((record) => {
+    const fields = record.split('\0').filter(Boolean);
+    const worktree = fields.find((item) => item.startsWith('worktree '));
+    if (!worktree) return [];
+    return [{
+      path: path.resolve(worktree.slice('worktree '.length)),
+      prunable: fields.some((item) => item === 'prunable' || item.startsWith('prunable '))
+    }];
+  });
+}
+
+async function executeWithTransientRetry(callback, options = {}) {
+  const wait = options.wait || ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+  const delays = options.delays || [20, 50, 100, 200, 400, 800];
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await callback();
+    } catch (error) {
+      if (!(options.retryAll === true || ['EPERM', 'EACCES', 'EBUSY'].includes(error?.code)) || attempt >= delays.length) throw error;
+      await wait(delays[attempt]);
+    }
+  }
+}
+
+function isOwnedExactWorkspace(runtimeDir, candidate) {
+  const snapshotsRoot = path.join(path.resolve(runtimeDir), 'snapshots');
+  const relative = path.relative(snapshotsRoot, path.resolve(candidate));
+  const segments = relative.split(path.sep);
+  return !path.isAbsolute(relative) && !relative.startsWith('..')
+    && segments.length === 2 && RUN_ID_RE.test(segments[0]) && segments[1] === 'workspace';
+}
+
+async function pruneOwnedStaleWorktreeRegistry({ repoRoot, runtimeDir, workspace }, options = {}) {
+  let records = await listedWorktreeRecords(repoRoot, options);
+  if (!records.some((record) => sameResolvedPath(record.path, workspace))) return false;
+  const prunable = records.filter((record) => record.prunable);
+  const target = prunable.find((record) => sameResolvedPath(record.path, workspace));
+  if (!target || prunable.some((record) => !isOwnedExactWorkspace(runtimeDir, record.path))) {
+    throw new ExactValidationError(
+      'EXACT_WORKTREE_PRUNE_BLOCKED',
+      'Git worktree registry содержит foreign/still-live entry; автоматическая очистка остановлена.',
+      { status: 500 }
+    );
+  }
+  const execute = options.execFile || execFileAsync;
+  await executeWithTransientRetry(() => execute('git', ['worktree', 'prune', '--expire=now'], {
+    cwd: repoRoot,
+    windowsHide: true,
+    timeout: 120_000,
+    maxBuffer: 10 * 1024 * 1024
+  }), { ...options, retryAll: true });
+  records = await listedWorktreeRecords(repoRoot, options);
+  if (records.some((record) => sameResolvedPath(record.path, workspace))) {
+    throw new ExactValidationError('EXACT_WORKTREE_REGISTRY_CLEANUP_FAILED', 'Git worktree registry не очистил exact workspace.', { status: 500 });
+  }
+  return true;
+}
+
+export async function cleanupExactWorkspace({ repoRoot, runtimeDir, runId, dependencyLinkInstalled = false }, options = {}) {
+  const snapshotRoot = exactSnapshotRoot(runtimeDir, runId);
+  const workspace = path.join(snapshotRoot, 'workspace');
+  if (!contained(snapshotRoot, workspace)) {
+    throw new ExactValidationError('EXACT_CLEANUP_ESCAPE', 'Exact workspace вышел за owned snapshot.', { status: 500 });
+  }
+  const lstatFile = options.lstat || fs.lstat.bind(fs);
+  const snapshotStat = await optionalLstat(snapshotRoot, lstatFile);
+  if (snapshotStat) await assertOwnedExactRuntime({ repoRoot, runtimeDir, snapshotRoot });
+  else await assertOwnedRuntimeDirectory({ repoRoot, runtimeDir });
+  const initialRecords = await listedWorktreeRecords(repoRoot, options);
+  const initialRecord = initialRecords.find((record) => sameResolvedPath(record.path, workspace));
+  if (!snapshotStat) {
+    if (initialRecord) await pruneOwnedStaleWorktreeRegistry({ repoRoot, runtimeDir, workspace }, options);
+    return { removed: false, registered: Boolean(initialRecord) };
+  }
+  const workspaceStat = await optionalLstat(workspace, lstatFile);
+  if (!workspaceStat) {
+    if (initialRecord) await pruneOwnedStaleWorktreeRegistry({ repoRoot, runtimeDir, workspace }, options);
+    return { removed: false, registered: Boolean(initialRecord) };
+  }
+  if (!workspaceStat.isDirectory() || workspaceStat.isSymbolicLink()) {
+    throw new ExactValidationError('EXACT_CLEANUP_UNSAFE', 'Exact workspace должен быть обычным каталогом.', { status: 500 });
+  }
+
+  const nodeModules = path.join(workspace, 'node_modules');
+  const dependencies = await optionalLstat(nodeModules, lstatFile);
+  if (dependencies?.isSymbolicLink()) {
+    const unlinkFile = options.unlink || fs.unlink.bind(fs);
+    await executeWithTransientRetry(() => unlinkFile(nodeModules), options);
+  } else if (dependencyLinkInstalled && dependencies) {
+    throw new ExactValidationError(
+      'EXACT_DEPENDENCY_LINK_CLEANUP_FAILED',
+      'Exact workspace сохранён: ссылка зависимостей была заменена.',
+      { status: 500 }
+    );
+  }
+
+  const registered = Boolean(initialRecord);
+  if (registered) {
+    const execute = options.execFile || execFileAsync;
+    try {
+      await executeWithTransientRetry(() => execute('git', ['worktree', 'remove', '--force', workspace], {
+        cwd: repoRoot,
+        windowsHide: true,
+        timeout: 120_000,
+        maxBuffer: 10 * 1024 * 1024
+      }), { ...options, retryAll: true });
+    } catch (error) {
+      throw new ExactValidationError(
+        'EXACT_WORKTREE_REMOVE_FAILED',
+        'Git не удалил exact workspace; результат проверки не может считаться успешным.',
+        { status: 500, cause: error }
+      );
+    }
+  } else {
+    await (options.removeTree || removeOwnedTreeNoFollow)(workspace, snapshotRoot, options);
+  }
+  const after = await optionalLstat(workspace, lstatFile);
+  if (after) {
+    throw new ExactValidationError('EXACT_WORKSPACE_CLEANUP_FAILED', 'Exact workspace не удалён из owned runtime.', {
+      status: 500,
+      details: { registered }
+    });
+  }
+  if (registered) {
+    const afterRecords = await listedWorktreeRecords(repoRoot, options);
+    if (afterRecords.some((record) => sameResolvedPath(record.path, workspace))) {
+      await pruneOwnedStaleWorktreeRegistry({ repoRoot, runtimeDir, workspace }, options);
+    }
+  }
+  return { removed: true, registered };
+}
+
+export async function garbageCollectExactRuntime({ repoRoot, runtimeDir, retainedRuns }) {
+  await assertOwnedRuntimeDirectory({ repoRoot, runtimeDir });
+  const retainedIds = new Set(retainedRuns.map((run) => safeRunId(run.runId)));
+  const retainedBlobs = new Set();
+  for (const run of retainedRuns) {
+    for (const item of Array.isArray(run.snapshot?.files) ? run.snapshot.files : []) {
+      if (item.operation === 'write' && SHA256_RE.test(item.sha256)) retainedBlobs.add(item.sha256);
+    }
+  }
+
+  const snapshotsRoot = path.join(runtimeDir, 'snapshots');
+  const snapshotsStat = await optionalLstat(snapshotsRoot, fs.lstat.bind(fs));
+  if (snapshotsStat && (!snapshotsStat.isDirectory() || snapshotsStat.isSymbolicLink())) {
+    throw new ExactValidationError('EXACT_RUNTIME_UNSAFE', 'Exact snapshots root не является owned-каталогом.', { status: 500 });
+  }
+  const snapshotEntries = await fs.readdir(snapshotsRoot, { withFileTypes: true }).catch((error) => {
+    if (error?.code === 'ENOENT') return [];
+    throw error;
+  });
+  const unsafeSnapshot = snapshotEntries.find((entry) => (
+    !RUN_ID_RE.test(entry.name) || !entry.isDirectory() || entry.isSymbolicLink()
+  ));
+  if (unsafeSnapshot) {
+    throw new ExactValidationError('EXACT_RUNTIME_FOREIGN_ENTRY', 'Exact runtime содержит неожиданный snapshot entry.', {
+      status: 500,
+      details: { path: `snapshots/${unsafeSnapshot.name}` }
+    });
+  }
+  for (const entry of snapshotEntries) {
+    if (retainedIds.has(entry.name)) continue;
+    await cleanupExactWorkspace({ repoRoot, runtimeDir, runId: entry.name });
+    await removeOwnedTreeNoFollow(path.join(snapshotsRoot, entry.name), snapshotsRoot);
+  }
+
+  const blobsRoot = path.join(runtimeDir, 'blobs', 'sha256');
+  const blobsStat = await optionalLstat(blobsRoot, fs.lstat.bind(fs));
+  if (blobsStat && (!blobsStat.isDirectory() || blobsStat.isSymbolicLink())) {
+    throw new ExactValidationError('EXACT_RUNTIME_UNSAFE', 'Exact blob root не является owned-каталогом.', { status: 500 });
+  }
+  const prefixes = await fs.readdir(blobsRoot, { withFileTypes: true }).catch((error) => {
+    if (error?.code === 'ENOENT') return [];
+    throw error;
+  });
+  const unsafePrefix = prefixes.find((prefix) => (
+    !/^[a-f0-9]{2}$/u.test(prefix.name) || !prefix.isDirectory() || prefix.isSymbolicLink()
+  ));
+  if (unsafePrefix) {
+    throw new ExactValidationError('EXACT_RUNTIME_FOREIGN_ENTRY', 'Exact blob cache содержит неожиданный entry.', {
+      status: 500,
+      details: { path: `blobs/sha256/${unsafePrefix.name}` }
+    });
+  }
+  const blobPlans = [];
+  for (const prefix of prefixes) {
+    const directory = path.join(blobsRoot, prefix.name);
+    const files = await fs.readdir(directory, { withFileTypes: true });
+    const unsafeFile = files.find((file) => {
+      const hash = `${prefix.name}${file.name}`;
+      const ownedTemporary = /^[a-f0-9]{62}\.[a-f0-9-]{36}\.tmp$/u.test(file.name);
+      return (!SHA256_RE.test(hash) && !ownedTemporary) || !file.isFile() || file.isSymbolicLink();
+    });
+    if (unsafeFile) {
+      throw new ExactValidationError('EXACT_RUNTIME_FOREIGN_ENTRY', 'Exact blob cache содержит неожиданный файл.', {
+        status: 500,
+        details: { path: `blobs/sha256/${prefix.name}/${unsafeFile.name}` }
+      });
+    }
+    blobPlans.push({ prefix, directory, files });
+  }
+  for (const { prefix, directory, files } of blobPlans) {
+    for (const file of files) {
+      const hash = `${prefix.name}${file.name}`;
+      const ownedTemporary = /^[a-f0-9]{62}\.[a-f0-9-]{36}\.tmp$/u.test(file.name);
+      if (ownedTemporary || !retainedBlobs.has(hash)) {
+        await executeWithTransientRetry(() => fs.unlink(path.join(directory, file.name)));
+      }
+    }
+    const remaining = await fs.readdir(directory);
+    if (!remaining.length) await executeWithTransientRetry(() => fs.rmdir(directory));
+  }
+}
+
 export async function prepareExactDependencies({ sourceRoot, destinationRoot, platform = process.platform }) {
   const source = path.resolve(sourceRoot);
   const destination = path.resolve(destinationRoot);
@@ -607,17 +919,28 @@ export function exactBuildInvocation(options = {}) {
   });
 }
 
-export async function runExactSnapshot({ repoRoot, snapshot, environment = process.env, timeoutMs = DEFAULT_TIMEOUT_MS }) {
-  const workspace = path.join(snapshot.snapshotRoot, 'workspace');
+export async function runExactSnapshot({ repoRoot, runtimeDir, snapshot, environment = process.env, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+  const runId = safeRunId(snapshot?.runId);
+  safeTransactionId(snapshot?.transactionId);
+  if (!SHA_RE.test(String(snapshot?.sourceSha || '').toLowerCase())) {
+    throw new ExactValidationError('EXACT_SOURCE_SHA_INVALID', 'Exact snapshot содержит некорректный source SHA.', { status: 500 });
+  }
+  const trustedSnapshotRoot = exactSnapshotRoot(runtimeDir, runId);
+  if (!sameResolvedPath(snapshot?.snapshotRoot, trustedSnapshotRoot)) {
+    throw new ExactValidationError('EXACT_SNAPSHOT_ROOT_INVALID', 'Exact snapshot path не совпадает с owned runtime.', { status: 500 });
+  }
+  await assertOwnedExactRuntime({ repoRoot, runtimeDir, snapshotRoot: trustedSnapshotRoot });
+  const workspace = path.join(trustedSnapshotRoot, 'workspace');
   const nodeModules = path.join(workspace, 'node_modules');
-  if (!contained(snapshot.snapshotRoot, workspace)) throw new ExactValidationError('EXACT_WORKSPACE_ESCAPE', 'Exact workspace вышел за snapshot.', { status: 500 });
-  let worktreeAdded = false;
+  if (!contained(trustedSnapshotRoot, workspace)) throw new ExactValidationError('EXACT_WORKSPACE_ESCAPE', 'Exact workspace вышел за snapshot.', { status: 500 });
+  if (await optionalLstat(workspace, fs.lstat.bind(fs))) {
+    throw new ExactValidationError('EXACT_WORKSPACE_EXISTS', 'Exact workspace уже существует. Требуется безопасное восстановление runtime.', { status: 500 });
+  }
   let dependencyLinkInstalled = false;
   try {
     await execFileAsync('git', ['worktree', 'add', '--detach', workspace, snapshot.sourceSha], {
       cwd: repoRoot, windowsHide: true, timeout: 120_000, maxBuffer: 10 * 1024 * 1024
     });
-    worktreeAdded = true;
     for (const item of snapshot.files) {
       const destination = path.join(workspace, ...item.path.split('/'));
       if (!contained(workspace, destination)) throw new ExactValidationError('EXACT_OVERLAY_ESCAPE', 'Snapshot overlay вышел за workspace.', { status: 500 });
@@ -625,7 +948,7 @@ export async function runExactSnapshot({ repoRoot, snapshot, environment = proce
         await fs.unlink(destination).catch((error) => { if (error?.code !== 'ENOENT') throw error; });
         continue;
       }
-      const runtimeRoot = path.resolve(snapshot.snapshotRoot, '..', '..');
+      const runtimeRoot = path.resolve(trustedSnapshotRoot, '..', '..');
       const source = path.join(runtimeRoot, 'blobs', 'sha256', item.sha256.slice(0, 2), item.sha256.slice(2));
       if (!contained(path.join(runtimeRoot, 'blobs', 'sha256'), source)) {
         throw new ExactValidationError('EXACT_PAYLOAD_ESCAPE', 'Snapshot blob вышел за runtime.', { status: 500 });
@@ -764,32 +1087,62 @@ export async function runExactSnapshot({ repoRoot, snapshot, environment = proce
       cause: error
     });
   } finally {
-    let dependencyCleanupError = null;
-    if (dependencyLinkInstalled) {
-      try {
-        const linkStat = await fs.lstat(nodeModules);
-        if (!linkStat.isSymbolicLink()) throw new Error('dependency link was replaced');
-        await fs.unlink(nodeModules);
-      } catch (error) {
-        dependencyCleanupError = error;
-      }
-    }
-    if (worktreeAdded && !dependencyCleanupError) {
-      await execFileAsync('git', ['worktree', 'remove', '--force', workspace], {
-        cwd: repoRoot, windowsHide: true, timeout: 120_000, maxBuffer: 10 * 1024 * 1024
-      }).catch(() => {});
-      await execFileAsync('git', ['worktree', 'prune'], {
-        cwd: repoRoot, windowsHide: true, timeout: 120_000, maxBuffer: 10 * 1024 * 1024
-      }).catch(() => {});
-    }
-    if (dependencyCleanupError) {
-      throw new ExactValidationError(
-        'EXACT_DEPENDENCY_LINK_CLEANUP_FAILED',
-        'Exact workspace сохранён: безопасно удалить ссылку зависимостей не удалось.',
-        { status: 500, cause: dependencyCleanupError }
-      );
+    await cleanupExactWorkspace({ repoRoot, runtimeDir, runId, dependencyLinkInstalled });
+  }
+}
+
+function validatePersistedExactState(value, runtimeDir) {
+  if (value?.version !== 1 || !Number.isSafeInteger(value.sequence) || value.sequence < 0
+    || !value.runs || typeof value.runs !== 'object' || Array.isArray(value.runs)) {
+    throw new Error('invalid exact state envelope');
+  }
+  const runIds = new Set(Object.keys(value.runs));
+  for (const pointer of ['currentRunId', 'activeRunId', 'pendingRunId']) {
+    if (value[pointer] !== null && value[pointer] !== undefined && !runIds.has(value[pointer])) {
+      throw new Error(`invalid exact state pointer: ${pointer}`);
     }
   }
+  for (const [storedRunId, run] of Object.entries(value.runs)) {
+    const runId = safeRunId(storedRunId);
+    if (!run || run.runId !== runId || !TERMINAL.has(run.status) && !['queued', 'running'].includes(run.status)
+      || !SHA_RE.test(String(run.sourceSha || '')) || !SHA256_RE.test(String(run.snapshotSha256 || ''))
+      || !SHA256_RE.test(String(run.ownerKey || '')) || !run.snapshot || typeof run.snapshot !== 'object') {
+      throw new Error(`invalid exact run: ${storedRunId}`);
+    }
+    const snapshot = run.snapshot;
+    if (snapshot.version !== 1 || snapshot.kind !== 'smu1-exact-snapshot'
+      || snapshot.runId !== runId || snapshot.transactionId !== run.transactionId
+      || snapshot.sourceSha !== run.sourceSha || snapshot.snapshotSha256 !== run.snapshotSha256
+      || snapshot.schemaHash !== run.schemaHash || snapshot.bindingRegistryHash !== run.bindingRegistryHash
+      || snapshot.h5PipelineHash !== run.h5PipelineHash
+      || ![snapshot.schemaHash, snapshot.bindingRegistryHash, snapshot.h5PipelineHash].every((hash) => SHA256_RE.test(String(hash || '')))
+      || !sameResolvedPath(snapshot.snapshotRoot, exactSnapshotRoot(runtimeDir, runId))
+      || !Array.isArray(snapshot.files) || !Array.isArray(snapshot.routeExpectations)
+      || !Array.isArray(snapshot.affectedRoutes) || !Array.isArray(snapshot.closureTransactionIds)) {
+      throw new Error(`invalid exact snapshot identity: ${storedRunId}`);
+    }
+    safeTransactionId(snapshot.transactionId);
+    exactRouteManifestSha256({
+      version: 1,
+      kind: 'smu1-exact-route-closure',
+      runId,
+      transactionId: snapshot.transactionId,
+      expectations: snapshot.routeExpectations
+    });
+    for (const item of snapshot.files) {
+      if (!item || typeof item !== 'object' || !editablePath(item.path)
+        || !['write', 'delete'].includes(item.operation)
+        || !Number.isSafeInteger(item.bytes) || item.bytes < 0
+        || (item.operation === 'write' && (!SHA256_RE.test(item.sha256) || item.bytes < 1))
+        || (item.operation === 'delete' && (item.sha256 !== 'missing' || item.bytes !== 0))) {
+        throw new Error(`invalid exact snapshot file: ${storedRunId}`);
+      }
+    }
+    const { snapshotRoot: ignoredRoot, snapshotSha256: claimedDigest, ...manifest } = snapshot;
+    void ignoredRoot;
+    if (digest(manifest) !== claimedDigest) throw new Error(`invalid exact snapshot digest: ${storedRunId}`);
+  }
+  return value;
 }
 
 export function createExactValidationService(options = {}) {
@@ -803,7 +1156,12 @@ export function createExactValidationService(options = {}) {
     throw new ExactValidationError('EXACT_TRANSACTION_SERVICE_REQUIRED', 'Exact validation требует transaction service.', { status: 500 });
   }
   const snapshotBuilder = options.snapshotBuilder || ((request) => createExactSnapshot({ repoRoot, runtimeDir, ...request }));
-  const runner = options.runner || ((request) => runExactSnapshot({ repoRoot, environment: options.environment, ...request }));
+  const runner = options.runner || ((request) => runExactSnapshot({
+    ...request,
+    repoRoot,
+    runtimeDir,
+    environment: options.environment
+  }));
   const identityValidator = options.identityValidator || ((run) => proveExactRunIdentity({ repoRoot, run }));
   const now = options.now || (() => new Date());
   const randomUUID = options.randomUUID || crypto.randomUUID;
@@ -827,10 +1185,17 @@ export function createExactValidationService(options = {}) {
       (Date.parse(right.requestedAt) - Date.parse(left.requestedAt))
       || (Number(right.requestSequence || 0) - Number(left.requestSequence || 0))
     ));
+    let trimmed = false;
     for (const item of ordered.slice(maxRuns)) {
-      if (item.runId !== state.activeRunId && item.runId !== state.pendingRunId) delete state.runs[item.runId];
+      if (item.runId !== state.activeRunId && item.runId !== state.pendingRunId) {
+        delete state.runs[item.runId];
+        trimmed = true;
+      }
     }
     await atomicWriteJson(statePath, state);
+    if (trimmed) {
+      await garbageCollectExactRuntime({ repoRoot, runtimeDir, retainedRuns: Object.values(state.runs) });
+    }
   }
 
   async function update(mutator) {
@@ -850,10 +1215,22 @@ export function createExactValidationService(options = {}) {
     await fs.mkdir(runtimeDir, { recursive: true, mode: 0o700 });
     const stat = await fs.lstat(runtimeDir);
     if (stat.isSymbolicLink() || !stat.isDirectory()) throw new ExactValidationError('EXACT_RUNTIME_UNSAFE', 'Exact runtime должен быть обычным каталогом.', { status: 500 });
+    let loaded = null;
     try {
-      const loaded = JSON.parse(await fs.readFile(statePath, 'utf8'));
-      if (loaded?.version !== 1 || !loaded.runs || typeof loaded.runs !== 'object') throw new Error('invalid state');
+      loaded = validatePersistedExactState(JSON.parse(await fs.readFile(statePath, 'utf8')), runtimeDir);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') {
+        throw new ExactValidationError('EXACT_STATE_CORRUPT', 'Состояние exact validation повреждено.', { status: 500, cause: error });
+      }
+    }
+    if (loaded) {
       state = loaded;
+      for (const run of Object.values(state.runs)) {
+        const workspace = path.join(exactSnapshotRoot(runtimeDir, run.runId), 'workspace');
+        if (await optionalLstat(workspace, fs.lstat.bind(fs))) {
+          await cleanupExactWorkspace({ repoRoot, runtimeDir, runId: run.runId });
+        }
+      }
       for (const run of Object.values(state.runs)) {
         if (['running', 'queued'].includes(run.status)) run.status = 'queued';
       }
@@ -866,12 +1243,10 @@ export function createExactValidationService(options = {}) {
         run.message = 'Проверка заменена более новой сохранённой редакцией.';
       }
       await persist();
-    } catch (error) {
-      if (error?.code !== 'ENOENT') {
-        throw new ExactValidationError('EXACT_STATE_CORRUPT', 'Состояние exact validation повреждено.', { status: 500, cause: error });
-      }
+    } else {
       await persist();
     }
+    await garbageCollectExactRuntime({ repoRoot, runtimeDir, retainedRuns: Object.values(state.runs) });
     initialized = true;
     schedulePump();
   }
