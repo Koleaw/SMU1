@@ -86,6 +86,7 @@ const partitionUnknownDocumentEvents = (input) => {
 };
 
 const model = buildExpectedRouteModel({ root });
+const expectedRouteByPath = new Map(model.routes.map((route) => [route.pathname, route]));
 const bindingRecords = new Map();
 for (const entry of fs.readdirSync(path.join(root, 'src', 'content'), { withFileTypes: true }).filter((item) => item.isDirectory())) {
   const directory = path.join(root, 'src', 'content', entry.name);

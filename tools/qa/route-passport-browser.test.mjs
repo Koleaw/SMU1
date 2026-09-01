@@ -16,3 +16,9 @@ test('editor equivalence explicitly classifies runtime-only surfaces and uses st
   assert.match(source, /compareStableGeometry\(snapshot\.stableGeometry, editorSnapshot\.stableGeometry\)/u);
   assert.doesNotMatch(source, /editorSnapshot\.documentSize\.scrollHeight\s*!==\s*snapshot\.documentSize\.scrollHeight/u);
 });
+
+test('alias reconciliation resolves its canonical runtime descriptor from the authoritative route model', async () => {
+  const source = await readFile(new URL('./route-passport-browser.mjs', import.meta.url), 'utf8');
+  assert.match(source, /const expectedRouteByPath = new Map\(model\.routes\.map\(\(route\) => \[route\.pathname, route\]\)\);/u);
+  assert.match(source, /expectedRouteByPath\.get\(expected\.canonicalTarget\) \|\| expected/u);
+});
