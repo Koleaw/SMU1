@@ -22,7 +22,6 @@ test('project and product card business labels have exact shared owners', () => 
 
   for (const [fieldPath, value] of Object.entries({
     cardPremiumLabel: 'Решение для объекта',
-    cardMaterialsMissingLabel: 'Материалы не указаны',
     cardCtaLabel: 'Подробнее'
   })) {
     assert.equal(settings.productUi[fieldPath], value);
@@ -31,7 +30,12 @@ test('project and product card business labels have exact shared owners', () => 
     assert.ok(getFieldCoverage('site-settings', `productUi.${fieldPath}`));
   }
 
-  assert.match(productCard, /kind: 'derived'[\s\S]*products\.\$\{product\.slug\}\.materials\[0\]/u);
+  assert.equal(settings.productUi.cardMaterialsMissingLabel, 'Материалы не указаны');
+  assert.ok(getFieldCoverage('site-settings', 'productUi.cardMaterialsMissingLabel'));
+  assert.match(productCard, /binding\('materials', 'list',[\s\S]*itemKind: 'string'/u);
+  assert.match(productCard, /first non-empty materials item \|\| site-settings\.global\.productUi\.cardMaterialsMissingLabel/u);
+  assert.match(productCard, /primaryMaterial \|\| settings\.productUi\.cardMaterialsMissingLabel/u);
+  assert.doesNotMatch(productCard, /productUiBinding\('cardMaterialsMissingLabel'/u);
   assert.doesNotMatch(productCard, />Решение для объекта</u);
   assert.doesNotMatch(productCard, />Подробнее</u);
 });

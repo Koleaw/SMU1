@@ -16,7 +16,13 @@ const NAMED_SELECTOR_RE = /^([A-Za-z_$][\w$-]*)\[([A-Za-z_$][\w$-]*)\](?:\.(.+))
 const SAFE_PATH_RE = /^[A-Za-z_$][\w$-]*(?:(?:\.[A-Za-z_$][\w$-]*)|(?:\[(?:\d+|[A-Za-z_$][\w$-]*)\]))*$/u;
 const STRUCTURAL_FALLBACKS = new Set(['category order']);
 const PRESERVED_PROJECTION_KINDS = new Set(['derived', 'relation']);
-const PRESERVED_TOOLS = new Set(['relation-select', 'relation-list', 'project-direction-relations', 'reorder-item']);
+const PRESERVED_TOOLS = new Set([
+  'relation-select',
+  'relation-list',
+  'project-direction-relations',
+  'direction-related-relations',
+  'reorder-item'
+]);
 
 function ownerOf(binding) {
   const owner = binding?.owner || {};

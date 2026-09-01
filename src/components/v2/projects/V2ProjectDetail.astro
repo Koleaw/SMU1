@@ -10,7 +10,7 @@ import V2ProjectMeta from './V2ProjectMeta.astro';
 import V2SectionNav from '../V2SectionNav.astro';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 import '../../../styles/v2/projects-v2.css';
-import { adminBinding } from '../../../admin/bindings/adminBinding';
+import { adminBinding, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
 import settings from '../../../content/site-settings/global.json';
 
 interface Props {
@@ -20,6 +20,7 @@ interface Props {
 }
 
 const { presentation, previous, next } = Astro.props as Props;
+const editorCanvas = isLocalAdminCanvas(Astro.url);
 const {
   project,
   detailHeroMedia: heroMedia,
@@ -64,12 +65,28 @@ const additionalFacts = [
     ? { title: settings.projectUi.detailFactFeaturesLabel, titleField: 'detailFactFeaturesLabel', text: projectTextItems(project.features).join(', '), fieldPath: 'features' }
     : null
 ].filter((item): item is { title: string; titleField: string; text: string; fieldPath: string } => Boolean(item?.text));
+const sourceRelatedDirections = project.presentation?.relatedDirections ?? [];
+const editableRelatedDirections = relatedDirections.flatMap((direction) => {
+  const sourceIndex = sourceRelatedDirections.findIndex((candidate) => candidate.id === direction.id);
+  return sourceIndex >= 0 ? [{ ...direction, sourceIndex }] : [];
+});
+const relatedDirectionsBinding = binding('presentation.relatedDirections', 'project-direction-relations', {
+  itemKind: 'object',
+  relationCollections: ['product-sections', 'services'],
+  label: 'Связанные направления и их порядок',
+  permissions: { edit: true, reorder: true, delete: false },
+  projection: { kind: 'relation' }
+});
+const relatedDirectionsEditorMetadata = editorCanvas ? {
+  'data-smu1-project-relations-eyebrow': settings.projectUi.detailDirectionsEyebrow,
+  'data-smu1-project-relations-title': settings.projectUi.detailDirectionsTitle
+} : {};
 const sectionNavItems = [
   { id: 'project-overview', label: settings.projectUi.detailNavOverviewLabel, editor: projectUiBinding('detailNavOverviewLabel') },
   { id: 'project-work', label: settings.projectUi.detailNavWorkLabel, editor: projectUiBinding('detailNavWorkLabel') },
   ...(additionalFacts.length > 0 ? [{ id: 'project-facts', label: settings.projectUi.detailNavFactsLabel, editor: projectUiBinding('detailNavFactsLabel') }] : []),
   ...(publicGallery.length > 0 ? [{ id: 'project-gallery', label: settings.projectUi.detailNavGalleryLabel, editor: projectUiBinding('detailNavGalleryLabel') }] : []),
-  ...(relatedDirections.length > 0 ? [{ id: 'project-directions', label: settings.projectUi.detailNavDirectionsLabel, editor: projectUiBinding('detailNavDirectionsLabel') }] : []),
+  ...(editableRelatedDirections.length > 0 || editorCanvas ? [{ id: 'project-directions', label: settings.projectUi.detailNavDirectionsLabel, editor: projectUiBinding('detailNavDirectionsLabel') }] : []),
   { id: 'contact', label: settings.projectUi.detailNavContactLabel, editor: projectUiBinding('detailNavContactLabel') }
 ];
 ---
@@ -177,29 +194,34 @@ const sectionNavItems = [
     </section>
   )}
 
-  {relatedDirections.length > 0 && (
+  {editableRelatedDirections.length > 0 && (
     <section class="v2-project-detail__directions" id="project-directions" aria-labelledby="v2-project-directions-title">
       <div class="hv2-shell">
         <header class="v2-project-detail__section-heading" data-v2-reveal>
           <p class="hv2-eyebrow" {...projectUiBinding('detailDirectionsEyebrow')}>{settings.projectUi.detailDirectionsEyebrow}</p>
           <h2 id="v2-project-directions-title" {...projectUiBinding('detailDirectionsTitle', 'heading')}>{settings.projectUi.detailDirectionsTitle}</h2>
         </header>
-        <div class="v2-project-detail__direction-grid" role="list" {...binding('presentation.relatedDirections', 'project-direction-relations', {
-          itemKind: 'object',
-          relationCollections: ['product-sections', 'services'],
-          label: 'Связанные направления и их порядок',
-          permissions: { edit: true, reorder: true, delete: false },
-          projection: { kind: 'relation' }
-        })}>
-          {relatedDirections.map((direction) => (
-            <a href={withBase(direction.href)} role="listitem" data-v2-transition-label={direction.label} data-v2-reveal>
-              <span>{direction.context}</span>
-              <strong>{direction.label}</strong>
+        <div class="v2-project-detail__direction-grid" role="list" {...relatedDirectionsBinding} {...relatedDirectionsEditorMetadata}>
+          {editableRelatedDirections.map((direction) => (
+            <a href={withBase(direction.href)} role="listitem" data-v2-transition-label={direction.label} data-v2-reveal data-smu1-live-direction-id={editorCanvas ? direction.id : undefined}>
+              <span {...binding(`presentation.relatedDirections[${direction.sourceIndex}].context`, 'short-text', { stableItemId: `${project.slug}-${direction.id}-direction-context` })}>{direction.context}</span>
+              <strong {...binding(`presentation.relatedDirections[${direction.sourceIndex}].label`, 'short-text', { stableItemId: `${project.slug}-${direction.id}-direction-label` })}>{direction.label}</strong>
             </a>
           ))}
         </div>
       </div>
     </section>
+  )}
+
+  {editorCanvas && editableRelatedDirections.length === 0 && (
+    <button
+      class="v2-editor-fixed-affordance"
+      type="button"
+      data-smu1-editor-affordance="empty-project-directions"
+      aria-label="Добавить связанные направления"
+      {...relatedDirectionsBinding}
+      {...relatedDirectionsEditorMetadata}
+    >Добавить связанные направления</button>
   )}
 
   {(previous || next) && (

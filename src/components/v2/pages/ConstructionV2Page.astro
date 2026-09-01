@@ -11,6 +11,7 @@ import {
 } from '../directions/directionV2Presentation';
 import {
   directionPresentationBinding,
+  directionRelatedRelationsBinding,
   directionRelatedItems,
   directionSectionNavItems,
   requireDirectionPresentation
@@ -236,6 +237,7 @@ const blockBinding = (block: unknown, field: 'title' | 'intro' | 'items', tool: 
     eyebrow={presentation.related.eyebrow}
     title={presentation.related.title}
     items={related}
+    relationsBinding={directionRelatedRelationsBinding(Astro.url, owner, route)}
     variant="compact"
     presentation="links"
     eyebrowBinding={presentationBinding('related.eyebrow')}

@@ -3,7 +3,7 @@ import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import { formatProductPrice, imageViewStyle, productGalleryImages, type ProductData } from './catalogV2Data';
 import V2ResponsiveImage from './V2ResponsiveImage.astro';
-import { adminBinding, adminDisposition, isLocalAdminCanvas } from '../../admin/bindings/adminBinding';
+import { adminBinding, isLocalAdminCanvas } from '../../admin/bindings/adminBinding';
 import settings from '../../content/site-settings/global.json';
 
 interface Props {
@@ -46,8 +46,10 @@ const productUiBinding = (fieldPath: string, tool = 'short-text') => adminBindin
   href={withBase(href)}
   data-v2-transition-label={product.title}
   data-product-card-presentation={isPremium ? 'premium' : 'standard'}
+  data-smu1-live-product-slug={editorCanvas ? product.slug : undefined}
+  data-smu1-live-product-category={editorCanvas ? product.productCategorySlug : undefined}
   data-v2-reveal
-  {...binding('order', 'reorder-item', { zoneId: product.productCategorySlug, parentSlug: product.productCategorySlug, permissions: { edit: true, reorder: true, delete: false } })}
+  {...(!related ? binding('order', 'reorder-item', { zoneId: product.productCategorySlug, parentSlug: product.productCategorySlug, permissions: { edit: true, reorder: true, delete: false } }) : {})}
 >
   {(cardImage || editorCanvas) && (
     <div
@@ -66,6 +68,7 @@ const productUiBinding = (fieldPath: string, tool = 'short-text') => adminBindin
         decoding="async"
         style={imageViewStyle(product.imageView)}
         data-v2-image
+        data-smu1-canonical-media={editorCanvas ? cardImage : undefined}
       />
       ) : (
         <span class="v2-media-empty v2-media-empty--editor-affordance" data-smu1-editor-affordance="missing-product-media">
@@ -80,12 +83,14 @@ const productUiBinding = (fieldPath: string, tool = 'short-text') => adminBindin
         {settings.productUi.cardPremiumLabel}
       </p>
     ) : null}
-    <p class="v2-product-card__type" {...(!primaryMaterial ? productUiBinding('cardMaterialsMissingLabel') : adminDisposition(Astro.url, {
-      kind: 'derived',
-      reason: 'В карточке показан первый непустой пункт списка материалов; меняется через список товара.',
-      source: `products.${product.slug}.materials[0]`,
-      tool: 'list-editor'
-    }))}>
+    <p class="v2-product-card__type" {...binding('materials', 'list', {
+      itemKind: 'string',
+      label: 'Материалы товара',
+      projection: {
+        kind: 'derived',
+        formula: 'first non-empty materials item || site-settings.global.productUi.cardMaterialsMissingLabel'
+      }
+    })}>
       {primaryMaterial || settings.productUi.cardMaterialsMissingLabel}
     </p>
     <h3 {...binding('title', 'heading')}>{product.title}</h3>

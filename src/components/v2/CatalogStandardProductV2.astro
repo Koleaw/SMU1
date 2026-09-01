@@ -32,6 +32,9 @@ interface Props {
 
 const { route, relatedProducts, links, currentPath } = Astro.props as Props;
 const { section, category, product } = route;
+const editorCanvas = isLocalAdminCanvas(Astro.url);
+const standardTemplateProduct = { ...product, presentationType: 'standard' as const };
+const premiumTemplateProduct = { ...product, presentationType: 'premium' as const };
 const images = productGalleryImages(product);
 const publicTextItems = (items: unknown) => cleanTextItems(items)
   .map((item) => publicCatalogCopy(item))
@@ -120,6 +123,25 @@ const displayRelatedProducts = relatedProducts.map((item) => ({
     shortDescription: publicCatalogCopy(item.product.shortDescription)
   }
 }));
+const relatedProductsBinding = binding('relatedProductSlugs', 'relation-list', {
+  itemKind: 'string',
+  relationCollections: ['products'],
+  label: 'Связанные товары и их порядок',
+  permissions: { edit: true, reorder: true, delete: false },
+  projection: { kind: product.relatedProductSlugs?.length ? 'relation' : 'fallback', fallback: 'category order' }
+});
+const relatedProductsEditorMetadata = editorCanvas ? {
+  'data-smu1-product-relations-variant': 'standard',
+  'data-smu1-product-relations-eyebrow': settings.productUi.standardRelatedEyebrow,
+  'data-smu1-product-relations-title': relatedTitle,
+  'data-smu1-product-relations-category-title': settings.productUi.standardRelatedCategoryTitle,
+  'data-smu1-product-relations-section-title': settings.productUi.standardRelatedSectionTitle,
+  'data-smu1-product-relations-link-label': settings.productUi.standardRelatedLinkLabel,
+  'data-smu1-product-relations-link-href': withBase(relatedHref),
+  'data-smu1-product-card-premium-label': settings.productUi.cardPremiumLabel,
+  'data-smu1-product-card-materials-missing-label': settings.productUi.cardMaterialsMissingLabel,
+  'data-smu1-product-card-cta-label': settings.productUi.cardCtaLabel
+} : {};
 const isFenceProduct = section.slug === 'ograzhdeniya-i-zabory';
 const rootClass = [
   'catalog-product',
@@ -140,13 +162,12 @@ const sectionNavItems = [
   ...(product.showDeliveryBlock !== false && deliveryParagraphs.length > 0
     ? [{ id: 'product-delivery', label: settings.productUi.standardNavDeliveryLabel, editor: productUiBinding('standardNavDeliveryLabel', 'short-text', 'nav-delivery') }]
     : []),
-  ...(relatedProducts.length > 0 ? [{ id: 'related-products', label: settings.productUi.standardNavRelatedLabel, editor: productUiBinding('standardNavRelatedLabel', 'short-text', 'nav-related') }] : []),
+  ...(relatedProducts.length > 0 || editorCanvas ? [{ id: 'related-products', label: settings.productUi.standardNavRelatedLabel, editor: productUiBinding('standardNavRelatedLabel', 'short-text', 'nav-related') }] : []),
   { id: 'contact', label: settings.productUi.standardNavContactLabel, editor: productUiBinding('standardNavContactLabel', 'short-text', 'nav-contact') }
 ];
 const headerCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-label', 'header-desktop');
 const headerMobileCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-label', 'header-mobile');
 const mobileCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-label', 'footer-mobile');
-const editorCanvas = isLocalAdminCanvas(Astro.url);
 ---
 
 <CatalogV2Layout
@@ -341,19 +362,41 @@ const editorCanvas = isLocalAdminCanvas(Astro.url);
         </section>
       )}
 
+      {editorCanvas && relatedProducts.length === 0 && (
+        <button
+          class="v2-editor-fixed-affordance"
+          type="button"
+          data-smu1-editor-affordance="empty-related-products"
+          aria-label="Добавить связанные товары"
+          {...relatedProductsBinding}
+          {...relatedProductsEditorMetadata}
+        >Добавить связанные товары</button>
+      )}
+
+      {editorCanvas && (
+        <template data-smu1-product-relations-template="standard">
+          <span data-smu1-related-title-binding="category" {...productUiBinding('standardRelatedCategoryTitle', 'heading', 'related-title-category')}></span>
+          <span data-smu1-related-title-binding="section" {...productUiBinding('standardRelatedSectionTitle', 'heading', 'related-title-section')}></span>
+          <section class="v2-related-products" id="related-products" aria-labelledby="v2-related-title">
+            <header class="v2-section-heading" data-v2-reveal>
+              <div><p class="hv2-eyebrow" {...productUiBinding('standardRelatedEyebrow')}>{settings.productUi.standardRelatedEyebrow}</p><h2 id="v2-related-title" {...productUiBinding(relatedTitleField, 'heading', 'related-title')}>{relatedTitle}</h2></div>
+              <a class="hv2-text-link" href={withBase(relatedHref)} {...productUiBinding('standardRelatedLinkLabel', 'link-label')}>{settings.productUi.standardRelatedLinkLabel}</a>
+            </header>
+            <div class="v2-product-grid v2-product-grid--related" role="list" {...relatedProductsBinding} {...relatedProductsEditorMetadata}>
+              <div role="listitem" data-smu1-card-template-presentation="standard"><V2ProductCard product={standardTemplateProduct} href={currentPath} related /></div>
+              <div role="listitem" data-smu1-card-template-presentation="premium"><V2ProductCard product={premiumTemplateProduct} href={currentPath} related /></div>
+            </div>
+          </section>
+        </template>
+      )}
+
       {relatedProducts.length > 0 && (
         <section class="v2-related-products" id="related-products" aria-labelledby="v2-related-title">
           <header class="v2-section-heading" data-v2-reveal>
             <div><p class="hv2-eyebrow" {...productUiBinding('standardRelatedEyebrow')}>{settings.productUi.standardRelatedEyebrow}</p><h2 id="v2-related-title" {...productUiBinding(relatedTitleField, 'heading', 'related-title')}>{relatedTitle}</h2></div>
             <a class="hv2-text-link" href={withBase(relatedHref)} {...productUiBinding('standardRelatedLinkLabel', 'link-label')}>{settings.productUi.standardRelatedLinkLabel}</a>
           </header>
-          <div class="v2-product-grid v2-product-grid--related" role="list" {...binding('relatedProductSlugs', 'relation-list', {
-            itemKind: 'string',
-            relationCollections: ['products'],
-            label: 'Связанные товары и их порядок',
-            permissions: { edit: true, reorder: true, delete: false },
-            projection: { kind: product.relatedProductSlugs?.length ? 'relation' : 'fallback', fallback: 'category order' }
-          })}>
+          <div class="v2-product-grid v2-product-grid--related" role="list" {...relatedProductsBinding} {...relatedProductsEditorMetadata}>
             {displayRelatedProducts.map((item) => (
               <div role="listitem"><V2ProductCard product={item.product} href={relatedProductHref(item)} related /></div>
             ))}

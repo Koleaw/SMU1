@@ -1,7 +1,7 @@
 ---
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
-import { adminDisposition } from '../../../admin/bindings/adminBinding';
+import { adminDisposition, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
 
 interface RelatedItem {
   eyebrow?: string;
@@ -25,6 +25,7 @@ interface Props {
   presentation?: 'cards' | 'links';
   titleBinding?: Record<string, string>;
   eyebrowBinding?: Record<string, string>;
+  relationsBinding?: Record<string, string>;
   editorSource?: string;
 }
 
@@ -36,6 +37,7 @@ const {
   presentation = 'cards'
 } = Astro.props as Props;
 const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : withBase(value);
+const editorCanvas = isLocalAdminCanvas(Astro.url);
 const editorSource = Astro.props.editorSource ?? 'src/components/v2/directions/DirectionV2Related.astro#Astro.props';
 const declared = (
   kind: 'contextual' | 'derived' | 'template-fixed',
@@ -49,9 +51,15 @@ const directOrDeclared = (
   fragment: string,
   reason: string
 ) => attributes && Object.keys(attributes).length > 0 ? attributes : declared(kind, fragment, reason);
+const editorProjectionMetadata = editorCanvas ? {
+  'data-smu1-direction-related-variant': variant,
+  'data-smu1-direction-related-presentation': presentation,
+  'data-smu1-direction-related-eyebrow': eyebrow,
+  'data-smu1-direction-related-title': title
+} : {};
 ---
 
-{items.length > 0 && (
+{items.length > 0 ? (
   <section
     class:list={[
       'direction-related',
@@ -60,6 +68,8 @@ const directOrDeclared = (
     ]}
     aria-labelledby="direction-related-title"
     data-direction-related-count={presentation === 'links' ? items.length : undefined}
+    {...Astro.props.relationsBinding}
+    {...editorProjectionMetadata}
   >
     <div class="hv2-shell">
       <header class="direction-section-heading direction-section-heading--compact" data-v2-reveal>
@@ -74,7 +84,7 @@ const directOrDeclared = (
             <a class="direction-related__card" href={href(item.href)} role="listitem" data-v2-transition-label={item.title} data-v2-reveal {...item.reorderEditor} {...directOrDeclared(item.editor?.href, 'derived', `items[${index}].href`, 'Адрес перехода вычислен из slug связанной записи и route policy; меняется через настройки связанной страницы.')}>
               <span {...directOrDeclared(item.editor?.eyebrow, 'contextual', `items[${index}].eyebrow`, 'Контекстная метка связи задана renderer-композицией, а не локальным полем карточки.')}>{item.eyebrow || 'Направление'}</span>
               <h3 {...directOrDeclared(item.editor?.title, 'contextual', `items[${index}].title`, 'Название связанной записи передано renderer-владельцем без schema binding.')}>{item.title}</h3>
-              {item.description && <p {...directOrDeclared(item.editor?.description, 'contextual', `items[${index}].description`, 'Пояснение связи задано renderer-композицией; отдельная related-description schema пока отсутствует.')}>{item.description}</p>}
+              {(item.description || editorCanvas) && <p hidden={!item.description} {...directOrDeclared(item.editor?.description, 'contextual', `items[${index}].description`, 'Пояснение связи задано renderer-композицией; отдельная related-description schema пока отсутствует.')}>{item.description}</p>}
             </a>
           ))}
         </div>
@@ -86,7 +96,7 @@ const directOrDeclared = (
                 <span class="direction-related__link-eyebrow" {...directOrDeclared(item.editor?.eyebrow, 'contextual', `items[${index}].eyebrow`, 'Контекстная метка связи задана renderer-композицией, а не локальным полем карточки.')}>{item.eyebrow || 'Направление'}</span>
                 <span class="direction-related__link-copy">
                   <strong {...directOrDeclared(item.editor?.title, 'contextual', `items[${index}].title`, 'Название связанной записи передано renderer-владельцем без schema binding.')}>{item.title}</strong>
-                  {item.description && <span {...directOrDeclared(item.editor?.description, 'contextual', `items[${index}].description`, 'Пояснение связи задано renderer-композицией; отдельная related-description schema пока отсутствует.')}>{item.description}</span>}
+                  {(item.description || editorCanvas) && <span hidden={!item.description} {...directOrDeclared(item.editor?.description, 'contextual', `items[${index}].description`, 'Пояснение связи задано renderer-композицией; отдельная related-description schema пока отсутствует.')}>{item.description}</span>}
                 </span>
                 <svg viewBox="0 0 16 16" aria-hidden="true">
                   <path d="M4 12 12 4M6 4h6v6"></path>
@@ -98,4 +108,12 @@ const directOrDeclared = (
       )}
     </div>
   </section>
+) : editorCanvas && (
+  <button
+    type="button"
+    class="v2-editor-fixed-affordance"
+    data-smu1-editor-affordance="empty-direction-related"
+    {...Astro.props.relationsBinding}
+    {...editorProjectionMetadata}
+  >Добавить связанные страницы</button>
 )}

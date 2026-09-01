@@ -598,6 +598,21 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
           };
 
           const bindingElements = () => Array.from(document.querySelectorAll('[data-smu1-binding-id][data-smu1-binding]'));
+          const bindingDefinitions = () => {
+            const seen = new Set();
+            return bindingElements().flatMap((element) => {
+              const binding = parseBinding(element);
+              if (!binding || seen.has(binding.bindingId)) return [];
+              seen.add(binding.bindingId);
+              return [binding];
+            });
+          };
+          const bindingTemplates = () => Array.from(document.querySelectorAll('template[data-smu1-product-relations-template]'))
+            .flatMap((template) => Array.from(template.content.querySelectorAll('[data-smu1-binding-id][data-smu1-binding]')))
+            .flatMap((element) => {
+              const binding = parseBinding(element);
+              return binding ? [binding] : [];
+            });
           const bindingsWithGeometry = () => bindingElements().flatMap((element) => {
             const binding = parseBinding(element);
             if (!binding) return [];
@@ -619,6 +634,10 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
 
           const sendGeometry = (type = 'geometry') => post(type, {
             bindings: bindingsWithGeometry(),
+            ...(type === 'ready' ? {
+              bindingDefinitions: bindingDefinitions(),
+              bindingTemplates: bindingTemplates()
+            } : {}),
             viewport: { width: window.innerWidth, height: window.innerHeight },
             scroll: { x: window.scrollX, y: window.scrollY }
           });
@@ -1079,18 +1098,712 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
             projectLiveGallery(gallery, { items: state.items });
           }, true);
 
+          const setSectionNavItemVisibility = (sectionId, visible) => {
+            const link = Array.from(document.querySelectorAll('[data-v2-section-nav-link]'))
+              .find((candidate) => candidate.getAttribute('href') === `#${sectionId}`);
+            const item = link?.closest('.v2-section-nav__item');
+            if (item instanceof HTMLElement) item.hidden = !visible;
+          };
+          setSectionNavItemVisibility('related-products', Boolean(document.getElementById('related-products')));
+          setSectionNavItemVisibility('premium-related', Boolean(document.getElementById('premium-related')));
+          setSectionNavItemVisibility('project-directions', Boolean(document.getElementById('project-directions')));
+
           const projectValue = (element, binding, value) => {
             const target = binding?.projection?.target || 'text';
+            if (value && typeof value === 'object' && value.__smu1ProductRelationsProjection === true && element instanceof HTMLElement) {
+              const metadata = {
+                variant: element.dataset.smu1ProductRelationsVariant === 'premium' ? 'premium' : 'standard',
+                eyebrow: String(element.dataset.smu1ProductRelationsEyebrow || 'Смотрите также'),
+                title: String(element.dataset.smu1ProductRelationsTitle || 'Связанные товары'),
+                categoryTitle: String(element.dataset.smu1ProductRelationsCategoryTitle || ''),
+                sectionTitle: String(element.dataset.smu1ProductRelationsSectionTitle || ''),
+                linkLabel: String(element.dataset.smu1ProductRelationsLinkLabel || 'Все товары категории'),
+                linkHref: String(element.dataset.smu1ProductRelationsLinkHref || '/'),
+                premiumLabel: String(element.dataset.smu1ProductCardPremiumLabel || 'Решение для объекта'),
+                materialsMissingLabel: String(element.dataset.smu1ProductCardMaterialsMissingLabel || 'Материалы не указаны'),
+                ctaLabel: String(element.dataset.smu1ProductCardCtaLabel || 'Подробнее')
+              };
+              const safeHref = (value) => {
+                if (!/^\/(?!\/)/u.test(String(value || ''))) return '';
+                try {
+                  const destination = new URL(String(value), window.location.origin);
+                  return destination.origin === window.location.origin
+                    ? `${destination.pathname}${destination.search}${destination.hash}`
+                    : '';
+                } catch { return ''; }
+              };
+              const safeItems = (Array.isArray(value.items) ? value.items : []).flatMap((item) => {
+                const href = safeHref(item?.href);
+                const slug = String(item?.slug || '');
+                if (!item || !href || !/^[a-z0-9][a-z0-9-]*$/u.test(slug)) return [];
+                const imageSource = typeof item.image === 'string' ? item.image : item.image?.src;
+                const imageHref = imageSource ? safeHref(imageSource) : '';
+                return [{
+                  slug,
+                  href,
+                  title: String(item.title || slug),
+                  description: String(item.description || ''),
+                  material: String(item.material || ''),
+                  price: String(item.price || 'Цена не указана'),
+                  categorySlug: /^[a-z0-9][a-z0-9-]*$/u.test(String(item.categorySlug || '')) ? String(item.categorySlug) : '',
+                  presentationType: item.presentationType === 'premium' ? 'premium' : 'standard',
+                  image: imageHref ? { src: imageHref, alt: String(item.title || slug) } : null,
+                  imageView: item.imageView && typeof item.imageView === 'object' ? item.imageView : null
+                }];
+              });
+              const copiedAttributes = [
+                'data-smu1-binding',
+                'data-smu1-binding-id',
+                'data-smu1-product-relations-variant',
+                'data-smu1-product-relations-eyebrow',
+                'data-smu1-product-relations-title',
+                'data-smu1-product-relations-category-title',
+                'data-smu1-product-relations-section-title',
+                'data-smu1-product-relations-link-label',
+                'data-smu1-product-relations-link-href',
+                'data-smu1-product-card-premium-label',
+                'data-smu1-product-card-materials-missing-label',
+                'data-smu1-product-card-cta-label'
+              ];
+              const copyEditorAttributes = (next) => copiedAttributes.forEach((name) => {
+                const attribute = element.getAttribute(name);
+                if (attribute !== null) next.setAttribute(name, attribute);
+              });
+              const node = (tag, className = '', text = '') => {
+                const created = document.createElement(tag);
+                if (className) created.className = className;
+                if (text) created.textContent = text;
+                return created;
+              };
+              const rendererTemplate = document.querySelector(`template[data-smu1-product-relations-template="${metadata.variant}"]`);
+              const templateSection = rendererTemplate instanceof HTMLTemplateElement
+                ? rendererTemplate.content.querySelector(metadata.variant === 'premium' ? '.v2-premium-related' : '.v2-related-products')
+                : null;
+              const liveBindingHash = (value) => {
+                let result = 0x811c9dc5;
+                for (const character of String(value || '')) {
+                  result ^= character.charCodeAt(0);
+                  result = Math.imul(result, 0x01000193) >>> 0;
+                }
+                return result.toString(16).padStart(8, '0');
+              };
+              const promoteSectionBindings = (section) => {
+                section.querySelectorAll('[data-smu1-binding-id][data-smu1-binding]').forEach((bindingNode) => {
+                  if (bindingNode.closest('.v2-product-grid--related')) return;
+                  let liveBinding;
+                  try { liveBinding = JSON.parse(bindingNode.getAttribute('data-smu1-binding') || 'null'); } catch { return; }
+                  const originalId = String(liveBinding?.bindingId || '');
+                  if (!originalId || liveBinding.ownerCollection !== 'site-settings' || liveBinding.scope !== 'global') return;
+                  const liveId = `live-section:${liveBindingHash(binding.bindingId)}:${liveBindingHash(originalId)}`;
+                  liveBinding.bindingId = liveId;
+                  liveBinding.liveTemplateBindingId = originalId;
+                  liveBinding.dynamicParentBindingId = binding.bindingId;
+                  liveBinding.dynamicItemId = 'section';
+                  bindingNode.setAttribute('data-smu1-binding-id', liveId);
+                  bindingNode.setAttribute('data-smu1-binding', JSON.stringify(liveBinding));
+                });
+              };
+              const syncStandardRelatedHeading = (section) => {
+                if (metadata.variant !== 'standard' || !(section instanceof HTMLElement)) return;
+                const mode = value.relatedTitleMode === 'category' ? 'category' : 'section';
+                const heading = section.querySelector(':scope > .v2-section-heading h2');
+                if (!(heading instanceof HTMLElement)) return;
+                heading.textContent = mode === 'category'
+                  ? metadata.categoryTitle || metadata.title
+                  : metadata.sectionTitle || metadata.title;
+                const blueprint = rendererTemplate instanceof HTMLTemplateElement
+                  ? rendererTemplate.content.querySelector(`[data-smu1-related-title-binding="${mode}"][data-smu1-binding]`)
+                  : null;
+                let headingBinding;
+                try { headingBinding = JSON.parse(blueprint?.getAttribute('data-smu1-binding') || 'null'); } catch { return; }
+                const originalId = String(headingBinding?.bindingId || '');
+                if (!headingBinding || !originalId) return;
+                const liveId = `live-section:${liveBindingHash(binding.bindingId)}:${liveBindingHash(originalId)}`;
+                headingBinding.bindingId = liveId;
+                headingBinding.liveTemplateBindingId = originalId;
+                headingBinding.dynamicParentBindingId = binding.bindingId;
+                headingBinding.dynamicItemId = `section-title:${mode}`;
+                heading.setAttribute('data-smu1-binding-id', liveId);
+                heading.setAttribute('data-smu1-binding', JSON.stringify(headingBinding));
+              };
+              const cloneRendererRow = (item) => {
+                const templateRow = templateSection?.querySelector(
+                  `.v2-product-grid--related > [role="listitem"][data-smu1-card-template-presentation="${item.presentationType}"]`
+                );
+                if (!(templateRow instanceof HTMLElement)) return null;
+                const wrapper = templateRow.cloneNode(true);
+                const bindingNodes = [
+                  ...(wrapper.hasAttribute('data-smu1-binding') ? [wrapper] : []),
+                  ...wrapper.querySelectorAll('[data-smu1-binding-id][data-smu1-binding]')
+                ];
+                for (const bindingNode of bindingNodes) {
+                  let liveBinding;
+                  try { liveBinding = JSON.parse(bindingNode.getAttribute('data-smu1-binding') || 'null'); } catch { return null; }
+                  const originalId = String(liveBinding?.bindingId || bindingNode.getAttribute('data-smu1-binding-id') || '');
+                  if (!liveBinding || !originalId) return null;
+                  const liveId = `live-product:${item.slug}:${liveBindingHash(originalId)}`;
+                  liveBinding.bindingId = liveId;
+                  liveBinding.liveTemplateBindingId = originalId;
+                  liveBinding.liveTargetSlug = item.slug;
+                  liveBinding.dynamicParentBindingId = binding.bindingId;
+                  liveBinding.dynamicItemId = item.slug;
+                  if (liveBinding.ownerCollection === 'products') {
+                    liveBinding.owner = { collection: 'products', slug: item.slug };
+                    liveBinding.recordSlug = item.slug;
+                    liveBinding.stableItemId = item.slug;
+                    if (liveBinding.renderer?.family === 'catalog-card') {
+                      liveBinding.renderer = {
+                        ...liveBinding.renderer,
+                        variant: item.presentationType === 'premium' ? 'premium-product' : 'standard-product'
+                      };
+                    }
+                    liveBinding.affectedRoutes = [...new Set([window.location.pathname, item.href])];
+                    if (liveBinding.tool === 'reorder-item' && item.categorySlug) {
+                      liveBinding.zoneId = item.categorySlug;
+                      liveBinding.parentSlug = item.categorySlug;
+                    }
+                  }
+                  bindingNode.setAttribute('data-smu1-binding-id', liveId);
+                  bindingNode.setAttribute('data-smu1-binding', JSON.stringify(liveBinding));
+                }
+                return wrapper;
+              };
+              if (!safeItems.length) {
+                setSectionNavItemVisibility(metadata.variant === 'premium' ? 'premium-related' : 'related-products', false);
+                if (element.matches('[data-smu1-editor-affordance="empty-related-products"]')) return;
+                const affordance = node('button', 'v2-editor-fixed-affordance', 'Добавить связанные товары');
+                affordance.type = 'button';
+                affordance.dataset.smu1EditorAffordance = 'empty-related-products';
+                affordance.setAttribute('aria-label', 'Добавить связанные товары');
+                copyEditorAttributes(affordance);
+                const host = element.closest('.v2-related-products,.v2-premium-related') || element;
+                affordance.__smu1DetachedProductRelationsHost = host;
+                host.replaceWith(affordance);
+                return;
+              }
+              const detachedHost = element.__smu1DetachedProductRelationsHost;
+              const cachedGrid = detachedHost instanceof HTMLElement
+                ? detachedHost.querySelector('.v2-product-grid--related')
+                : null;
+              const existingGrid = element.matches('.v2-product-grid--related')
+                ? element
+                : cachedGrid instanceof HTMLElement ? cachedGrid : null;
+              const grid = existingGrid || node('div', 'v2-product-grid v2-product-grid--related');
+              grid.setAttribute('role', 'list');
+              if (!existingGrid) copyEditorAttributes(grid);
+              if (metadata.variant === 'premium') grid.dataset.premiumRelatedCount = String(safeItems.length);
+              const productRowCache = grid.__smu1ProductRelationRows instanceof Map
+                ? grid.__smu1ProductRelationRows
+                : new Map();
+              Array.from(grid.querySelectorAll(':scope > [role="listitem"]'))
+                .forEach((wrapper) => {
+                  const card = wrapper.querySelector(':scope > .v2-product-card');
+                  const cardBinding = card instanceof Element ? parseBinding(card) : null;
+                  const slug = String(card?.dataset.smu1LiveProductSlug || cardBinding?.recordSlug || '');
+                  if (slug) productRowCache.set(slug, wrapper);
+                });
+              grid.__smu1ProductRelationRows = productRowCache;
+              const rows = safeItems.flatMap((item) => {
+                const wrapper = productRowCache.get(item.slug) || cloneRendererRow(item);
+                if (!(wrapper instanceof HTMLElement)) return [];
+                wrapper.setAttribute('role', 'listitem');
+                let card = wrapper.querySelector(':scope > .v2-product-card');
+                if (!(card instanceof HTMLAnchorElement)) return [];
+                card.classList.add('v2-product-card', 'v2-product-card--related');
+                card.classList.toggle('v2-product-card--premium', item.presentationType === 'premium');
+                card.href = item.href;
+                card.dataset.v2TransitionLabel = item.title;
+                card.dataset.productCardPresentation = item.presentationType;
+                card.dataset.smu1LiveProductSlug = item.slug;
+                let media = card.querySelector(':scope > .v2-product-card__media');
+                if (item.image) {
+                  if (!(media instanceof HTMLElement)) return [];
+                  media.hidden = false;
+                  media.classList.remove('v2-product-card__media--editor-affordance');
+                  media.removeAttribute('data-smu1-editor-affordance');
+                  media.querySelector('.v2-media-empty--editor-affordance')?.remove();
+                  card.classList.remove('v2-product-card--editor-missing-media');
+                  const projectedSource = safeHref(item.image.src);
+                  let image = media.querySelector('img');
+                  const cachedBeforeCreate = media.__smu1CanonicalResponsivePicture;
+                  if (!(image instanceof HTMLImageElement)
+                    && cachedBeforeCreate?.source === projectedSource
+                    && cachedBeforeCreate.node instanceof HTMLPictureElement) {
+                    const restored = cachedBeforeCreate.node.cloneNode(true);
+                    media.replaceChildren(restored);
+                    image = restored.querySelector('img');
+                  }
+                  if (!(image instanceof HTMLImageElement)) {
+                    image = document.createElement('img');
+                    media.replaceChildren(image);
+                  }
+                  const canonicalSource = safeHref(image.dataset.smu1CanonicalMedia || '');
+                  const responsivePicture = image.closest('picture');
+                  if (!media.__smu1CanonicalResponsivePicture
+                    && canonicalSource
+                    && responsivePicture instanceof HTMLPictureElement) {
+                    media.__smu1CanonicalResponsivePicture = {
+                      source: canonicalSource,
+                      node: responsivePicture.cloneNode(true)
+                    };
+                  }
+                  if (canonicalSource && projectedSource === canonicalSource) {
+                    const cached = media.__smu1CanonicalResponsivePicture;
+                    if (media.__smu1ProductMediaChanged
+                      && cached?.source === canonicalSource
+                      && cached.node instanceof HTMLPictureElement) {
+                      const restored = cached.node.cloneNode(true);
+                      responsivePicture?.replaceWith(restored);
+                      image = restored.querySelector('img');
+                    }
+                    if (image instanceof HTMLImageElement) image.alt = item.title;
+                    media.__smu1ProductMediaChanged = false;
+                  } else {
+                    writeLiveImage(image, item.image);
+                    media.__smu1ProductMediaChanged = true;
+                  }
+                  if (!(image instanceof HTMLImageElement)) return [];
+                  const x = Math.min(100, Math.max(0, Number(item.imageView?.positionX ?? 50)));
+                  const y = Math.min(100, Math.max(0, Number(item.imageView?.positionY ?? 50)));
+                  const scale = Math.min(3, Math.max(1, Number(item.imageView?.scale ?? 1)));
+                  image.style.objectFit = item.imageView?.fit === 'contain' ? 'contain' : 'cover';
+                  image.style.objectPosition = `${x}% ${y}%`;
+                  image.style.transform = `scale(${scale})`;
+                  image.style.transformOrigin = 'center';
+                } else if (media instanceof HTMLElement) {
+                  const canonicalImage = media.querySelector('img[data-smu1-canonical-media]');
+                  const canonicalPicture = canonicalImage?.closest('picture');
+                  const canonicalSource = canonicalImage instanceof HTMLImageElement
+                    ? safeHref(canonicalImage.dataset.smu1CanonicalMedia || '')
+                    : '';
+                  if (canonicalSource && canonicalPicture instanceof HTMLPictureElement) {
+                    media.__smu1CanonicalResponsivePicture = {
+                      source: canonicalSource,
+                      node: canonicalPicture.cloneNode(true)
+                    };
+                  }
+                  media.hidden = false;
+                  media.classList.add('v2-product-card__media--editor-affordance');
+                  media.dataset.smu1EditorAffordance = 'missing-product-media';
+                  card.classList.add('v2-product-card--editor-missing-media');
+                  media.querySelector('picture')?.remove();
+                  media.querySelector(':scope > img')?.remove();
+                  let emptyMedia = media.querySelector(':scope > .v2-media-empty--editor-affordance');
+                  if (!(emptyMedia instanceof HTMLElement)) {
+                    emptyMedia = node('span', 'v2-media-empty v2-media-empty--editor-affordance');
+                    emptyMedia.dataset.smu1EditorAffordance = 'missing-product-media';
+                    emptyMedia.append(node('span', '', 'Добавить фотографии'));
+                    media.append(emptyMedia);
+                  }
+                }
+                let body = card.querySelector(':scope > .v2-product-card__body');
+                if (!(body instanceof HTMLElement)) {
+                  body = node('div', 'v2-product-card__body');
+                  card.append(body);
+                }
+                let presentation = body.querySelector(':scope > .v2-product-card__presentation');
+                if (!(presentation instanceof HTMLElement) && item.presentationType === 'premium') {
+                  presentation = node('p', 'v2-product-card__presentation');
+                  body.prepend(presentation);
+                }
+                if (presentation instanceof HTMLElement) {
+                  presentation.textContent = metadata.premiumLabel;
+                  presentation.hidden = item.presentationType !== 'premium';
+                }
+                let material = body.querySelector(':scope > .v2-product-card__type');
+                if (!(material instanceof HTMLElement)) {
+                  material = node('p', 'v2-product-card__type');
+                  body.append(material);
+                }
+                let title = body.querySelector(':scope > h3');
+                if (!(title instanceof HTMLElement)) {
+                  title = node('h3');
+                  body.append(title);
+                }
+                let description = body.querySelector(':scope > .v2-product-card__description');
+                if (!(description instanceof HTMLElement)) {
+                  description = node('p', 'v2-product-card__description');
+                  body.append(description);
+                }
+                let footer = body.querySelector(':scope > .v2-product-card__footer');
+                if (!(footer instanceof HTMLElement)) {
+                  footer = node('div', 'v2-product-card__footer');
+                  body.append(footer);
+                }
+                let price = footer.querySelector(':scope > strong');
+                if (!(price instanceof HTMLElement)) {
+                  price = node('strong');
+                  footer.prepend(price);
+                }
+                let cta = footer.querySelector(':scope > .v2-card-link');
+                if (!(cta instanceof HTMLElement)) {
+                  cta = node('span', 'v2-card-link');
+                  footer.append(cta);
+                }
+                material.textContent = item.material || metadata.materialsMissingLabel;
+                title.textContent = item.title;
+                description.textContent = item.description;
+                price.textContent = item.price;
+                cta.textContent = metadata.ctaLabel;
+                productRowCache.set(item.slug, wrapper);
+                return [wrapper];
+              });
+              grid.replaceChildren(...rows);
+              syncStandardRelatedHeading(grid.closest('.v2-related-products'));
+              setSectionNavItemVisibility(metadata.variant === 'premium' ? 'premium-related' : 'related-products', true);
+              if (detachedHost instanceof HTMLElement && existingGrid) {
+                element.replaceWith(detachedHost);
+              } else if (!existingGrid) {
+                if (!(templateSection instanceof HTMLElement)) return;
+                const section = templateSection.cloneNode(true);
+                const templateGrid = section.querySelector('.v2-product-grid--related');
+                if (!(templateGrid instanceof HTMLElement)) return;
+                copyEditorAttributes(templateGrid);
+                if (metadata.variant === 'premium') templateGrid.dataset.premiumRelatedCount = String(rows.length);
+                templateGrid.replaceChildren(...rows);
+                promoteSectionBindings(section);
+                syncStandardRelatedHeading(section);
+                element.replaceWith(section);
+              }
+              return;
+            }
+            if (value && typeof value === 'object' && value.__smu1DirectionRelatedProjection === true && element instanceof HTMLElement) {
+              const allowedCollections = new Set(['product-sections', 'product-categories', 'services']);
+              const safeItems = (Array.isArray(value.items) ? value.items : []).flatMap((item) => {
+                if (!item || !allowedCollections.has(String(item.targetCollection || ''))
+                  || !/^[a-z0-9][a-z0-9-]*$/u.test(String(item.targetSlug || ''))
+                  || !/^[a-z0-9][a-z0-9-]*$/u.test(String(item.id || ''))
+                  || !Number.isSafeInteger(item.sourceIndex)
+                  || item.sourceIndex < 0
+                  || !/^\/(?!\/)/u.test(String(item.href || ''))) return [];
+                let destination;
+                try { destination = new URL(String(item.href), window.location.origin); } catch { return []; }
+                if (destination.origin !== window.location.origin) return [];
+                return [{
+                  id: String(item.id),
+                  targetCollection: String(item.targetCollection),
+                  targetSlug: String(item.targetSlug),
+                  eyebrow: String(item.eyebrow || ''),
+                  title: String(item.title || item.targetSlug),
+                  titleSource: item.titleSource === 'local' ? 'local' : 'inherited',
+                  description: String(item.description || ''),
+                  descriptionSource: item.descriptionSource === 'local' ? 'local' : 'inherited',
+                  href: `${destination.pathname}${destination.search}${destination.hash}`,
+                  sourceIndex: item.sourceIndex
+                }];
+              });
+              const metadata = {
+                variant: ['default', 'compact'].includes(element.dataset.smu1DirectionRelatedVariant)
+                  ? element.dataset.smu1DirectionRelatedVariant
+                  : 'default',
+                presentation: element.dataset.smu1DirectionRelatedPresentation === 'links' ? 'links' : 'cards',
+                eyebrow: String(value.eyebrow ?? element.dataset.smu1DirectionRelatedEyebrow ?? 'Дальше по задаче'),
+                title: String(value.title ?? element.dataset.smu1DirectionRelatedTitle ?? 'Связанные направления')
+              };
+              const copyEditorAttributes = (next) => {
+                for (const name of [
+                  'data-smu1-binding',
+                  'data-smu1-binding-id',
+                  'data-smu1-direction-related-variant',
+                  'data-smu1-direction-related-presentation',
+                  'data-smu1-direction-related-eyebrow',
+                  'data-smu1-direction-related-title'
+                ]) {
+                  const attribute = element.getAttribute(name);
+                  if (attribute !== null) next.setAttribute(name, attribute);
+                }
+              };
+              const node = (tag, className = '', text = '') => {
+                const created = document.createElement(tag);
+                if (className) created.className = className;
+                if (text) created.textContent = text;
+                return created;
+              };
+              if (!safeItems.length) {
+                if (element.matches('[data-smu1-editor-affordance="empty-direction-related"]')) return;
+                const affordance = node('button', 'v2-editor-fixed-affordance', 'Добавить связанные страницы');
+                affordance.type = 'button';
+                affordance.dataset.smu1EditorAffordance = 'empty-direction-related';
+                copyEditorAttributes(affordance);
+                affordance.__smu1DetachedDirectionRelatedHost = element;
+                element.replaceWith(affordance);
+                return;
+              }
+              const detachedSection = element.__smu1DetachedDirectionRelatedHost;
+              const existingSection = element.matches('section.direction-related')
+                ? element
+                : detachedSection instanceof HTMLElement && detachedSection.matches('section.direction-related')
+                  ? detachedSection
+                  : null;
+              const section = existingSection
+                || node('section', `direction-related direction-related--${metadata.variant}${metadata.presentation === 'links' ? ' direction-related--links' : ''}`);
+              if (!existingSection) {
+                section.setAttribute('aria-labelledby', 'direction-related-title');
+                copyEditorAttributes(section);
+              }
+              section.dataset.smu1DirectionRelatedEyebrow = metadata.eyebrow;
+              section.dataset.smu1DirectionRelatedTitle = metadata.title;
+              if (metadata.presentation === 'links') section.dataset.directionRelatedCount = String(safeItems.length);
+              else section.removeAttribute('data-direction-related-count');
+              let shell = section.querySelector(':scope > .hv2-shell');
+              if (!(shell instanceof HTMLElement)) {
+                shell = node('div', 'hv2-shell');
+                section.append(shell);
+              }
+              let header = shell.querySelector(':scope > .direction-section-heading');
+              if (!(header instanceof HTMLElement)) {
+                header = node('header', 'direction-section-heading direction-section-heading--compact');
+                shell.prepend(header);
+              }
+              let headingCopy = header.querySelector(':scope > div');
+              if (!(headingCopy instanceof HTMLElement)) {
+                headingCopy = node('div');
+                header.append(headingCopy);
+              }
+              let eyebrow = headingCopy.querySelector(':scope > .hv2-eyebrow');
+              if (!(eyebrow instanceof HTMLElement)) {
+                eyebrow = node('p', 'hv2-eyebrow');
+                headingCopy.prepend(eyebrow);
+              }
+              let heading = headingCopy.querySelector(':scope > h2');
+              if (!(heading instanceof HTMLElement)) {
+                heading = node('h2');
+                headingCopy.append(heading);
+              }
+              eyebrow.textContent = metadata.eyebrow;
+              heading.textContent = metadata.title;
+              heading.id = 'direction-related-title';
+              const stableIdOf = (row) => {
+                const liveId = String(row?.dataset?.smu1LiveDirectionId || '');
+                if (liveId) return liveId;
+                const rowBinding = row instanceof Element ? parseBinding(row) : null;
+                return String(rowBinding?.stableItemId || '');
+              };
+              const retargetDirectionChild = (child, field, item) => {
+                if (!(child instanceof HTMLElement)) return;
+                let childBinding;
+                try { childBinding = JSON.parse(child.getAttribute('data-smu1-binding') || 'null'); } catch { return; }
+                if (!childBinding) return;
+                const localBinding = childBinding.ownerCollection === binding.ownerCollection
+                  && childBinding.recordSlug === binding.recordSlug
+                  && childBinding.stableItemId === `${binding.recordSlug}-${item.id}-related-${field}`;
+                if (!localBinding) {
+                  child.removeAttribute('data-smu1-binding-id');
+                  child.removeAttribute('data-smu1-binding');
+                  return;
+                }
+                childBinding.fieldPath = `directionPresentation.related.items[${item.sourceIndex}].${field}`;
+                child.setAttribute('data-smu1-binding', JSON.stringify(childBinding));
+              };
+              if (metadata.presentation === 'cards') {
+                let grid = shell.querySelector(':scope > .direction-related__grid');
+                if (!(grid instanceof HTMLElement)) {
+                  shell.querySelector(':scope > .direction-related__links')?.remove();
+                  grid = node('div', 'direction-related__grid');
+                  grid.setAttribute('role', 'list');
+                  shell.append(grid);
+                }
+                const currentById = grid.__smu1DirectionRelatedRows instanceof Map
+                  ? grid.__smu1DirectionRelatedRows
+                  : new Map();
+                Array.from(grid.querySelectorAll(':scope > .direction-related__card')).forEach((row) => {
+                  const id = stableIdOf(row);
+                  if (id) currentById.set(id, row);
+                });
+                grid.__smu1DirectionRelatedRows = currentById;
+                const rows = safeItems.map((item) => {
+                  const existingCard = currentById.get(item.id);
+                  const card = existingCard || node('a', 'direction-related__card');
+                  if (!existingCard) copyEditorAttributes(card);
+                  card.href = item.href;
+                  card.setAttribute('role', 'listitem');
+                  card.dataset.v2TransitionLabel = item.title;
+                  card.dataset.smu1LiveDirectionId = item.id;
+                  let itemEyebrow = card.querySelector(':scope > span');
+                  if (!(itemEyebrow instanceof HTMLElement)) {
+                    itemEyebrow = node('span');
+                    card.prepend(itemEyebrow);
+                  }
+                  let itemTitle = card.querySelector(':scope > h3');
+                  if (!(itemTitle instanceof HTMLElement)) {
+                    itemTitle = node('h3');
+                    itemEyebrow.after(itemTitle);
+                  }
+                  let itemDescription = card.querySelector(':scope > p');
+                  if (!(itemDescription instanceof HTMLElement) && item.description) {
+                    itemDescription = node('p');
+                    card.append(itemDescription);
+                  }
+                  itemEyebrow.textContent = item.eyebrow || 'Направление';
+                  itemTitle.textContent = item.title;
+                  if (itemDescription instanceof HTMLElement) {
+                    itemDescription.textContent = item.description;
+                    itemDescription.hidden = !item.description;
+                  }
+                  retargetDirectionChild(itemEyebrow, 'eyebrow', item);
+                  retargetDirectionChild(itemTitle, 'title', item);
+                  retargetDirectionChild(itemDescription, 'description', item);
+                  currentById.set(item.id, card);
+                  return card;
+                });
+                grid.replaceChildren(...rows);
+              } else {
+                let links = shell.querySelector(':scope > .direction-related__links');
+                if (!(links instanceof HTMLElement)) {
+                  shell.querySelector(':scope > .direction-related__grid')?.remove();
+                  links = node('ul', 'direction-related__links');
+                  shell.append(links);
+                }
+                const currentById = links.__smu1DirectionRelatedRows instanceof Map
+                  ? links.__smu1DirectionRelatedRows
+                  : new Map();
+                Array.from(links.querySelectorAll(':scope > li')).forEach((row) => {
+                  const id = stableIdOf(row);
+                  if (id) currentById.set(id, row);
+                });
+                links.__smu1DirectionRelatedRows = currentById;
+                const rows = safeItems.map((item) => {
+                  const existingRow = currentById.get(item.id);
+                  const row = existingRow || node('li');
+                  if (!existingRow) copyEditorAttributes(row);
+                  row.dataset.smu1LiveDirectionId = item.id;
+                  let anchor = row.querySelector(':scope > .direction-related__link');
+                  if (!(anchor instanceof HTMLAnchorElement)) {
+                    anchor = node('a', 'direction-related__link');
+                    row.replaceChildren(anchor);
+                  }
+                  anchor.href = item.href;
+                  anchor.dataset.v2TransitionLabel = item.title;
+                  let itemEyebrow = anchor.querySelector(':scope > .direction-related__link-eyebrow');
+                  if (!(itemEyebrow instanceof HTMLElement)) {
+                    itemEyebrow = node('span', 'direction-related__link-eyebrow');
+                    anchor.prepend(itemEyebrow);
+                  }
+                  let linkCopy = anchor.querySelector(':scope > .direction-related__link-copy');
+                  if (!(linkCopy instanceof HTMLElement)) {
+                    linkCopy = node('span', 'direction-related__link-copy');
+                    itemEyebrow.after(linkCopy);
+                  }
+                  let itemTitle = linkCopy.querySelector(':scope > strong');
+                  if (!(itemTitle instanceof HTMLElement)) {
+                    itemTitle = node('strong');
+                    linkCopy.prepend(itemTitle);
+                  }
+                  let itemDescription = linkCopy.querySelector(':scope > span');
+                  if (!(itemDescription instanceof HTMLElement) && item.description) {
+                    itemDescription = node('span');
+                    linkCopy.append(itemDescription);
+                  }
+                  if (!anchor.querySelector(':scope > svg')) {
+                    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    icon.setAttribute('viewBox', '0 0 16 16');
+                    icon.setAttribute('aria-hidden', 'true');
+                    const iconPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    iconPath.setAttribute('d', 'M4 12 12 4M6 4h6v6');
+                    icon.append(iconPath);
+                    anchor.append(icon);
+                  }
+                  itemEyebrow.textContent = item.eyebrow || 'Направление';
+                  itemTitle.textContent = item.title;
+                  if (itemDescription instanceof HTMLElement) {
+                    itemDescription.textContent = item.description;
+                    itemDescription.hidden = !item.description;
+                  }
+                  retargetDirectionChild(itemEyebrow, 'eyebrow', item);
+                  retargetDirectionChild(itemTitle, 'title', item);
+                  retargetDirectionChild(itemDescription, 'description', item);
+                  currentById.set(item.id, row);
+                  return row;
+                });
+                links.replaceChildren(...rows);
+              }
+              if (element !== section) element.replaceWith(section);
+              return;
+            }
             if (value && typeof value === 'object' && value.__smu1ProjectDirectionProjection === true && element instanceof HTMLElement) {
+              const eyebrowText = String(value.eyebrow ?? element.dataset.smu1ProjectRelationsEyebrow ?? 'Направления проекта');
+              const titleText = String(value.title ?? element.dataset.smu1ProjectRelationsTitle ?? 'Связанные направления');
+              const updateProjectDirectionHeading = (host) => {
+                if (!(host instanceof HTMLElement)) return;
+                const header = host.matches('.v2-project-detail__section-heading')
+                  ? host
+                  : host.querySelector('.v2-project-detail__section-heading');
+                if (!(header instanceof HTMLElement)) return;
+                const eyebrow = header.querySelector(':scope > .hv2-eyebrow');
+                const heading = header.querySelector(':scope > #v2-project-directions-title');
+                if (eyebrow instanceof HTMLElement) eyebrow.textContent = eyebrowText;
+                if (heading instanceof HTMLElement) heading.textContent = titleText;
+              };
               const items = (Array.isArray(value.items) ? value.items : [])
-                .filter((item) => item && /^\/(?!\/)[a-z0-9а-яё/_-]*\/?$/iu.test(String(item.href || '')))
+                .filter((item) => item
+                  && /^[a-z0-9][a-z0-9-]*$/u.test(String(item.id || ''))
+                  && Number.isSafeInteger(item.sourceIndex)
+                  && item.sourceIndex >= 0
+                  && /^\/(?!\/)[a-z0-9а-яё/_-]*\/?$/iu.test(String(item.href || '')))
                 .slice()
                 .sort((left, right) => Number(left.order || 0) - Number(right.order || 0));
-              const current = Array.from(element.querySelectorAll(':scope > a'));
+              const copyEditorAttributes = (next) => {
+                for (const name of [
+                  'data-smu1-binding',
+                  'data-smu1-binding-id',
+                  'data-smu1-project-relations-eyebrow',
+                  'data-smu1-project-relations-title'
+                ]) {
+                  const attribute = element.getAttribute(name);
+                  if (attribute !== null) next.setAttribute(name, attribute);
+                }
+              };
+              if (!items.length) {
+                setSectionNavItemVisibility('project-directions', false);
+                if (element.matches('[data-smu1-editor-affordance="empty-project-directions"]')) return;
+                const affordance = document.createElement('button');
+                affordance.type = 'button';
+                affordance.className = 'v2-editor-fixed-affordance';
+                affordance.dataset.smu1EditorAffordance = 'empty-project-directions';
+                affordance.setAttribute('aria-label', 'Добавить связанные направления');
+                affordance.textContent = 'Добавить связанные направления';
+                copyEditorAttributes(affordance);
+                const host = element.closest('.v2-project-detail__directions') || element;
+                affordance.__smu1DetachedProjectDirectionsHost = host;
+                host.replaceWith(affordance);
+                return;
+              }
+              const detachedHost = element.__smu1DetachedProjectDirectionsHost;
+              const cachedGrid = detachedHost instanceof HTMLElement
+                ? detachedHost.querySelector('.v2-project-detail__direction-grid')
+                : null;
+              const grid = element.matches('.v2-project-detail__direction-grid')
+                ? element
+                : cachedGrid instanceof HTMLElement
+                  ? cachedGrid
+                  : document.createElement('div');
+              if (!grid.classList.contains('v2-project-detail__direction-grid')) {
+                grid.className = 'v2-project-detail__direction-grid';
+                grid.setAttribute('role', 'list');
+                copyEditorAttributes(grid);
+              }
+              const current = Array.from(grid.querySelectorAll(':scope > a'));
+              const cachedRows = grid.__smu1ProjectDirectionRows instanceof Map
+                ? grid.__smu1ProjectDirectionRows
+                : new Map();
+              current.forEach((row) => {
+                const id = String(row.dataset.smu1LiveDirectionId || '');
+                if (id) cachedRows.set(id, row);
+              });
+              grid.__smu1ProjectDirectionRows = cachedRows;
+              const currentById = new Map(current
+                .map((row) => [String(row.dataset.smu1LiveDirectionId || ''), row])
+                .filter(([id]) => id));
               const rows = items.map((item, index) => {
-                const row = current[index] instanceof HTMLAnchorElement
-                  ? current[index]
-                  : document.createElement('a');
+                const keyed = currentById.get(String(item.id || '')) || cachedRows.get(String(item.id || ''));
+                const row = keyed instanceof HTMLAnchorElement
+                  ? keyed
+                  : current[index] instanceof HTMLAnchorElement && !current[index].dataset.smu1LiveDirectionId
+                    ? current[index]
+                    : document.createElement('a');
+                if (!keyed && !(current[index] instanceof HTMLAnchorElement && !current[index].dataset.smu1LiveDirectionId)) {
+                  copyEditorAttributes(row);
+                }
                 row.setAttribute('role', 'listitem');
                 row.href = item.href;
                 row.dataset.v2TransitionLabel = String(item.label || '');
@@ -1107,9 +1820,51 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
                 }
                 context.textContent = String(item.context || '');
                 label.textContent = String(item.label || '');
+                const retargetChildBinding = (child, field) => {
+                  if (!(child instanceof HTMLElement)) return;
+                  let childBinding;
+                  try { childBinding = JSON.parse(child.getAttribute('data-smu1-binding') || 'null'); } catch { return; }
+                  if (!childBinding
+                    || childBinding.ownerCollection !== binding.ownerCollection
+                    || childBinding.recordSlug !== binding.recordSlug
+                    || childBinding.stableItemId !== `${binding.recordSlug}-${item.id}-direction-${field}`) return;
+                  childBinding.fieldPath = `presentation.relatedDirections[${item.sourceIndex}].${field}`;
+                  child.setAttribute('data-smu1-binding', JSON.stringify(childBinding));
+                };
+                retargetChildBinding(context, 'context');
+                retargetChildBinding(label, 'label');
+                cachedRows.set(String(item.id || ''), row);
                 return row;
               });
-              element.replaceChildren(...rows);
+              grid.replaceChildren(...rows);
+              setSectionNavItemVisibility('project-directions', true);
+              if (detachedHost instanceof HTMLElement && grid === cachedGrid) {
+                element.replaceWith(detachedHost);
+                updateProjectDirectionHeading(detachedHost);
+              } else if (grid !== element) {
+                const section = document.createElement('section');
+                section.className = 'v2-project-detail__directions';
+                section.id = 'project-directions';
+                section.setAttribute('aria-labelledby', 'v2-project-directions-title');
+                const shell = document.createElement('div');
+                shell.className = 'hv2-shell';
+                const header = document.createElement('header');
+                header.className = 'v2-project-detail__section-heading';
+                header.dataset.smu1EditorAffordance = 'project-directions-structural';
+                copyEditorAttributes(header);
+                const eyebrow = document.createElement('p');
+                eyebrow.className = 'hv2-eyebrow';
+                eyebrow.textContent = eyebrowText;
+                const heading = document.createElement('h2');
+                heading.id = 'v2-project-directions-title';
+                heading.textContent = titleText;
+                header.append(eyebrow, heading);
+                shell.append(header, grid);
+                section.append(shell);
+                element.replaceWith(section);
+              } else {
+                updateProjectDirectionHeading(grid.closest('.v2-project-detail__directions'));
+              }
               return;
             }
             if (value && typeof value === 'object' && value.__smu1CropProjection === true && element instanceof HTMLElement) {

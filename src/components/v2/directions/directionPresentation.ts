@@ -42,6 +42,28 @@ export function directionPresentationBinding(
   });
 }
 
+export function directionRelatedRelationsBinding(
+  url: URL,
+  owner: DirectionOwner,
+  currentRoute: string
+) {
+  return directionPresentationBinding(
+    url,
+    owner,
+    currentRoute,
+    'related.items',
+    'direction-related-relations',
+    {
+      stableItemId: `${owner.slug}-related-relations`,
+      label: 'Связанные страницы и порядок',
+      itemKind: 'object',
+      relationCollections: ['product-sections', 'product-categories', 'services'],
+      permissions: { edit: true, reorder: true, delete: false },
+      projection: { kind: 'relation', formula: 'ordered related items → canonical direction routes' }
+    }
+  );
+}
+
 export function directionSectionNavItems(
   url: URL,
   owner: DirectionOwner,
@@ -105,31 +127,35 @@ export function directionRelatedItems(
       const href = item.targetCollection === 'product-categories'
         ? `/${(record as ProductCategoryData).parentSectionSlug}/${record.slug}/`
         : `/${record.slug}/`;
-      const targetRoute = href;
       const local = (field: 'eyebrow' | 'title' | 'description', tool = 'short-text') =>
         directionPresentationBinding(
           url,
           owner,
           currentRoute,
           `related.items[${sourceIndex}].${field}`,
-          tool
+          tool,
+          { stableItemId: `${owner.slug}-${item.id}-related-${field}` }
         );
-      const titleEditor = item.title
-        ? local('title')
-        : adminBinding(url, {
-            renderer: { family: 'direction-related', variant: owner.slug },
-            owner: { collection: item.targetCollection, slug: record.slug },
-            fieldPath: 'title', stableItemId: `${owner.slug}-${item.id}-related-title`,
-            scope: 'shared', tool: 'short-text', affectedRoutes: [currentRoute, targetRoute, '/']
-          });
-      const descriptionEditor = typeof item.description === 'string'
-        ? local('description', 'long-text')
-        : adminBinding(url, {
-            renderer: { family: 'direction-related', variant: owner.slug },
-            owner: { collection: item.targetCollection, slug: record.slug },
-            fieldPath: 'shortDescription', stableItemId: `${owner.slug}-${item.id}-related-description`,
-            scope: 'shared', tool: 'long-text', affectedRoutes: [currentRoute, targetRoute, '/']
-          });
+      const titleEditor = directionPresentationBinding(
+        url, owner, currentRoute, `related.items[${sourceIndex}].title`, 'short-text', {
+          stableItemId: `${owner.slug}-${item.id}-related-title`,
+          projection: {
+            kind: 'fallback',
+            formula: `local title || ${item.targetCollection}.${record.slug}.title`,
+            fallback: `${item.targetCollection}.${record.slug}.title`
+          }
+        }
+      );
+      const descriptionEditor = directionPresentationBinding(
+        url, owner, currentRoute, `related.items[${sourceIndex}].description`, 'long-text', {
+          stableItemId: `${owner.slug}-${item.id}-related-description`,
+          projection: {
+            kind: 'fallback',
+            formula: `local description || ${item.targetCollection}.${record.slug}.shortDescription`,
+            fallback: `${item.targetCollection}.${record.slug}.shortDescription`
+          }
+        }
+      );
       const hrefEditor = adminDisposition(url, {
         kind: 'derived',
         reason: 'Адрес связи вычисляется из targetCollection, targetSlug и канонической route policy.',

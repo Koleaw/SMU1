@@ -92,6 +92,30 @@
   color: #fff;
 }
 
+.v2-editor-fixed-affordance {
+  position: fixed;
+  z-index: 24;
+  right: 18px;
+  bottom: 18px;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border: 1px dashed rgb(255 255 255 / 0.72);
+  border-radius: 999px;
+  color: #fff;
+  background: rgb(16 23 32 / 0.9);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.24);
+  cursor: pointer;
+  font: 700 12px/1.35 Manrope, "Segoe UI", Arial, sans-serif;
+}
+
+.v2-editor-fixed-affordance:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
 @media (max-width: 980px) {
   .v2-product-top__gallery--editor-affordance {
     right: 12px;
@@ -108,7 +132,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .v2-media-empty--editor-affordance {
+  .v2-media-empty--editor-affordance,
+  .v2-editor-fixed-affordance {
     transition: none !important;
   }
 }

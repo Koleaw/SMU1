@@ -134,6 +134,32 @@ export function declaredStructuredListFields(binding) {
   return normalize(binding?.itemFields);
 }
 
+export function relationStructuralHeaderFields(tool) {
+  if (tool === 'direction-related-relations') {
+    return Object.freeze([
+      Object.freeze({ owner: 'current', path: 'directionPresentation.related.eyebrow', label: 'Надзаголовок блока', scope: 'local' }),
+      Object.freeze({ owner: 'current', path: 'directionPresentation.related.title', label: 'Заголовок блока', scope: 'local' })
+    ]);
+  }
+  if (tool === 'project-direction-relations') {
+    return Object.freeze([
+      Object.freeze({ owner: 'site-settings:global', path: 'projectUi.detailDirectionsEyebrow', label: 'Надзаголовок блока', scope: 'global' }),
+      Object.freeze({ owner: 'site-settings:global', path: 'projectUi.detailDirectionsTitle', label: 'Заголовок блока', scope: 'global' })
+    ]);
+  }
+  return Object.freeze([]);
+}
+
+export function hasNewlyVisibleBindingRows(previousRows, nextRows) {
+  const previousIds = new Set((Array.isArray(previousRows) ? previousRows : [])
+    .map((row) => String(row?.binding?.bindingId || ''))
+    .filter(Boolean));
+  return (Array.isArray(nextRows) ? nextRows : []).some((row) => {
+    const bindingId = String(row?.binding?.bindingId || '');
+    return Boolean(bindingId) && !previousIds.has(bindingId);
+  });
+}
+
 export function createStructuredListItem(fields, position, { randomUUID = () => crypto.randomUUID() } = {}) {
   let item = {};
   for (const field of declaredStructuredListFields({ itemFields: fields })) {
@@ -261,6 +287,460 @@ export function moveRelationValue(items, index, destination) {
   if (!Number.isFinite(target)) return Array.isArray(items) ? [...items] : [];
   current.splice(target, 0, item);
   return current;
+}
+
+const DIRECTION_RELATED_COLLECTIONS = new Set(['product-sections', 'product-categories', 'services']);
+
+export function resolveDirectionRelatedCanvasProjection({
+  items,
+  pages,
+  readRecordContent = () => undefined,
+  siteBase = '/',
+  eyebrow = 'Дальше по задаче',
+  title = 'Связанные направления'
+} = {}) {
+  const descriptors = Array.isArray(pages) ? pages : [];
+  const pageByOwner = new Map(descriptors.flatMap((page) => (
+    DIRECTION_RELATED_COLLECTIONS.has(String(page?.collection || ''))
+      && /^[a-z0-9][a-z0-9-]*$/u.test(String(page?.slug || ''))
+      && typeof page.route === 'string'
+      ? [[`${page.collection}:${page.slug}`, page]]
+      : []
+  )));
+  const dependencies = new Map();
+  const projectedItems = (Array.isArray(items) ? items : [])
+    .map((item, sourceIndex) => ({ item, sourceIndex }))
+    .filter(({ item }) => item && item.isActive !== false)
+    .filter(({ item }) => (
+      DIRECTION_RELATED_COLLECTIONS.has(String(item.targetCollection || ''))
+      && /^[a-z0-9][a-z0-9-]*$/u.test(String(item.targetSlug || ''))
+      && /^[a-z0-9][a-z0-9-]*$/u.test(String(item.id || ''))
+    ))
+    .sort((left, right) => Number(left.item.order || 0) - Number(right.item.order || 0)
+      || String(left.item.id).localeCompare(String(right.item.id), 'ru')
+      || left.sourceIndex - right.sourceIndex)
+    .flatMap(({ item, sourceIndex }) => {
+      const collection = String(item.targetCollection);
+      const slug = String(item.targetSlug);
+      const ownerKey = `${collection}:${slug}`;
+      const page = pageByOwner.get(ownerKey);
+      if (!page?.route) return [];
+      const content = readRecordContent(collection, slug);
+      if (content === undefined) {
+        dependencies.set(ownerKey, { collection, slug });
+        return [];
+      }
+      if (content?.isActive === false) return [];
+      if (collection === 'product-categories') {
+        const sectionSlug = String(content.parentSectionSlug || page.parentSlug || '');
+        const sectionPage = pageByOwner.get(`product-sections:${sectionSlug}`);
+        if (sectionPage) {
+          const sectionContent = readRecordContent('product-sections', sectionSlug);
+          if (sectionContent === undefined) {
+            dependencies.set(`product-sections:${sectionSlug}`, { collection: 'product-sections', slug: sectionSlug });
+            return [];
+          }
+          if (sectionContent.isActive === false) return [];
+        }
+      }
+      const localTitle = typeof item.title === 'string' && item.title.trim() ? item.title : '';
+      const inheritedTitle = String(content?.title || page.title || slug);
+      const localDescription = typeof item.description === 'string' ? item.description : null;
+      const inheritedDescription = String(
+        content?.shortDescription
+        || page.entry?.shortDescription
+        || page.entry?.summary?.shortDescription
+        || ''
+      );
+      return [{
+        id: String(item.id),
+        targetCollection: collection,
+        targetSlug: slug,
+        eyebrow: String(item.eyebrow || ''),
+        title: localTitle || inheritedTitle,
+        titleSource: localTitle ? 'local' : 'inherited',
+        description: localDescription ?? inheritedDescription,
+        descriptionSource: localDescription !== null ? 'local' : 'inherited',
+        href: withBase(siteBase, normalizeRoute(page.route)),
+        order: Number(item.order || 0),
+        sourceIndex
+      }];
+    });
+  return Object.freeze({
+    complete: dependencies.size === 0,
+    value: Object.freeze({
+      __smu1DirectionRelatedProjection: true,
+      eyebrow: String(eyebrow || ''),
+      title: String(title || ''),
+      items: projectedItems
+    }),
+    dependencies: Object.freeze([...dependencies.values()])
+  });
+}
+
+function canvasLiveBindingHash(value) {
+  let result = 0x811c9dc5;
+  for (const character of String(value || '')) {
+    result ^= character.charCodeAt(0);
+    result = Math.imul(result, 0x01000193) >>> 0;
+  }
+  return result.toString(16).padStart(8, '0');
+}
+
+export function liveProductBindingId(templateBindingId, targetSlug) {
+  return `live-product:${targetSlug}:${canvasLiveBindingHash(templateBindingId)}`;
+}
+
+export function liveSectionBindingId(parentBindingId, templateBindingId) {
+  return `live-section:${canvasLiveBindingHash(parentBindingId)}:${canvasLiveBindingHash(templateBindingId)}`;
+}
+
+const sameCanvasBindingValue = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+
+export function reconcileCanvasBindingCandidate({
+  candidate,
+  registered,
+  template,
+  structuralParent,
+  frameRevision,
+  currentRoute,
+  readRecordContent = () => undefined,
+  resolvePage = () => undefined,
+  isDynamicItemAllowed = () => false
+} = {}) {
+  const id = String(candidate?.bindingId || '');
+  const collection = String(candidate?.ownerCollection || candidate?.owner?.collection || '');
+  const slug = String(candidate?.recordSlug || candidate?.owner?.slug || '');
+  const fieldPath = String(candidate?.fieldPath || '');
+  const basic = id.length > 8 && id.length <= 240
+    && /^[a-z0-9-]+$/u.test(slug)
+    && /^[A-Za-z0-9_.\[\]-]{1,300}$/u.test(fieldPath)
+    && candidate?.renderer?.version === 'h6-v1'
+    && Number(candidate?.currentDraftRevision) === Number(frameRevision);
+  if (!basic) return null;
+  if (registered) {
+    if (candidate.bindingId !== registered.bindingId
+      || candidate.ownerCollection !== registered.ownerCollection
+      || candidate.recordSlug !== registered.recordSlug
+      || !sameCanvasBindingValue(candidate.owner, registered.owner)
+      || !sameCanvasBindingValue(candidate.renderer, registered.renderer)
+      || candidate.stableItemId !== registered.stableItemId
+      || candidate.role !== registered.role
+      || candidate.scope !== registered.scope
+      || candidate.tool !== registered.tool) return null;
+    if (candidate.fieldPath === registered.fieldPath) {
+      return { ...clone(registered), currentDraftRevision: Number(frameRevision) };
+    }
+    const patterns = [
+      {
+        expression: /^presentation\.relatedDirections\[(\d+)\]\.(context|label)$/u,
+        arrayPath: 'presentation.relatedDirections',
+        stable: (item, field) => `${slug}-${item.id}-direction-${field}`
+      },
+      {
+        expression: /^directionPresentation\.related\.items\[(\d+)\]\.(eyebrow|title|description)$/u,
+        arrayPath: 'directionPresentation.related.items',
+        stable: (item, field) => `${slug}-${item.id}-related-${field}`
+      }
+    ];
+    const rule = patterns.find(({ expression }) => expression.test(candidate.fieldPath) && expression.test(registered.fieldPath));
+    if (!rule) return null;
+    const nextMatch = candidate.fieldPath.match(rule.expression);
+    const previousMatch = registered.fieldPath.match(rule.expression);
+    if (!nextMatch || !previousMatch || nextMatch[2] !== previousMatch[2]) return null;
+    const content = readRecordContent(collection, slug);
+    const item = getAtPath(content, `${rule.arrayPath}[${Number(nextMatch[1])}]`);
+    if (!item?.id || candidate.stableItemId !== rule.stable(item, nextMatch[2])) return null;
+    return { ...clone(registered), fieldPath: candidate.fieldPath, currentDraftRevision: Number(frameRevision) };
+  }
+  if (!template || candidate.liveTemplateBindingId !== template.bindingId) return null;
+  const sectionPromotion = candidate.dynamicItemId === 'section'
+    || /^section-title:(?:category|section)$/u.test(String(candidate.dynamicItemId || ''));
+  if (sectionPromotion) {
+    const titleMode = /^section-title:(category|section)$/u.exec(String(candidate.dynamicItemId || ''))?.[1] || '';
+    const expectedTitlePath = titleMode
+      ? `productUi.standardRelated${titleMode === 'category' ? 'Category' : 'Section'}Title`
+      : '';
+    if (!structuralParent
+      || candidate.dynamicParentBindingId !== structuralParent.bindingId
+      || structuralParent.tool !== 'relation-list'
+      || structuralParent.ownerCollection !== 'products'
+      || structuralParent.fieldPath !== 'relatedProductSlugs'
+      || template.ownerCollection !== 'site-settings'
+      || template.scope !== 'global'
+      || (titleMode && (template.fieldPath !== expectedTitlePath || template.tool !== 'heading'))
+      || (candidate.dynamicItemId !== 'section' && !isDynamicItemAllowed(structuralParent, candidate.dynamicItemId))
+      || candidate.bindingId !== liveSectionBindingId(structuralParent.bindingId, template.bindingId)
+      || candidate.route !== template.route
+      || candidate.fieldPath !== template.fieldPath
+      || !sameCanvasBindingValue(candidate.renderer, template.renderer)
+      || candidate.ownerCollection !== template.ownerCollection
+      || candidate.recordSlug !== template.recordSlug
+      || !sameCanvasBindingValue(candidate.owner, template.owner)
+      || candidate.stableItemId !== template.stableItemId
+      || candidate.role !== template.role
+      || candidate.scope !== template.scope
+      || candidate.tool !== template.tool) return null;
+    return {
+      ...clone(template),
+      bindingId: candidate.bindingId,
+      currentDraftRevision: Number(frameRevision),
+      liveTemplateBindingId: template.bindingId,
+      dynamicParentBindingId: structuralParent.bindingId,
+      dynamicItemId: candidate.dynamicItemId
+    };
+  }
+  const targetSlug = String(candidate.liveTargetSlug || '');
+  const page = resolvePage('products', targetSlug);
+  if (!page
+    || page.collection !== 'products'
+    || typeof page.route !== 'string') return null;
+  if (!structuralParent
+    || candidate.dynamicParentBindingId !== structuralParent.bindingId
+    || candidate.dynamicItemId !== targetSlug
+    || structuralParent.tool !== 'relation-list'
+    || structuralParent.ownerCollection !== 'products'
+    || structuralParent.fieldPath !== 'relatedProductSlugs'
+    || !isDynamicItemAllowed(structuralParent, targetSlug)) return null;
+  const targetContent = readRecordContent('products', targetSlug);
+  if (!targetContent || targetContent.isActive === false || targetContent.showInCatalog === false) return null;
+  const expectedRenderer = template.ownerCollection === 'products' && template.renderer?.family === 'catalog-card'
+    ? { ...template.renderer, variant: targetContent.presentationType === 'premium' ? 'premium-product' : 'standard-product' }
+    : template.renderer;
+  if (candidate.bindingId !== liveProductBindingId(template.bindingId, targetSlug)
+    || candidate.route !== template.route
+    || candidate.fieldPath !== template.fieldPath
+    || !sameCanvasBindingValue(candidate.renderer, expectedRenderer)
+    || candidate.role !== template.role
+    || candidate.scope !== template.scope
+    || candidate.tool !== template.tool) return null;
+  if (template.ownerCollection === 'products') {
+    if (collection !== 'products'
+      || slug !== targetSlug
+      || candidate.owner?.collection !== 'products'
+      || candidate.owner?.slug !== targetSlug
+      || candidate.stableItemId !== targetSlug) return null;
+    if (candidate.tool === 'reorder-item'
+      && (candidate.parentSlug !== page.parentSlug || candidate.zoneId !== page.parentSlug)) return null;
+  } else if (collection !== template.ownerCollection
+    || slug !== template.recordSlug
+    || !sameCanvasBindingValue(candidate.owner, template.owner)
+    || candidate.stableItemId !== template.stableItemId) return null;
+  const trusted = clone(template);
+  trusted.bindingId = candidate.bindingId;
+  trusted.currentDraftRevision = Number(frameRevision);
+  trusted.liveTemplateBindingId = template.bindingId;
+  trusted.liveTargetSlug = targetSlug;
+  trusted.dynamicParentBindingId = structuralParent.bindingId;
+  trusted.dynamicItemId = targetSlug;
+  if (template.ownerCollection === 'products') {
+    trusted.owner = { collection: 'products', slug: targetSlug };
+    trusted.ownerCollection = 'products';
+    trusted.recordSlug = targetSlug;
+    trusted.stableItemId = targetSlug;
+    trusted.renderer = expectedRenderer;
+    trusted.affectedRoutes = [...new Set([currentRoute, page.route])];
+    if (trusted.tool === 'reorder-item') {
+      trusted.parentSlug = page.parentSlug;
+      trusted.zoneId = page.parentSlug;
+    }
+  }
+  return trusted;
+}
+
+export function synchronizeIndexedRelationBindingState({
+  registry,
+  rows,
+  currentBinding,
+  readRecordContent = () => undefined
+} = {}) {
+  const nextRegistry = new Map(registry instanceof Map ? registry : []);
+  const nextRows = Array.isArray(rows) ? rows.map((row) => ({ ...row })) : [];
+  const rules = [
+    {
+      expression: /^presentation\.relatedDirections\[\d+\]\.(context|label)$/u,
+      arrayPath: 'presentation.relatedDirections',
+      stable: (binding, item, field) => `${binding.recordSlug}-${item.id}-direction-${field}`,
+      path: (index, field) => `presentation.relatedDirections[${index}].${field}`
+    },
+    {
+      expression: /^directionPresentation\.related\.items\[\d+\]\.(eyebrow|title|description)$/u,
+      arrayPath: 'directionPresentation.related.items',
+      stable: (binding, item, field) => `${binding.recordSlug}-${item.id}-related-${field}`,
+      path: (index, field) => `directionPresentation.related.items[${index}].${field}`
+    }
+  ];
+  const dormantIds = new Set();
+  for (const [id, binding] of nextRegistry) {
+    const rule = rules.find(({ expression }) => expression.test(String(binding.fieldPath || '')));
+    if (!rule) continue;
+    const field = String(binding.fieldPath).match(rule.expression)?.[1];
+    const content = readRecordContent(binding.ownerCollection, binding.recordSlug);
+    const items = getAtPath(content, rule.arrayPath);
+    if (!field || !Array.isArray(items)) continue;
+    const index = items.findIndex((item) => item?.id && binding.stableItemId === rule.stable(binding, item, field));
+    if (index < 0) {
+      dormantIds.add(id);
+      continue;
+    }
+    const fieldPath = rule.path(index, field);
+    if (fieldPath === binding.fieldPath) continue;
+    const next = { ...binding, fieldPath };
+    nextRegistry.set(id, next);
+    for (const row of nextRows) if (row.binding.bindingId === id) row.binding = next;
+  }
+  const visibleRows = nextRows.filter((row) => !dormantIds.has(row.binding.bindingId));
+  const selectedId = currentBinding?.binding?.bindingId || '';
+  const nextCurrent = dormantIds.has(selectedId)
+    ? null
+    : currentBinding && nextRegistry.has(selectedId)
+      ? { ...currentBinding, binding: nextRegistry.get(selectedId) }
+      : currentBinding || null;
+  return Object.freeze({ registry: nextRegistry, rows: visibleRows, currentBinding: nextCurrent, dormantIds });
+}
+
+export function resolveProductRelationsCanvasProjection({
+  relatedProductSlugs,
+  currentProductSlug,
+  currentCategorySlug,
+  pages,
+  readRecordContent = () => undefined,
+  resolveMedia = (_collection, _slug, value) => value,
+  siteBase = '/'
+} = {}) {
+  const publicCatalogProjectionCopy = (value) => {
+    if (typeof value !== 'string') return '';
+    const copy = value.trim();
+    if (!copy) return '';
+    return [
+      /^описание первого экрана[.!]?$/iu,
+      /^описание страницы[.!]?$/iu,
+      /^краткое описание(?: типа)? изделий[.!]?$/iu,
+      /^заголовок блока[.!]?$/iu,
+      /^текст блока[.!]?$/iu,
+      /^текст[.!]?$/iu,
+      /^lorem ipsum(?:[\s\S]*)$/iu,
+      /^placeholder(?: text| copy)?[.!]?$/iu,
+      /^dev(?:elopment)?[\s/_-]*(?:copy|text|placeholder)[.!]?$/iu,
+      /^v2[\s/_-]*(?:copy|text|placeholder)[.!]?$/iu
+    ].some((pattern) => pattern.test(copy)) ? '' : copy;
+  };
+  const productPages = (Array.isArray(pages) ? pages : [])
+    .filter((page) => page?.collection === 'products')
+    .filter((page) => /^[a-z0-9][a-z0-9-]*$/u.test(String(page.slug || '')))
+    .filter((page) => typeof page.route === 'string');
+  const pageBySlug = new Map(productPages.map((page) => [page.slug, page]));
+  const categoryPageBySlug = new Map((Array.isArray(pages) ? pages : [])
+    .filter((page) => page?.collection === 'product-categories' && typeof page.route === 'string')
+    .map((page) => [page.slug, page]));
+  const sectionPageBySlug = new Map((Array.isArray(pages) ? pages : [])
+    .filter((page) => page?.collection === 'product-sections' && typeof page.route === 'string')
+    .map((page) => [page.slug, page]));
+  const explicit = Array.isArray(relatedProductSlugs) && relatedProductSlugs.length > 0;
+  const manual = Array.isArray(relatedProductSlugs)
+    ? [...new Set(relatedProductSlugs.map((slug) => String(slug || '').trim())
+      .filter((slug) => /^[a-z0-9][a-z0-9-]*$/u.test(slug) && slug !== currentProductSlug))]
+    : [];
+  const selectedSlugs = (explicit
+    ? manual
+    : productPages
+        .filter((page) => page.parentSlug === currentCategorySlug && page.slug !== currentProductSlug)
+        .sort((left, right) => Number(left.entry?.order ?? Number.MAX_SAFE_INTEGER) - Number(right.entry?.order ?? Number.MAX_SAFE_INTEGER)
+          || String(left.title || '').localeCompare(String(right.title || ''), 'ru'))
+        .map((page) => page.slug))
+    .filter((slug) => pageBySlug.has(slug));
+  const dependencies = [];
+  const addDependency = (collection, slug) => {
+    if (!dependencies.some((item) => item.collection === collection && item.slug === slug)) {
+      dependencies.push({ collection, slug });
+    }
+  };
+  const items = selectedSlugs.flatMap((slug) => {
+    const page = pageBySlug.get(slug);
+    const content = readRecordContent('products', slug);
+    if (content === undefined) {
+      addDependency('products', slug);
+      return [];
+    }
+    if (content.isActive === false || content.showInCatalog === false) return [];
+    const categorySlug = String(content.productCategorySlug || page.parentSlug || '');
+    const categoryPage = categoryPageBySlug.get(categorySlug);
+    if (categoryPage) {
+      const categoryContent = readRecordContent('product-categories', categorySlug);
+      if (categoryContent === undefined) {
+        addDependency('product-categories', categorySlug);
+        return [];
+      }
+      if (categoryContent.isActive === false) return [];
+      const sectionSlug = String(categoryContent.parentSectionSlug || categoryPage.parentSlug || '');
+      const sectionPage = sectionPageBySlug.get(sectionSlug);
+      if (sectionPage) {
+        const sectionContent = readRecordContent('product-sections', sectionSlug);
+        if (sectionContent === undefined) {
+          addDependency('product-sections', sectionSlug);
+          return [];
+        }
+        if (sectionContent.isActive === false) return [];
+      }
+    }
+    const galleryPath = (item) => typeof item === 'string'
+      ? item.trim()
+      : item && typeof item === 'object' && typeof item.src === 'string'
+        ? item.src.trim()
+        : '';
+    const gallery = [content.image, ...(Array.isArray(content.gallery) ? content.gallery : [])]
+      .map(galleryPath)
+      .filter((item) => item && !/\/assets\/images\/placeholders\//iu.test(item));
+    const rawImage = [...new Set(gallery)][0] || '';
+    const primaryMaterial = Array.isArray(content.materials)
+      ? content.materials.find((item) => typeof item === 'string' && item.trim())?.trim() || ''
+      : '';
+    const mode = String(content.priceMode || 'on_request');
+    const amount = content.priceFrom;
+    const currency = content.currency === 'RUB' ? '₽' : String(content.currency || '');
+    const price = ['from', 'exact'].includes(mode) && typeof amount === 'number'
+      ? `${mode === 'from' ? 'от ' : ''}${amount.toLocaleString('ru-RU')} ${currency}`.trim()
+      : mode === 'on_request' ? 'Цена по запросу' : 'Цена не указана';
+    return [{
+      slug,
+      href: withBase(siteBase, normalizeRoute(page.route)),
+      title: String(content.title || page.title || slug),
+      description: publicCatalogProjectionCopy(content.shortDescription),
+      material: primaryMaterial,
+      price,
+      categorySlug,
+      presentationType: content.presentationType === 'premium' ? 'premium' : 'standard',
+      image: rawImage ? resolveMedia('products', slug, rawImage) : null,
+      imageView: content.imageView && typeof content.imageView === 'object' ? clone(content.imageView) : null
+    }];
+  }).slice(0, 4);
+  return Object.freeze({
+    complete: dependencies.length === 0,
+    explicit,
+    value: Object.freeze({
+      __smu1ProductRelationsProjection: true,
+      relatedTitleMode: items.every((item) => item.categorySlug === currentCategorySlug) ? 'category' : 'section',
+      items
+    }),
+    dependencies: Object.freeze(dependencies)
+  });
+}
+
+export function resolveCatalogCardMaterialProjection(productContent, globalContent) {
+  const material = (Array.isArray(productContent?.materials) ? productContent.materials : [])
+    .find((item) => typeof item === 'string' && item.trim())?.trim() || '';
+  if (material) return Object.freeze({ status: 'value', value: material, dependencies: [] });
+  if (globalContent === undefined) {
+    return Object.freeze({
+      status: 'pending',
+      dependencies: [Object.freeze({ collection: 'site-settings', slug: 'global' })]
+    });
+  }
+  return Object.freeze({
+    status: 'value',
+    value: String(globalContent?.productUi?.cardMaterialsMissingLabel || 'Материалы не указаны'),
+    dependencies: []
+  });
 }
 
 function iconFor(descriptor) {
@@ -536,6 +1016,7 @@ export async function startVisualEditor() {
     currentBinding: null,
     bindingRows: [],
     bindingRegistry: new Map(),
+    bindingTemplateRegistry: new Map(),
     frameRevision: 0,
     bridgeSequence: -1,
     parentSequence: 0,
@@ -943,6 +1424,7 @@ export async function startVisualEditor() {
     state.currentBinding = null;
     state.bindingRows = [];
     state.bindingRegistry = new Map();
+    state.bindingTemplateRegistry = new Map();
     state.projectionDependencyFailures.clear();
     state.frameRevision += 1;
     state.bridgeSequence = -1;
@@ -1117,7 +1599,26 @@ export async function startVisualEditor() {
     return next;
   }
 
+  function synchronizeIndexedRelationBindings() {
+    const synchronized = synchronizeIndexedRelationBindingState({
+      registry: state.bindingRegistry,
+      rows: state.bindingRows,
+      currentBinding: state.currentBinding,
+      readRecordContent: projectionRecordContent
+    });
+    state.bindingRegistry = synchronized.registry;
+    state.bindingRows = synchronized.rows;
+    const selectionRemoved = state.currentBinding && !synchronized.currentBinding;
+    state.currentBinding = synchronized.currentBinding;
+    if (selectionRemoved) {
+      closeInlineEditor();
+      closeInspector({ restoreFocus: false });
+    }
+    if (synchronized.dormantIds.size) renderOverlay();
+  }
+
   function projectDraftToFrame() {
+    synchronizeIndexedRelationBindings();
     const projections = [];
     const dependencies = [];
     for (const row of state.bindingRows) {
@@ -1130,6 +1631,57 @@ export async function startVisualEditor() {
         continue;
       }
       const content = record.history.snapshot().value;
+      if (row.binding.tool === 'direction-related-relations') {
+        const related = getAtPath(content, 'directionPresentation.related') || {};
+        const directionResolution = resolveDirectionRelatedCanvasProjection({
+          items: getAtPath(content, row.binding.fieldPath),
+          pages: state.pages,
+          readRecordContent: projectionRecordContent,
+          siteBase,
+          eyebrow: related.eyebrow,
+          title: related.title
+        });
+        if (directionResolution.complete) projections.push({ bindingId: row.binding.bindingId, value: directionResolution.value });
+        dependencies.push(...directionResolution.dependencies);
+        continue;
+      }
+      if (row.binding.tool === 'relation-list'
+        && row.binding.ownerCollection === 'products'
+        && row.binding.fieldPath === 'relatedProductSlugs'
+        && row.binding.renderer?.family === 'product-detail'
+        && Array.isArray(row.binding.relationCollections)
+        && row.binding.relationCollections.length === 1
+        && row.binding.relationCollections[0] === 'products') {
+        const productResolution = resolveProductRelationsCanvasProjection({
+          relatedProductSlugs: getAtPath(content, row.binding.fieldPath),
+          currentProductSlug: row.binding.recordSlug,
+          currentCategorySlug: String(content.productCategorySlug || state.currentPage?.parentSlug || ''),
+          pages: state.pages,
+          readRecordContent: projectionRecordContent,
+          resolveMedia: (collection, slug, value) => canvasMediaItem(
+            state.records.get(recordKey(collection, slug)),
+            value
+          ),
+          siteBase
+        });
+        dependencies.push(...productResolution.dependencies);
+        if (productResolution.complete) {
+          projections.push({ bindingId: row.binding.bindingId, value: productResolution.value });
+        }
+        continue;
+      }
+      if (row.binding.renderer?.family === 'catalog-card'
+        && row.binding.ownerCollection === 'products'
+        && row.binding.fieldPath === 'materials'
+        && row.binding.tool === 'list') {
+        const materialResolution = resolveCatalogCardMaterialProjection(
+          content,
+          projectionRecordContent('site-settings', 'global')
+        );
+        if (materialResolution.status === 'pending') dependencies.push(...materialResolution.dependencies);
+        else projections.push({ bindingId: row.binding.bindingId, value: materialResolution.value });
+        continue;
+      }
       const relationResolution = resolveRelationMediaProjection(row.binding, projectionRecordContent);
       if (relationResolution.status === 'pending') {
         dependencies.push(...relationResolution.dependencies);
@@ -1164,21 +1716,32 @@ export async function startVisualEditor() {
       }
       if (row.binding.tool === 'project-direction-relations') {
         const items = getAtPath(content, row.binding.fieldPath);
+        const settingsContent = projectionRecordContent('site-settings', 'global');
+        if (!settingsContent) {
+          dependencies.push({ collection: 'site-settings', slug: 'global' });
+          continue;
+        }
         projections.push({
           bindingId: row.binding.bindingId,
           value: {
             __smu1ProjectDirectionProjection: true,
+            eyebrow: String(getAtPath(settingsContent, 'projectUi.detailDirectionsEyebrow') || ''),
+            title: String(getAtPath(settingsContent, 'projectUi.detailDirectionsTitle') || ''),
             items: Array.isArray(items)
-              ? items.map((item) => ({
+              ? items.map((item, sourceIndex) => ({
                   id: String(item?.id || ''),
                   label: String(item?.label || ''),
                   context: String(item?.context || ''),
                   href: String(item?.href || ''),
-                  order: Number(item?.order || 0)
+                  order: Number(item?.order || 0),
+                  sourceIndex
                 }))
               : []
           }
         });
+        continue;
+      }
+      if (/^(?:presentation\.relatedDirections|directionPresentation\.related\.items)\[\d+\]\.(?:context|label|eyebrow|title|description)$/u.test(row.binding.fieldPath)) {
         continue;
       }
       const resolution = resolveBindingProjection(row.binding, projectionRecordContent);
@@ -1266,6 +1829,7 @@ export async function startVisualEditor() {
     if (binding.tool === 'price') return 'Цена';
     if (binding.tool === 'relation-select') return binding.label || 'Выбрать связанный материал';
     if (binding.tool === 'relation-list') return binding.label || 'Связанные материалы';
+    if (binding.tool === 'direction-related-relations') return binding.label || 'Связанные страницы';
     return binding.label || fieldLabel(binding.fieldPath);
   }
 
@@ -1290,8 +1854,44 @@ export async function startVisualEditor() {
         && Number(candidate?.currentDraftRevision) === state.frameRevision;
       if (!valid) continue;
       seen.add(id);
-      if (establish) nextRegistry.set(id, clone(candidate));
-      const registered = nextRegistry.get(id);
+      let registered = nextRegistry.get(id);
+      if (establish) {
+        registered = clone(candidate);
+        nextRegistry.set(id, registered);
+      } else {
+        registered = reconcileCanvasBindingCandidate({
+          candidate,
+          registered,
+          template: state.bindingTemplateRegistry.get(String(candidate?.liveTemplateBindingId || '')),
+          structuralParent: state.bindingRegistry.get(String(candidate?.dynamicParentBindingId || '')),
+          frameRevision: state.frameRevision,
+          currentRoute: state.currentPage?.route || '',
+          readRecordContent: projectionRecordContent,
+          resolvePage: (ownerCollection, ownerSlug) => state.pages.find((page) => (
+            page.collection === ownerCollection && page.slug === ownerSlug
+          )),
+          isDynamicItemAllowed: (parent, targetSlug) => {
+            const parentContent = projectionRecordContent(parent.ownerCollection, parent.recordSlug);
+            const result = resolveProductRelationsCanvasProjection({
+              relatedProductSlugs: getAtPath(parentContent, parent.fieldPath),
+              currentProductSlug: parent.recordSlug,
+              currentCategorySlug: String(parentContent?.productCategorySlug || state.currentPage?.parentSlug || ''),
+              pages: state.pages,
+              readRecordContent: projectionRecordContent,
+              siteBase
+            });
+            if (!result.complete) return false;
+            const headingMatch = /^section-title:(category|section)$/u.exec(targetSlug);
+            return headingMatch
+              ? result.value.relatedTitleMode === headingMatch[1]
+              : result.value.items.some((item) => item.slug === targetSlug);
+          }
+        });
+        if (registered) {
+          nextRegistry.set(id, registered);
+          if (state.currentBinding?.binding?.bindingId === id) state.currentBinding.binding = registered;
+        }
+      }
       if (!registered) continue;
       const rect = row?.rect;
       if (!rect || !['left', 'top', 'right', 'bottom', 'width', 'height'].every((key) => Number.isFinite(Number(rect[key])))) continue;
@@ -1299,6 +1899,48 @@ export async function startVisualEditor() {
     }
     if (establish) state.bindingRegistry = nextRegistry;
     return result;
+  }
+
+  function registerBindingTemplates(candidates) {
+    const allowedCollections = new Set([...COLLECTIONS, 'navigation']);
+    const registry = new Map();
+    for (const candidate of Array.isArray(candidates) ? candidates : []) {
+      const id = String(candidate?.bindingId || '');
+      const collection = String(candidate?.ownerCollection || candidate?.owner?.collection || '');
+      const slug = String(candidate?.recordSlug || candidate?.owner?.slug || '');
+      const fieldPath = String(candidate?.fieldPath || '');
+      const valid = id.length > 8 && id.length <= 240
+        && !registry.has(id)
+        && allowedCollections.has(collection)
+        && /^[a-z0-9-]+$/u.test(slug)
+        && /^[A-Za-z0-9_.\[\]-]{1,300}$/u.test(fieldPath)
+        && candidate?.renderer?.version === 'h6-v1'
+        && Number(candidate?.currentDraftRevision) === state.frameRevision
+        && candidate.route === frame.contentWindow?.location?.pathname;
+      if (valid) registry.set(id, clone(candidate));
+    }
+    state.bindingTemplateRegistry = registry;
+  }
+
+  function registerBindingDefinitions(candidates) {
+    const allowedCollections = new Set([...COLLECTIONS, 'navigation']);
+    const registry = new Map();
+    for (const candidate of Array.isArray(candidates) ? candidates : []) {
+      const id = String(candidate?.bindingId || '');
+      const collection = String(candidate?.ownerCollection || candidate?.owner?.collection || '');
+      const slug = String(candidate?.recordSlug || candidate?.owner?.slug || '');
+      const fieldPath = String(candidate?.fieldPath || '');
+      const valid = id.length > 8 && id.length <= 240
+        && !registry.has(id)
+        && allowedCollections.has(collection)
+        && /^[a-z0-9-]+$/u.test(slug)
+        && /^[A-Za-z0-9_.\[\]-]{1,300}$/u.test(fieldPath)
+        && candidate?.renderer?.version === 'h6-v1'
+        && Number(candidate?.currentDraftRevision) === state.frameRevision
+        && candidate.route === frame.contentWindow?.location?.pathname;
+      if (valid) registry.set(id, clone(candidate));
+    }
+    state.bindingRegistry = registry;
   }
 
   function renderOverlay() {
@@ -1383,7 +2025,7 @@ export async function startVisualEditor() {
         });
         overlay.append(handle, moves);
       }
-      if (binding.tool === 'relation-select' || binding.tool === 'relation-list') {
+      if (binding.tool === 'relation-select' || binding.tool === 'relation-list' || binding.tool === 'direction-related-relations') {
         const relationHandle = document.createElement('button');
         relationHandle.type = 'button';
         relationHandle.className = 've-relation-handle';
@@ -1427,7 +2069,9 @@ export async function startVisualEditor() {
         canvasHint.textContent = `Совместимый адрес. Каноническая страница: ${state.currentPage.canonicalTarget}`;
         return;
       }
-      state.bindingRows = registeredBindingRows(message.bindings, { establish: true });
+      registerBindingTemplates(message.bindingTemplates);
+      registerBindingDefinitions(message.bindingDefinitions);
+      state.bindingRows = registeredBindingRows(message.bindings);
       renderOverlay();
       projectDraftToFrame();
       canvasHint.textContent = state.bindingRows.length
@@ -1439,13 +2083,46 @@ export async function startVisualEditor() {
     }
     if (message.type === 'geometry') {
       if (aliasPreview) return;
-      state.bindingRows = registeredBindingRows(message.bindings);
+      const registrySize = state.bindingRegistry.size;
+      const nextRows = registeredBindingRows(message.bindings);
+      const hasNewlyVisibleBinding = hasNewlyVisibleBindingRows(state.bindingRows, nextRows);
+      state.bindingRows = nextRows;
       renderOverlay();
+      if (state.bindingRegistry.size > registrySize || hasNewlyVisibleBinding) queueMicrotask(projectDraftToFrame);
       return;
     }
     if (message.type === 'select' && message.binding && message.rect) {
       if (aliasPreview) return;
-      const registered = state.bindingRegistry.get(String(message.binding.bindingId || ''));
+      const id = String(message.binding.bindingId || '');
+      const registered = reconcileCanvasBindingCandidate({
+        candidate: message.binding,
+        registered: state.bindingRegistry.get(id),
+        template: state.bindingTemplateRegistry.get(String(message.binding.liveTemplateBindingId || '')),
+        structuralParent: state.bindingRegistry.get(String(message.binding.dynamicParentBindingId || '')),
+        frameRevision: state.frameRevision,
+        currentRoute: state.currentPage?.route || '',
+        readRecordContent: projectionRecordContent,
+        resolvePage: (ownerCollection, ownerSlug) => state.pages.find((page) => (
+          page.collection === ownerCollection && page.slug === ownerSlug
+        )),
+        isDynamicItemAllowed: (parent, targetSlug) => {
+          const parentContent = projectionRecordContent(parent.ownerCollection, parent.recordSlug);
+          const result = resolveProductRelationsCanvasProjection({
+            relatedProductSlugs: getAtPath(parentContent, parent.fieldPath),
+            currentProductSlug: parent.recordSlug,
+            currentCategorySlug: String(parentContent?.productCategorySlug || state.currentPage?.parentSlug || ''),
+            pages: state.pages,
+            readRecordContent: projectionRecordContent,
+            siteBase
+          });
+          if (!result.complete) return false;
+          const headingMatch = /^section-title:(category|section)$/u.exec(targetSlug);
+          return headingMatch
+            ? result.value.relatedTitleMode === headingMatch[1]
+            : result.value.items.some((item) => item.slug === targetSlug);
+        }
+      });
+      if (registered) state.bindingRegistry.set(id, registered);
       if (registered) void selectBinding(registered, message.rect);
       return;
     }
@@ -1906,11 +2583,30 @@ export async function startVisualEditor() {
     requestAnimationFrame(() => chooser.querySelector('button,select')?.focus());
   }
 
-  function renderProjectDirectionRelationsInspector(record) {
+  async function renderProjectDirectionRelationsInspector(record) {
+    const selectedBindingId = state.currentBinding?.binding?.bindingId || '';
+    let globalRecord;
+    try {
+      globalRecord = await ensureRecord('site-settings', 'global');
+    } catch (error) {
+      notifications.toast(error.message || 'Не удалось открыть общие подписи блока.', 'error', 0);
+      return;
+    }
+    if (state.currentBinding?.binding?.bindingId !== selectedBindingId) return;
+    const heading = document.createElement('fieldset');
+    heading.className = 've-relation-chooser';
+    const legend = document.createElement('legend');
+    legend.textContent = 'Общие подписи блока';
+    const hint = document.createElement('p');
+    hint.className = 've-field-hint';
+    hint.textContent = 'Источник — общие настройки проекта. Изменение влияет на заголовок блока на всех страницах выполненных объектов.';
+    heading.append(legend, hint, ...relationStructuralHeaderFields('project-direction-relations').map((field) => (
+      fieldControl(globalRecord, field.path, field.label)
+    )));
     const candidates = state.pages.filter((item) => item.kind === 'direction' || item.collection === 'services');
     const chooser = projectDirectionChooser(record, candidates);
     chooser.dataset.relationTool = 'project-direction-relations';
-    inspectorForm.append(chooser);
+    inspectorForm.append(heading, chooser);
     requestAnimationFrame(() => chooser.querySelector('button,select')?.focus());
   }
 
@@ -2100,7 +2796,8 @@ export async function startVisualEditor() {
     else if (binding.tool === 'crop') renderCropInspector(record, binding);
     else if (binding.tool === 'relation-select') renderRelationSelectInspector(record, binding);
     else if (binding.tool === 'relation-list') renderRelationListInspector(record, binding);
-    else if (binding.tool === 'project-direction-relations') renderProjectDirectionRelationsInspector(record);
+    else if (binding.tool === 'direction-related-relations') renderDirectionRelatedRelationsInspector(record);
+    else if (binding.tool === 'project-direction-relations') await renderProjectDirectionRelationsInspector(record);
     else if (binding.tool === 'list' || Array.isArray(value)) renderListInspector(record, binding);
     else if (binding.tool === 'link' && binding.hrefPath) {
       renderTextInspector(record, binding, value, { multiline: false });
@@ -2952,6 +3649,29 @@ export async function startVisualEditor() {
     return section;
   }
 
+  function directionRelatedCandidates(record) {
+    return state.pages.filter((item) => (
+      ['product-sections', 'product-categories', 'services'].includes(item.collection)
+      && item.emitted !== false
+      && item.isActive !== false
+      && !(item.collection === record.collection && item.slug === record.slug)
+    ));
+  }
+
+  function renderDirectionRelatedRelationsInspector(record) {
+    const heading = document.createElement('fieldset');
+    heading.className = 've-relation-chooser';
+    const legend = document.createElement('legend');
+    legend.textContent = 'Заголовок блока';
+    const hint = document.createElement('p');
+    hint.className = 've-field-hint';
+    hint.textContent = 'Эти подписи принадлежат только текущей странице. Они доступны здесь и при первом добавлении блока из пустого состояния.';
+    heading.append(legend, hint, ...relationStructuralHeaderFields('direction-related-relations').map((field) => (
+      fieldControl(record, field.path, field.label)
+    )));
+    inspectorForm.append(heading, directionRelatedChooser(record, directionRelatedCandidates(record)));
+  }
+
   function focalPositionControl(record, path, label) {
     const section = document.createElement('fieldset');
     section.className = 've-relation-chooser';
@@ -3286,12 +4006,7 @@ export async function startVisualEditor() {
       settingsBody.append(projectDirectionChooser(record, candidates));
     }
     if (content.directionPresentation && ['product-sections', 'services'].includes(record.collection)) {
-      const candidates = state.pages.filter((item) => (
-        ['product-sections', 'product-categories', 'services'].includes(item.collection)
-        && item.emitted !== false
-        && item.isActive !== false
-        && !(item.collection === record.collection && item.slug === record.slug)
-      ));
+      const candidates = directionRelatedCandidates(record);
       settingsBody.append(directionSectionNavEditor(record), directionRelatedChooser(record, candidates));
     }
     const aliases = state.pages.filter((item) => item.canonicalTarget && normalizeRoute(item.canonicalTarget) === page?.route);
