@@ -13,6 +13,7 @@ import {
   resolveV2TransitionMode,
   v2PathnameWithBase
 } from '../../src/utils/v2TransitionRouting.mjs';
+import { resolveBrowserFinalMountRequest } from './browser-final-base-path.mjs';
 
 const root = process.cwd();
 const distRoot = path.join(root, 'dist');
@@ -376,20 +377,28 @@ const clearFault = () => configureFault('', '', 0);
 if (!options.externalOrigin) {
   const distInfo = await stat(distRoot).catch(() => null);
   if (!distInfo?.isDirectory()) throw new Error('dist is missing; run npm run build before H2 browser QA.');
+  const mounts = [
+    { kind: 'primary-dist', basePath: primaryBase, root: distRoot },
+    ...(baseBuildRoot
+      ? [{ kind: 'temporary-base-build', basePath: options.githubBase, root: baseBuildRoot }]
+      : [])
+  ];
   server = createServer(async (request, response) => {
     try {
       const requestUrl = new URL(request.url || '/', origin);
       const pathname = decodeURIComponent(requestUrl.pathname);
-      const basePrefix = options.githubBase === '/' ? '' : options.githubBase.slice(0, -1);
-      const primaryPrefix = primaryBase === '/' ? '' : primaryBase.slice(0, -1);
-      const matchesMount = (prefix) => !prefix || pathname === prefix || pathname.startsWith(`${prefix}/`);
-      const usesBaseBuild = Boolean(baseBuildRoot && (pathname === basePrefix || pathname.startsWith(`${basePrefix}/`)));
-      const usesPrimaryBuild = matchesMount(primaryPrefix);
-      const mountRoot = usesBaseBuild ? baseBuildRoot : distRoot;
-      const mountPrefix = usesBaseBuild ? basePrefix : primaryPrefix;
-      const mountedPath = usesBaseBuild || usesPrimaryBuild
-        ? pathname.slice(mountPrefix.length) || '/'
-        : '/__outside-configured-base__';
+      const resolvedMount = resolveBrowserFinalMountRequest(mounts, pathname);
+      if (resolvedMount.status === 'outside-base') {
+        const notFound = Buffer.from('Not found');
+        response.writeHead(404, {
+          'cache-control': 'no-cache',
+          'content-length': String(notFound.length),
+          'content-type': 'text/plain; charset=utf-8'
+        }).end(request.method === 'HEAD' ? undefined : notFound);
+        return;
+      }
+      const mountRoot = resolvedMount.mount.root;
+      const mountedPath = resolvedMount.logicalPathname;
       let filename = mountedPath === '/404.html'
         ? path.join(mountRoot, '404.html')
         : path.resolve(mountRoot, `.${mountedPath}`);

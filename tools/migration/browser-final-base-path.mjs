@@ -38,6 +38,43 @@ export function withoutBrowserFinalBasePath(pathname, basePath = '/') {
   return value.slice(base.length) || '/';
 }
 
+export function createBrowserFinalMountTable(mounts) {
+  if (!Array.isArray(mounts)) {
+    throw new TypeError('Browser QA mounts must be an array.');
+  }
+
+  const seenBasePaths = new Set();
+  const normalized = mounts.flatMap((mount, index) => {
+    if (!mount || typeof mount !== 'object' || !mount.root) {
+      throw new TypeError(`Browser QA mount ${index} must provide a root.`);
+    }
+    const basePath = normalizeBrowserFinalBasePath(mount.basePath);
+    if (seenBasePaths.has(basePath)) return [];
+    seenBasePaths.add(basePath);
+    return [{
+      ...mount,
+      basePath,
+      root: path.resolve(String(mount.root)),
+      inputIndex: index
+    }];
+  });
+
+  normalized.sort((left, right) => right.basePath.length - left.basePath.length
+    || left.inputIndex - right.inputIndex);
+  return Object.freeze(normalized.map(({ inputIndex: _inputIndex, ...mount }) => Object.freeze(mount)));
+}
+
+export function resolveBrowserFinalMountRequest(mounts, pathname) {
+  const table = createBrowserFinalMountTable(mounts);
+  for (const mount of table) {
+    const logicalPathname = withoutBrowserFinalBasePath(pathname, mount.basePath);
+    if (logicalPathname !== null) {
+      return Object.freeze({ status: 'ok', logicalPathname, mount });
+    }
+  }
+  return Object.freeze({ status: 'outside-base', logicalPathname: null, mount: null });
+}
+
 export function resolveBrowserFinalDistRequest(distRoot, pathname, basePath = '/') {
   const root = path.resolve(distRoot);
   const logicalPathname = withoutBrowserFinalBasePath(pathname, basePath);
