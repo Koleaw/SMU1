@@ -681,20 +681,26 @@ const analyzeH3MediaPixels = async (filename, geometry) => {
     .toBuffer({ resolveWithObject: true });
   let darkPixels = 0;
   let chromaticPixels = 0;
+  let luminanceSum = 0;
+  let luminanceSquaredSum = 0;
   for (let index = 0; index < data.length; index += info.channels) {
     const red = data[index];
     const green = data[index + 1];
     const blue = data[index + 2];
     const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    luminanceSum += luminance;
+    luminanceSquaredSum += luminance * luminance;
     if (luminance < 210) darkPixels += 1;
     if (Math.max(red, green, blue) - Math.min(red, green, blue) > 18) chromaticPixels += 1;
   }
   const pixels = data.length / info.channels;
+  const luminanceMean = luminanceSum / pixels;
   return {
     crop: { left, top, width, height },
     pixels,
     darkRatio: darkPixels / pixels,
-    chromaticRatio: chromaticPixels / pixels
+    chromaticRatio: chromaticPixels / pixels,
+    luminanceStdDev: Math.sqrt(Math.max(0, luminanceSquaredSum / pixels - luminanceMean ** 2))
   };
 };
 const clearOriginStorage = async () => {
@@ -1903,7 +1909,11 @@ const transitionFilmstripAudit = async () => {
     && revealingMediaVisual.placeholderRect?.width > 0
     && revealingMediaVisual.placeholderRect?.height > 0
     && revealingMediaVisual.pixels?.darkRatio > 0.08
-    && revealingMediaVisual.pixels?.chromaticRatio > 0.05), {
+    // Topiary cut-outs and dark industrial photographs are intentionally
+    // desaturated. Chroma alone is therefore not proof that the decoded
+    // placeholder painted; accept either colour or real luminance detail.
+    && (revealingMediaVisual.pixels?.chromaticRatio > 0.05
+      || revealingMediaVisual.pixels?.luminanceStdDev > 8)), {
       filmstripCriticalPath,
       faultHits: revealingMediaVisual?.fault?.hits ?? 0,
       revealingMediaVisual
@@ -2134,7 +2144,8 @@ const fullBleedTransitionMediaAudit = async () => {
     && result.visual.capture?.width === 1440
     && result.visual.capture?.height === 900
     && result.visual.pixels?.darkRatio > 0.08
-    && result.visual.pixels?.chromaticRatio > 0.05
+    && (result.visual.pixels?.chromaticRatio > 0.05
+      || result.visual.pixels?.luminanceStdDev > 8)
   )), { results });
 };
 
