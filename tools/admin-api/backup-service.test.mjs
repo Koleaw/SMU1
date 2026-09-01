@@ -7,14 +7,6 @@ import { createBackupService } from './backup-service.mjs';
 
 const OWNER = Object.freeze({ owner: 'pavel', recoveryClientId: 'backup-browser', sessionFingerprint: 'session-backup' });
 
-async function waitFor(predicate, timeoutMs = 15_000) {
-  const started = Date.now();
-  while (!await predicate()) {
-    if (Date.now() - started > timeoutMs) throw new Error('Timed out waiting for backup queue.');
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-}
-
 async function fixture(t, options = {}) {
   const base = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-backup-service-'));
   const repoRoot = path.join(base, 'repo');
@@ -64,7 +56,7 @@ test('automatic backup is non-blocking, checksummed, deduplicated and retained s
   const queued = fx.service.scheduleAfterSave({ transactionId: 'tx-one' });
   assert.deepEqual(queued, { queued: true, transactionId: 'tx-one' });
   assert.equal((await fx.service.status()).pending, 1);
-  await waitFor(async () => (await fx.service.status()).pending === 0);
+  await fx.service.waitForIdle();
   const firstStatus = await fx.service.status();
   assert.equal(firstStatus.lastAttempt.status, 'success');
   assert.equal(firstStatus.lastSuccess.transactionId, 'tx-one');
@@ -73,14 +65,14 @@ test('automatic backup is non-blocking, checksummed, deduplicated and retained s
 
   await fs.writeFile(path.join(fx.repoRoot, 'src', 'content', 'products', 'bench.json'), '{"slug":"bench","title":"Новая лавка"}\n');
   fx.service.scheduleAfterSave({ transactionId: 'tx-two' });
-  await waitFor(async () => (await fx.service.status()).pending === 0);
+  await fx.service.waitForIdle();
   const second = (await fx.service.list()).backups[0];
   const secondManifest = JSON.parse(await fs.readFile(path.join(fx.backupRoot, 'snapshots', second.snapshotId, 'manifest.json'), 'utf8'));
   assert.ok(secondManifest.addedBlobBytes > 0);
   assert.ok(secondManifest.addedBlobBytes < secondManifest.totalBytes, 'unchanged navigation/media blobs are reused');
 
   fx.service.scheduleAfterSave({ transactionId: 'tx-three' });
-  await waitFor(async () => (await fx.service.status()).pending === 0);
+  await fx.service.waitForIdle();
   assert.equal((await fx.service.list()).backups.length, 2, 'retention removes the oldest manifest');
   assert.equal((await fx.service.verify({ snapshotId: second.snapshotId })).ok, true);
 });
@@ -196,7 +188,7 @@ test('backup failure never throws into Save path and remains visible in status',
   const fx = await fixture(t, { maxBytes: 1024 * 1024 });
   await fs.writeFile(path.join(fx.repoRoot, 'public', 'uploads', 'too-large.jpg'), Buffer.alloc(2 * 1024 * 1024, 7));
   assert.doesNotThrow(() => fx.service.scheduleAfterSave({ transactionId: 'tx-disk-full' }));
-  await waitFor(async () => (await fx.service.status()).pending === 0);
+  await fx.service.waitForIdle();
   const status = await fx.service.status();
   assert.equal(status.lastAttempt.status, 'failed');
   assert.equal(status.lastError.code, 'BACKUP_QUOTA_EXCEEDED');

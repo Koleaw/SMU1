@@ -746,8 +746,12 @@ export function createBackupService(options = {}) {
     return exportPortable({ snapshotId: manifest.snapshotId });
   }
 
-  async function close() {
+  async function waitForIdle() {
     await queue.catch(() => {});
+  }
+
+  async function close() {
+    await waitForIdle();
   }
 
   return Object.freeze({
@@ -761,6 +765,7 @@ export function createBackupService(options = {}) {
     exportPortable,
     previewRestore,
     applyRestore,
+    waitForIdle,
     close,
     backupRoot,
     runtimeDir
