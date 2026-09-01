@@ -194,3 +194,34 @@ test('backup failure never throws into Save path and remains visible in status',
   assert.equal(status.lastError.code, 'BACKUP_QUOTA_EXCEEDED');
   assert.equal(await fs.readFile(path.join(fx.repoRoot, 'src', 'content', 'products', 'bench.json'), 'utf8'), '{"slug":"bench","title":"Лавка"}\n');
 });
+
+test('status persistence failure cannot wedge the automatic backup queue', async (t) => {
+  const fx = await fixture(t);
+  const statusPath = path.join(fx.repoRoot, '.admin-runtime', 'backup', 'status.json');
+  await fs.rm(statusPath, { force: true });
+  await fs.mkdir(statusPath);
+
+  fx.service.scheduleAfterSave({ transactionId: 'tx-status-write-failure' });
+  await fx.service.waitForIdle();
+
+  const status = await fx.service.status();
+  assert.equal(status.pending, 0);
+  assert.equal(status.lastAttempt.status, 'failed');
+  assert.ok(status.lastError?.code);
+  assert.equal((await fx.service.list()).backups.length, 0);
+});
+
+test('burst backup status writes are serialized and persist the terminal state', async (t) => {
+  const fx = await fixture(t);
+  for (const transactionId of ['tx-burst-one', 'tx-burst-two', 'tx-burst-three']) {
+    fx.service.scheduleAfterSave({ transactionId });
+  }
+  await fx.service.waitForIdle();
+
+  const statusPath = path.join(fx.repoRoot, '.admin-runtime', 'backup', 'status.json');
+  const persisted = JSON.parse(await fs.readFile(statusPath, 'utf8'));
+  assert.equal(persisted.pending, 0);
+  assert.equal(persisted.lastAttempt.status, 'success');
+  assert.equal(persisted.lastAttempt.transactionId, 'tx-burst-three');
+  assert.equal((await fx.service.list()).backups.length, 3);
+});

@@ -250,6 +250,7 @@ export function createBackupService(options = {}) {
   const restoreEngine = options.restoreEngine || createTransactionEngine({ repoRoot, runtimeDir: restoreRuntime, lockAcquireTimeoutMs: 5_000 });
   let initialized = false;
   let queue = Promise.resolve();
+  let statusWriteQueue = Promise.resolve();
   let pending = 0;
   let lastManifest = null;
   let status = {
@@ -268,8 +269,11 @@ export function createBackupService(options = {}) {
     return (value instanceof Date ? value : new Date(value)).toISOString();
   }
 
-  async function persistStatus() {
-    await atomicWriteJson(statusPath, status);
+  function persistStatus() {
+    const snapshot = clone(status);
+    const write = statusWriteQueue.then(() => atomicWriteJson(statusPath, snapshot));
+    statusWriteQueue = write.catch(() => {});
+    return write;
   }
 
   async function initialize() {
@@ -499,9 +503,9 @@ export function createBackupService(options = {}) {
     status = { ...status, pending, lastAttempt: { transactionId: transactionId || null, status: 'queued', at: timestamp() } };
     void persistStatus().catch(() => {});
     const task = queue.then(async () => {
-      status = { ...status, lastAttempt: { transactionId: transactionId || null, status: 'running', at: timestamp() } };
-      await persistStatus();
       try {
+        status = { ...status, lastAttempt: { transactionId: transactionId || null, status: 'running', at: timestamp() } };
+        await persistStatus();
         const manifest = await createSnapshot({ transactionId, backupKind: 'automatic' });
         status = {
           ...status,
