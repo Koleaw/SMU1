@@ -14,6 +14,10 @@ import {
   v2PathnameWithBase
 } from '../../src/utils/v2TransitionRouting.mjs';
 import { resolveBrowserFinalMountRequest } from './browser-final-base-path.mjs';
+import {
+  evaluateEntranceClsDelta,
+  evaluateTransitionFrameEvidence
+} from './h2-motion-evidence-contracts.mjs';
 
 const root = process.cwd();
 const distRoot = path.join(root, 'dist');
@@ -1163,7 +1167,15 @@ const captureTransitionReplays = async ({
     if (remaining > 0) await delay(remaining);
     const actualOffset = Date.now() - eventRow.at;
     const state = await stateSnapshot();
-    const withinTolerance = Math.abs(actualOffset - offset) <= toleranceMs;
+    const timingEvidence = evaluateTransitionFrameEvidence({
+      offset,
+      actualOffset,
+      requestedOffsets: offsets,
+      phase,
+      pageState: state?.pageState,
+      toleranceMs
+    });
+    const withinTolerance = timingEvidence.ok;
     const filename = await screenshot(`${prefix}-${String(offset).padStart(4, '0')}ms`, {
       directory,
       flow,
@@ -1186,7 +1198,7 @@ const captureTransitionReplays = async ({
       finalState: await stateSnapshot(),
       tokenEvents: [...readTokenEvents()]
     };
-    frames.push({ offset, actualOffset, withinTolerance, filename, state, eventRow });
+    frames.push({ offset, actualOffset, withinTolerance, timingEvidence, filename, state, eventRow });
   }
   return { frames, lastRun };
 };
@@ -2306,7 +2318,14 @@ const calmTransitionFilmstripAudit = async () => {
     && activeFrames.every((frame) => frame.withinTolerance)
     && from.rootSectionId === to.rootSectionId,
   { sourceHref, targetHref, from, to, coverStart, revealStart, timings,
-    files: activeFrames.map((frame) => frame.filename) });
+    frames: activeFrames.map((frame) => ({
+      offset: frame.offset,
+      actualOffset: frame.actualOffset,
+      withinTolerance: frame.withinTolerance,
+      timingEvidence: frame.timingEvidence,
+      pageState: frame.state?.pageState || '',
+      filename: frame.filename
+    })) });
   record('transition.calm-opacity-only-no-drawing', forbiddenFrames.length === 0 && nonOpacityFrames.length === 0
     && state.sheetBackground === 'rgb(11, 29, 54)' && !trace.some((row) => row.pageVariant === 'h3'),
   { forbiddenFrames, nonOpacityFrames, final: state,
@@ -2684,6 +2703,19 @@ const entranceFilmstripAudit = async () => {
   traceEvidence.push({ flow: 'entrance-direct-filmstrip', trace });
   const state = finalReplay?.usableState || await stateSnapshot();
   const lifecycle = lifecycleContract(trace, { expectedSource: 'direct', expectedScope: 'hero' });
+  const activationId = lifecycle.activations[0]?.activationId || '';
+  const entranceReady = traceEvents(trace, 'v2:entrance-ready').find((row) => row.activationId === activationId)
+    || traceEvents(trace, 'v2:entrance-ready')[0]
+    || null;
+  const entranceStart = traceEvents(trace, 'v2:entrance-start').find((row) => row.activationId === activationId)
+    || traceEvents(trace, 'v2:entrance-start')[0]
+    || null;
+  const clsEvidence = evaluateEntranceClsDelta({
+    readyLayoutShift: entranceReady?.layoutShift,
+    startLayoutShift: entranceStart?.layoutShift,
+    finalLayoutShift: state.layoutShift,
+    maximumDelta: 0.001
+  });
   const frameAt = (offset) => frames.find((frame) => frame.offset === offset)?.state;
   const role = (frame, name) => frame?.entranceRoles.find((item) => item.role === name);
   const f0 = frameAt(0);
@@ -2724,8 +2756,8 @@ const entranceFilmstripAudit = async () => {
   });
   record('entrance.direct-lifecycle-and-cleanup', lifecycle.ok && state.entranceMarkCount === 1
     && cleanupContract(state) && state.bodyOpacity === 1 && state.mainOpacity === 1
-    && state.horizontalOverflow <= 1 && state.layoutShift <= .001,
-  { lifecycle, state });
+    && state.horizontalOverflow <= 1 && clsEvidence.ok,
+  { lifecycle, cls: clsEvidence, state });
   record('entrance.domcontentloaded-pageshow-idempotent', lifecycle.activations.length === 1
     && trace.filter((row) => row.kind === 'dom-content-loaded').length === 1
     && trace.filter((row) => row.kind === 'pageshow' && row.persisted === false).length === 1,
