@@ -9,7 +9,10 @@ import {
   validatedExactRouteManifestInput
 } from './exact-prerender-integration.mjs';
 
-const route = (pathname) => ({ pathname, route: { component: `${pathname || 'root'}.astro`, prerender: true } });
+const route = (pathname, routePattern = pathname) => ({
+  pathname,
+  route: { component: `${pathname || 'root'}.astro`, prerender: true, route: routePattern }
+});
 const manifest = (expectations) => ({
   version: 1,
   kind: 'smu1-exact-route-closure',
@@ -32,7 +35,7 @@ test('exact route closure normalizes trailing slash only and rejects unsafe or a
 });
 
 test('targeted production SSG selection enumerates full topology but emits only requested HTML', () => {
-  const paths = [route('/'), route('/catalog/'), route('/catalog/item/'), route('/project/'), route('/404.html')];
+  const paths = [route('/'), route('/catalog/'), route('/catalog/item/'), route('/project/'), route('/404', '/404')];
   const selected = selectExactStaticPaths(paths, manifest([
     { route: '/catalog/item/', expected: 'html' },
     { route: '/project/', expected: 'html' }
@@ -52,12 +55,13 @@ test('validated manifest input remains strict when the Astro hook validates it a
 });
 
 test('not-found expectation proves absence from topology and selects the canonical 404 renderer', () => {
-  const paths = [route('/'), route('/active/'), route('/404.html')];
+  const paths = [route('/'), route('/active/'), route('/404', '/404')];
   const selected = selectExactStaticPaths(paths, manifest([
     { route: '/removed/', expected: 'not-found' },
     { route: '/active/', expected: 'html' }
   ]));
-  assert.deepEqual(selected.selected.map((entry) => entry.pathname), ['/active/', '/404.html']);
+  assert.deepEqual(selected.selected.map((entry) => entry.pathname), ['/active/', '/404']);
+  assert.deepEqual(selected.evidence.selectedRoutes, ['/404.html', '/active']);
   assert.throws(
     () => selectExactStaticPaths(paths, manifest([{ route: '/active/', expected: 'not-found' }])),
     (error) => error.code === 'EXACT_NOT_FOUND_ROUTE_PRESENT'

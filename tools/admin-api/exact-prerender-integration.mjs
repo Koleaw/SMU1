@@ -81,7 +81,13 @@ export function selectExactStaticPaths(paths, manifest) {
     throw new ExactPrerenderManifestError('EXACT_PRERENDER_PATHS_INVALID', 'Astro prerenderer вернул некорректный route set.');
   }
   const normalized = normalizeExactRouteManifest(manifest);
-  const pathRows = paths.map((entry) => ({ entry, normalizedRoute: normalizeExactRoute(entry.pathname) }));
+  const pathRows = paths.map((entry) => {
+    const normalizedPathname = normalizeExactRoute(entry.pathname);
+    const normalizedRoute = normalizedPathname === '/404' && entry.route?.route === '/404'
+      ? '/404.html'
+      : normalizedPathname;
+    return { entry, normalizedRoute };
+  });
   const emitted = new Set(pathRows.map((row) => row.normalizedRoute));
   const requested = new Set();
   const topologyChecks = [];
@@ -108,7 +114,9 @@ export function selectExactStaticPaths(paths, manifest) {
     requested.add('/404.html');
   }
   const selected = pathRows.filter((row) => requested.has(row.normalizedRoute)).map((row) => row.entry);
-  const selectedRoutes = [...new Set(selected.map((entry) => normalizeExactRoute(entry.pathname)))].sort();
+  const selectedRoutes = [...new Set(pathRows
+    .filter((row) => requested.has(row.normalizedRoute))
+    .map((row) => row.normalizedRoute))].sort();
   return {
     selected,
     evidence: {
