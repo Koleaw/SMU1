@@ -43,6 +43,16 @@ test('local production canvas excludes the unrelated Astro developer toolbar', a
   assert.match(config, /devToolbar:\s*\{\s*enabled:\s*false\s*\}/u);
 });
 
+test('isolated admin browser sandbox includes every runtime release dependency', async () => {
+  const source = await readFile(new URL('../admin-api/admin-browser-roundtrip.mjs', import.meta.url), 'utf8');
+  assert.match(source, /cp\(path\.join\(root, 'tools', 'release'\),\s*path\.join\(sandbox, 'tools', 'release'\),\s*\{ recursive: true \}\)/u);
+});
+
+test('secondary editor keeps reloadable History API routes on its own document', async () => {
+  const source = await readFile(new URL('../../src/admin/shell/AdminShell.astro', import.meta.url), 'utf8');
+  assert.match(source, /const adminBase = withBase\('\/admin\/all-materials\/'\);/u);
+});
+
 test('visual acceptance origin parser is loopback-only and accepts no URL credentials or paths', () => {
   assert.equal(parseLoopbackOrigin('http://127.0.0.1:4321'), 'http://127.0.0.1:4321');
   assert.equal(parseLoopbackOrigin('http://localhost:4321/'), 'http://localhost:4321');

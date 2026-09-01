@@ -277,6 +277,18 @@ async function startSafetyProxy({ backendOrigin, siteOrigin, port, stats }) {
       responseHeaders['x-admin-qa-proxy'] = 'isolated';
       response.writeHead(backendResponse.status, responseHeaders).end(method === 'HEAD' ? undefined : responseBody);
       row.status = backendResponse.status;
+      if (backendResponse.status >= 400 && String(backendResponse.headers.get('content-type') || '').includes('application/json')) {
+        try {
+          const errorPayload = JSON.parse(responseBody.toString('utf8'));
+          row.error = {
+            code: String(errorPayload?.code || ''),
+            message: String(errorPayload?.error || errorPayload?.message || '').slice(0, 500),
+            issuePaths: Array.isArray(errorPayload?.validationIssues)
+              ? errorPayload.validationIssues.map((issue) => String(issue?.path || '')).filter(Boolean).slice(0, 20)
+              : []
+          };
+        } catch { /* Non-JSON diagnostics stay status-only. */ }
+      }
       stats.forwarded.push(row);
 
       if (/^\/api\/admin\/content\/products(?:\/|$)/u.test(incoming.pathname)
@@ -408,7 +420,8 @@ async function prepareSandbox(tempRoot, sourceProduct) {
   await Promise.all([
     cp(path.join(root, 'src', 'admin'), path.join(sandbox, 'src', 'admin'), { recursive: true }),
     cp(path.join(root, 'src', 'pages', 'admin'), path.join(sandbox, 'src', 'pages', 'admin'), { recursive: true }),
-    cp(path.join(root, 'tools', 'admin-api'), path.join(sandbox, 'tools', 'admin-api'), { recursive: true })
+    cp(path.join(root, 'tools', 'admin-api'), path.join(sandbox, 'tools', 'admin-api'), { recursive: true }),
+    cp(path.join(root, 'tools', 'release'), path.join(sandbox, 'tools', 'release'), { recursive: true })
   ]);
   await copyIfPresent(
     path.join(root, 'public', 'assets', 'brand', 'favicon.svg'),
@@ -1340,6 +1353,17 @@ try {
     && draftActive.value === false && draftCatalog.value === false
     && !await exists(draftFile), { draftRoute, draftActive, draftCatalog, diskExists: await exists(draftFile) });
 
+  const secondaryRouteBeforeReload = await evaluate(`(() => ({
+    pathname: location.pathname,
+    secondaryShell: Boolean(document.querySelector('#adminApp')),
+    visualShell: Boolean(document.querySelector('#veApp'))
+  }))()`);
+  requireCheck('admin.browser-only-draft-route-stays-in-secondary-editor',
+    secondaryRouteBeforeReload.pathname === '/admin/all-materials/'
+      && secondaryRouteBeforeReload.secondaryShell
+      && !secondaryRouteBeforeReload.visualShell,
+    secondaryRouteBeforeReload);
+
   await delay(700);
   runtimePhase = 'draft-reload';
   const documentTimeOrigin = await evaluate('performance.timeOrigin');
@@ -1351,6 +1375,8 @@ try {
     const catalog = document.querySelector('[data-field-path="showInCatalog"] input')?.checked;
     return document.readyState === 'complete'
       && !document.querySelector('#adminApp')?.hidden
+      && location.pathname === '/admin/all-materials/'
+      && !document.querySelector('#veApp')
       && title === ${JSON.stringify(draftTitle)}
       && active === false && catalog === false
       && !document.querySelector('#adminRecoveryDialog')?.open

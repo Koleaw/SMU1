@@ -17,7 +17,10 @@ const {
 } = Astro.props;
 const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE || '/api/admin';
 const adminHealthMarker = import.meta.env.PUBLIC_ADMIN_HEALTH_MARKER || '';
-const adminBase = withBase('/admin/');
+// This shell is the secondary bulk/technical editor. Keep its History API
+// routes on the same real document so a reload cannot fall through to the
+// page-first editor at /admin/ and lose the visible recovery context.
+const adminBase = withBase('/admin/all-materials/');
 const brandIcon = withBase('/assets/brand/favicon.svg');
 ---
 
