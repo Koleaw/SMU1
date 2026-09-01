@@ -51,6 +51,9 @@ test('CDP keyboard Enter activates focused native controls', { skip: !preferredC
   const server = await createDistServer({ distRoot: root });
   const browser = await new CdpBrowser().start();
   try {
+    const [assignedPort] = (await readFile(path.join(browser.profileDir, 'DevToolsActivePort'), 'utf8')).trim().split(/\r?\n/u);
+    assert.equal(browser.debugPort, Number(assignedPort));
+    assert.ok(browser.debugPort > 0 && browser.debugPort <= 65_535);
     await browser.navigate(server.origin);
     await browser.evaluate(`document.querySelector('#action').focus()`);
     await browser.dispatchKey('Enter', { code: 'Enter' });

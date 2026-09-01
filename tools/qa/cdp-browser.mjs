@@ -149,6 +149,7 @@ export class CdpBrowser {
     this.safetyIntercepts = [];
     this.child = null;
     this.profileDir = '';
+    this.debugPort = 0;
     this.socket = null;
     this.id = 0;
     this.pending = new Map();
@@ -158,19 +159,30 @@ export class CdpBrowser {
   async start() {
     if (!this.chromePath) throw new Error('Chrome was not found. Set CHROME_PATH to a Chromium-compatible browser.');
     this.profileDir = await mkdtemp(path.join(os.tmpdir(), 'smu1-h6-cdp-'));
-    const debugPort = 10_500 + Math.floor(Math.random() * 2_000);
     this.child = spawn(this.chromePath, [
       ...(this.headful ? [] : [this.chromePath.includes('headless-shell') ? '--headless' : '--headless=new']),
       '--disable-extensions', '--disable-component-extensions-with-background-pages', '--no-first-run',
       '--no-default-browser-check', '--remote-allow-origins=*', '--autoplay-policy=no-user-gesture-required',
-      `--remote-debugging-port=${debugPort}`, `--user-data-dir=${this.profileDir}`, '--window-size=1440,900', 'about:blank'
+      '--remote-debugging-port=0', `--user-data-dir=${this.profileDir}`, '--window-size=1440,900', 'about:blank'
     ], { stdio: 'ignore', windowsHide: true });
     const deadline = Date.now() + 30_000;
     let debuggerUrl = '';
+    const activePortFilename = path.join(this.profileDir, 'DevToolsActivePort');
     while (Date.now() < deadline && !debuggerUrl) {
       if (this.child.exitCode !== null) throw new Error(`Chrome exited before DevTools was ready (${this.child.exitCode}).`);
+      if (!this.debugPort) {
+        const activePort = await readFile(activePortFilename, 'utf8').catch(() => '');
+        const [portLine = '', browserSocketPath = ''] = activePort.trim().split(/\r?\n/u);
+        const assignedPort = Number(portLine);
+        if (Number.isInteger(assignedPort) && assignedPort > 0 && assignedPort <= 65_535
+          && /^\/devtools\/browser\/[a-z0-9-]+$/iu.test(browserSocketPath)) {
+          this.debugPort = assignedPort;
+        }
+      }
       try {
-        const response = await fetch(`http://127.0.0.1:${debugPort}/json/list`);
+        const response = this.debugPort
+          ? await fetch(`http://127.0.0.1:${this.debugPort}/json/list`)
+          : null;
         const pages = response.ok ? await response.json() : [];
         debuggerUrl = pages.find((item) => item.type === 'page')?.webSocketDebuggerUrl || '';
       } catch {}
@@ -362,13 +374,23 @@ export class CdpBrowser {
   async close() {
     try { if (this.socket?.readyState < WebSocket.CLOSING) this.socket.close(); } catch {}
     if (this.child?.exitCode === null) {
+      const exited = new Promise((resolve) => {
+        const timeout = setTimeout(resolve, 5_000);
+        this.child.once('exit', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      });
       if (process.platform === 'win32') {
         const { execFile } = await import('node:child_process');
         await new Promise((resolve) => execFile('taskkill', ['/pid', String(this.child.pid), '/T', '/F'], { windowsHide: true }, resolve));
       } else {
         this.child.kill('SIGTERM');
       }
+      await exited;
     }
-    if (this.profileDir) await rm(this.profileDir, { recursive: true, force: true }).catch(() => {});
+    if (this.profileDir) await rm(this.profileDir, {
+      recursive: true, force: true, maxRetries: 5, retryDelay: 100
+    }).catch(() => {});
   }
 }
