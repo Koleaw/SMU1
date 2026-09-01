@@ -107,6 +107,48 @@ const backgroundUrls = (value) => Array.from(
   (match) => match[1]
 );
 
+const mediaGroupOf = (item, index) => {
+  const declared = String(item?.mediaGroup || '').trim();
+  // Old snapshots did not expose picture/source ownership. Treat those items
+  // as separate groups rather than pooling all page candidates: this remains
+  // safe and prevents one image from borrowing another image's declaration.
+  return declared || `media:${index}`;
+};
+
+const comparableMediaEntries = (snapshot) => (snapshot?.media || [])
+  .map((item, index) => ({ item, index }))
+  .filter(({ item }) => !item.runtimeSurface && (item.src || item.currentSrc || item.poster || item.srcset || item.declaredSources?.length));
+
+/**
+ * The browser inventory's mediaGroup is an intra-document association key. It
+ * can be a generated counter and therefore legitimately shifts when the editor
+ * adds runtime-only DOM. For cross-document comparison, retain the grouping
+ * topology and first-occurrence order, but replace raw values with ordinals.
+ */
+const comparableGroupOrdinals = (entries) => {
+  const ordinals = new Map();
+  for (const { item, index } of entries) {
+    const group = mediaGroupOf(item, index);
+    if (!ordinals.has(group)) ordinals.set(group, `group:${ordinals.size + 1}`);
+  }
+  return ordinals;
+};
+
+const comparableGroupOf = (item, index, ordinals) => ordinals.get(mediaGroupOf(item, index));
+
+const declaredMediaCandidates = (item, normalizeUrl, snapshotLocation, localBaseByOrigin) => {
+  const candidates = new Set();
+  for (const value of [item?.src, item?.poster, ...(item?.declaredSources || [])]) {
+    const normalized = normalizeUrl(value);
+    if (normalized) candidates.add(normalized);
+  }
+  for (const candidate of normalizeSrcset(item?.srcset, snapshotLocation, localBaseByOrigin)) {
+    const [value] = candidate.split(/\s+/u);
+    if (value) candidates.add(value);
+  }
+  return candidates;
+};
+
 /**
  * Produces a deterministic media descriptor. Only explicitly local origins
  * and their configured deploy bases are collapsed; external origins, query
@@ -117,15 +159,19 @@ export function comparableMedia(snapshot, { localOrigins = [] } = {}) {
   const localBaseByOrigin = new Map(localOrigins.map(({ origin, basePath = '/' }) => [new URL(origin).origin, normalizeBase(basePath)]));
   const normalizeUrl = (value) => comparableMediaUrl(value, snapshotLocation, localBaseByOrigin);
 
-  const elementMedia = (snapshot?.media || [])
-    .filter((item) => !item.runtimeSurface && (item.src || item.currentSrc || item.poster || item.srcset || item.declaredSources?.length))
-    .map((item) => ({
+  const entries = comparableMediaEntries(snapshot);
+  const groupOrdinals = comparableGroupOrdinals(entries);
+  const elementMedia = entries
+    .map(({ item, index }) => ({
       tag: item.tag,
+      mediaGroup: comparableGroupOf(item, index, groupOrdinals),
+      mediaAttribute: String(item.mediaAttribute || ''),
       src: normalizeUrl(item.src),
-      currentSrc: normalizeUrl(item.currentSrc),
       poster: normalizeUrl(item.poster),
       srcset: normalizeSrcset(item.srcset, snapshotLocation, localBaseByOrigin),
-      declaredSources: (item.declaredSources || []).map(normalizeUrl)
+      declaredSources: (item.declaredSources || []).map(normalizeUrl),
+      sizes: String(item.sizes || ''),
+      mimeType: String(item.mimeType || '')
     }));
   const backgrounds = (snapshot?.backgroundMedia || [])
     .filter((item) => !item.runtimeSurface)
@@ -137,11 +183,103 @@ export function comparableMedia(snapshot, { localOrigins = [] } = {}) {
   return [...elementMedia, ...backgrounds];
 }
 
+/**
+ * `currentSrc` is a runtime observation rather than renderer source data. It
+ * may be empty for a lazy image in one sequential crawl and selected in the
+ * next one. Validate every non-empty selection against its own declared
+ * picture/media group, never against candidates elsewhere on the page.
+ */
+export function runtimeMediaSelectionIssues(snapshot, { localOrigins = [] } = {}) {
+  const snapshotLocation = snapshot?.location || 'http://route-passport.invalid/';
+  const localBaseByOrigin = new Map(localOrigins.map(({ origin, basePath = '/' }) => [new URL(origin).origin, normalizeBase(basePath)]));
+  const normalizeUrl = (value) => comparableMediaUrl(value, snapshotLocation, localBaseByOrigin);
+  const candidatesByGroup = new Map();
+  for (const [index, item] of (snapshot?.media || []).entries()) {
+    if (item.runtimeSurface) continue;
+    const group = mediaGroupOf(item, index);
+    const candidates = candidatesByGroup.get(group) || new Set();
+    for (const candidate of declaredMediaCandidates(item, normalizeUrl, snapshotLocation, localBaseByOrigin)) candidates.add(candidate);
+    candidatesByGroup.set(group, candidates);
+  }
+  const issues = [];
+  for (const [index, item] of (snapshot?.media || []).entries()) {
+    if (item.runtimeSurface || !item.currentSrc) continue;
+    const selected = normalizeUrl(item.currentSrc);
+    const mediaGroup = mediaGroupOf(item, index);
+    if (selected && !candidatesByGroup.get(mediaGroup)?.has(selected)) {
+      issues.push({ index, tag: item.tag, mediaGroup, selected });
+    }
+  }
+  return issues;
+}
+
+const comparableCurrentSelections = (snapshot, { localOrigins = [] } = {}) => {
+  const snapshotLocation = snapshot?.location || 'http://route-passport.invalid/';
+  const localBaseByOrigin = new Map(localOrigins.map(({ origin, basePath = '/' }) => [new URL(origin).origin, normalizeBase(basePath)]));
+  const entries = comparableMediaEntries(snapshot);
+  const groupOrdinals = comparableGroupOrdinals(entries);
+  return entries
+    .map(({ item, index }) => ({
+      index,
+      tag: item.tag,
+      mediaGroup: comparableGroupOf(item, index, groupOrdinals),
+      currentSrc: comparableMediaUrl(item.currentSrc, snapshotLocation, localBaseByOrigin),
+      // A source element does not render media itself. For an image, absence
+      // is tolerated only if *both* equivalent items prove they are explicitly
+      // lazy and not visible; otherwise one renderer may have accidentally
+      // hidden or skipped a visible settled image.
+      nonRenderingSource: String(item.tag || '').toLowerCase() === 'source',
+      lazyAndInvisible: item.loading === 'lazy' && item.visible === false
+    }));
+};
+
+const currentSelectionDifferences = (publicSnapshot, editorSnapshot, options) => {
+  const publicSelections = comparableCurrentSelections(publicSnapshot, options);
+  const editorSelections = comparableCurrentSelections(editorSnapshot, options);
+  const differences = [];
+  const count = Math.max(publicSelections.length, editorSelections.length);
+  for (let index = 0; index < count; index += 1) {
+    const publicSelection = publicSelections[index];
+    const editorSelection = editorSelections[index];
+    if (!publicSelection || !editorSelection
+      || publicSelection.tag !== editorSelection.tag
+      || publicSelection.mediaGroup !== editorSelection.mediaGroup) {
+      differences.push({ index, publicSelection: publicSelection || null, editorSelection: editorSelection || null });
+      continue;
+    }
+    // A lazy non-rendering/source item may have no selection in one sequential
+    // visit. Once both renderers selected a candidate, it must be identical.
+    if (publicSelection.currentSrc && editorSelection.currentSrc
+      && publicSelection.currentSrc !== editorSelection.currentSrc) {
+      differences.push({ index, kind: 'different-selected-candidate', publicSelection, editorSelection });
+      continue;
+    }
+    if (Boolean(publicSelection.currentSrc) !== Boolean(editorSelection.currentSrc)) {
+      const allowedMissingSelection = publicSelection.nonRenderingSource && editorSelection.nonRenderingSource
+        || (publicSelection.lazyAndInvisible && editorSelection.lazyAndInvisible);
+      if (!allowedMissingSelection) {
+        differences.push({
+          index,
+          kind: 'unexpected-empty-current-src',
+          emptySide: publicSelection.currentSrc ? 'editor' : 'public',
+          publicSelection,
+          editorSelection
+        });
+      }
+    }
+  }
+  return differences;
+};
+
 export function compareMediaSnapshots(publicSnapshot, editorSnapshot, options = {}) {
   const publicMedia = comparableMedia(publicSnapshot, options);
   const editorMedia = comparableMedia(editorSnapshot, options);
-  const match = JSON.stringify(publicMedia) === JSON.stringify(editorMedia);
-  if (match) return { match, publicMedia, editorMedia, diff: null };
+  const publicSelectionIssues = runtimeMediaSelectionIssues(publicSnapshot, options);
+  const editorSelectionIssues = runtimeMediaSelectionIssues(editorSnapshot, options);
+  const selectionDifferences = currentSelectionDifferences(publicSnapshot, editorSnapshot, options);
+  const declarationsMatch = JSON.stringify(publicMedia) === JSON.stringify(editorMedia);
+  const match = declarationsMatch && publicSelectionIssues.length === 0 && editorSelectionIssues.length === 0 && selectionDifferences.length === 0;
+  if (match) return { match, publicMedia, editorMedia, publicSelectionIssues, editorSelectionIssues, selectionDifferences, diff: null };
 
   const publicKeys = publicMedia.map((item) => JSON.stringify(item));
   const editorKeys = editorMedia.map((item) => JSON.stringify(item));
@@ -156,14 +294,29 @@ export function compareMediaSnapshots(publicSnapshot, editorSnapshot, options = 
   };
   const publicOnly = subtract(publicKeys, editorKeys);
   const editorOnly = subtract(editorKeys, publicKeys);
+  const declarationDifferences = {
+    publicOnly: publicOnly.slice(0, 12),
+    editorOnly: editorOnly.slice(0, 12),
+    orderOnly: publicOnly.length === 0 && editorOnly.length === 0
+  };
   return {
     match,
     publicMedia,
     editorMedia,
+    publicSelectionIssues,
+    editorSelectionIssues,
+    selectionDifferences,
     diff: {
-      publicOnly: publicOnly.slice(0, 12),
-      editorOnly: editorOnly.slice(0, 12),
-      orderOnly: publicOnly.length === 0 && editorOnly.length === 0
+      // Keep the flattened fields for existing evidence consumers, and carry
+      // each independent failure class so a selection-only mismatch is never
+      // reported as an opaque declaration diff.
+      ...declarationDifferences,
+      declarationDifferences,
+      selectionDifferences,
+      selectionIssues: {
+        public: publicSelectionIssues,
+        editor: editorSelectionIssues
+      }
     }
   };
 }

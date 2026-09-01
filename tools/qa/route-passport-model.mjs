@@ -240,7 +240,7 @@ const toolsByKind = {
   category: ['inline-text', 'long-text', 'media', 'reorder', 'record-actions'],
   'product-standard': ['inline-text', 'long-text', 'price', 'list', 'media', 'relation'],
   'product-premium': ['inline-text', 'long-text', 'price', 'list', 'media', 'relation', 'crop'],
-  'project-detail': ['inline-text', 'long-text', 'list', 'media', 'relation'],
+  'project-detail': ['inline-text', 'long-text', 'media', 'relation'],
   'career-detail': ['inline-text', 'long-text', 'list', 'contact']
 };
 
@@ -383,6 +383,8 @@ export function buildExpectedRouteModel({ root = process.cwd() } = {}) {
     }
     if (descriptor.routeKind === 'project-detail') {
       const entry = projects.get(pathname.split('/').filter(Boolean).at(-1));
+      const hasBusinessList = ['workTypes', 'materials', 'features']
+        .some((field) => Array.isArray(entry?.data?.[field]) && entry.data[field].length > 0);
       const publicGalleryCount = Array.isArray(entry?.data.presentation?.publicGallery)
         ? entry.data.presentation.publicGallery.length
         : 0;
@@ -402,13 +404,21 @@ export function buildExpectedRouteModel({ root = process.cwd() } = {}) {
         : 'text-only';
       return {
         ...base, rendererFamily: 'project', rendererVariant: `${detailVariant}+${archiveOrientation}+${archivePlacement}`,
+        expectedTools: [
+          'inline-text',
+          'long-text',
+          ...(hasBusinessList ? ['list'] : []),
+          'media',
+          'relation'
+        ],
         sourceOwners: entry ? [owner(entry), templateOwner('src/components/v2/mediaRoleAdapter.ts', 'Legacy project presentation roles; expected to migrate to record-backed roles.')] : [],
         modelEvidence: {
           rawGalleryCount: Array.isArray(entry?.data.gallery) ? entry.data.gallery.length : 0,
           publicGalleryCount,
           detailVariant,
           archiveOrientation,
-          archivePlacement
+          archivePlacement,
+          hasBusinessList
         }
       };
     }

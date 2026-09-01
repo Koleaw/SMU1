@@ -34,6 +34,11 @@ test('authoritative source model describes every current production route and re
     'direction-engineering-visual', 'direction-visual', 'direction-engineering-commercial',
     'direction-project-commercial', 'direction-place-commercial'
   ]) assert.equal(summary.rendererVariants[variant], 1);
+  const projectRoutes = model.routes.filter((route) => route.rendererFamily === 'project');
+  assert.equal(projectRoutes.length, 4);
+  assert.ok(projectRoutes.every((route) => (
+    route.expectedTools.includes('list') === route.modelEvidence.hasBusinessList
+  )));
   for (const variant of [
     'gallery+landscape+media-first',
     'text-only+landscape+text-only',

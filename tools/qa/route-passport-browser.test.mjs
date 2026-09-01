@@ -30,6 +30,9 @@ test('editor equivalence explicitly classifies runtime-only surfaces and uses st
   for (const marker of ['data-v2-gallery-prev', 'data-v2-gallery-next', 'data-v2-gallery-status', 'data-v2-project-gallery-prev', 'data-v2-project-gallery-next', 'data-v2-project-gallery-status']) {
     assert.match(source, new RegExp(marker, 'u'));
   }
+  for (const marker of ['hv2-header__dropdown-indicator', 'v2-breadcrumbs i', 'v2-product-gallery__zoom', 'v2-project-gallery__zoom']) {
+    assert.match(source, new RegExp(marker, 'u'));
+  }
   assert.match(source, /comparableBusinessText\(snapshot\)/u);
   assert.match(source, /compareStableGeometry\(snapshot\.stableGeometry, editorSnapshot\.stableGeometry\)/u);
   assert.doesNotMatch(source, /editorSnapshot\.documentSize\.scrollHeight\s*!==\s*snapshot\.documentSize\.scrollHeight/u);
@@ -61,6 +64,7 @@ test('preview passport reconciles schema-backed optional fields, wildcard impact
   assert.match(source, /width: element\.offsetWidth/u);
   assert.match(source, /visualWidth: Math\.round\(rect\.width/u);
   assert.match(source, /#main-content header\[id\], #main-content nav[\s\S]*?#main-content \[data-v2-page-handoff\][\s\S]*?#main-content \[data-v2-media\][\s\S]*?#main-content \[data-v2-entrance-role\]/u);
+  assert.match(source, /\.filter\(\(element\) => visuallyVisible\(element\) && !runtimeSurfaceOf\(element\)\)/u);
   assert.match(source, /mediaDiff/u);
   assert.match(source, /compareMediaSnapshots\(snapshot, editorSnapshot, mediaComparisonOptions\)/u);
   assert.match(source, /publicFontDiagnostics: snapshot\.fontDiagnostics/u);
@@ -129,9 +133,18 @@ test('object-list coverage is fail-closed against uneditable descendant fields',
 
 test('relation coverage requires an explicit typed relation tool', async () => {
   const source = await readFile(new URL('./route-passport-browser.mjs', import.meta.url), 'utf8');
-  assert.match(source, /RELATION_BINDING_TOOLS = new Set\(\['relation-list', 'relation-select', 'project-direction-relations'\]\)/u);
-  assert.match(source, /RELATION_BINDING_TOOLS[^\n]+\n[\s\S]*?capabilities\.add\('relation'\)/u);
+  for (const tool of ['relation-list', 'relation-select', 'project-direction-relations', 'direction-related-relations']) {
+    assert.match(source, new RegExp(`'${tool}'`, 'u'));
+  }
+  assert.match(source, /RELATION_BINDING_TOOLS[\s\S]*?capabilities\.add\('relation'\)/u);
   assert.doesNotMatch(source, /if \(actual\.has\('list'\)\) \{[\s\S]{0,160}capabilities\.add\('relation'\)/u);
+  assert.doesNotMatch(source, /actual\.has\('reorder-item'\)[\s\S]{0,120}capabilities\.add\('relation'\)/u);
+});
+
+test('structural relation bindings never mask unbound descendant business text', async () => {
+  const source = await readFile(new URL('./route-passport-browser.mjs', import.meta.url), 'utf8');
+  assert.match(source, /NON_DIRECT_TEXT_BINDING_TOOLS = new Set\(\[[\s\S]*'relation-list'[\s\S]*'relation-select'[\s\S]*'project-direction-relations'[\s\S]*'direction-related-relations'[\s\S]*\]\)/u);
+  assert.match(source, /kind === 'media'[\s\S]*: !NON_DIRECT_TEXT_BINDING_TOOLS\.has\(item\.binding\.tool\)/u);
 });
 
 test('crop coverage requires an explicit crop binding instead of a generic media binding', async () => {
@@ -170,13 +183,23 @@ test('mobile project detail lead keeps a font-cache-independent line measure', a
   assert.match(mobileScale, /\.projects-v2 \.v2-project-detail__lead\s*\{\s*max-width: calc\(100% - 1em\);/u);
 });
 
-test('route equivalence warms the optional public font before comparing sequential origins', async () => {
+test('route equivalence warms and verifies the optional font on both sequential origins', async () => {
   const source = await readFile(new URL('./route-passport-browser.mjs', import.meta.url), 'utf8');
   assert.match(source, /const warmFontCache = async \(\) =>/u);
   assert.match(source, /const warmRoute = routesToCrawl\[0\]\?\.pathname \|\| '\/'/u);
-  assert.match(source, /current\.mode = 'font-cache-warmup'/u);
-  assert.match(source, /await browser\.navigate\(`\$\{origin\}\$\{withBase\(warmRoute\)\}`\)/u);
+  assert.match(source, /\{ id: 'public', url: `\$\{origin\}\$\{withBase\(warmRoute\)\}` \}/u);
+  assert.match(source, /id: 'editor'[\s\S]*new URL\(warmRoute, `\$\{options\.editorOrigin\}\/`\)/u);
+  assert.match(source, /for \(let pass = 1; pass <= 2; pass \+= 1\)/u);
+  assert.match(source, /kind: 'font-metric-mismatch'/u);
+  assert.match(source, /await browser\.emulateMedia\(\{ reducedMotion: true \}\)/u);
   assert.match(source, /cold-font-warmup-runtime-or-network/u);
   assert.match(source, /fontWarmup\.failures\.length \+ routeResults\.reduce/u);
   assert.match(source, /try \{\s*const fontWarmup = await warmFontCache\(\);\s*progress/u);
+});
+
+test('filtered project smoke does not invent missing archive evidence while full crawl stays strict', async () => {
+  const source = await readFile(new URL('./route-passport-browser.mjs', import.meta.url), 'utf8');
+  assert.match(source, /presentation \|\| \(options\.onlyRoute\s*\? \{ status: 'not-collected-in-filtered-smoke' \}/u);
+  assert.match(source, /if \(!presentation && options\.onlyRoute\) continue;/u);
+  assert.match(source, /if \(!presentation\) \{\s*result\.issues\.push\('project-archive-presentation-unreconciled'\)/u);
 });

@@ -834,7 +834,7 @@
   margin-top: 24px;
 }
 
-.v2-project-detail__lead {
+.home-v2-body .v2-project-detail__lead {
   max-width: 660px;
   margin-top: 24px;
   color: var(--hv2-muted);
@@ -901,7 +901,7 @@
   font-size: clamp(36px, 4vw, 56px);
 }
 
-.v2-project-detail--media-sparse .v2-project-detail__lead {
+.home-v2-body .v2-project-detail--media-sparse .v2-project-detail__lead {
   max-width: 800px;
   margin-top: 18px;
   font-size: clamp(17px, 1.6vw, 21px);

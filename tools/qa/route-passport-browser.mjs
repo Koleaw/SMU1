@@ -213,7 +213,6 @@ browser.on('Network.loadingFailed', ({ blockedReason, canceled, errorText, type 
 
 const settleMediaAndScroll = () => browser.evaluate(`(async () => {
   const initialY = window.scrollY;
-  const height = document.documentElement.scrollHeight;
   const fontStylesheet = document.querySelector('[data-v2-font-stylesheet]');
   if (fontStylesheet instanceof HTMLLinkElement && !fontStylesheet.dataset.v2FontState) {
     await Promise.race([
@@ -223,6 +222,24 @@ const settleMediaAndScroll = () => browser.evaluate(`(async () => {
       }),
       new Promise((resolve) => setTimeout(resolve, 3000))
     ]);
+  }
+  // Production intentionally uses font-display:optional for its cold paint.
+  // The public artifact and editor run on different loopback origins, so
+  // Chrome can independently accept the downloaded font for one document and
+  // keep the fallback for the other. Normalize only this equivalence crawl to
+  // the same real Manrope face; H5 and motion QA retain the production
+  // optional lifecycle and cover the cold/fallback state separately.
+  if (fontStylesheet instanceof HTMLLinkElement && /[?&]display=optional(?:&|$)/u.test(fontStylesheet.href)) {
+    const normalizedFontHref = fontStylesheet.href.replace(/([?&]display=)optional(?=&|$)/u, '$1block');
+    await Promise.race([
+      new Promise((resolve) => {
+        fontStylesheet.addEventListener('load', resolve, { once: true });
+        fontStylesheet.addEventListener('error', resolve, { once: true });
+        fontStylesheet.href = normalizedFontHref;
+      }),
+      new Promise((resolve) => setTimeout(resolve, 3000))
+    ]);
+    fontStylesheet.dataset.h6RoutePassportFont = 'block';
   }
   if (document.fonts?.load) {
     const heading = document.querySelector('h1');
@@ -241,9 +258,12 @@ const settleMediaAndScroll = () => browser.evaluate(`(async () => {
   if (document.fonts?.ready) {
     await Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 1200))]);
   }
+  // Font availability can change line wraps and therefore the document
+  // height. Compute the scroll range only after the font state is settled.
+  const height = document.documentElement.scrollHeight;
   for (let y = 0; y <= height; y += 720) {
     window.scrollTo(0, y);
-    await new Promise((resolve) => setTimeout(resolve, 8));
+    await new Promise((resolve) => setTimeout(resolve, 12));
   }
   window.scrollTo(0, initialY);
   await Promise.race([
@@ -255,6 +275,9 @@ const settleMediaAndScroll = () => browser.evaluate(`(async () => {
         }))),
     new Promise((resolve) => setTimeout(resolve, 1800))
   ]);
+  await Promise.allSettled(Array.from(document.images)
+    .filter((image) => image.complete && image.naturalWidth > 0 && typeof image.decode === 'function')
+    .map((image) => image.decode()));
   const finiteAnimations = document.getAnimations().filter((animation) => {
     const iterations = animation.effect?.getTiming?.().iterations;
     return animation.playState === 'running' && iterations !== Infinity;
@@ -290,6 +313,10 @@ const inventoryExpression = `(() => {
     if (element.closest('[data-hf-video-toggle]')) return 'media-control';
     if (element.closest('[data-v2-gallery-prev],[data-v2-gallery-next],[data-v2-gallery-status],[data-v2-project-gallery-prev],[data-v2-project-gallery-next],[data-v2-project-gallery-status]')) return 'gallery-control';
     if (element.closest('[data-v2-product-lightbox],[data-v2-project-lightbox]')) return 'lightbox-control';
+    if (element.closest('.hv2-header__dropdown-indicator')) return 'navigation-control';
+    if (element.closest('.v2-breadcrumbs i[aria-hidden="true"]')) return 'breadcrumb-separator';
+    if (element.closest('.v2-product-gallery__zoom,.v2-project-gallery__zoom')) return 'gallery-control';
+    if (element.closest('[data-v2-image-fallback]')) return 'media-fallback-status';
     return '';
   };
   const parseBinding = (owner) => {
@@ -374,11 +401,21 @@ const inventoryExpression = `(() => {
     visible: visuallyVisible(element), accessible: accessibilityVisible(element), binding: bindingOf(element), disposition: dispositionOf(element)
   }));
   const mediaNodes = Array.from(document.querySelectorAll('img,video,picture source,video source'));
+  const mediaGroupIds = new WeakMap();
+  let nextMediaGroupId = 0;
   const media = mediaNodes.map((element, index) => ({
     locator: locator(element, index), tag: element.tagName.toLowerCase(),
+    mediaGroup: (() => {
+      const group = element.closest('picture,video') || element;
+      if (!mediaGroupIds.has(group)) mediaGroupIds.set(group, String(nextMediaGroupId++));
+      return mediaGroupIds.get(group);
+    })(),
     src: element.getAttribute('src') || element.src || '',
     currentSrc: element.currentSrc || '',
     srcset: element.srcset || element.getAttribute('srcset') || '',
+    sizes: element.getAttribute('sizes') || '',
+    mediaAttribute: element.getAttribute('media') || '',
+    mimeType: element.getAttribute('type') || '',
     declaredSources: [...new Set([
       element.getAttribute('data-v2-desktop-src'), element.getAttribute('data-v2-mobile-src'),
       element.getAttribute('data-hf-desktop-src'), element.getAttribute('data-hf-mobile-src')
@@ -486,7 +523,7 @@ const inventoryExpression = `(() => {
     };
   };
   const contentLandmarks = Array.from(document.querySelectorAll('#main-content h1, #main-content header[id], #main-content nav, #main-content section, #main-content article, #main-content [data-v2-page-handoff], #main-content [data-v2-media], #main-content [data-v2-entrance-role]'))
-    .filter((element) => !runtimeSurfaceOf(element))
+    .filter((element) => visuallyVisible(element) && !runtimeSurfaceOf(element))
     .map((element, index) => ['content-' + index + ':' + (element.id || element.tagName.toLowerCase()), geometryTarget(element)]);
   const stableGeometry = Object.fromEntries([
     ['main-frame', geometryTarget(document.querySelector('#main-content, main'), ['width'])],
@@ -506,13 +543,14 @@ const inventoryExpression = `(() => {
     stylesheetState: fontStylesheet?.getAttribute('data-v2-font-state') || '',
     stylesheetMedia: fontStylesheet?.getAttribute('media') || '',
     stylesheetHref: fontStylesheet?.getAttribute('href') || '',
+    equivalenceNormalization: fontStylesheet?.getAttribute('data-h6-route-passport-font') || '',
     headingFontFamily: fontHeadingStyle?.fontFamily || '',
     headingFontWeight: fontHeadingStyle?.fontWeight || '',
     headingFontSize: fontHeadingStyle?.fontSize || '',
     headingMaxWidth: fontHeadingStyle?.maxWidth || '',
     zeroAdvance: fontMeasure ? Math.round(fontMeasure.measureText('0').width * 1000) / 1000 : 0
   };
-  const runtimeSurfaces = Array.from(document.querySelectorAll('[data-smu1-editor-affordance],[data-v2-entry-skip-link],[data-v2-entry-root],[data-v2-entry-overlay],[data-v2-page-transition],[data-v2-page-bootstrap-overlay],[data-cookie-banner]'))
+  const runtimeSurfaces = Array.from(document.querySelectorAll('[data-smu1-editor-affordance],[data-v2-entry-skip-link],[data-v2-entry-root],[data-v2-entry-overlay],[data-v2-page-transition],[data-v2-page-bootstrap-overlay],[data-cookie-banner],.hv2-header__dropdown-indicator,.v2-breadcrumbs i[aria-hidden="true"],.v2-product-gallery__zoom,.v2-project-gallery__zoom,[data-v2-image-fallback]'))
     .map((element, index) => ({ locator: locator(element, index), kind: runtimeSurfaceOf(element), visible: visuallyVisible(element), accessible: accessibilityVisible(element) }));
   const actualRendererFamily = document.querySelector('[data-home-final-root]') ? 'home'
     : document.querySelector('.v2-project-detail') ? 'project'
@@ -652,13 +690,25 @@ const validDisposition = (occurrence) => Boolean(
   && !['html', 'body', 'main'].includes(occurrence.disposition?.domTarget?.tag)
 );
 
+const NON_DIRECT_TEXT_BINDING_TOOLS = new Set([
+  'crop',
+  'gallery',
+  'image',
+  'media',
+  'reorder-item',
+  'relation-list',
+  'relation-select',
+  'project-direction-relations',
+  'direction-related-relations'
+]);
+
 const coverageFor = (items, invalidBindingIds, kind) => {
   const visibleItems = items.filter((item) => item.visible && !item.runtimeSurface);
   const itemBound = (item) => Boolean(
     item.binding?.bindingId && !item.binding.ambiguous && !invalidBindingIds.has(item.binding.bindingId)
     && (kind === 'media'
       ? isDirectMediaBindingTool(item.binding.tool) || objectListBindingSupportsMedia(item.binding)
-      : !['crop', 'gallery', 'image', 'media', 'reorder-item'].includes(item.binding.tool))
+      : !NON_DIRECT_TEXT_BINDING_TOOLS.has(item.binding.tool))
   );
   const bound = visibleItems.filter(itemBound);
   const declared = visibleItems.filter((item) => !itemBound(item) && validDisposition(item));
@@ -676,7 +726,12 @@ const coverageFor = (items, invalidBindingIds, kind) => {
 };
 
 const NON_BINDING_TOOL_EXPECTATIONS = new Set(['integration-settings', 'legal-confirmation', 'record-actions']);
-const RELATION_BINDING_TOOLS = new Set(['relation-list', 'relation-select', 'project-direction-relations']);
+const RELATION_BINDING_TOOLS = new Set([
+  'relation-list',
+  'relation-select',
+  'project-direction-relations',
+  'direction-related-relations'
+]);
 const bindingToolCapabilities = (bindings) => {
   const actual = new Set(bindings.map((binding) => binding.tool).filter(Boolean));
   const capabilities = new Set(actual);
@@ -710,21 +765,73 @@ const warmFontCache = async () => {
   // compares the fully available renderer state so public and editor do not
   // inherit different metrics merely because they are opened sequentially.
   const warmRoute = routesToCrawl[0]?.pathname || '/';
-  current.route = warmRoute;
-  current.viewport = REQUIRED_VIEWPORTS[0].id;
-  current.mode = 'font-cache-warmup';
   const eventIndex = events.length;
   const requestIndex = resourceRequests.length;
+  const warmupEditorSession = crypto.randomUUID();
   await browser.setViewport(REQUIRED_VIEWPORTS[0]);
-  await browser.emulateMedia({ reducedMotion: false });
-  await browser.navigate(`${origin}${withBase(warmRoute)}`);
-  await settleMediaAndScroll();
+  await browser.emulateMedia({ reducedMotion: true });
+  const targets = [
+    { id: 'public', url: `${origin}${withBase(warmRoute)}` },
+    ...(options.editorOrigin ? [{
+      id: 'editor',
+      url: (() => {
+        const value = new URL(warmRoute, `${options.editorOrigin}/`);
+        value.searchParams.set('__smu1_editor', '1');
+        value.searchParams.set('editorSession', warmupEditorSession);
+        value.searchParams.set('editorRevision', '1');
+        return value.href;
+      })()
+    }] : [])
+  ];
+  const passes = [];
+  // `font-display: optional` and Chrome's partitioned cache can otherwise
+  // leave the public artifact on Manrope while the editor origin measures the
+  // fallback font. Warm and verify both exact origins twice before comparing
+  // renderer geometry.
+  for (let pass = 1; pass <= 2; pass += 1) {
+    for (const target of targets) {
+      current.route = warmRoute;
+      current.viewport = REQUIRED_VIEWPORTS[0].id;
+      current.mode = `font-cache-warmup-${target.id}-${pass}`;
+      await browser.navigate(target.url);
+      await settleMediaAndScroll();
+      const metrics = await browser.evaluate(`(() => {
+        const heading = document.querySelector('h1');
+        const style = heading ? getComputedStyle(heading) : null;
+        const context = document.createElement('canvas').getContext('2d');
+        if (context) context.font = (style?.fontWeight || '600') + ' ' + (style?.fontSize || '64px') + ' Manrope';
+        return {
+          status: document.fonts?.status || 'unsupported',
+          family: style?.fontFamily || '',
+          weight: style?.fontWeight || '',
+          size: style?.fontSize || '',
+          zeroAdvance: context ? Math.round(context.measureText('0').width * 1000) / 1000 : 0
+        };
+      })()`);
+      passes.push({ pass, origin: target.id, metrics });
+    }
+  }
   const warmupEvents = events.slice(eventIndex);
+  const failures = warmupEvents.filter((event) => !['console-warning', 'log-warning'].includes(event.kind));
+  const finalMetrics = Object.fromEntries(passes.filter((entry) => entry.pass === 2).map((entry) => [entry.origin, entry.metrics]));
+  if (finalMetrics.public && finalMetrics.editor
+    && (finalMetrics.public.size !== finalMetrics.editor.size
+      || Math.abs(Number(finalMetrics.public.zeroAdvance) - Number(finalMetrics.editor.zeroAdvance)) > 0.01)) {
+    failures.push({
+      route: warmRoute,
+      viewport: REQUIRED_VIEWPORTS[0].id,
+      mode: 'font-cache-warmup-verification',
+      kind: 'font-metric-mismatch',
+      public: finalMetrics.public,
+      editor: finalMetrics.editor
+    });
+  }
   return {
     route: warmRoute,
     viewport: REQUIRED_VIEWPORTS[0].id,
+    passes,
     events: warmupEvents,
-    failures: warmupEvents.filter((event) => !['console-warning', 'log-warning'].includes(event.kind)),
+    failures,
     resourceRequests: resourceRequests.slice(requestIndex)
   };
 };
@@ -744,7 +851,10 @@ try {
       const startedResponseIndex = documentResponses.length;
       const startedRequestIndex = resourceRequests.length;
       await browser.setViewport(viewport);
-      await browser.emulateMedia({ reducedMotion: false });
+      // Motion/lifecycle has its own exhaustive suite. Renderer equivalence
+      // uses the stable reduced-motion state so it never compares two
+      // different points of an entrance transform.
+      await browser.emulateMedia({ reducedMotion: true });
       const requestedUrl = `${origin}${withBase(expected.pathname)}`;
       await browser.navigate(requestedUrl);
       await settleMediaAndScroll();
@@ -857,7 +967,17 @@ try {
         const toolCoverage = expectedToolCoverage(expected.expectedTools, editorSnapshot.bindings);
         const mediaComparison = compareMediaSnapshots(snapshot, editorSnapshot, mediaComparisonOptions);
         const mediaPathsMatch = mediaComparison.match;
-        const mediaDiff = mediaComparison.diff;
+        const mediaDiff = mediaComparison.diff || (
+          mediaComparison.publicSelectionIssues.length || mediaComparison.editorSelectionIssues.length
+            ? {
+                publicOnly: [],
+                editorOnly: [],
+                orderOnly: false,
+                publicSelectionIssues: mediaComparison.publicSelectionIssues,
+                editorSelectionIssues: mediaComparison.editorSelectionIssues
+              }
+            : null
+        );
         const equivalenceIssues = [];
         const editorLocation = new URL(editorSnapshot.location);
         if (logicalPathname(editorSnapshot.location) !== expected.pathname) equivalenceIssues.push('logical-route');
@@ -1074,7 +1194,17 @@ try {
             editorComparableTextOccurrences: editorComparableText.length,
             publicStableGeometry: snapshot.stableGeometry,
             editorStableGeometry: editorSnapshot.stableGeometry,
-            mediaDiff: mediaComparison.diff,
+            mediaDiff: mediaComparison.diff || (
+              mediaComparison.publicSelectionIssues.length || mediaComparison.editorSelectionIssues.length
+                ? {
+                    publicOnly: [],
+                    editorOnly: [],
+                    orderOnly: false,
+                    publicSelectionIssues: mediaComparison.publicSelectionIssues,
+                    editorSelectionIssues: mediaComparison.editorSelectionIssues
+                  }
+                : null
+            ),
             stableGeometryIssues
           }
         },
@@ -1131,7 +1261,10 @@ try {
   for (const result of routeResults) {
     if (result.renderer.family !== 'project') continue;
     const presentation = archivePresentation.get(result.route) || null;
-    result.renderer.archivePresentation = presentation;
+    result.renderer.archivePresentation = presentation || (options.onlyRoute
+      ? { status: 'not-collected-in-filtered-smoke' }
+      : null);
+    if (!presentation && options.onlyRoute) continue;
     if (!presentation) {
       result.issues.push('project-archive-presentation-unreconciled');
       result.status = 'fail';
