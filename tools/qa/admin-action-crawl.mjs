@@ -319,6 +319,7 @@ const openPageBySearch = async ({ query, expectedPath, exactPath = false, mode, 
         }))
       : buttons[0];
     if (!button) return null;
+    button.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
     button.focus({ preventScroll: true });
     const rect = button.getBoundingClientRect();
     return { label: button.textContent?.replace(/\\s+/gu, ' ').trim() || '', point: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } };

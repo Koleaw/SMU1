@@ -54,6 +54,7 @@ test('admin action inventory keeps iframe links unresolved so editor nonces cann
   const source = await readFile(new URL('./admin-action-crawl.mjs', import.meta.url), 'utf8');
   assert.match(source, /href:\s*element\.getAttribute\('href'\)\s*\|\|\s*''/u);
   assert.doesNotMatch(source, /href:\s*element\.href/u);
+  assert.match(source, /button\.scrollIntoView\(\{ block: 'center', inline: 'nearest', behavior: 'instant' \}\);\s*button\.focus/u);
 });
 
 test('compatibility aliases render their canonical target in the editor canvas', async () => {
