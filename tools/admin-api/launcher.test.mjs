@@ -17,10 +17,13 @@ import {
   installLauncherSignalHandlers,
   probeHttp,
   readPreferredRuntimePorts,
+  removeRuntimeSession,
+  renameLauncherRuntimeFile,
   resolveLauncherAstroCli,
   selectRuntimePorts,
   settleAdminSession,
   stopChild,
+  unlinkLauncherRuntimeFile,
   writePreferredRuntimePorts
 } from './launcher.mjs';
 import {
@@ -33,6 +36,69 @@ const REPO_IDENTITY = 'a'.repeat(64);
 const TEST_FILE = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(TEST_FILE), '..', '..');
 const SERVER_PATH = path.join(REPO_ROOT, 'tools', 'admin-api', 'server.mjs');
+
+test('Windows launcher retries transient runtime marker operations without exposing a partial marker', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-launcher-runtime-marker-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const source = path.join(root, 'marker.tmp');
+  const target = path.join(root, 'marker.json');
+  await fs.writeFile(source, 'new marker');
+  await fs.writeFile(target, 'old marker');
+  const calls = [];
+  const delays = [];
+  await renameLauncherRuntimeFile(source, target, {
+    platform: 'win32',
+    retryDelays: [5, 10, 20],
+    delay: async (milliseconds) => {
+      delays.push(milliseconds);
+      assert.equal(await fs.readFile(target, 'utf8'), 'old marker');
+    },
+    rename: async (from, to) => {
+      calls.push({ source: from, target: to });
+      if (calls.length < 3) throw Object.assign(new Error('scanner holds the destination'), { code: 'EPERM' });
+      await fs.rename(from, to);
+    }
+  });
+  assert.deepEqual(delays, [5, 10]);
+  assert.equal(await fs.readFile(target, 'utf8'), 'new marker');
+  assert.deepEqual(calls, [
+    { source, target },
+    { source, target },
+    { source, target }
+  ]);
+
+  for (const code of ['EACCES', 'EBUSY']) {
+    let attempts = 0;
+    await assert.rejects(() => renameLauncherRuntimeFile('marker.tmp', 'marker.json', {
+      platform: 'win32',
+      retryDelays: [1, 1],
+      delay: async () => {},
+      rename: async () => { attempts += 1; throw Object.assign(new Error('still locked'), { code }); }
+    }), { code });
+    assert.equal(attempts, 3);
+  }
+
+  let posixAttempts = 0;
+  await assert.rejects(() => renameLauncherRuntimeFile('marker.tmp', 'marker.json', {
+    platform: 'linux',
+    retryDelays: [1],
+    delay: async () => {},
+    rename: async () => { posixAttempts += 1; throw Object.assign(new Error('locked'), { code: 'EPERM' }); }
+  }), { code: 'EPERM' });
+  assert.equal(posixAttempts, 1);
+
+  let unlinkAttempts = 0;
+  await unlinkLauncherRuntimeFile('marker.json', {
+    platform: 'win32',
+    retryDelays: [1, 1],
+    delay: async () => {},
+    unlink: async () => {
+      unlinkAttempts += 1;
+      if (unlinkAttempts < 3) throw Object.assign(new Error('scanner holds the marker'), { code: 'EBUSY' });
+    }
+  });
+  assert.equal(unlinkAttempts, 3);
+});
 
 test('launcher resolves the installed Astro 7 CLI and fails fast for an incomplete install', async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-launcher-astro-cli-'));
@@ -105,6 +171,59 @@ test('launcher ignores a port preference from another checkout or loopback host'
 
   assert.equal(await readPreferredRuntimePorts(root, { ...identity, repoIdentity: 'b'.repeat(64) }), null);
   assert.equal(await readPreferredRuntimePorts(root, { ...identity, uiHost: '::1' }), null);
+});
+
+test('an older launcher cannot remove a newer same-checkout runtime session marker', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-launcher-session-race-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const runtimeDir = path.join(root, '.admin-runtime');
+  const marker = path.join(runtimeDir, 'admin-launcher-session.json');
+  await fs.mkdir(runtimeDir, { recursive: true });
+  const current = {
+    version: 1,
+    repoIdentity: REPO_IDENTITY,
+    launcherPid: 2222,
+    apiPort: 41001,
+    uiPort: 41002,
+    startedAt: '2026-09-01T12:00:00.000Z'
+  };
+  await fs.writeFile(marker, `${JSON.stringify(current)}\n`, 'utf8');
+
+  assert.equal(await removeRuntimeSession(root, { ...current, launcherPid: 1111 }), false);
+  assert.equal(JSON.parse(await fs.readFile(marker, 'utf8')).launcherPid, 2222);
+  assert.equal(await removeRuntimeSession(root, current), true);
+  await assert.rejects(() => fs.access(marker), { code: 'ENOENT' });
+});
+
+test('a delayed old launcher unlink revalidates ownership and preserves a replacement session', async () => {
+  const previous = {
+    version: 1,
+    repoIdentity: REPO_IDENTITY,
+    launcherPid: 1111,
+    apiPort: 41001,
+    uiPort: 41002,
+    startedAt: '2026-09-01T12:00:00.000Z'
+  };
+  const replacement = { ...previous, launcherPid: 2222, startedAt: '2026-09-01T12:01:00.000Z' };
+  let marker = previous;
+  let attempts = 0;
+  const removed = await unlinkLauncherRuntimeFile('admin-launcher-session.json', {
+    platform: 'win32',
+    retryDelays: [1, 1],
+    delay: async () => {},
+    beforeAttempt: async () => marker === previous,
+    unlink: async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        marker = replacement;
+        throw Object.assign(new Error('old marker was temporarily locked'), { code: 'EPERM' });
+      }
+      marker = null;
+    }
+  });
+  assert.equal(removed, false);
+  assert.equal(attempts, 1);
+  assert.deepEqual(marker, replacement);
 });
 
 async function freePort() {

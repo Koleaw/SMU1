@@ -20,6 +20,8 @@ const THIS_FILE = fileURLToPath(import.meta.url);
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(THIS_FILE), '..', '..');
 const SESSION_FILE_NAME = 'admin-launcher-session.json';
 const PORT_PREFERENCE_FILE_NAME = 'admin-launcher-ports.json';
+const WINDOWS_RUNTIME_RENAME_RETRY_CODES = new Set(['EACCES', 'EBUSY', 'EPERM']);
+const DEFAULT_RUNTIME_RENAME_DELAYS_MS = Object.freeze([20, 40, 80, 160, 250, 350, 500, 750]);
 
 export class AdminLauncherError extends Error {
   constructor(message, { code = 'ADMIN_LAUNCHER_ERROR', details } = {}) {
@@ -27,6 +29,54 @@ export class AdminLauncherError extends Error {
     this.name = 'AdminLauncherError';
     this.code = code;
     if (details !== undefined) this.details = details;
+  }
+}
+
+/**
+ * Antivirus/indexer handles can make an otherwise valid same-directory rename
+ * fail briefly on Windows. Runtime markers are written only after their temp
+ * file is complete, so retrying the exact rename preserves the atomic boundary
+ * without unlinking or partially rewriting the previous marker.
+ */
+export async function renameLauncherRuntimeFile(source, target, options = {}) {
+  const rename = options.rename || fs.rename;
+  const delay = options.delay || ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+  const platform = options.platform || process.platform;
+  const retryDelays = options.retryDelays || DEFAULT_RUNTIME_RENAME_DELAYS_MS;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rename(source, target);
+      return;
+    } catch (error) {
+      const retryable = platform === 'win32'
+        && WINDOWS_RUNTIME_RENAME_RETRY_CODES.has(error?.code)
+        && attempt < retryDelays.length;
+      if (!retryable) throw error;
+      await delay(retryDelays[attempt]);
+    }
+  }
+}
+
+export async function unlinkLauncherRuntimeFile(target, options = {}) {
+  const unlink = options.unlink || fs.unlink;
+  const delay = options.delay || ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+  const platform = options.platform || process.platform;
+  const retryDelays = options.retryDelays || DEFAULT_RUNTIME_RENAME_DELAYS_MS;
+  for (let attempt = 0; ; attempt += 1) {
+    if (typeof options.beforeAttempt === 'function' && await options.beforeAttempt({ attempt, target }) === false) {
+      return false;
+    }
+    try {
+      await unlink(target);
+      return true;
+    } catch (error) {
+      if (error?.code === 'ENOENT') return false;
+      const retryable = platform === 'win32'
+        && WINDOWS_RUNTIME_RENAME_RETRY_CODES.has(error?.code)
+        && attempt < retryDelays.length;
+      if (!retryable) throw error;
+      await delay(retryDelays[attempt]);
+    }
   }
 }
 
@@ -207,7 +257,8 @@ export async function readPreferredRuntimePorts(repoRoot, identity) {
     const payload = JSON.parse(await fs.readFile(portPreferenceFilePath(repoRoot), 'utf8'));
     return normalizePortPreference(payload, identity);
   } catch (error) {
-    if (error?.code === 'ENOENT' || error instanceof SyntaxError) return null;
+    if (error?.code === 'ENOENT' || error instanceof SyntaxError
+      || WINDOWS_RUNTIME_RENAME_RETRY_CODES.has(error?.code)) return null;
     throw error;
   }
 }
@@ -232,11 +283,9 @@ export async function writePreferredRuntimePorts(repoRoot, identity, ports) {
     await fs.writeFile(tempPath, `${JSON.stringify(payload, null, 2)}\n`, {
       encoding: 'utf8', flag: 'wx', mode: 0o600
     });
-    await fs.rename(tempPath, filePath);
+    await renameLauncherRuntimeFile(tempPath, filePath);
   } catch (error) {
-    await fs.unlink(tempPath).catch((cleanupError) => {
-      if (cleanupError?.code !== 'ENOENT') throw cleanupError;
-    });
+    await unlinkLauncherRuntimeFile(tempPath);
     throw error;
   }
   return normalized;
@@ -276,6 +325,7 @@ async function readRuntimeSession(repoRoot, repoIdentity) {
   try {
     const payload = JSON.parse(await fs.readFile(sessionFilePath(repoRoot), 'utf8'));
     if (payload?.version !== 1 || payload?.repoIdentity !== repoIdentity
+      || !Number.isSafeInteger(payload?.launcherPid) || payload.launcherPid < 1
       || !isRuntimePort(payload?.apiPort) || !isRuntimePort(payload?.uiPort)
       || payload.apiPort === payload.uiPort) return null;
     return payload;
@@ -290,15 +340,32 @@ async function writeRuntimeSession(repoRoot, payload) {
   await fs.mkdir(runtimeDir, { recursive: true });
   const filePath = sessionFilePath(repoRoot);
   const tempPath = path.join(runtimeDir, `.${SESSION_FILE_NAME}.${process.pid}.${Date.now()}.tmp`);
-  await fs.writeFile(tempPath, `${JSON.stringify(payload, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
-  await fs.rename(tempPath, filePath);
+  try {
+    await fs.writeFile(tempPath, `${JSON.stringify(payload, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+    await renameLauncherRuntimeFile(tempPath, filePath);
+  } catch (error) {
+    await unlinkLauncherRuntimeFile(tempPath);
+    throw error;
+  }
 }
 
-async function removeRuntimeSession(repoRoot, repoIdentity) {
+function sameRuntimeSession(left, right) {
+  return Boolean(left && right
+    && left.repoIdentity === right.repoIdentity
+    && left.launcherPid === right.launcherPid
+    && left.apiPort === right.apiPort
+    && left.uiPort === right.uiPort
+    && left.startedAt === right.startedAt);
+}
+
+export async function removeRuntimeSession(repoRoot, expectedSession) {
   const filePath = sessionFilePath(repoRoot);
-  const current = await readRuntimeSession(repoRoot, repoIdentity).catch(() => null);
-  if (!current || current.repoIdentity !== repoIdentity) return;
-  await fs.unlink(filePath).catch((error) => { if (error?.code !== 'ENOENT') throw error; });
+  return unlinkLauncherRuntimeFile(filePath, {
+    beforeAttempt: async () => {
+      const current = await readRuntimeSession(repoRoot, expectedSession.repoIdentity).catch(() => null);
+      return sameRuntimeSession(current, expectedSession);
+    }
+  });
 }
 
 export async function probeHttp(url, options = {}) {
@@ -593,7 +660,7 @@ export async function runAdminLauncher(options = {}) {
         code: 'PARTIAL_SESSION_DETECTED'
       });
     }
-    await removeRuntimeSession(repoRoot, repoIdentity);
+    await removeRuntimeSession(repoRoot, savedSession);
   }
 
   const fixedPorts = options.fixedPorts === true || loaded.raw.ADMIN_FIXED_PORTS === 'true';
@@ -675,12 +742,20 @@ export async function runAdminLauncher(options = {}) {
   });
 
   let stopPromise = null;
+  const ownedSession = Object.freeze({
+    version: 1,
+    repoIdentity,
+    launcherPid: process.pid,
+    apiPort: config.ADMIN_API_PORT,
+    uiPort: config.ADMIN_UI_PORT,
+    startedAt: new Date().toISOString()
+  });
   const stop = () => {
     if (stopPromise) return stopPromise;
     stopPromise = Promise.all([
       stopChild(api, { role: 'api', repoIdentity }),
       stopChild(ui, { role: 'ui', repoIdentity })
-    ]).finally(() => removeRuntimeSession(repoRoot, repoIdentity));
+    ]).finally(() => removeRuntimeSession(repoRoot, ownedSession));
     return stopPromise;
   };
   const abortOnExit = (name, child) => child.once('exit', (code, signal) => {
@@ -702,15 +777,13 @@ export async function runAdminLauncher(options = {}) {
   }
 
   try {
-    if (!fixedPorts) await writePreferredRuntimePorts(repoRoot, runtimeIdentity, runtimePorts);
-    await writeRuntimeSession(repoRoot, {
-      version: 1,
-      repoIdentity,
-      launcherPid: process.pid,
-      apiPort: config.ADMIN_API_PORT,
-      uiPort: config.ADMIN_UI_PORT,
-      startedAt: new Date().toISOString()
-    });
+    if (!fixedPorts) {
+      await writePreferredRuntimePorts(repoRoot, runtimeIdentity, runtimePorts).catch((error) => {
+        const message = redactText(error?.message || 'Не удалось обновить сохранённые порты.', { repoRoot });
+        process.stderr.write(`Предупреждение: сохранённые порты не обновлены (${message}). Текущая сессия продолжает работу.\n`);
+      });
+    }
+    await writeRuntimeSession(repoRoot, ownedSession);
   } catch (error) {
     await stop();
     throw error;
