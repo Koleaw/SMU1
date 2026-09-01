@@ -611,7 +611,9 @@ export async function startVisualEditor() {
     };
     statusButton.dataset.state = status;
     const backupSuffix = state.backupStatus?.lastError ? ' · резервная копия не создана' : '';
-    statusLabel.textContent = `${detail || labels[status] || labels.saved}${backupSuffix}`;
+    const humanStatus = `${detail || labels[status] || labels.saved}${backupSuffix}`;
+    statusLabel.textContent = humanStatus;
+    statusButton.title = humanStatus;
   }
 
   function persistFavorites() {

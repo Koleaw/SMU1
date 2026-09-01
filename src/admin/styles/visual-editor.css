@@ -208,9 +208,10 @@ button { color: inherit; }
 .ve-viewport-switcher button, .ve-mode-switcher button { min-height: 28px; padding: 0 9px; border-radius: 5px; color: #59665f; background: transparent; font-size: 11px; font-weight: 750; }
 .ve-viewport-switcher button[aria-pressed="true"], .ve-mode-switcher button[aria-pressed="true"] { color: var(--ve-green-dark); background: #fff; box-shadow: 0 1px 3px rgb(22 44 36 / .12); }
 .ve-viewport-switcher button { width: 30px; padding: 0; font-size: 16px; }
-.ve-status { display: flex; align-items: center; gap: 7px; max-width: 210px; min-height: 34px; padding: 0 10px; border-radius: 8px; color: #415049; background: transparent; font-size: 11px; font-weight: 750; white-space: nowrap; }
+.ve-status { display: flex; flex: 0 1 210px; align-items: center; gap: 7px; min-width: 46px; max-width: 210px; min-height: 34px; overflow: hidden; padding: 0 10px; border-radius: 8px; color: #415049; background: transparent; font-size: 11px; font-weight: 750; white-space: nowrap; }
 .ve-status:hover { background: #eef2ef; }
-.ve-status__dot { width: 8px; height: 8px; border-radius: 50%; background: #789087; box-shadow: 0 0 0 3px rgb(120 144 135 / .12); }
+.ve-status__dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: #789087; box-shadow: 0 0 0 3px rgb(120 144 135 / .12); }
+#veStatusLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ve-status[data-state="dirty"] .ve-status__dot { background: var(--ve-amber); box-shadow: 0 0 0 3px rgb(199 131 22 / .14); }
 .ve-status[data-state="checking"] .ve-status__dot { background: var(--ve-blue); animation: ve-pulse 1.3s ease-in-out infinite; }
 .ve-status[data-state="ready"] .ve-status__dot, .ve-status[data-state="published"] .ve-status__dot { background: var(--ve-green); }

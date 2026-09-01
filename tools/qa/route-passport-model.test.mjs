@@ -118,6 +118,16 @@ test('inert admin compatibility styles cannot leak through Astro dev HMR into th
   assert.doesNotMatch(source, /(?:^|\n)\s*body\s*\{/u);
 });
 
+test('long human Save and backup status remains bounded in the editor topbar', async () => {
+  const [css, app] = await Promise.all([
+    readFile(path.resolve('src/admin/styles/visual-editor.css'), 'utf8'),
+    readFile(path.resolve('src/admin/shell/visual-editor-app.mjs'), 'utf8')
+  ]);
+  assert.match(css, /\.ve-status\s*\{[^}]*flex:\s*0 1 210px;[^}]*overflow:\s*hidden;/su);
+  assert.match(css, /#veStatusLabel\s*\{[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/su);
+  assert.match(app, /statusLabel\.textContent\s*=\s*humanStatus;\s*statusButton\.title\s*=\s*humanStatus;/su);
+});
+
 test('public artifact isolation rejects local canvas affordance markup and CSS', async () => {
   const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'smu1-editor-affordance-isolation-'));
   try {
