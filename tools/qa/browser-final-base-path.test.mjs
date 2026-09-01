@@ -43,3 +43,12 @@ test('motion QA keeps the temporary Astro outDir on the checkout filesystem', as
   assert.match(source, /repoDevice\.dev !== tempDevice\.dev/u);
   assert.doesNotMatch(source, /mkdtemp\(path\.join\(os\.tmpdir\(\), 'smu1-h2-base-build-'\)\)/u);
 });
+
+test('motion QA mounts the tested dist at BASE_PATH without shadowing it with a duplicate build', async () => {
+  const source = await readFile(path.resolve('tools/migration/h2-motion-qa.mjs'), 'utf8');
+  assert.match(source, /normalizeBase\(process\.env\.BASE_PATH \|\| '\/'\)/u);
+  assert.match(source, /primaryBase !== options\.githubBase/u);
+  assert.match(source, /const usesPrimaryBuild = matchesMount\(primaryPrefix\)/u);
+  assert.match(source, /const coveredByPrimaryArtifact = primaryBase === options\.githubBase/u);
+  assert.match(source, /artifact: coveredByPrimaryArtifact \? 'primary-dist' : 'temporary-base-build'/u);
+});

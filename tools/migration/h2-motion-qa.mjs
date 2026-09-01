@@ -38,7 +38,8 @@ const options = {
 if (options.help) {
   process.stdout.write(`H2/H4 first-entry, hierarchical transitions and universal entrance browser QA\n\n`);
   process.stdout.write(`  node tools/migration/h2-motion-qa.mjs\n`);
-  process.stdout.write(`      Serve ./dist, run the complete H2 motion suite, build a temporary /SMU1/ copy,\n`);
+  process.stdout.write(`      Serve ./dist at BASE_PATH, run the complete H2 motion suite, and when needed\n`);
+  process.stdout.write(`      build a temporary /SMU1/ copy for the secondary base-path audit.\n`);
   process.stdout.write(`      and save H3/calm/entrance/scroll/responsive evidence below the operating-system temp directory.\n`);
   process.stdout.write(`  node tools/migration/h2-motion-qa.mjs --origin=http://127.0.0.1:4321\n`);
   process.stdout.write(`      Test an existing local origin. Deterministic media faults and the temporary base build are skipped.\n`);
@@ -126,7 +127,9 @@ if (parsedExternal && !['127.0.0.1', 'localhost', '::1'].includes(parsedExternal
 }
 origin = parsedExternal?.origin || `http://127.0.0.1:${5200 + Math.floor(Math.random() * 500)}`;
 localPort = Number.parseInt(new URL(origin).port, 10);
-primaryBase = parsedExternal ? normalizeBase(parsedExternal.pathname) : '/';
+primaryBase = parsedExternal
+  ? normalizeBase(parsedExternal.pathname)
+  : normalizeBase(process.env.BASE_PATH || '/');
 
 const content = (collection) => fs.readdirSync(path.join(root, 'src', 'content', collection))
   .filter((name) => name.endsWith('.json'))
@@ -330,7 +333,7 @@ const handoffFixture = ({
   };
 };
 
-if (!options.externalOrigin && !options.skipBaseBuild) {
+if (!options.externalOrigin && !options.skipBaseBuild && primaryBase !== options.githubBase) {
   // Astro 7 promotes prerendered assets with rename(), so the output directory
   // must live on the same filesystem as the checkout's .astro working directory.
   const baseBuildTempBase = path.resolve(
@@ -378,9 +381,15 @@ if (!options.externalOrigin) {
       const requestUrl = new URL(request.url || '/', origin);
       const pathname = decodeURIComponent(requestUrl.pathname);
       const basePrefix = options.githubBase === '/' ? '' : options.githubBase.slice(0, -1);
+      const primaryPrefix = primaryBase === '/' ? '' : primaryBase.slice(0, -1);
+      const matchesMount = (prefix) => !prefix || pathname === prefix || pathname.startsWith(`${prefix}/`);
       const usesBaseBuild = Boolean(baseBuildRoot && (pathname === basePrefix || pathname.startsWith(`${basePrefix}/`)));
+      const usesPrimaryBuild = matchesMount(primaryPrefix);
       const mountRoot = usesBaseBuild ? baseBuildRoot : distRoot;
-      const mountedPath = usesBaseBuild ? pathname.slice(basePrefix.length) || '/' : pathname;
+      const mountPrefix = usesBaseBuild ? basePrefix : primaryPrefix;
+      const mountedPath = usesBaseBuild || usesPrimaryBuild
+        ? pathname.slice(mountPrefix.length) || '/'
+        : '/__outside-configured-base__';
       let filename = mountedPath === '/404.html'
         ? path.join(mountRoot, '404.html')
         : path.resolve(mountRoot, `.${mountedPath}`);
@@ -4117,7 +4126,8 @@ const responsiveHeaderTypographyAudit = async () => {
 };
 
 const githubBaseAudit = async () => {
-  if (!baseBuildRoot) {
+  const coveredByPrimaryArtifact = primaryBase === options.githubBase;
+  if (!baseBuildRoot && !coveredByPrimaryArtifact) {
     record('base.github-pages', true, {
       skipped: true,
       reason: options.externalOrigin ? '--origin supplied; use an origin whose path is /SMU1/ for deployed QA' : '--skip-base-build supplied'
@@ -4172,7 +4182,15 @@ const githubBaseAudit = async () => {
     && baseMedia.placeholderPathname.startsWith(`${options.githubBase}_media/h5/`)
     && baseMedia.semanticPathname.startsWith(`${options.githubBase}_media/h5/`)
     && cleanupContract(snapshot),
-  { base: options.githubBase, token, lifecycle, snapshot, assetIssues, baseMedia });
+  {
+    base: options.githubBase,
+    artifact: coveredByPrimaryArtifact ? 'primary-dist' : 'temporary-base-build',
+    token,
+    lifecycle,
+    snapshot,
+    assetIssues,
+    baseMedia
+  });
 };
 
 try {
