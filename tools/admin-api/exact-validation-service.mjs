@@ -552,6 +552,34 @@ function safeOutput(value) {
     .slice(-20_000);
 }
 
+function trustedNpmCliPath(value, pathApi = path) {
+  const raw = String(value || '').trim();
+  if (!raw || !pathApi.isAbsolute(raw)) return null;
+  const normalized = pathApi.normalize(raw).replace(/\\/gu, '/').toLowerCase();
+  return normalized.endsWith('/node_modules/npm/bin/npm-cli.js') ? pathApi.normalize(raw) : null;
+}
+
+/**
+ * Node 24 no longer executes `.cmd` files through execFile on Windows. Invoke
+ * npm's JavaScript entrypoint with the already-running Node binary instead of
+ * enabling a shell for an exact-build command.
+ */
+export function exactBuildInvocation(options = {}) {
+  const platform = String(options.platform || process.platform);
+  if (platform !== 'win32') {
+    return Object.freeze({ command: 'npm', args: Object.freeze(['run', 'build:exact']) });
+  }
+  const pathApi = path.win32;
+  const nodeExecutable = pathApi.resolve(String(options.nodeExecutable || process.execPath));
+  const environment = options.environment || process.env;
+  const npmCli = trustedNpmCliPath(environment.npm_execpath, pathApi)
+    || pathApi.join(pathApi.dirname(nodeExecutable), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+  return Object.freeze({
+    command: nodeExecutable,
+    args: Object.freeze([npmCli, 'run', 'build:exact'])
+  });
+}
+
 export async function runExactSnapshot({ repoRoot, snapshot, environment = process.env, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   const workspace = path.join(snapshot.snapshotRoot, 'workspace');
   if (!contained(snapshot.snapshotRoot, workspace)) throw new ExactValidationError('EXACT_WORKSPACE_ESCAPE', 'Exact workspace вышел за snapshot.', { status: 500 });
@@ -602,11 +630,11 @@ export async function runExactSnapshot({ repoRoot, snapshot, environment = proce
     };
     const exactRouteManifestHash = exactRouteManifestSha256(exactRouteManifestValue);
     await atomicWriteJson(exactRouteManifest, exactRouteManifestValue);
-    const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    const npm = exactBuildInvocation({ environment });
     const exactBasePath = exactBuildBasePath(environment.BASE_PATH || environment.TEST_BASE_PATH || '/');
     const exactTestSiteUrl = exactBuildTestSiteUrl(environment.TEST_SITE_URL || 'http://127.0.0.1');
     const exactCi = String(environment.CI || '').toLowerCase() === 'true' ? 'true' : 'false';
-    const result = await execFileAsync(npm, ['run', 'build:exact'], {
+    const result = await execFileAsync(npm.command, [...npm.args], {
       cwd: workspace,
       windowsHide: true,
       timeout: Number(timeoutMs) || DEFAULT_TIMEOUT_MS,

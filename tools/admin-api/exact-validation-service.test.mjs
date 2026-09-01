@@ -9,6 +9,7 @@ import {
   createExactSnapshot,
   createExactValidationService,
   ExactValidationError,
+  exactBuildInvocation,
   hydrateExactMediaCache,
   installSnapshotBlobAtomically,
   renameAtomicWithTransientRetry,
@@ -22,6 +23,31 @@ import {
 const execFileAsync = promisify(execFile);
 
 const OWNER = Object.freeze({ owner: 'pavel', sessionFingerprint: 'session-test', recoveryClientId: 'browser-test' });
+
+test('exact build invokes npm without a Windows command shell', () => {
+  const windows = exactBuildInvocation({
+    platform: 'win32',
+    nodeExecutable: 'C:\\Program Files\\nodejs\\node.exe',
+    environment: { npm_execpath: 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js' }
+  });
+  assert.deepEqual(windows, {
+    command: path.win32.resolve('C:\\Program Files\\nodejs\\node.exe'),
+    args: [
+      path.win32.normalize('C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js'),
+      'run',
+      'build:exact'
+    ]
+  });
+  assert.equal(windows.args.some((value) => /(?:cmd\.exe|npm\.cmd)/iu.test(value)), false);
+
+  const rejectedOverride = exactBuildInvocation({
+    platform: 'win32',
+    nodeExecutable: 'C:\\Node\\node.exe',
+    environment: { npm_execpath: 'C:\\temp\\untrusted-runner.js' }
+  });
+  assert.equal(rejectedOverride.args[0], path.win32.normalize('C:\\Node\\node_modules\\npm\\bin\\npm-cli.js'));
+  assert.deepEqual(exactBuildInvocation({ platform: 'linux' }), { command: 'npm', args: ['run', 'build:exact'] });
+});
 
 test('exact state atomic rename retries transient Windows sharing failures without a non-atomic fallback', async () => {
   const attempts = [];
