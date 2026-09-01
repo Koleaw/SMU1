@@ -2,6 +2,11 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { classifyAdminAction } from './action-crawl-core.mjs';
+import {
+  ADMIN_EDITOR_REVISION_PATTERN_SOURCE,
+  ADMIN_EDITOR_SESSION_PATTERN_SOURCE,
+  isAdminHomeCanvasReady
+} from './admin-canvas-contract.mjs';
 import { CdpBrowser } from './cdp-browser.mjs';
 import { buildExpectedRouteModel, reconcileRouteSets } from './route-passport-model.mjs';
 
@@ -19,6 +24,7 @@ const options = {
   isolationProof: option('--isolation-proof', process.env.H6_QA_ISOLATION_PROOF || ''),
   output: path.resolve(root, option('--output', '.admin-runtime/h6-qa/admin-action-crawl.json'))
 };
+const verboseProgress = process.env.H6_QA_VERBOSE === 'true';
 if (options.help) {
   process.stdout.write(`H6 visual-editor action registry and safe crawl\n\n`);
   process.stdout.write(`  H6_QA_ADMIN_ORIGIN=http://127.0.0.1:<port> H6_QA_ADMIN_USERNAME=<synthetic> H6_QA_ADMIN_PASSWORD=<synthetic> node tools/qa/admin-action-crawl.mjs\n`);
@@ -57,6 +63,14 @@ const git = (...args) => {
   try { return execFileSync('git', args, { cwd: root, encoding: 'utf8', windowsHide: true }).trim(); }
   catch { return ''; }
 };
+const sanitizeObservedUrl = (value) => {
+  try {
+    const url = new URL(String(value || ''));
+    return { origin: url.origin, pathname: url.pathname, queryKeys: [...new Set(url.searchParams.keys())].sort() };
+  } catch {
+    return { origin: '', pathname: '', queryKeys: [] };
+  }
+};
 const browser = await new CdpBrowser({ headful: options.headful, safetyMode: 'admin-no-release' }).start();
 const current = { actionKey: '', mode: '' };
 const events = [];
@@ -66,10 +80,14 @@ browser.on('Runtime.consoleAPICalled', ({ type, args }) => {
   if (['error', 'assert'].includes(type)) events.push({ ...current, kind: `console-${type}`, text: args?.map((item) => item.value ?? item.description ?? '').join(' ') || '' });
 });
 browser.on('Network.responseReceived', ({ response, type }) => {
-  if (response.status >= 400) events.push({ ...current, kind: 'http-response', status: response.status, url: response.url, resourceType: type });
+  const url = sanitizeObservedUrl(response.url);
+  const expectedNotFoundCanvas = response.status === 404 && current.actionKey === 'canvas-route:/404.html'
+    && ['/404', '/404.html'].includes(url.pathname);
+  if (response.status >= 400 && !expectedNotFoundCanvas) events.push({ ...current, kind: 'http-response', status: response.status, url, resourceType: type });
 });
 browser.on('Network.requestWillBeSent', ({ request, type }) => {
-  if (new URL(request.url).origin === parsedOrigin.origin) requests.push({ ...current, method: request.method, url: request.url, resourceType: type });
+  const url = sanitizeObservedUrl(request.url);
+  if (url.origin === parsedOrigin.origin) requests.push({ ...current, method: request.method, url, resourceType: type });
 });
 
 const inventoryExpression = `(() => {
@@ -85,7 +103,7 @@ const inventoryExpression = `(() => {
       classes: Array.from(element.classList),
       containerId: element.parentElement?.closest('[id]')?.id || '',
       name: clean(element.getAttribute('aria-label') || element.title || element.textContent || element.value),
-      href: element.href || element.getAttribute('href') || '', type: element.type || '', visible: visible(element),
+      href: element.getAttribute('href') || '', type: element.type || '', visible: visible(element),
       disabled: Boolean(element.disabled || element.getAttribute('aria-disabled') === 'true'), tabIndex: element.tabIndex,
       dataActions: Array.from(element.attributes).filter((item) => item.name.startsWith('data-') && item.name !== 'data-h6-admin-action-id').map((item) => item.name),
       dataAttributes: Object.fromEntries(Array.from(element.attributes).filter((item) => item.name.startsWith('data-') && item.name !== 'data-h6-admin-action-id').map((item) => [item.name, item.value]))
@@ -163,23 +181,85 @@ const loginIfNeeded = async () => {
   return { attempted: true, success: false };
 };
 
+const homeCanvasSnapshotExpression = () => `(() => {
+  const frame = document.querySelector('#veFrame');
+  const documentValue = frame?.contentDocument;
+  const locationValue = frame?.contentWindow?.location?.href || '';
+  const locationUrl = locationValue ? new URL(locationValue) : null;
+  const srcValue = frame?.src || '';
+  const srcUrl = srcValue ? new URL(srcValue) : null;
+  const siteBase = document.querySelector('[data-site-base]')?.dataset.siteBase || '/';
+  const pathname = locationUrl?.pathname || '';
+  const normalizedBase = siteBase === '/' ? '/' : ('/' + siteBase.replace(/^\\/+|\\/+$/gu, ''));
+  const logicalRoute = normalizedBase !== '/' && (pathname === normalizedBase || pathname.startsWith(normalizedBase + '/'))
+    ? pathname.slice(normalizedBase.length) || '/'
+    : pathname;
+  const sessionPattern = new RegExp(${JSON.stringify(ADMIN_EDITOR_SESSION_PATTERN_SOURCE)}, 'iu');
+  const revisionPattern = new RegExp(${JSON.stringify(ADMIN_EDITOR_REVISION_PATTERN_SOURCE)}, 'u');
+  return {
+    ready: Boolean(documentValue?.body && documentValue.readyState !== 'loading'),
+    srcOriginPath: srcUrl ? srcUrl.origin + srcUrl.pathname : '',
+    locationOriginPath: locationUrl ? locationUrl.origin + locationUrl.pathname : '',
+    queryKeys: locationUrl ? [...new Set(locationUrl.searchParams.keys())].sort() : [],
+    siteBase,
+    logicalRoute,
+    editorMode: locationUrl?.searchParams.get('__smu1_editor') || '',
+    editorSessionShape: sessionPattern.test(locationUrl?.searchParams.get('editorSession') || ''),
+    editorRevisionShape: revisionPattern.test(locationUrl?.searchParams.get('editorRevision') || ''),
+    h1: Array.from(documentValue?.querySelectorAll('h1') || []).map((item) => item.textContent?.replace(/\\s+/gu, ' ').trim()).filter(Boolean),
+    bindings: documentValue?.querySelectorAll('[data-smu1-binding]').length || 0,
+    interactions: documentValue?.querySelectorAll('a[href],button,input,select,textarea,summary,[role="button"],[tabindex]').length || 0,
+    overlays: document.querySelectorAll('#veOverlay [data-binding-id]').length || 0
+  };
+})()`;
+
+const evaluateWithin = async (expression, timeoutMs) => {
+  const timeoutMarker = Symbol('canvas-evaluation-timeout');
+  let timer;
+  const value = await Promise.race([
+    browser.evaluate(expression).catch(() => null),
+    new Promise((resolve) => { timer = setTimeout(() => resolve(timeoutMarker), timeoutMs); })
+  ]).finally(() => clearTimeout(timer));
+  return value === timeoutMarker ? { timedOut: true, value: null } : { timedOut: false, value };
+};
+
+const waitForAdminHomeCanvas = async ({ timeoutMs = 20_000 } = {}) => {
+  const startedAt = performance.now();
+  const deadline = startedAt + timeoutMs;
+  let canvas = null;
+  let attempts = 0;
+  let evaluationTimedOut = false;
+  while (performance.now() < deadline) {
+    attempts += 1;
+    const remainingMs = Math.max(1, Math.ceil(deadline - performance.now()));
+    const evaluation = await evaluateWithin(homeCanvasSnapshotExpression(), remainingMs);
+    if (evaluation.timedOut) {
+      evaluationTimedOut = true;
+      break;
+    }
+    if (evaluation.value) canvas = evaluation.value;
+    if (isAdminHomeCanvasReady(canvas)) break;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  return {
+    canvas,
+    diagnostics: {
+      attempts,
+      elapsedMs: Math.round(performance.now() - startedAt),
+      evaluationTimedOut
+    }
+  };
+};
+
 const restoreAdminHome = async () => {
   await browser.navigate(`${parsedOrigin.origin}/admin/`, { waitAfterMs: 100 });
   const login = await loginIfNeeded();
   if (login.attempted && !login.success) throw new Error('Synthetic admin login did not restore the editor shell.');
-  const deadline = Date.now() + 20_000;
-  while (Date.now() < deadline) {
-    const ready = await browser.evaluate(`(() => {
-      const frame = document.querySelector('#veFrame');
-      return Boolean(frame?.contentDocument?.body && frame.contentDocument.readyState !== 'loading' && frame.contentDocument.querySelectorAll('h1').length === 1);
-    })()`).catch(() => false);
-    if (ready) {
-      await browser.evaluate(inventoryExpression);
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 120));
+  const wait = await waitForAdminHomeCanvas();
+  if (!isAdminHomeCanvasReady(wait.canvas)) {
+    throw new Error(`Admin Home canvas did not recover after restoring action baseline: ${JSON.stringify({ ...wait.diagnostics, snapshot: wait.canvas })}`);
   }
-  throw new Error('Admin Home canvas did not recover after restoring action baseline.');
+  await browser.evaluate(inventoryExpression);
 };
 
 const clickShellSelector = async (selector) => {
@@ -206,8 +286,10 @@ const waitForCanvasPath = async (expectedPath, { exact = false } = {}) => {
       const logicalPathname = normalizedBase !== '/' && (pathname === normalizedBase || pathname.startsWith(normalizedBase + '/'))
         ? pathname.slice(normalizedBase.length) || '/'
         : pathname;
+      const locationUrl = locationValue ? new URL(locationValue) : null;
       return {
-        location: locationValue,
+        locationOriginPath: locationUrl ? locationUrl.origin + locationUrl.pathname : '',
+        queryKeys: locationUrl ? [...new Set(locationUrl.searchParams.keys())].sort() : [],
         pathname,
         logicalPathname,
         h1: Array.from(frame?.contentDocument?.querySelectorAll('h1') || []).map((item) => item.textContent?.replace(/\\s+/gu, ' ').trim()).filter(Boolean)
@@ -232,7 +314,7 @@ const openPageBySearch = async ({ query, expectedPath, exactPath = false, mode, 
     const routeText = ${JSON.stringify(routeText)};
     const button = routeText
       ? buttons.find((candidate) => Array.from(candidate.querySelectorAll('small')).some((item) => {
-          const text = item.textContent?.replace(/\s+/gu, ' ').trim() || '';
+          const text = item.textContent?.replace(/\\s+/gu, ' ').trim() || '';
           return text === routeText || text.endsWith('· ' + routeText);
         }))
       : buttons[0];
@@ -294,6 +376,7 @@ const runCanvasRouteAudit = async () => {
   const results = [];
   let completed = 0;
   for (const descriptor of routeModel.routes) {
+    if (verboseProgress) progress(`opening canvas route ${completed + 1}/${routeModel.routes.length}: ${descriptor.pathname}`);
     current.actionKey = `canvas-route:${descriptor.pathname}`;
     current.mode = 'navigator-click';
     const eventIndex = events.length;
@@ -313,42 +396,93 @@ const runCanvasRouteAudit = async () => {
         snapshot = await browser.evaluate(`(() => {
           const frame = document.querySelector('#veFrame');
           const documentValue = frame?.contentDocument;
+          const frameLocation = frame?.contentWindow?.location?.href || '';
+          const frameRevision = frameLocation ? new URL(frameLocation).searchParams.get('editorRevision') || '' : '';
+          const aliasCanvasRevision = document.querySelector('#veApp')?.dataset.aliasCanvasRevision || '';
           const overlayTargets = Array.from(document.querySelectorAll('.ve-overlay-target')).filter((item) => {
             const style = getComputedStyle(item); const rect = item.getBoundingClientRect();
             return !item.hidden && style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0
               && rect.right > 0 && rect.bottom > 0 && rect.left < innerWidth && rect.top < innerHeight;
           });
+          const describedTargets = overlayTargets.map((item) => {
+            const bindingId = item.dataset.bindingId || '';
+            const bindingElement = Array.from(documentValue?.querySelectorAll('[data-smu1-binding-id][data-smu1-binding]') || [])
+              .find((candidate) => candidate.getAttribute('data-smu1-binding-id') === bindingId);
+            let tool = '';
+            try { tool = JSON.parse(bindingElement?.getAttribute('data-smu1-binding') || 'null')?.tool || ''; } catch {}
+            return { item, tool };
+          });
           return {
             h1: Array.from(documentValue?.querySelectorAll('h1') || []).map((item) => item.textContent?.replace(/\\s+/gu, ' ').trim()).filter(Boolean),
+            canvasHint: document.querySelector('#veCanvasHint')?.textContent?.replace(/\\s+/gu, ' ').trim() || '',
+            aliasBridgeReady: document.querySelector('#veApp')?.dataset.aliasCanvasReady === 'true',
+            aliasBridgeRevisionMatch: Boolean(frameRevision && aliasCanvasRevision === frameRevision),
             bindings: documentValue?.querySelectorAll('[data-smu1-binding]').length || 0,
             bindingIds: new Set(Array.from(documentValue?.querySelectorAll('[data-smu1-binding-id]') || []).map((item) => item.getAttribute('data-smu1-binding-id'))).size,
             interactions: documentValue?.querySelectorAll('a[href],button,input,select,textarea,summary,[role="button"],[tabindex]').length || 0,
             overlays: overlayTargets.length,
-            overlayPoint: (() => { const item = overlayTargets[0]; if (!item) return null; const rect = item.getBoundingClientRect(); return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }; })()
+            overlayPoint: (() => {
+              const editable = describedTargets.filter((candidate) => !['media', 'gallery'].includes(candidate.tool));
+              const selected = editable.find((candidate) => candidate.item.dataset.priority === 'primary')
+                || editable[0]
+                || describedTargets.find((candidate) => candidate.item.dataset.priority === 'primary')
+                || describedTargets[0];
+              if (!selected) return null;
+              const rect = selected.item.getBoundingClientRect();
+              return {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2,
+                tool: selected.tool,
+                bindingId: selected.item.dataset.bindingId || ''
+              };
+            })()
           };
         })()`).catch(() => null);
-        if (snapshot?.h1?.length === 1 && (descriptor.routeClass === 'alias' || (snapshot.bindings > 0 && snapshot.overlays > 0))) break;
+        if (snapshot?.h1?.length === 1 && (descriptor.routeClass === 'alias'
+          ? snapshot.aliasBridgeReady && snapshot.aliasBridgeRevisionMatch
+          : snapshot.bindings > 0 && snapshot.overlays > 0)) break;
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
       let contextual = { applicable: descriptor.routeClass !== 'alias', opened: false, controls: 0, escapeClosed: false };
       if (descriptor.routeClass !== 'alias' && snapshot?.overlayPoint) {
-        await browser.dispatchClick(snapshot.overlayPoint);
-        const inspectorDeadline = Date.now() + 5_000;
-        while (Date.now() < inspectorDeadline) {
-          contextual = await browser.evaluate(`(() => {
-            const inspector = document.querySelector('#veInspector');
-            const inline = document.querySelector('#veInlineEditor');
-            const opened = Boolean((inspector && !inspector.hidden) || (inline && !inline.hidden));
-            const owner = inspector && !inspector.hidden ? inspector : inline && !inline.hidden ? inline : null;
-            return { applicable: true, opened, controls: owner?.querySelectorAll('button,input,select,textarea,[role="button"],[tabindex]').length || 0, escapeClosed: false };
+        for (let attempt = 0; attempt < 2 && !contextual.opened; attempt += 1) {
+          const clickPoint = await browser.evaluate(`(() => {
+            const bindingId = ${JSON.stringify(snapshot.overlayPoint.bindingId || '')};
+            const item = Array.from(document.querySelectorAll('.ve-overlay-target'))
+              .find((candidate) => candidate.dataset.bindingId === bindingId);
+            if (!item) return null;
+            const rect = item.getBoundingClientRect();
+            return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
           })()`);
-          if (contextual.opened) break;
-          await new Promise((resolve) => setTimeout(resolve, 80));
+          if (!clickPoint) break;
+          await browser.dispatchClick(clickPoint);
+          const inspectorDeadline = Date.now() + 2_500;
+          while (Date.now() < inspectorDeadline) {
+            contextual = await browser.evaluate(`(() => {
+              const inspector = document.querySelector('#veInspector');
+              const inline = document.querySelector('#veInlineEditor');
+              const media = document.querySelector('#veMediaDialog');
+              const opened = Boolean((inspector && !inspector.hidden) || (inline && !inline.hidden) || media?.open);
+              const owner = inspector && !inspector.hidden ? inspector : inline && !inline.hidden ? inline : media?.open ? media : null;
+              return { applicable: true, opened, controls: owner?.querySelectorAll('button,input,select,textarea,[role="button"],[tabindex]').length || 0, escapeClosed: false };
+            })()`);
+            if (contextual.opened) break;
+            await new Promise((resolve) => setTimeout(resolve, 80));
+          }
         }
         if (contextual.opened) {
+          await new Promise((resolve) => setTimeout(resolve, 120));
           await browser.dispatchKey('Escape', { code: 'Escape' });
-          await new Promise((resolve) => setTimeout(resolve, 45));
-          contextual.escapeClosed = await browser.evaluate(`Boolean(document.querySelector('#veInspector')?.hidden && document.querySelector('#veInlineEditor')?.hidden)`);
+          const closeDeadline = Date.now() + 2_000;
+          while (Date.now() < closeDeadline) {
+            contextual.escapeClosed = await browser.evaluate(`Boolean(
+              document.querySelector('#veInspector')?.hidden
+              && document.querySelector('#veInlineEditor')?.hidden
+              && !document.querySelector('#veMediaDialog')?.open
+            )`);
+            if (contextual.escapeClosed) break;
+            await new Promise((resolve) => setTimeout(resolve, 80));
+          }
         }
       }
       const routeEvents = events.slice(eventIndex);
@@ -358,6 +492,10 @@ const runCanvasRouteAudit = async () => {
       if (snapshot?.h1?.length !== 1) issues.push(`h1-count:${snapshot?.h1?.length || 0}`);
       if (descriptor.routeClass !== 'alias' && (!snapshot?.bindings || !snapshot?.bindingIds || !snapshot?.overlays)) issues.push('binding-overlay-coverage');
       if (descriptor.routeClass !== 'alias' && (!contextual.opened || !contextual.controls || !contextual.escapeClosed)) issues.push('contextual-tool-or-escape');
+      if (descriptor.routeClass === 'alias' && (!snapshot?.aliasBridgeReady || !snapshot?.aliasBridgeRevisionMatch
+        || snapshot?.overlays !== 0 || !snapshot?.canvasHint?.includes(descriptor.canonicalTarget))) {
+        issues.push('alias-read-only-provenance');
+      }
       if (routeEvents.length) issues.push(`runtime-or-network:${routeEvents.length}`);
       if (routeRequests.some((request) => !['GET', 'HEAD', 'OPTIONS'].includes(request.method))) issues.push('unexpected-mutation-request');
       results.push({
@@ -373,7 +511,11 @@ const runCanvasRouteAudit = async () => {
         issues,
         status: issues.length ? 'fail' : 'pass'
       });
+      if (verboseProgress) progress(`canvas route ${descriptor.pathname}: ${issues.length
+        ? `fail (${issues.join(', ')}; tool=${snapshot?.overlayPoint?.tool || 'none'}; contextual=${JSON.stringify(contextual)})`
+        : 'pass'}`);
     } catch (error) {
+      if (verboseProgress) progress(`canvas route ${descriptor.pathname}: exception (${String(error)})`);
       results.push({
         route: descriptor.pathname,
         routeClass: descriptor.routeClass,
@@ -399,44 +541,15 @@ try {
   await browser.navigate(`${parsedOrigin.origin}/admin/`, { waitAfterMs: 100 });
   const login = await loginIfNeeded();
   if (login.attempted && !login.success) throw new Error('Synthetic admin login did not reach the editor shell.');
-  const canvasDeadline = Date.now() + 20_000;
-  while (Date.now() < canvasDeadline) {
-    const canvasReady = await browser.evaluate(`(() => {
-      const frame = document.querySelector('#veFrame');
-      return Boolean(frame?.contentDocument?.body && frame.contentDocument.readyState !== 'loading');
-    })()`).catch(() => false);
-    if (canvasReady) break;
-    await new Promise((resolve) => setTimeout(resolve, 150));
+  const canvasWait = await waitForAdminHomeCanvas();
+  const canvas = canvasWait.canvas;
+  if (!isAdminHomeCanvasReady(canvas)) {
+    const diagnostics = { ...canvasWait.diagnostics, snapshot: canvas };
+    throw new Error(`Exact Home editor canvas did not become ready for admin action crawl: ${JSON.stringify(diagnostics)}`);
   }
-  await new Promise((resolve) => setTimeout(resolve, 250));
-  const canvas = await browser.evaluate(`(() => {
-    const frame = document.querySelector('#veFrame');
-    const documentValue = frame?.contentDocument;
-    const siteBase = document.querySelector('[data-site-base]')?.dataset.siteBase || '/';
-    const pathname = frame?.contentWindow?.location?.pathname || '';
-    const normalizedBase = siteBase === '/' ? '/' : ('/' + siteBase.replace(/^\\/+|\\/+$/gu, ''));
-    const logicalRoute = normalizedBase !== '/' && (pathname === normalizedBase || pathname.startsWith(normalizedBase + '/'))
-      ? pathname.slice(normalizedBase.length) || '/'
-      : pathname;
-    return {
-      ready: Boolean(documentValue?.body),
-      src: frame?.src || '',
-      location: frame?.contentWindow?.location?.href || '',
-      siteBase,
-      logicalRoute,
-      editorMode: frame?.contentWindow?.location?.href ? new URL(frame.contentWindow.location.href).searchParams.get('__smu1_editor') || '' : '',
-      editorSession: frame?.contentWindow?.location?.href ? new URL(frame.contentWindow.location.href).searchParams.get('editorSession') || '' : '',
-      editorRevision: frame?.contentWindow?.location?.href ? new URL(frame.contentWindow.location.href).searchParams.get('editorRevision') || '' : '',
-      h1: Array.from(documentValue?.querySelectorAll('h1') || []).map((item) => item.textContent?.replace(/\\s+/gu, ' ').trim()).filter(Boolean),
-      bindings: documentValue?.querySelectorAll('[data-smu1-binding]').length || 0,
-      interactions: documentValue?.querySelectorAll('a[href],button,input,select,textarea,summary,[role="button"],[tabindex]').length || 0
-    };
-  })()`);
-  if (!canvas.ready || !canvas.location || canvas.logicalRoute !== '/' || canvas.h1.length !== 1
-    || canvas.editorMode !== '1' || !/^[0-9a-f-]{36}$/iu.test(canvas.editorSession) || !/^\d+$/u.test(canvas.editorRevision)) {
-    throw new Error('Exact Home editor canvas did not become ready for admin action crawl.');
-  }
+  if (verboseProgress) progress(`Home canvas ready after ${canvasWait.diagnostics.attempts} probe(s)`);
   const navigationAcceptance = await runNavigationAcceptance('/');
+  if (verboseProgress) progress(`navigation acceptance: ${navigationAcceptance.status}`);
   const canvasRouteResults = await runCanvasRouteAudit();
   const discovered = new Map();
   const actionResults = [];
@@ -453,6 +566,7 @@ try {
       }
       const policy = classifyAdminAction(action, { isolatedMutations: options.isolatedMutations });
       const result = { key, action, policy: policy.policy, executions: [], status: 'pass' };
+      if (verboseProgress) progress(`action ${key}: ${policy.policy}`);
       if (policy.execute && action.visible && !action.disabled) {
         for (const operation of ['click', 'keyboard']) {
           if (operation === 'keyboard') await restoreAdminHome();
@@ -503,10 +617,14 @@ try {
     counts[result.policy] = (counts[result.policy] || 0) + 1;
     return counts;
   }, {});
-  const browserSafety = browser.safetyEvidence();
+  const rawBrowserSafety = browser.safetyEvidence();
+  const browserSafety = {
+    ...rawBrowserSafety,
+    intercepted: rawBrowserSafety.intercepted.map((entry) => ({ ...entry, url: sanitizeObservedUrl(entry.url) }))
+  };
   const releaseMutationAttempts = requests.filter((request) => {
     try {
-      return !['GET', 'HEAD', 'OPTIONS'].includes(request.method) && /\/api\/admin\/(?:publish|release|rollback|production)(?:\/|$)/iu.test(new URL(request.url).pathname);
+      return !['GET', 'HEAD', 'OPTIONS'].includes(request.method) && /\/api\/admin\/(?:publish|release|rollback|production)(?:\/|$)/iu.test(request.url?.pathname || '');
     } catch { return false; }
   });
   const navigatorRoutes = [...new Set(actionResults

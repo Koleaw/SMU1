@@ -91,6 +91,11 @@ export function createHistoryStore(initialValue, {
   let past = [];
   let future = [];
   let boundary = freezeSnapshot(initialValue);
+  const checkpoints = new WeakSet();
+
+  function cloneHistoryEntries(entries) {
+    return entries.map((entry) => ({ ...entry, value: freezeSnapshot(entry.value) }));
+  }
 
   function emit(reason) {
     onChange(snapshot(), reason);
@@ -147,6 +152,30 @@ export function createHistoryStore(initialValue, {
     return snapshot();
   }
 
+  // A UI gesture needs a stronger boundary than an undo-count comparison:
+  // adjacent text commits may coalesce and a bounded history can keep the same
+  // length while dropping its oldest entry. The opaque checkpoint restores the
+  // exact current/past/future state without moving the saved boundary.
+  function createCheckpoint() {
+    const checkpoint = Object.freeze({
+      current: freezeSnapshot(current),
+      past: Object.freeze(cloneHistoryEntries(past).map(Object.freeze)),
+      future: Object.freeze(cloneHistoryEntries(future).map(Object.freeze))
+    });
+    checkpoints.add(checkpoint);
+    return checkpoint;
+  }
+
+  function restoreCheckpoint(checkpoint) {
+    if (!checkpoint || !checkpoints.has(checkpoint)) throw new TypeError('History checkpoint is invalid or already restored.');
+    checkpoints.delete(checkpoint);
+    current = freezeSnapshot(checkpoint.current);
+    past = cloneHistoryEntries(checkpoint.past);
+    future = cloneHistoryEntries(checkpoint.future);
+    emit('checkpoint-restore');
+    return snapshot();
+  }
+
   function markBoundary(value = current) {
     current = freezeSnapshot(value);
     boundary = current;
@@ -173,7 +202,17 @@ export function createHistoryStore(initialValue, {
     return snapshot();
   }
 
-  return Object.freeze({ snapshot, commit, undo, redo, markBoundary, setBoundary, resetToBoundary });
+  return Object.freeze({
+    snapshot,
+    commit,
+    undo,
+    redo,
+    createCheckpoint,
+    restoreCheckpoint,
+    markBoundary,
+    setBoundary,
+    resetToBoundary
+  });
 }
 
 export function getAtPath(value, path) {

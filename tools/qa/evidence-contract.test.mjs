@@ -233,7 +233,13 @@ test('admin action evidence rejects generic execution of release controls', () =
     schemaVersion: 1,
     evidence: {
       sourceSHA: 'abc123', dirty: false, loopbackOnly: true, credentialsPersisted: false,
-      releaseActionsExecuted: false, canvas: { ready: true, h1: ['Главная'], bindings: 12, interactions: 8 },
+      releaseActionsExecuted: false,
+      canvas: {
+        ready: true, h1: ['Главная'], bindings: 12, interactions: 8, overlays: 7,
+        editorSessionShape: true, editorRevisionShape: true,
+        srcOriginPath: 'http://127.0.0.1:4321/', locationOriginPath: 'http://127.0.0.1:4321/',
+        queryKeys: ['__smu1_editor', 'editorMode', 'editorRevision', 'editorSession']
+      },
       releaseMutationAttempts: [], browserSafety: { mode: 'admin-no-release', intercepted: [] },
       navigationAcceptance: { status: 'pass', click: { mode: 'click' }, keyboard: { mode: 'keyboard-enter' } }
     },
@@ -254,6 +260,24 @@ test('admin action evidence rejects generic execution of release controls', () =
     aggregate: { discoveredContexts: ['shell', 'iframe-home'] }
   };
   assert.equal(validateAdminActionEvidence(report, { authoritativeRoutes: ['/'] }).ok, true);
+  const leakedSession = structuredClone(report);
+  leakedSession.evidence.canvas.editorSession = '6e978464-ea27-49de-92d4-44cb175166e8';
+  leakedSession.evidence.canvas.location = 'http://127.0.0.1:4321/?editorSession=6e978464-ea27-49de-92d4-44cb175166e8';
+  assert.match(validateAdminActionEvidence(leakedSession, { authoritativeRoutes: ['/'] }).issues.join('\n'), /canvas-session-leak/u);
+  const aliasReport = structuredClone(report);
+  aliasReport.navigator = { exact: true, expected: ['/legacy/'], discovered: ['/legacy/'] };
+  aliasReport.canvasRouteResults = [{
+    route: '/legacy/', routeClass: 'alias', canonicalTarget: '/canonical/', status: 'pass', navigation: { mode: 'click' },
+    snapshot: {
+      h1: ['Каноническая'], bindings: 10, bindingIds: 10, overlays: 0,
+      aliasBridgeReady: true, aliasBridgeRevisionMatch: true,
+      canvasHint: 'Совместимый адрес. Каноническая страница: /canonical/'
+    },
+    contextual: { applicable: false, opened: false, controls: 0, escapeClosed: false }, requests: [], events: []
+  }];
+  assert.equal(validateAdminActionEvidence(aliasReport, { authoritativeRoutes: ['/legacy/'] }).ok, true);
+  aliasReport.canvasRouteResults[0].snapshot.overlays = 1;
+  assert.match(validateAdminActionEvidence(aliasReport, { authoritativeRoutes: ['/legacy/'] }).issues.join('\n'), /alias-editable/u);
   report.actionResults[0].executions.push({ operation: 'click', status: 'pass' });
   assert.match(validateAdminActionEvidence(report, { authoritativeRoutes: ['/'] }).issues.join('\n'), /forbidden-execution/u);
 });

@@ -1,4 +1,5 @@
 import { createAdminApiClient, AdminApiError } from '../core/api-client.mjs';
+import { handleVisualEditorEscape } from '../core/editor-escape.mjs';
 import { createDraftStore } from '../state/draft-store.mjs';
 import {
   bindingOwnerDependency,
@@ -6,6 +7,11 @@ import {
   resolveRelationMediaProjection
 } from '../state/binding-projection.mjs';
 import { createHistoryStore, getAtPath, setAtPath } from '../state/history-store.mjs';
+import {
+  completeInlineGesture,
+  createInlineGestureCheckpoint,
+  restoreInlineGestureCheckpoint
+} from '../state/inline-gesture.mjs';
 import { createMediaQueueStore } from '../state/media-queue-store.mjs';
 import {
   addDirectionRelation,
@@ -409,7 +415,11 @@ function createToastRegion(region, liveRegion) {
       const remove = () => node.remove();
       node.addEventListener('click', remove, { once: true });
       node.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') remove();
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          remove();
+        }
       });
       if (duration) window.setTimeout(remove, duration);
       return node;
@@ -915,7 +925,7 @@ export async function startVisualEditor() {
   }
 
   function buildCanvasUrl(page) {
-    const url = new URL(withBase(siteBase, page.route), location.origin);
+    const url = new URL(withBase(siteBase, page.canonicalTarget || page.route), location.origin);
     url.searchParams.set('__smu1_editor', '1');
     url.searchParams.set('editorSession', frameNonce);
     url.searchParams.set('editorRevision', String(state.frameRevision));
@@ -936,6 +946,8 @@ export async function startVisualEditor() {
     state.bridgeSequence = -1;
     state.parentSequence = 0;
     overlay.replaceChildren();
+    app.dataset.aliasCanvasReady = 'false';
+    app.dataset.aliasCanvasRevision = '';
     closeInlineEditor();
     closeInspector({ restoreFocus: false });
     let openedRecord = null;
@@ -1401,7 +1413,18 @@ export async function startVisualEditor() {
     if (message.nonce !== frameNonce || message.revision !== state.frameRevision) return;
     if (!Number.isSafeInteger(message.sequence) || message.sequence <= state.bridgeSequence) return;
     state.bridgeSequence = message.sequence;
+    const aliasPreview = Boolean(state.currentPage?.readOnly && state.currentPage?.canonicalTarget);
     if (message.type === 'ready') {
+      if (aliasPreview) {
+        state.bindingRows = [];
+        state.bindingRegistry = new Map();
+        state.projectionDependencyFailures.clear();
+        overlay.replaceChildren();
+        app.dataset.aliasCanvasReady = 'true';
+        app.dataset.aliasCanvasRevision = String(state.frameRevision);
+        canvasHint.textContent = `Совместимый адрес. Каноническая страница: ${state.currentPage.canonicalTarget}`;
+        return;
+      }
       state.bindingRows = registeredBindingRows(message.bindings, { establish: true });
       renderOverlay();
       projectDraftToFrame();
@@ -1413,11 +1436,13 @@ export async function startVisualEditor() {
       return;
     }
     if (message.type === 'geometry') {
+      if (aliasPreview) return;
       state.bindingRows = registeredBindingRows(message.bindings);
       renderOverlay();
       return;
     }
     if (message.type === 'select' && message.binding && message.rect) {
+      if (aliasPreview) return;
       const registered = state.bindingRegistry.get(String(message.binding.bindingId || ''));
       if (registered) void selectBinding(registered, message.rect);
       return;
@@ -1463,9 +1488,16 @@ export async function startVisualEditor() {
   }
 
   function closeInlineEditor() {
+    completeInlineGesture(state.inlineGesture);
     inlineEditor.hidden = true;
     inlineEditor.dataset.bindingId = '';
     state.inlineGesture = null;
+  }
+
+  function cancelInlineEditor() {
+    const gesture = state.inlineGesture;
+    restoreInlineGestureCheckpoint(gesture, (commands) => { state.commandRedo = commands; });
+    closeInlineEditor();
   }
 
   function closeInspector({ restoreFocus = true } = {}) {
@@ -2042,7 +2074,7 @@ export async function startVisualEditor() {
       inlineLabel.textContent = binding.label || fieldLabel(binding.fieldPath);
       inlineInput.value = value == null ? '' : String(value);
       inlineEditor.dataset.bindingId = binding.bindingId;
-      state.inlineGesture = { record, undoCount: record.history.snapshot().undoCount, started: false };
+      state.inlineGesture = createInlineGestureCheckpoint(record, state.commandRedo);
       positionInlineEditor(rect);
       inlineEditor.hidden = false;
       requestAnimationFrame(() => { inlineInput.focus(); inlineInput.select(); });
@@ -2094,11 +2126,16 @@ export async function startVisualEditor() {
   inlineInput.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       event.preventDefault();
-      const gesture = state.inlineGesture;
-      while (gesture?.record?.history.snapshot().undoCount > gesture.undoCount) gesture.record.history.undo();
-      closeInlineEditor();
+      cancelInlineEditor();
     }
   });
+  document.addEventListener('keydown', (event) => handleVisualEditorEscape(event, {
+    documentValue: document,
+    inlineOpen: () => !inlineEditor.hidden,
+    cancelInline: cancelInlineEditor,
+    inspectorOpen: () => !inspector.hidden,
+    closeInspector
+  }));
   inlineInput.addEventListener('blur', () => window.setTimeout(() => {
     if (!inlineEditor.matches(':focus-within')) closeInlineEditor();
   }, 0));
@@ -2246,6 +2283,10 @@ export async function startVisualEditor() {
   }
 
   async function saveAll() {
+    // Ctrl/Cmd+S does not blur the anchored input. Finish that gesture before
+    // deriving the immutable save candidates so a later Escape cannot restore
+    // a checkpoint from before the newly saved boundary.
+    closeInlineEditor();
     const candidates = dirtyRecords();
     if (candidates.some((record) => record.reconciliationPending)) {
       notifications.toast('Предыдущая запись уже выполнена, но редактор ещё не сверил новую revision. Перезапустите редактор; браузерный черновик следующих правок сохранён.', 'warning', 0);

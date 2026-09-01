@@ -521,13 +521,26 @@ export function validateAdminActionEvidence(report, options = {}) {
       || !result.contextual?.opened || !result.contextual?.controls || !result.contextual?.escapeClosed)) {
       issues.push(`admin-actions:canvas-tool-coverage:${result.route}`);
     }
+    if (result.routeClass === 'alias'
+      && (!result.snapshot?.aliasBridgeReady || !result.snapshot?.aliasBridgeRevisionMatch
+        || result.snapshot?.overlays !== 0 || !result.snapshot?.canvasHint?.includes(result.canonicalTarget))) {
+      issues.push(`admin-actions:alias-editable:${result.route}`);
+    }
     if (result.events?.length || result.requests?.some((request) => !['GET', 'HEAD', 'OPTIONS'].includes(request.method))) {
       issues.push(`admin-actions:canvas-side-effect:${result.route}`);
     }
   }
   for (const route of authoritativeRoutes) if (!canvasSeen.has(route)) issues.push(`admin-actions:canvas-missing:${route}`);
-  if (!report?.evidence?.canvas?.ready || report.evidence.canvas.h1?.length !== 1
-    || !report.evidence.canvas.bindings || !report.evidence.canvas.interactions) issues.push('admin-actions:canvas-not-ready');
+  const homeCanvas = report?.evidence?.canvas;
+  if (!homeCanvas?.ready || homeCanvas.h1?.length !== 1
+    || !homeCanvas.bindings || !homeCanvas.interactions || !homeCanvas.overlays
+    || !homeCanvas.editorSessionShape || !homeCanvas.editorRevisionShape) issues.push('admin-actions:canvas-not-ready');
+  const serializedAdminActionReport = JSON.stringify(report || {});
+  if (Object.hasOwn(homeCanvas || {}, 'editorSession')
+    || /"(?:editorSession|csrf|token|secret|password)"\s*:/iu.test(serializedAdminActionReport)
+    || /[?&](?:editorSession|csrf|token|secret|password)=/iu.test(serializedAdminActionReport)) {
+    issues.push('admin-actions:canvas-session-leak');
+  }
   if (report?.evidence?.navigationAcceptance?.status !== 'pass'
     || report.evidence.navigationAcceptance.click?.mode !== 'click'
     || report.evidence.navigationAcceptance.keyboard?.mode !== 'keyboard-enter') {

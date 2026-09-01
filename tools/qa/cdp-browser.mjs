@@ -141,10 +141,11 @@ export async function createDistServer({ distRoot, basePath = '/' }) {
 }
 
 export class CdpBrowser {
-  constructor({ chromePath, headful = false, safetyMode = 'public-read-only' } = {}) {
+  constructor({ chromePath, headful = false, safetyMode = 'public-read-only', commandTimeoutMs = 30_000 } = {}) {
     this.chromePath = chromePath || preferredChromePath({ headful });
     this.headful = headful;
     this.safetyMode = safetyMode;
+    this.commandTimeoutMs = commandTimeoutMs;
     this.safetyIntercepts = [];
     this.child = null;
     this.profileDir = '';
@@ -192,6 +193,12 @@ export class CdpBrowser {
         return;
       }
       for (const listener of this.listeners.get(message.method) || []) listener(message.params || {});
+    });
+    this.socket.addEventListener('close', () => {
+      for (const [id, pending] of this.pending) {
+        this.pending.delete(id);
+        pending.reject(new Error('Chrome DevTools connection closed before the command completed.'));
+      }
     });
     await Promise.all([
       this.send('Page.enable'), this.send('Runtime.enable'), this.send('Network.enable'), this.send('Log.enable')
@@ -248,11 +255,31 @@ export class CdpBrowser {
     };
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, { timeoutMs = this.commandTimeoutMs } = {}) {
     const id = ++this.id;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      this.socket.send(JSON.stringify({ id, method, params }));
+      let settled = false;
+      let timer;
+      const finish = (callback, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        this.pending.delete(id);
+        callback(value);
+      };
+      this.pending.set(id, {
+        resolve: (value) => finish(resolve, value),
+        reject: (error) => finish(reject, error)
+      });
+      timer = setTimeout(() => {
+        const pending = this.pending.get(id);
+        pending?.reject(new Error(`Timed out waiting for Chrome DevTools command ${method}.`));
+      }, Math.max(1, Number(timeoutMs) || this.commandTimeoutMs));
+      try {
+        this.socket.send(JSON.stringify({ id, method, params }));
+      } catch (error) {
+        this.pending.get(id)?.reject(error);
+      }
     });
   }
 

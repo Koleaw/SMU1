@@ -38,6 +38,34 @@ test('text actions coalesce while structural changes remain separate and clear r
   assert.equal(store.snapshot().canRedo, false);
 });
 
+test('gesture checkpoint restores exact coalesced and redo state', () => {
+  let time = 100;
+  const store = createHistoryStore({ title: 'A' }, { now: () => time, coalesceMs: 750 });
+  store.commit({ title: 'B' }, { label: 'Первый жест', coalesceKey: 'title' });
+  const checkpoint = store.createCheckpoint();
+  time += 100;
+  store.commit({ title: 'C' }, { label: 'Повторный жест', coalesceKey: 'title' });
+  assert.equal(store.snapshot().undoCount, 1, 'the second gesture really coalesced with the first');
+
+  store.restoreCheckpoint(checkpoint);
+  assert.deepEqual(store.snapshot().value, { title: 'B' });
+  assert.equal(store.snapshot().undoCount, 1);
+  store.undo();
+  assert.deepEqual(store.snapshot().value, { title: 'A' });
+  store.redo();
+  assert.deepEqual(store.snapshot().value, { title: 'B' });
+  assert.throws(() => store.restoreCheckpoint(checkpoint), /already restored/u);
+
+  store.undo();
+  const redoCheckpoint = store.createCheckpoint();
+  store.commit({ title: 'X' }, { label: 'Временный жест', coalesceKey: 'title' });
+  assert.equal(store.snapshot().canRedo, false);
+  store.restoreCheckpoint(redoCheckpoint);
+  assert.equal(store.snapshot().canRedo, true, 'Escape restores redo entries that the temporary gesture cleared');
+  store.redo();
+  assert.deepEqual(store.snapshot().value, { title: 'B' });
+});
+
 test('a completed save can advance the boundary without discarding a newer browser edit', () => {
   const store = createHistoryStore({ title: 'До save' });
   store.commit({ title: 'Отправлено в save' }, { force: true });
