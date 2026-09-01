@@ -7,7 +7,7 @@ import V2HeroHandoff from '../V2HeroHandoff.astro';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 import type { CustomOrderV2Data } from './customOrderV2Data';
 import '../../../styles/v2/custom-order-v2.css';
-import { adminBinding, adminDisposition, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
+  import { adminBinding, adminDisposition, adminListField, adminListItem, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   data: CustomOrderV2Data;
@@ -54,6 +54,28 @@ const breadcrumbItems = [
     editor: pageBinding('title', 'heading', { stableItemId: 'custom-order-breadcrumb-current', role: 'breadcrumb-current' })
   }
 ];
+const customOrderHeroMediaBinding = adminBinding(Astro.url, {
+  renderer: { family: 'custom-order', variant: 'borrowed-project-hero' },
+  owner: { collection: 'projects', slug: heroMedia.ownerSlug }, fieldPath: heroMedia.fieldPath,
+  stableItemId: 'custom-order-hero-project-media', role: 'detail-hero', scope: 'shared', tool: 'media',
+  label: `Фотография объекта «${heroMedia.ownerSlug}»`, multiple: false,
+  affectedRoutes: ['/izgotovlenie-na-zakaz/', `/vypolnennye-obekty/${heroMedia.ownerSlug}/`],
+  projection: { kind: 'shared-media', formula: 'project.presentation.detailHeroMedia → custom order hero' }
+});
+const customOrderHeroRelationBinding = pageBinding('customOrderHeroProjectSlug', 'relation-select', {
+  stableItemId: 'custom-order-hero-source', role: 'custom-order-hero-source',
+  label: 'Объект-источник первого экрана',
+  relationCollection: 'projects', validation: { required: true },
+  projection: { kind: 'relation', formula: 'customOrderHeroProjectSlug → project.presentation.detailHeroMedia' },
+  relationProjection: {
+    mediaBindingId: customOrderHeroMediaBinding['data-smu1-binding-id'] || '',
+    mediaFieldPaths: ['presentation.detailHeroMedia', 'presentation.archiveCoverMedia', 'presentation.publicGallery'],
+    positionFields: [
+      { fieldPath: 'customOrderHeroPosition', cssProperty: '--custom-order-hero-position' },
+      { fieldPath: 'customOrderHeroMobilePosition', cssProperty: '--custom-order-hero-position-mobile' }
+    ]
+  }
+});
 ---
 
 <div class="custom-order-v2">
@@ -88,27 +110,13 @@ const breadcrumbItems = [
             </div>
           </div>
 
-          <div class="custom-order-hero__media" data-v2-media data-v2-entrance-role="media" {...pageBinding('customOrderHeroProjectSlug', 'relation-select', {
-            stableItemId: 'custom-order-hero-source', role: 'custom-order-hero-source',
-            projection: { kind: 'relation', formula: 'customOrderHeroProjectSlug → project.presentation.detailHeroMedia' }
-          })}>
-            {isEditorCanvas && (
-              <>
-                <span hidden aria-hidden="true" {...adminBinding(Astro.url, {
-                  renderer: { family: 'custom-order', variant: 'borrowed-project-hero' },
-                  owner: { collection: 'projects', slug: heroMedia.ownerSlug }, fieldPath: heroMedia.fieldPath,
-                  stableItemId: 'custom-order-hero-project-media', role: 'detail-hero', scope: 'shared', tool: 'media',
-                  affectedRoutes: ['/izgotovlenie-na-zakaz/', `/vypolnennye-obekty/${heroMedia.ownerSlug}/`],
-                  projection: { kind: 'shared-media', formula: 'project.presentation.detailHeroMedia → custom order hero' }
-                })}></span>
-                <span hidden aria-hidden="true" {...pageBinding('customOrderHeroPosition', 'focal-position', {
-                  stableItemId: 'custom-order-hero-position-desktop', role: 'desktop-crop'
-                })}></span>
-                <span hidden aria-hidden="true" {...pageBinding('customOrderHeroMobilePosition', 'focal-position', {
-                  stableItemId: 'custom-order-hero-position-mobile', role: 'mobile-crop'
-                })}></span>
-              </>
-            )}
+          <div
+            class="custom-order-hero__media"
+            data-v2-media
+            data-v2-entrance-role="media"
+            data-smu1-borrowed-media-root={isEditorCanvas ? 'true' : undefined}
+            {...customOrderHeroRelationBinding}
+          >
             <V2ResponsiveImage
               src={heroMedia.src}
               alt={heroMedia.alt}
@@ -120,6 +128,8 @@ const breadcrumbItems = [
               style={`--custom-order-hero-position:${heroMedia.position};--custom-order-hero-position-mobile:${heroMedia.mobilePosition};`}
               data-v2-image
               data-v2-page-critical
+              data-smu1-borrowed-media={isEditorCanvas ? 'true' : undefined}
+              {...customOrderHeroMediaBinding}
             />
           </div>
         </div>
@@ -139,9 +149,19 @@ const breadcrumbItems = [
             <h3 {...pageBinding('customOrderSourceHeading', 'heading')}>{data.sourcePage.customOrderSourceHeading}</h3>
             <p {...pageBinding('customOrderSourceDescription', 'long-text')}>{data.sourcePage.customOrderSourceDescription}</p>
           </div>
-          <ol class="custom-order-sources">
+          <ol class="custom-order-sources" {...pageBinding('customOrderSourceMaterials', 'list', {
+                stableItemId: 'custom-order-source-materials',
+                itemKind: 'object',
+                permissions: { edit: true, reorder: true, delete: false },
+                itemFields: [
+                  { fieldPath: 'id', tool: 'generated-id' },
+                  { fieldPath: 'label', label: 'Материал', tool: 'short-text' },
+                  { fieldPath: 'order', tool: 'generated-order' },
+                  { fieldPath: 'isActive', label: 'Показывать пункт', tool: 'visibility' }
+                ]
+              })}>
             {data.sourceMaterials.map((item) => (
-              <li {...pageBinding('customOrderSourceMaterials', 'list', { stableItemId: item.id, itemKind: 'object' })}><span>{item.label}</span></li>
+              <li {...adminListItem(Astro.url, item.id)}><span {...adminListField(Astro.url, 'label')}>{item.label}</span></li>
             ))}
           </ol>
         </div>
@@ -151,12 +171,31 @@ const breadcrumbItems = [
             <h3 {...pageBinding('customOrderChangeHeading', 'heading')}>{data.sourcePage.customOrderChangeHeading}</h3>
             <p {...pageBinding('customOrderChangeDescription', 'long-text')}>{data.sourcePage.customOrderChangeDescription}</p>
           </div>
-          <ul class="custom-order-themes">
+          <ul class="custom-order-themes" {...pageBinding('customOrderChangeThemes', 'list', {
+                stableItemId: 'custom-order-change-themes',
+                itemKind: 'object',
+                permissions: { edit: true, reorder: true, delete: false },
+                itemFields: [
+                  { fieldPath: 'id', tool: 'generated-id' },
+                  { fieldPath: 'title', label: 'Тема изменений', tool: 'short-text' },
+                  { fieldPath: 'order', tool: 'generated-order' },
+                  { fieldPath: 'isActive', label: 'Показывать тему', tool: 'visibility' },
+                  {
+                    fieldPath: 'items', label: 'Что можно изменить', tool: 'list', itemKind: 'object',
+                    itemFields: [
+                      { fieldPath: 'id', tool: 'generated-id' },
+                      { fieldPath: 'label', label: 'Параметр', tool: 'short-text' },
+                      { fieldPath: 'order', tool: 'generated-order' },
+                      { fieldPath: 'isActive', label: 'Показывать параметр', tool: 'visibility' }
+                    ]
+                  }
+                ]
+              })}>
             {data.changeThemes.map((theme) => (
-              <li {...pageBinding('customOrderChangeThemes', 'list', { stableItemId: theme.id, itemKind: 'object' })}>
-                <h4>{theme.title}</h4>
-                <ul>
-                  {theme.items.map((item) => <li>{item.label}</li>)}
+              <li {...adminListItem(Astro.url, theme.id)}>
+                <h4 {...adminListField(Astro.url, 'title')}>{theme.title}</h4>
+                <ul {...adminListField(Astro.url, 'items')}>
+                  {theme.items.map((item) => <li {...adminListItem(Astro.url, item.id)}><span {...adminListField(Astro.url, 'label')}>{item.label}</span></li>)}
                 </ul>
               </li>
             ))}
@@ -171,6 +210,8 @@ const breadcrumbItems = [
       <h2 id="custom-order-directions-title" {...pageBinding('customOrderDirectionsTitle', 'heading')}>{data.sourcePage.customOrderDirectionsTitle}</h2>
       <ul class="custom-order-directions__links" {...pageBinding('relatedDirectionSlugs', 'relation-list', {
         stableItemId: 'custom-order-related-directions', permissions: { edit: true, reorder: true, delete: false },
+        label: 'Связанные направления и их порядок',
+        relationCollections: ['product-sections', 'services'],
         projection: { kind: 'relation', formula: 'ordered relatedDirectionSlugs → direction links' }
       })}>
         {data.directions.map((direction) => (

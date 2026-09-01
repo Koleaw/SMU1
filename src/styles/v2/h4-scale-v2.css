@@ -103,7 +103,9 @@
 }
 
 :root[data-v2-public-route='true'] .home-v2-body .home-final .hf-hero__copy h1 {
-  max-width: 20ch;
+  /* Keep the accepted 20ch/Manrope width without making the canvas geometry
+     depend on whether font-display:optional won the first-paint race. */
+  max-width: min(100%, 11.1035em);
   font-size: var(--h4-h1-home);
   line-height: 0.98;
 }
@@ -343,6 +345,13 @@
   :root[data-v2-public-route='true'] .home-v2-body .immersive-direction-hero h1 {
     overflow-wrap: anywhere !important;
     hyphens: auto;
+  }
+
+  /* Keep project-detail hero copy on the same line-count contract when the
+     optional Manrope face is either already cached or stays on its fallback. */
+  :root[data-v2-public-route='true'] .home-v2-body
+    .projects-v2 .v2-project-detail__lead {
+    max-width: calc(100% - 1em);
   }
 
   :root[data-v2-public-route='true'] .home-v2-body .hv2-header__menu-button {

@@ -18,6 +18,7 @@ import { loadV2TransitionRouteRegistryJson } from '../utils/v2RouteRegistry';
 import { withBase } from '../utils/withBase';
 import { getV2Scope, productionV2Path, type V2Scope } from '../utils/v2Routes';
 import { adminDisposition, isLocalAdminCanvas } from '../admin/bindings/adminBinding';
+import editorCanvasAffordancesCss from '../admin/styles/editor-canvas-affordances.css?raw';
 
 interface Props {
   title: string;
@@ -52,6 +53,13 @@ const {
 const isProduction = scope === 'production';
 const isEditorCanvas = isLocalAdminCanvas(Astro.url);
 const isEntryPreview = entryMotion === 'preview';
+const stylesheetUrl = (value: string) => import.meta.env.DEV
+  ? `${value}${value.includes('?') ? '&' : '?'}direct`
+  : value;
+const entranceV2StylesheetUrl = stylesheetUrl(entranceV2Url);
+const finalArtDirectionStylesheetUrl = stylesheetUrl(finalArtDirectionUrl);
+const h4ScaleV2StylesheetUrl = stylesheetUrl(h4ScaleV2Url);
+const fontStylesheetUrl = 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional';
 const entrySessionKey = 'smu1:entry-intro:v2';
 const currentProductionPath = productionV2Path(Astro.url.pathname).split(/[?#]/, 1)[0];
 const compatibilityRoutes = new Set(['/lavochki-i-skameyki/', '/urny/', '/navesy/']);
@@ -120,7 +128,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
   class="home-v2-html"
   data-home-v2-theme="engineering"
   data-v2-entry-enabled={entryMode}
-  data-v2-public-route={isPublicV2Motion ? 'true' : undefined}
+  data-v2-public-route={isProduction ? 'true' : undefined}
   data-v2-base={v2BasePath}
 >
   <head>
@@ -263,12 +271,12 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       crossorigin
     />
     <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional"
+      href={fontStylesheetUrl}
       rel="preload"
       as="style"
     />
     <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional"
+      href={fontStylesheetUrl}
       rel="stylesheet"
       media="print"
       data-v2-font-stylesheet
@@ -370,12 +378,12 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     )}
     <noscript>
       <link
-        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional"
+        href={fontStylesheetUrl}
         rel="stylesheet"
       />
     </noscript>
     <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
-    <link rel="preload" href={finalArtDirectionUrl} as="style" />
+    <link rel="preload" href={finalArtDirectionStylesheetUrl} as="style" />
     <title>{pageTitle}</title>
     {!isSearchExcluded && (
       <script type="application/ld+json" set:html={safeInlineJson({ '@context': 'https://schema.org', '@graph': jsonLdGraph })} />
@@ -440,12 +448,15 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
         })();
       </script>
     )}
-    <link rel="stylesheet" href={finalArtDirectionUrl} data-final-art-direction />
-    {isPublicV2Motion && <link rel="stylesheet" href={entranceV2Url} data-v2-entrance-styles />}
-    {isPublicV2Motion && <link rel="stylesheet" href={h4ScaleV2Url} data-v2-h4-scale-styles />}
+    <link rel="stylesheet" href={finalArtDirectionStylesheetUrl} data-final-art-direction />
+    {isPublicV2Motion && <link rel="stylesheet" href={entranceV2StylesheetUrl} data-v2-entrance-styles />}
+    {isProduction && <link rel="stylesheet" href={h4ScaleV2StylesheetUrl} data-v2-h4-scale-styles />}
     {blockingStylesheetUrls.map((href) => (
       <link rel="stylesheet" href={href} data-v2-route-styles />
     ))}
+    {isEditorCanvas && (
+      <style is:inline set:html={editorCanvasAffordancesCss} data-smu1-editor-canvas-styles />
+    )}
   </head>
   <body class="home-v2-body">
     {isPublicV2Motion && <V2PageTransition />}
@@ -663,21 +674,269 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
           };
 
           const leafElements = (element) => Array.from(element.querySelectorAll('*'))
-            .filter((node) => node.children.length === 0 && !['IMG', 'SOURCE', 'SVG', 'PATH'].includes(node.tagName));
+            .filter((node) => node.children.length === 0 && !['IMG', 'SOURCE', 'SVG', 'PATH'].includes(node.tagName))
+            .filter((node) => !node.closest('[aria-hidden="true"],[inert]'));
 
           const writeParts = (element, parts) => {
-            const leaves = leafElements(element);
-            if (!leaves.length) {
-              element.textContent = parts.join(' · ');
+            const explicit = [
+              ...(element.matches?.('[data-smu1-list-value]') ? [element] : []),
+              ...element.querySelectorAll('[data-smu1-list-value]')
+            ];
+            if (explicit.length) {
+              explicit.forEach((target, index) => {
+                if (index < parts.length) target.textContent = parts[index];
+              });
               return;
             }
+            const leaves = leafElements(element);
             leaves.forEach((leaf, index) => {
               if (index < parts.length) leaf.textContent = parts[index];
             });
+            if (leaves.length) return;
+            const directText = Array.from(element.childNodes).filter((node) => node.nodeType === Node.TEXT_NODE && node.nodeValue?.trim());
+            if (directText.length) {
+              directText[0].nodeValue = parts.join(' · ');
+              directText.slice(1).forEach((node) => node.remove());
+              return;
+            }
+            element.append(document.createTextNode(parts.join(' · ')));
+          };
+
+          const directListItems = (element) => {
+            const marked = Array.from(element.children).filter((node) => node.hasAttribute('data-smu1-list-item'));
+            return marked.length
+              ? marked
+              : Array.from(element.children).filter((node) => ['LI', 'ARTICLE', 'SECTION', 'DIV', 'DL'].includes(node.tagName));
+          };
+
+          const fieldElements = (itemElement, fieldPath) => {
+            const escaped = window.CSS?.escape ? CSS.escape(fieldPath) : fieldPath.replace(/["\\]/g, '\\$&');
+            const candidates = [
+              ...(itemElement.getAttribute('data-smu1-list-field') === fieldPath ? [itemElement] : []),
+              ...itemElement.querySelectorAll(`[data-smu1-list-field="${escaped}"]`)
+            ];
+            return candidates.filter((node) => node === itemElement || node.closest('[data-smu1-list-item]') === itemElement);
+          };
+
+          const projectStructuredItem = (itemElement, item, fields, index) => {
+            if (!item || typeof item !== 'object') return;
+            const itemId = String(item.id || '').trim();
+            if (!itemId) {
+              itemElement.removeAttribute('data-smu1-list-item');
+              itemElement.hidden = true;
+              return;
+            }
+            itemElement.setAttribute('data-smu1-list-item', itemId);
+            for (const field of fields) {
+              const targets = fieldElements(itemElement, field.fieldPath);
+              if (field.tool === 'computed') {
+                if (field.fieldPath === 'ordinal') targets.forEach((target) => { target.textContent = String(index + 1).padStart(2, '0'); });
+                continue;
+              }
+              const fieldValue = field.fieldPath.split('.').reduce((current, part) => current?.[part], item);
+              if (field.tool === 'list') {
+                targets.forEach((target) => projectStructuredArray(target, Array.isArray(fieldValue) ? fieldValue : [], field.itemFields || []));
+                continue;
+              }
+              if (field.tool === 'media') {
+                targets.forEach((target) => {
+                  const image = target instanceof HTMLImageElement ? target : target.querySelector('img');
+                  if (!(image instanceof HTMLImageElement)) return;
+                  const mediaHost = target.closest('[data-smu1-list-media-host]');
+                  if (fieldValue?.src) {
+                    if (mediaHost instanceof HTMLElement) mediaHost.hidden = false;
+                    writeLiveImage(image, fieldValue);
+                    const editorial = itemElement.closest('.direction-type-editorial');
+                    if (editorial instanceof HTMLElement) {
+                      editorial.classList.add('direction-type-editorial--has-media');
+                      editorial.classList.remove('direction-type-editorial--no-media');
+                      editorial.dataset.directionTypeState = 'has-media';
+                    }
+                  } else {
+                    clearLiveImage(image, { preserveGeometry: mediaHost === null });
+                    if (mediaHost instanceof HTMLElement) mediaHost.hidden = true;
+                    const editorial = itemElement.closest('.direction-type-editorial');
+                    if (editorial instanceof HTMLElement) {
+                      editorial.classList.remove('direction-type-editorial--has-media', 'direction-type-editorial--featured', 'direction-type-editorial--media-end');
+                      editorial.classList.add('direction-type-editorial--no-media');
+                      editorial.dataset.directionTypeState = 'no-media';
+                    }
+                  }
+                });
+                continue;
+              }
+              if (['generated-id', 'generated-order', 'visibility'].includes(field.tool)) continue;
+              targets.forEach((target) => {
+                const optionalField = target.hasAttribute('data-smu1-list-optional-field') ? target : null;
+                if (optionalField instanceof HTMLElement) optionalField.hidden = !String(fieldValue ?? '').trim();
+                if (target.dataset.smu1ListTransform === 'line') {
+                  const lines = String(fieldValue ?? '').split(/\r?\n+/u).map((part) => part.trim()).filter(Boolean);
+                  const lineIndex = Number(target.dataset.smu1ListLine || 0);
+                  target.textContent = lines[lineIndex] || '';
+                  if (target instanceof HTMLElement) target.hidden = lineIndex >= lines.length;
+                  return;
+                }
+                if (target.dataset.smu1ListTransform === 'lines') {
+                  const lines = String(fieldValue ?? '').split(/\r?\n+/u).map((part) => part.trim()).filter(Boolean);
+                  const template = target.querySelector('span');
+                  const spans = Array.from(target.querySelectorAll(':scope > span'));
+                  while (spans.length < lines.length && template) {
+                    const copy = template.cloneNode(false);
+                    target.append(copy);
+                    spans.push(copy);
+                  }
+                  while (spans.length > lines.length) spans.pop()?.remove();
+                  spans.forEach((span, lineIndex) => { span.textContent = lines[lineIndex]; });
+                  if (!template && !lines.length) target.textContent = '';
+                  else if (!template && lines.length) lines.forEach((line) => {
+                    const span = document.createElement('span');
+                    span.textContent = line;
+                    target.append(span);
+                  });
+                  return;
+                }
+                if (field.tool === 'link' && target instanceof HTMLAnchorElement && typeof fieldValue === 'string') target.href = fieldValue;
+                else target.textContent = fieldValue == null ? '' : String(fieldValue);
+              });
+            }
+            itemElement.hidden = item.isActive === false;
+          };
+
+          const projectStructuredArray = (element, value, fields) => {
+            const directItems = directListItems(element);
+            const template = directItems.at(-1);
+            while (directItems.length < value.length && template) {
+              const copy = template.cloneNode(true);
+              copy.removeAttribute('data-smu1-binding');
+              copy.removeAttribute('data-smu1-binding-id');
+              copy.querySelectorAll('[data-smu1-binding],[data-smu1-binding-id]').forEach((node) => {
+                node.removeAttribute('data-smu1-binding');
+                node.removeAttribute('data-smu1-binding-id');
+              });
+              element.append(copy);
+              directItems.push(copy);
+            }
+            while (directItems.length > value.length) directItems.pop()?.remove();
+            directItems.forEach((itemElement, index) => projectStructuredItem(itemElement, value[index], fields, index));
+          };
+
+          const projectStructuredMarkers = (element, value, fields) => {
+            const marked = directListItems(element).filter((item) => (
+              item.hasAttribute('data-smu1-list-item')
+              && item.closest('[data-smu1-binding-id][data-smu1-binding]') === element
+            ));
+            const template = marked.at(-1);
+            if (!template) return;
+            const byId = new Map(marked.map((item) => [item.getAttribute('data-smu1-list-item') || '', item]));
+            const used = new Set();
+            const ordered = value.flatMap((item, index) => {
+              if (!item || typeof item !== 'object') return [];
+              const itemId = String(item.id || '').trim();
+              if (!itemId) return [];
+              let itemElement = byId.get(itemId);
+              if (!itemElement) {
+                itemElement = template.cloneNode(true);
+                itemElement.removeAttribute('data-smu1-binding');
+                itemElement.removeAttribute('data-smu1-binding-id');
+                itemElement.querySelectorAll('[data-smu1-binding],[data-smu1-binding-id]').forEach((node) => {
+                  node.removeAttribute('data-smu1-binding');
+                  node.removeAttribute('data-smu1-binding-id');
+                });
+              }
+              used.add(itemElement);
+              projectStructuredItem(itemElement, item, fields, index);
+              return [itemElement];
+            });
+            marked.filter((item) => !used.has(item)).forEach((item) => item.remove());
+            ordered.forEach((item) => element.append(item));
+          };
+
+          const projectProductSpecifications = (element, value, binding) => {
+            const genericLabels = new Set(['размеры и характеристики', 'размеры', 'характеристики']);
+            const normalized = value
+              .filter((item) => item && typeof item === 'object' && item.isActive !== false)
+              .map((item, sourceIndex) => {
+                const label = String(item.label || '').trim();
+                const lines = String(item.value || '').split(/\r?\n+/u).map((line) => line.trim()).filter(Boolean);
+                const generic = genericLabels.has(label.toLocaleLowerCase('ru-RU'));
+                return {
+                  id: String(item.id || ''), label, lines, sourceIndex,
+                  order: Number.isFinite(Number(item.order)) ? Number(item.order) : 0,
+                  pair: Boolean(label && lines.length && !generic), generic
+                };
+              })
+              .filter((item) => item.id && (item.label || item.lines.length))
+              .sort((left, right) => left.order - right.order || left.sourceIndex - right.sourceIndex);
+            const pairs = normalized.filter((item) => item.pair);
+            const textual = normalized.flatMap((item) => {
+              if (item.pair) return [];
+              if (item.lines.length) return item.lines.map((text, lineIndex) => ({
+                id: item.id, text, lineIndex, field: 'value', contextField: 'label'
+              }));
+              return item.label && !item.generic ? [{
+                id: item.id, text: item.label, lineIndex: 0, field: 'label', contextField: 'value'
+              }] : [];
+            });
+            const hasVisibleSpecifications = pairs.length > 0 || textual.length > 0;
+            const specificationsPanel = binding.renderer?.variant === 'standard'
+              ? element.closest('.v2-technical-panel--specs')
+              : element;
+            if (specificationsPanel instanceof HTMLElement) specificationsPanel.hidden = !hasVisibleSpecifications;
+            const node = (tag, attributes = {}, text = '') => {
+              const created = document.createElement(tag);
+              Object.entries(attributes).forEach(([name, attributeValue]) => {
+                if (attributeValue !== '' && attributeValue !== null && attributeValue !== undefined) created.setAttribute(name, String(attributeValue));
+              });
+              if (text) created.textContent = text;
+              return created;
+            };
+            const lineNode = (tag, item, className = '') => node(tag, {
+              ...(className ? { class: className } : {}),
+              'data-smu1-list-item': item.id,
+              'data-smu1-list-field': item.field,
+              'data-smu1-list-transform': 'line',
+              'data-smu1-list-line': item.lineIndex,
+              'data-smu1-list-context-field': item.contextField
+            }, item.text);
+            const definitions = pairs.length ? node('dl', binding.renderer?.variant === 'standard' ? { class: 'v2-spec-definitions' } : {}) : null;
+            pairs.forEach((item) => {
+              const row = node('div', { 'data-smu1-list-item': item.id });
+              row.append(node('dt', { 'data-smu1-list-field': 'label' }, item.label));
+              const value = node('dd', { 'data-smu1-list-field': 'value', 'data-smu1-list-transform': 'lines' });
+              item.lines.forEach((line) => value.append(node('span', {}, line)));
+              row.append(value);
+              definitions?.append(row);
+            });
+            if (binding.renderer?.variant === 'premium') {
+              Array.from(element.children).filter((child) => ['DL', 'UL'].includes(child.tagName)).forEach((child) => child.remove());
+              if (definitions) element.append(definitions);
+              if (textual.length) {
+                const list = node('ul');
+                textual.forEach((item) => list.append(lineNode('li', item)));
+                element.append(list);
+              }
+              return;
+            }
+            element.replaceChildren();
+            if (definitions) element.append(definitions);
+            if (textual.length === 1) element.append(lineNode('p', textual[0], 'v2-spec-copy'));
+            else if (textual.length > 1) {
+              const list = node('ul', { class: 'v2-spec-points' });
+              textual.forEach((item) => list.append(lineNode('li', item)));
+              element.append(list);
+            }
           };
 
           const projectListValue = (element, binding, payload) => {
             const value = payload.items;
+            const fields = Array.isArray(payload.itemFields) ? payload.itemFields : [];
+            if (payload.itemKind === 'object' && fields.length) {
+              if (Array.isArray(value) && payload.projectionTarget === 'product-specifications') projectProductSpecifications(element, value, binding);
+              else if (Array.isArray(value) && payload.projectionTarget === 'structured-markers') projectStructuredMarkers(element, value, fields);
+              else if (Array.isArray(value)) projectStructuredArray(element, value, fields);
+              else projectStructuredItem(element, value, fields, 0);
+              return;
+            }
             if (!Array.isArray(value)) {
               writeParts(element, scalarParts(value));
               return;
@@ -691,7 +950,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
               }
               return;
             }
-            const directItems = Array.from(element.children).filter((node) => ['LI', 'ARTICLE', 'SECTION', 'DIV', 'DL'].includes(node.tagName));
+            const directItems = directListItems(element);
             if (!directItems.length) {
               element.textContent = value.map((item) => scalarParts(item).join(' · ')).join(' · ');
               return;
@@ -715,11 +974,40 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
           const writeLiveImage = (image, item) => {
             if (!(image instanceof HTMLImageElement) || !item?.src) return;
             image.hidden = false;
+            if (image.dataset.smu1LiveMediaEmpty === 'true') {
+              delete image.dataset.smu1LiveMediaEmpty;
+              image.style.removeProperty('opacity');
+            }
             image.src = item.src;
             image.alt = item.alt || '';
             image.removeAttribute('srcset');
             image.closest('picture')?.querySelectorAll('source').forEach((source) => source.removeAttribute('srcset'));
           };
+
+          const clearLiveImage = (image, { preserveGeometry = false } = {}) => {
+            if (!(image instanceof HTMLImageElement)) return;
+            image.hidden = !preserveGeometry;
+            if (preserveGeometry) {
+              image.dataset.smu1LiveMediaEmpty = 'true';
+              image.style.opacity = '0';
+            }
+            image.removeAttribute('src');
+            image.removeAttribute('srcset');
+            image.closest('picture')?.querySelectorAll('source').forEach((source) => source.removeAttribute('srcset'));
+          };
+
+          const validRetargetedMediaBinding = (binding, bindingId) => (
+            binding
+            && binding.bindingId === bindingId
+            && binding.scope === 'shared'
+            && binding.tool === 'media'
+            && binding.ownerCollection === 'projects'
+            && binding.owner?.collection === 'projects'
+            && binding.owner?.slug === binding.recordSlug
+            && /^[a-z0-9][a-z0-9-]*$/u.test(String(binding.recordSlug || ''))
+            && /^presentation\.(?:detailHeroMedia|archiveCoverMedia|publicGallery\[\d+\])$/u.test(String(binding.fieldPath || ''))
+            && binding.renderer?.version === 'h6-v1'
+          );
 
           const liveGalleries = new WeakMap();
           const projectLiveGallery = (element, value) => {
@@ -793,6 +1081,74 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
 
           const projectValue = (element, binding, value) => {
             const target = binding?.projection?.target || 'text';
+            if (value && typeof value === 'object' && value.__smu1ProjectDirectionProjection === true && element instanceof HTMLElement) {
+              const items = (Array.isArray(value.items) ? value.items : [])
+                .filter((item) => item && /^\/(?!\/)[a-z0-9а-яё/_-]*\/?$/iu.test(String(item.href || '')))
+                .slice()
+                .sort((left, right) => Number(left.order || 0) - Number(right.order || 0));
+              const current = Array.from(element.querySelectorAll(':scope > a'));
+              const rows = items.map((item, index) => {
+                const row = current[index] instanceof HTMLAnchorElement
+                  ? current[index]
+                  : document.createElement('a');
+                row.setAttribute('role', 'listitem');
+                row.href = item.href;
+                row.dataset.v2TransitionLabel = String(item.label || '');
+                row.dataset.smu1LiveDirectionId = String(item.id || '');
+                let context = row.querySelector(':scope > span');
+                if (!(context instanceof HTMLElement)) {
+                  context = document.createElement('span');
+                  row.prepend(context);
+                }
+                let label = row.querySelector(':scope > strong');
+                if (!(label instanceof HTMLElement)) {
+                  label = document.createElement('strong');
+                  row.append(label);
+                }
+                context.textContent = String(item.context || '');
+                label.textContent = String(item.label || '');
+                return row;
+              });
+              element.replaceChildren(...rows);
+              return;
+            }
+            if (value && typeof value === 'object' && value.__smu1CropProjection === true && element instanceof HTMLElement) {
+              const fit = value.fit === 'contain' ? 'contain' : 'cover';
+              const positionX = Math.min(100, Math.max(0, Number(value.positionX ?? 50)));
+              const positionY = Math.min(100, Math.max(0, Number(value.positionY ?? 50)));
+              const scale = Math.min(3, Math.max(1, Number(value.scale ?? 1)));
+              element.style.setProperty('--v2-image-source-x', `${positionX}%`);
+              element.style.setProperty('--v2-image-source-y', `${positionY}%`);
+              element.style.setProperty('--v2-image-source-scale', String(scale));
+              element.style.objectFit = fit;
+              element.style.objectPosition = `${positionX}% ${positionY}%`;
+              element.style.transform = `scale(${scale})`;
+              element.style.transformOrigin = 'center';
+              return;
+            }
+            if (value && typeof value === 'object' && value.__smu1RelationMediaProjection === true) {
+              const bindingId = String(value.mediaBindingId || '');
+              const selectorValue = window.CSS?.escape
+                ? CSS.escape(bindingId)
+                : bindingId.replace(/["\\]/g, '\\$&');
+              const mediaElement = element.querySelector(`[data-smu1-binding-id="${selectorValue}"]`);
+              const image = mediaElement instanceof HTMLImageElement
+                ? mediaElement
+                : mediaElement?.querySelector('img');
+              if (!(image instanceof HTMLImageElement) || !validRetargetedMediaBinding(value.mediaBinding, bindingId)) return;
+              mediaElement.setAttribute('data-smu1-binding', JSON.stringify(value.mediaBinding));
+              if (value.item?.src) writeLiveImage(image, value.item);
+              else clearLiveImage(image, { preserveGeometry: true });
+              for (const position of Array.isArray(value.positions) ? value.positions : []) {
+                if (/^--[a-z][a-z0-9-]*$/u.test(String(position?.cssProperty || ''))) {
+                  image.style.setProperty(position.cssProperty, String(position.value || '50% 50%'));
+                }
+              }
+              if (/^(?:\d{1,3}%|left|center|right)\s+(?:\d{1,3}%|top|center|bottom)$/u.test(String(value.objectPosition || ''))) {
+                image.style.objectPosition = value.objectPosition;
+              }
+              return;
+            }
             if (value && typeof value === 'object' && value.__smu1VideoProjection === true && element instanceof HTMLVideoElement) {
               const desktop = typeof value.desktop === 'string' ? value.desktop : '';
               const mobile = typeof value.mobile === 'string' ? value.mobile : desktop;
@@ -824,23 +1180,22 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
             }
             if (value && typeof value === 'object' && value.__smu1MediaProjection === true && Array.isArray(value.paths)) {
               if (projectLiveGallery(element, value)) return;
-              const paths = value.paths.filter((item) => typeof item === 'string' && item);
+              const items = (Array.isArray(value.items) ? value.items : value.paths)
+                .map((item) => typeof item === 'string' ? { src: item, alt: '', caption: '' } : item)
+                .filter((item) => item && typeof item.src === 'string' && item.src);
               const images = element instanceof HTMLImageElement
                 ? [element]
                 : Array.from(element.querySelectorAll('img'));
               element.querySelectorAll('[data-smu1-live-media]').forEach((node) => node.remove());
               images.forEach((image, index) => {
-                const next = paths[index];
-                image.hidden = !next;
-                if (!next) return;
-                image.src = next;
-                image.removeAttribute('srcset');
-                image.closest('picture')?.querySelectorAll('source').forEach((source) => source.removeAttribute('srcset'));
+                const next = items[index];
+                if (!next) clearLiveImage(image);
+                else writeLiveImage(image, next);
               });
-              for (const next of paths.slice(images.length)) {
+              for (const next of items.slice(images.length)) {
                 const image = document.createElement('img');
-                image.src = next;
-                image.alt = '';
+                image.src = next.src;
+                image.alt = next.alt || '';
                 image.dataset.smu1LiveMedia = 'true';
                 image.style.cssText = 'display:block;width:100%;height:auto;object-fit:cover;';
                 element.append(image);
@@ -848,8 +1203,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
               return;
             }
             if (target === 'src' && element instanceof HTMLImageElement && typeof value === 'string') {
-              element.src = value;
-              element.removeAttribute('srcset');
+              writeLiveImage(element, { src: value, alt: element.alt });
               return;
             }
             if (target === 'href' && element instanceof HTMLAnchorElement && typeof value === 'string') {
@@ -858,6 +1212,19 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
             }
             if (target === 'style-image' && element instanceof HTMLElement && typeof value === 'string') {
               element.style.backgroundImage = `url("${value.replace(/["\\]/g, '\\$&')}")`;
+              return;
+            }
+            if (target === 'attribute:aria-label' && element instanceof HTMLElement && typeof value === 'string') {
+              element.setAttribute('aria-label', value);
+              return;
+            }
+            if (target === 'paragraphs' && element instanceof HTMLElement && typeof value === 'string') {
+              const paragraphs = value.split(/\n{2,}/u).map((item) => item.trim()).filter(Boolean);
+              element.replaceChildren(...paragraphs.map((text) => {
+                const paragraph = document.createElement('p');
+                paragraph.textContent = text;
+                return paragraph;
+              }));
               return;
             }
             if (value === null || value === undefined || typeof value === 'object') return;

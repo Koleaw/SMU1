@@ -31,6 +31,7 @@ export function projectProductToImportItem(product) {
     .filter((item) => typeof item === 'string' && item.length > 0);
   const specs = Array.isArray(product.dimensions)
     ? product.dimensions.map((item) => compactObject([
+      ['id', item?.id],
       ['name', item?.label],
       ['value', item?.value],
       ['order', item?.order],

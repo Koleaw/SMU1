@@ -5,6 +5,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import sharp from 'sharp';
 
 import { CdpBrowser } from './cdp-browser.mjs';
+import { buildExpectedRouteModel } from './route-passport-model.mjs';
+import { visualAcceptanceScenarioSetIssues } from './visual-editor-scenarios.mjs';
 import { createAdminRepoIdentity, createAdminUiHealthMarker } from '../admin-api/runtime-identity.mjs';
 
 const RUNNER_PATH = fileURLToPath(import.meta.url);
@@ -24,6 +26,11 @@ const DEFAULT_PROFILE = Object.freeze({
   noPhotoProduct: {
     query: 'konteynernaya-ploshchadka-modul',
     slug: 'konteynernaya-ploshchadka-modul'
+  },
+  project: {
+    query: 'objekt-parkovaya-zona',
+    slug: 'objekt-parkovaya-zona',
+    route: '/vypolnennye-obekty/objekt-parkovaya-zona/'
   }
 });
 
@@ -294,6 +301,7 @@ async function resolveFixtureBundle({ fixtures, origin, cwd }) {
       product: mergePageDescriptor(pages.product, DEFAULT_PROFILE.product),
       category: mergePageDescriptor(pages.category, DEFAULT_PROFILE.category),
       noPhotoProduct: mergePageDescriptor(pages.noPhotoProduct, DEFAULT_PROFILE.noPhotoProduct),
+      project: mergePageDescriptor(pages.project, DEFAULT_PROFILE.project),
       feedbackBudgetMs: Number.isFinite(Number(manifest.feedbackBudgetMs)) ? Number(manifest.feedbackBudgetMs) : 100,
       saveBudgetMs: Number.isFinite(Number(manifest.saveBudgetMs)) ? Number(manifest.saveBudgetMs) : 2000,
       exactObservationMs: Number.isFinite(Number(manifest.exactObservationMs)) ? Number(manifest.exactObservationMs) : 15_000
@@ -704,6 +712,63 @@ async function findBinding(browser, filter) {
   })()`, { timeoutMs: 12_000, label: `binding ${filter.ownerCollection || '*'}:${filter.fieldPath || filter.tool}` });
 }
 
+function borrowedMediaSnapshotExpression(relationBindingId) {
+  return `(() => {
+    const frame = document.querySelector('#veFrame');
+    const documentValue = frame?.contentDocument;
+    const parseBinding = (element) => {
+      try { return JSON.parse(element?.getAttribute('data-smu1-binding') || 'null'); }
+      catch { return null; }
+    };
+    const visible = (element) => {
+      if (!element || element.hidden || element.closest('[hidden]')) return false;
+      const rect = element.getBoundingClientRect();
+      const style = element.ownerDocument.defaultView.getComputedStyle(element);
+      return rect.width > 2 && rect.height > 2 && style.display !== 'none' && style.visibility !== 'hidden';
+    };
+    const action = (bindingId, controlKey) => {
+      const element = document.querySelector('#veOverlay [data-binding-id="' + CSS.escape(bindingId || '') + '"][data-control-key="' + CSS.escape(controlKey) + '"]');
+      const rect = element?.getBoundingClientRect();
+      const style = element ? getComputedStyle(element) : null;
+      return {
+        available: Boolean(element && !element.hidden && !element.disabled && rect.width > 2 && rect.height > 2
+          && style?.display !== 'none' && style?.visibility !== 'hidden'),
+        bindingId: element?.dataset.bindingId || '',
+        controlKey: element?.dataset.controlKey || '',
+        label: element?.dataset.toolLabel || element?.getAttribute('aria-label') || element?.textContent?.replace(/\\s+/gu, ' ').trim() || ''
+      };
+    };
+    const relationRoot = documentValue?.querySelector('[data-smu1-borrowed-media-root][data-smu1-binding-id="' + CSS.escape(${json(relationBindingId)}) + '"]');
+    const image = relationRoot?.querySelector('img[data-smu1-borrowed-media][data-smu1-binding-id][data-smu1-binding]');
+    const relation = parseBinding(relationRoot);
+    const media = parseBinding(image);
+    return relationRoot && image && relation && media ? {
+      relation: {
+        bindingId: relation.bindingId || '', ownerCollection: relation.ownerCollection || relation.owner?.collection || '',
+        ownerSlug: relation.recordSlug || relation.owner?.slug || '', fieldPath: relation.fieldPath || '',
+        tool: relation.tool || '', scope: relation.scope || '', affectedRoutes: relation.affectedRoutes || [],
+        projectionKind: relation.projection?.kind || '', projectionFormula: relation.projection?.formula || '',
+        relationCollection: relation.relationCollection || '', relationProjection: relation.relationProjection || null
+      },
+      media: {
+        bindingId: media.bindingId || '', ownerCollection: media.ownerCollection || media.owner?.collection || '',
+        ownerSlug: media.recordSlug || media.owner?.slug || '', fieldPath: media.fieldPath || '',
+        tool: media.tool || '', scope: media.scope || '', affectedRoutes: media.affectedRoutes || [],
+        projectionKind: media.projection?.kind || '', projectionFormula: media.projection?.formula || ''
+      },
+      image: {
+        visible: visible(image), complete: image.complete, naturalWidth: image.naturalWidth || 0,
+        src: image.getAttribute('src') || '', currentSrc: image.currentSrc || '',
+        srcset: image.getAttribute('srcset') || '',
+        sourceSrcsets: Array.from(relationRoot.querySelectorAll('source')).map((source) => source.getAttribute('srcset') || ''),
+        alt: image.getAttribute('alt') || ''
+      },
+      relationAction: action(relation.bindingId, 'relation'),
+      sourceAction: action(media.bindingId, 'target')
+    } : null;
+  })()`;
+}
+
 async function clickBinding(browser, bindingId, controlKey = 'target') {
   await browser.evaluate(`(() => {
     const frame = document.querySelector('#veFrame');
@@ -733,6 +798,28 @@ async function projectedBindingText(browser, bindingId) {
     const element = frame?.contentDocument?.querySelector('[data-smu1-binding-id="' + CSS.escape(${json(bindingId)}) + '"]');
     return element?.textContent?.replace(/\\s+/gu, ' ').trim() || '';
   })()`);
+}
+
+function linkBindingSnapshotExpression(bindingId) {
+  return `(() => {
+    const frame = document.querySelector('#veFrame');
+    const element = frame?.contentDocument?.querySelector('[data-smu1-binding-id="' + CSS.escape(${json(bindingId)}) + '"]');
+    if (!element || element.tagName !== 'A') return null;
+    const hrefAttribute = element.getAttribute('href') || '';
+    let pathname = '';
+    let hash = '';
+    try {
+      const parsed = new URL(hrefAttribute, frame.contentWindow.location.href);
+      pathname = parsed.pathname;
+      hash = parsed.hash;
+    } catch {}
+    return {
+      label: element.textContent?.replace(/\\s+/gu, ' ').trim() || '',
+      hrefAttribute,
+      pathname,
+      hash
+    };
+  })()`;
 }
 
 async function waitForProjectedText(browser, bindingId, expected, label) {
@@ -775,6 +862,8 @@ function indexedRecordExpression(storeName, predicateSource, projectionSource = 
 export function acceptanceBrowserExpressionsForTest() {
   return [
     canvasSnapshotExpression(),
+    borrowedMediaSnapshotExpression('fixture-relation-binding'),
+    linkBindingSnapshotExpression('fixture-link-binding'),
     indexedRecordExpression('record-drafts', '(row) => row.slug === "fixture"', '(row) => ({ key: row.key })')
   ];
 }
@@ -904,6 +993,9 @@ async function runAcceptance(options, bundle) {
   await browser.start();
   const telemetry = createTelemetry(browser, options.origin);
   const scenarios = [];
+  const authoritativeRoutes = buildExpectedRouteModel({ root: bundle.proof.disposableRoot })
+    .routes.map((route) => route.pathname)
+    .sort((left, right) => left.localeCompare(right, 'en'));
   const state = { productNavigation: null, productTitle: null, productDescription: null, noPhotoNavigation: null, queueOrder: null };
 
   async function scenario(id, title, callback) {
@@ -983,7 +1075,374 @@ async function runAcceptance(options, bundle) {
     // independent from the bulk uploader while still using the real UI/API.
     await runRequiredResilienceScenarios();
 
+    await scenario('borrowed-relation-media-live-projection', 'Borrowed project media retargets live with shared provenance and draft recovery', async ({ latency }) => {
+      const route = '/o-nas/';
+      for (const selector of ['#vePublishDrawer', '#veSettingsDrawer', '#veMediaDialog']) {
+        if (await browser.evaluate(`Boolean(document.querySelector(${json(selector)})?.open)`)) {
+          await clickShell(browser, `${selector} [data-dialog-close]`);
+          await waitFor(browser, `!document.querySelector(${json(selector)})?.open`, { label: `${selector} close before relation acceptance` });
+        }
+      }
+      const navigation = await openPage(browser, { query: 'o-nas', slug: 'o-nas', route });
+      const relationRow = await findBinding(browser, {
+        ownerCollection: 'static-pages', fieldPath: 'companyHeroProjectSlug', tool: 'relation-select'
+      });
+      const relationBinding = relationRow.binding;
+      const before = await waitFor(browser, `(() => {
+        const value = (${borrowedMediaSnapshotExpression(relationBinding.bindingId)});
+        return value?.image?.visible && value.image.complete && value.image.naturalWidth > 0
+          && value.sourceAction?.available && value.relationAction?.available ? value : null;
+      })()`, { timeoutMs: 15_000, intervalMs: 50, label: 'visible source-aware company hero' });
+      const beforeSaveEvidence = await browser.evaluate(`(() => {
+        const key = Object.keys(localStorage).find((entry) => entry.endsWith(':last-save-evidence'));
+        return key ? localStorage.getItem(key) : null;
+      })()`);
+      const requestIndex = telemetry.requests.length;
+
+      await clickBinding(browser, relationBinding.bindingId, 'relation');
+      const inspector = await waitFor(browser, `(() => {
+        const root = document.querySelector('#veInspector');
+        const select = root?.querySelector('[data-relation-tool="relation-select"] select[data-relation-field="companyHeroProjectSlug"]');
+        const provenance = document.querySelector('#veProvenance');
+        if (!root || root.hidden || !select || !provenance || provenance.hidden) return null;
+        return {
+          open: true,
+          value: select.value,
+          optionCount: Array.from(select.options).filter((option) => option.value && !option.disabled).length,
+          provenanceVisible: true,
+          provenance: provenance.textContent?.replace(/\\s+/gu, ' ').trim() || '',
+          label: select.getAttribute('aria-label') || ''
+        };
+      })()`, { label: 'company hero relation inspector' });
+
+      const selection = await browser.evaluate(`(async () => {
+        const select = document.querySelector('#veInspector [data-relation-tool="relation-select"] select[data-relation-field="companyHeroProjectSlug"]');
+        const relationRoot = document.querySelector('#veFrame')?.contentDocument
+          ?.querySelector('[data-smu1-borrowed-media-root][data-smu1-binding-id="' + CSS.escape(${json(relationBinding.bindingId)}) + '"]');
+        let relation = null;
+        try { relation = JSON.parse(relationRoot?.getAttribute('data-smu1-binding') || 'null'); } catch {}
+        if (!select || !relation) return null;
+        const read = (value, fieldPath) => String(fieldPath || '').split('.').reduce((current, part) => current?.[part], value);
+        const firstMedia = (value, fieldPath) => {
+          if (Array.isArray(value)) {
+            const index = value.findIndex((item) => typeof item === 'string' ? item.trim() : item?.src?.trim());
+            const item = index >= 0 ? value[index] : null;
+            return item ? { path: typeof item === 'string' ? item : item.src, fieldPath: fieldPath + '[' + index + ']' } : null;
+          }
+          if (typeof value === 'string' && value.trim()) return { path: value, fieldPath };
+          if (value?.src) return { path: value.src, fieldPath };
+          return null;
+        };
+        const load = async (slug) => {
+          const response = await fetch('/api/admin/content/projects/' + encodeURIComponent(slug), { credentials: 'include', cache: 'no-store' });
+          if (!response.ok) return null;
+          const payload = await response.json();
+          const content = payload?.content || payload;
+          const paths = relation.relationProjection?.mediaFieldPaths || [];
+          for (const fieldPath of paths) {
+            const media = firstMedia(read(content, fieldPath), fieldPath);
+            if (media?.path) return { slug, title: content.title || slug, ...media };
+          }
+          return null;
+        };
+        const originalSlug = select.value;
+        const originalSource = await load(originalSlug);
+        const candidates = Array.from(select.options)
+          .filter((option) => option.value && option.value !== originalSlug && !option.disabled)
+          .map((option) => ({ slug: option.value, label: option.textContent?.replace(/\\s+/gu, ' ').trim() || option.value }));
+        for (const candidate of candidates) {
+          const source = await load(candidate.slug);
+          if (source?.path && source.path !== originalSource?.path) {
+            return { originalSlug, originalSource, nextSlug: candidate.slug, nextLabel: candidate.label, nextSource: source };
+          }
+        }
+        return { originalSlug, originalSource, nextSlug: '', nextLabel: '', nextSource: null };
+      })()`);
+      if (!selection?.nextSlug || !selection.nextSource?.path) throw new Error('No second active project with distinct public media is available for relation projection.');
+
+      const switchStarted = performance.now();
+      if (!(await setControlValue(
+        browser,
+        '#veInspector [data-relation-tool="relation-select"] select[data-relation-field="companyHeroProjectSlug"]',
+        selection.nextSlug,
+        { event: 'change' }
+      ))) throw new Error('The structured project relation rejected the selected option.');
+      const after = await waitFor(browser, `(() => {
+        const value = (${borrowedMediaSnapshotExpression(relationBinding.bindingId)});
+        const beforeSource = ${json(before.image.currentSrc || before.image.src)};
+        const currentSource = value?.image?.currentSrc || value?.image?.src || '';
+        const responsiveSourcesCleared = !value?.image?.srcset && (value?.image?.sourceSrcsets || []).every((item) => !item);
+        return value?.media?.ownerSlug === ${json(selection.nextSlug)}
+          && value.media.bindingId === ${json(before.media.bindingId)}
+          && value.image.visible && value.image.complete && value.image.naturalWidth > 0
+          && currentSource && currentSource !== beforeSource && responsiveSourcesCleared
+          && value.sourceAction?.available ? value : null;
+      })()`, { timeoutMs: 15_000, intervalMs: 30, label: 'live retargeted company hero image' });
+      latency('borrowed-relation-media-feedback', performance.now() - switchStarted);
+
+      const draftRecovery = await waitForIndexedRecord(
+        browser,
+        'record-drafts',
+        `(row) => row.slug === 'o-nas' && row.content?.companyHeroProjectSlug === ${json(selection.nextSlug)}`,
+        'company relation recovery draft',
+        '(row) => ({ key: row.key, collection: row.collection || "", slug: row.slug, baseRevision: row.baseRevision, value: row.content.companyHeroProjectSlug })'
+      );
+
+      await clickBinding(browser, after.media.bindingId, 'target');
+      const mediaDialog = await waitFor(browser, `(() => {
+        const dialog = document.querySelector('#veMediaDialog');
+        const subtitle = document.querySelector('#veMediaSubtitle')?.textContent?.replace(/\\s+/gu, ' ').trim() || '';
+        const sourceMatches = subtitle.includes(${json(selection.nextSource.title)}) || subtitle.includes(${json(selection.nextSlug)});
+        const impactMatches = subtitle.includes(${json(route)})
+          && subtitle.includes(${json(`/vypolnennye-obekty/${selection.nextSlug}/`)});
+        return dialog?.open && sourceMatches && impactMatches
+          ? { open: true, subtitle, sourceMatches, impactMatches }
+          : null;
+      })()`, { timeoutMs: 12_000, intervalMs: 50, label: 'retargeted shared media action' });
+      await clickShell(browser, '#veMediaDialog [data-dialog-close]');
+      await waitFor(browser, `!document.querySelector('#veMediaDialog')?.open`, { label: 'borrowed media dialog close' });
+
+      await clickShell(browser, SELECTORS.undo);
+      const restored = await waitFor(browser, `(() => {
+        const value = (${borrowedMediaSnapshotExpression(relationBinding.bindingId)});
+        const currentSource = value?.image?.currentSrc || value?.image?.src || '';
+        const changedSource = ${json(after.image.currentSrc || after.image.src)};
+        return value?.media?.ownerSlug === ${json(selection.originalSlug)}
+          && value.image.visible && currentSource && currentSource !== changedSource
+          && value.sourceAction?.available && value.relationAction?.available ? value : null;
+      })()`, { timeoutMs: 15_000, intervalMs: 50, label: 'Undo restored original borrowed source' });
+      const recoveryAfterUndo = await waitFor(browser, `(${indexedRecordExpression(
+        'record-drafts',
+        `(row) => row.slug === 'o-nas'`,
+        '(row) => ({ key: row.key, value: row.content?.companyHeroProjectSlug || "" })'
+      )}).then((row) => !row || row.value === ${json(selection.originalSlug)}
+        ? { present: Boolean(row), value: row?.value || '' }
+        : null)`, { timeoutMs: 8_000, intervalMs: 100, label: 'relation recovery cleanup after Undo' });
+      if (await browser.evaluate(`Boolean(!document.querySelector('#veInspector')?.hidden)`)) {
+        await clickShell(browser, SELECTORS.inspectorDone);
+        await waitFor(browser, `Boolean(document.querySelector('#veInspector')?.hidden)`, { label: 'relation inspector close after Undo' });
+      }
+      await sleep(200);
+      const afterSaveEvidence = await browser.evaluate(`(() => {
+        const key = Object.keys(localStorage).find((entry) => entry.endsWith(':last-save-evidence'));
+        return key ? localStorage.getItem(key) : null;
+      })()`);
+      const scenarioRequests = telemetry.requests.slice(requestIndex);
+      const saveOrBuildRequests = scenarioRequests.filter((request) => request.method !== 'GET'
+        && (/\/transactions\/(?:preview|apply)$/u.test(request.url.pathname)
+          || request.url.pathname.endsWith('/validation/request')
+          || /\/validation\/runs\//u.test(request.url.pathname)));
+      const liveImageChanged = (after.image.currentSrc || after.image.src) !== (before.image.currentSrc || before.image.src);
+      const sharedImpact = after.media.scope === 'shared'
+        && after.media.affectedRoutes.includes(route)
+        && after.media.affectedRoutes.includes(`/vypolnennye-obekty/${selection.nextSlug}/`);
+      const sourceRetargeted = after.media.bindingId === before.media.bindingId
+        && after.media.ownerCollection === 'projects'
+        && after.media.ownerSlug === selection.nextSlug
+        && after.media.fieldPath === selection.nextSource.fieldPath;
+      const staleResponsiveSourcesCleared = !after.image.srcset && after.image.sourceSrcsets.every((item) => !item);
+      const undoRestored = restored.media.ownerSlug === selection.originalSlug
+        && (restored.image.currentSrc || restored.image.src) !== (after.image.currentSrc || after.image.src)
+        && recoveryAfterUndo.value !== selection.nextSlug;
+      const noSaveOrBuildRequested = saveOrBuildRequests.length === 0 && beforeSaveEvidence === afterSaveEvidence;
+
+      return {
+        issues: [
+          ...(navigation.selectedRoute !== route ? ['company-route-not-opened'] : []),
+          ...(relationBinding.relationCollection !== 'projects' || relationBinding.projection?.kind !== 'relation'
+            || relationBinding.relationProjection?.mediaBindingId !== before.media.bindingId ? ['relation-projection-contract-missing'] : []),
+          ...(!before.image.visible || before.media.scope !== 'shared' || before.media.tool !== 'media'
+            || before.media.ownerCollection !== 'projects' || before.media.affectedRoutes.length < 2 ? ['source-aware-shared-media-missing'] : []),
+          ...(!before.relationAction.available || !before.sourceAction.available ? ['borrowed-media-actions-not-accessible'] : []),
+          ...(!inspector.open || !inspector.provenanceVisible || inspector.optionCount < 2 ? ['structured-relation-inspector-missing'] : []),
+          ...(!liveImageChanged ? ['borrowed-media-image-did-not-change'] : []),
+          ...(!sourceRetargeted ? ['borrowed-media-source-binding-not-retargeted'] : []),
+          ...(!staleResponsiveSourcesCleared ? ['stale-responsive-source-after-relation-switch'] : []),
+          ...(!sharedImpact ? ['retargeted-shared-impact-missing'] : []),
+          ...(!draftRecovery?.key || draftRecovery.value !== selection.nextSlug ? ['relation-draft-not-recoverable'] : []),
+          ...(!mediaDialog.sourceMatches || !mediaDialog.impactMatches ? ['retargeted-source-action-mismatch'] : []),
+          ...(!undoRestored ? ['relation-undo-did-not-restore-source'] : []),
+          ...(!noSaveOrBuildRequested ? ['relation-gesture-triggered-save-or-build'] : [])
+        ],
+        evidence: {
+          route,
+          navigation,
+          relationBinding: {
+            bindingId: relationBinding.bindingId,
+            ownerCollection: relationBinding.ownerCollection || relationBinding.owner?.collection || '',
+            ownerSlug: relationBinding.recordSlug || relationBinding.owner?.slug || '',
+            fieldPath: relationBinding.fieldPath,
+            tool: relationBinding.tool,
+            relationCollection: relationBinding.relationCollection || '',
+            projectionKind: relationBinding.projection?.kind || '',
+            mediaBindingId: relationBinding.relationProjection?.mediaBindingId || ''
+          },
+          inspector,
+          selection,
+          before,
+          after,
+          liveImageChanged,
+          sourceRetargeted,
+          staleResponsiveSourcesCleared,
+          sharedImpact,
+          draftRecovery,
+          mediaDialog,
+          undo: { restored, recoveryAfterUndo, restoredSource: undoRestored },
+          saveEvidenceUnchanged: beforeSaveEvidence === afterSaveEvidence,
+          saveOrBuildRequests,
+          noSaveOrBuildRequested
+        }
+      };
+    });
+
     if (!options.requiredResilienceOnly) {
+
+    await scenario('link-label-href-independent', 'A visible link label and its destination project independently without Save or build', async () => {
+      const navigation = await openPage(browser, { query: 'Главная', slug: 'home', route: '/' });
+      const row = await findBinding(browser, {
+        ownerCollection: 'static-pages', fieldPath: 'heroPrimaryLabel', tool: 'link'
+      });
+      const binding = row.binding;
+      const original = await browser.evaluate(linkBindingSnapshotExpression(binding.bindingId));
+      if (!original?.label || !original.hrefAttribute) throw new Error('The Home primary CTA is not a live anchor binding.');
+      await clickBinding(browser, binding.bindingId);
+      const inspector = await waitFor(browser, `(() => {
+        const root = document.querySelector('#veInspector');
+        const fields = Array.from(document.querySelectorAll('#veInspectorForm .ve-field')).map((field) => ({
+          label: field.querySelector(':scope > span')?.textContent?.replace(/\\s+/gu, ' ').trim() || '',
+          value: field.querySelector('input,textarea')?.value || ''
+        }));
+        const address = fields.find((field) => field.label === 'Адрес ссылки');
+        const label = fields.find((field) => field.label !== 'Адрес ссылки');
+        return root && !root.hidden && fields.length === 2 && address && label
+          ? { open: true, fields, labelField: label.label, addressField: address.label }
+          : null;
+      })()`, { label: 'independent link label and address controls' });
+      const setInspectorField = (fieldLabel, value) => browser.evaluate(`(() => {
+        const field = Array.from(document.querySelectorAll('#veInspectorForm .ve-field')).find((candidate) =>
+          (candidate.querySelector(':scope > span')?.textContent?.replace(/\\s+/gu, ' ').trim() || '') === ${json(fieldLabel)}
+        );
+        const control = field?.querySelector('input,textarea');
+        if (!control) return false;
+        const prototype = control instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        Object.getOwnPropertyDescriptor(prototype, 'value').set.call(control, ${json(value)});
+        control.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+      })()`);
+      const labelMarker = 'H6: подпись изменена отдельно';
+      const nextHref = '/kontakty/';
+      const requestIndex = telemetry.requests.length;
+      if (!(await setInspectorField(inspector.labelField, labelMarker))) throw new Error('The link label control rejected input.');
+      const afterLabel = await waitFor(browser, `(() => {
+        const value = (${linkBindingSnapshotExpression(binding.bindingId)});
+        return value?.label === ${json(labelMarker)} && value.hrefAttribute === ${json(original.hrefAttribute)} ? value : null;
+      })()`, { timeoutMs: 5_000, intervalMs: 15, label: 'label projection with unchanged href' });
+      if (!(await setInspectorField('Адрес ссылки', nextHref))) throw new Error('The link address control rejected input.');
+      const afterHref = await waitFor(browser, `(() => {
+        const value = (${linkBindingSnapshotExpression(binding.bindingId)});
+        return value?.label === ${json(labelMarker)} && value.pathname === ${json(nextHref)}
+          && value.hrefAttribute !== ${json(afterLabel.hrefAttribute)} ? value : null;
+      })()`, { timeoutMs: 5_000, intervalMs: 15, label: 'href projection with unchanged label' });
+
+      if (!(await setInspectorField(inspector.labelField, original.label))) throw new Error('The link label control could not restore its original value.');
+      if (!(await setInspectorField('Адрес ссылки', original.hrefAttribute))) {
+        throw new Error('The link address control could not restore its original value.');
+      }
+      const restored = await waitFor(browser, `(() => {
+        const value = (${linkBindingSnapshotExpression(binding.bindingId)});
+        return value?.label === ${json(original.label)} && value.hrefAttribute === ${json(original.hrefAttribute)} ? value : null;
+      })()`, { timeoutMs: 5_000, intervalMs: 15, label: 'original link restored' });
+      await clickShell(browser, SELECTORS.inspectorDone);
+      await waitFor(browser, `Boolean(document.querySelector('#veInspector')?.hidden)`, { label: 'link inspector close' });
+      await sleep(320);
+      const saveOrBuildRequests = telemetry.requests.slice(requestIndex).filter((request) =>
+        ['/transactions/preview', '/transactions/apply', '/validation/request'].some((endpoint) => request.url.pathname.endsWith(endpoint))
+      );
+      return {
+        issues: [
+          ...(binding.hrefPath === binding.fieldPath || binding.hrefPath !== 'heroPrimaryHref' ? ['link-fields-not-independent'] : []),
+          ...(afterLabel.hrefAttribute !== original.hrefAttribute || afterLabel.label === original.label ? ['label-edit-mutated-href'] : []),
+          ...(afterHref.label !== afterLabel.label || afterHref.hrefAttribute === afterLabel.hrefAttribute ? ['href-edit-mutated-label-or-did-not-project'] : []),
+          ...(restored.label !== original.label || restored.hrefAttribute !== original.hrefAttribute ? ['link-not-restored'] : []),
+          ...(saveOrBuildRequests.length ? ['link-edit-triggered-save-or-build'] : [])
+        ],
+        evidence: {
+          navigation,
+          binding: {
+            bindingId: binding.bindingId,
+            ownerCollection: binding.ownerCollection || binding.owner?.collection || '',
+            ownerSlug: binding.recordSlug || binding.owner?.slug || '',
+            fieldPath: binding.fieldPath,
+            hrefPath: binding.hrefPath || '',
+            tool: binding.tool
+          },
+          inspector,
+          original,
+          afterLabel,
+          afterHref,
+          restored: { ...restored, exact: restored.label === original.label && restored.hrefAttribute === original.hrefAttribute },
+          saveOrBuildRequests,
+          noSaveOrBuildRequested: saveOrBuildRequests.length === 0
+        }
+      };
+    });
+
+    await scenario('global-phone-authoritative-impact', 'The global phone exposes the complete authoritative affected-route closure', async () => {
+      const navigation = await ensurePage(browser, { query: 'Главная', slug: 'home', route: '/' });
+      const row = await findBinding(browser, { ownerCollection: 'site-settings', fieldPath: 'phonePrimary', tool: 'link' });
+      const binding = row.binding;
+      await clickBinding(browser, binding.bindingId);
+      const provenance = await waitFor(browser, `(() => {
+        const root = document.querySelector('#veInspector');
+        const button = document.querySelector('#veProvenance [data-show-impact]');
+        if (!root || root.hidden || !button) return null;
+        const label = button.textContent?.replace(/\\s+/gu, ' ').trim() || '';
+        const match = label.match(/(\\d+)/u);
+        return { visible: true, label, declaredCount: Number(match?.[1] || 0) };
+      })()`, { label: 'global phone provenance impact action' });
+      await clickShell(browser, '#veProvenance [data-show-impact]');
+      const displayed = await waitFor(browser, `(() => {
+        const drawer = document.querySelector('#veSettingsDrawer');
+        const routes = Array.from(drawer?.querySelectorAll('.ve-impact-list li') || [])
+          .map((item) => item.textContent?.replace(/\\s+/gu, ' ').trim() || '')
+          .filter(Boolean)
+          .sort((left, right) => left.localeCompare(right, 'en'));
+        return drawer?.open && routes.length ? { open: true, routes } : null;
+      })()`, { timeoutMs: 8_000, intervalMs: 25, label: 'global phone route impact drawer' });
+      const uniqueDisplayed = [...new Set(displayed.routes)].sort((left, right) => left.localeCompare(right, 'en'));
+      const exact = JSON.stringify(uniqueDisplayed) === JSON.stringify(authoritativeRoutes)
+        && uniqueDisplayed.length === displayed.routes.length;
+      await clickShell(browser, '#veSettingsDrawer [data-dialog-close]');
+      await waitFor(browser, `!document.querySelector('#veSettingsDrawer')?.open`, { label: 'global phone impact drawer close' });
+      if (!(await browser.evaluate(`Boolean(document.querySelector('#veInspector')?.hidden)`))) {
+        await clickShell(browser, SELECTORS.inspectorDone);
+      }
+      return {
+        issues: [
+          ...(binding.scope !== 'global' || !Array.isArray(binding.affectedRoutes) || !binding.affectedRoutes.includes('*') ? ['global-phone-wildcard-binding-missing'] : []),
+          ...(provenance.declaredCount !== authoritativeRoutes.length ? [`global-phone-impact-count:${provenance.declaredCount}/${authoritativeRoutes.length}`] : []),
+          ...(!exact ? ['global-phone-impact-not-authoritative'] : [])
+        ],
+        evidence: {
+          navigation,
+          binding: {
+            bindingId: binding.bindingId,
+            ownerCollection: binding.ownerCollection || binding.owner?.collection || '',
+            ownerSlug: binding.recordSlug || binding.owner?.slug || '',
+            fieldPath: binding.fieldPath,
+            hrefPath: binding.hrefPath || '',
+            tool: binding.tool,
+            scope: binding.scope || '',
+            affectedRoutes: binding.affectedRoutes || []
+          },
+          provenance,
+          authoritativeRoutes,
+          displayedRoutes: displayed.routes,
+          uniqueDisplayedRoutes: uniqueDisplayed,
+          exactAuthoritativeImpact: exact
+        }
+      };
+    });
 
     await scenario('product-h1-live-edit', 'Product H1 live projection, Escape, and commit', async ({ latency }) => {
       const navigation = await openPage(browser, bundle.profile.product);
@@ -1642,6 +2101,218 @@ async function runAcceptance(options, bundle) {
       };
     });
 
+    await scenario('project-media-role-independence', 'A project bulk upload stays gallery-only until archive and detail roles are assigned independently', async ({ latency }) => {
+      const navigation = await openPage(browser, bundle.profile.project);
+      const mediaBinding = await findBinding(browser, {
+        ownerCollection: 'projects', fieldPath: 'gallery', tool: 'gallery', role: 'missing-project-media'
+      });
+      const projectSlug = bundle.profile.project.slug;
+      const original = await browser.evaluate(`(async () => {
+        const response = await fetch('/api/admin/content/projects/' + encodeURIComponent(${json(projectSlug)}), {
+          credentials: 'include', cache: 'no-store'
+        });
+        const payload = await response.json();
+        const content = payload?.content || payload;
+        const presentation = content?.presentation || {};
+        return {
+          status: response.status,
+          revision: payload?.revision || '',
+          rawGalleryCount: Array.isArray(content?.gallery) ? content.gallery.length : 0,
+          archiveCoverMedia: presentation.archiveCoverMedia || '',
+          detailHeroMedia: presentation.detailHeroMedia || '',
+          publicGallery: Array.isArray(presentation.publicGallery) ? presentation.publicGallery : []
+        };
+      })()`);
+      if (original.status !== 200 || original.archiveCoverMedia || original.detailHeroMedia || original.publicGallery.length) {
+        throw new Error('The project role fixture must start as a text-only public project with no assigned presentation media.');
+      }
+
+      await clickBinding(browser, mediaBinding.binding.bindingId);
+      await waitFor(browser, `document.querySelector('#veMediaDialog')?.open
+        && document.querySelectorAll('#veMediaBody .ve-media-row').length === ${Number(original.rawGalleryCount)}`, {
+        timeoutMs: 12_000,
+        label: 'text-only project source pool'
+      });
+      const documentNode = await browser.send('DOM.getDocument', { depth: -1, pierce: true });
+      const inputNode = await browser.send('DOM.querySelector', { nodeId: documentNode.root.nodeId, selector: '#veMediaBody input[type="file"]' });
+      if (!inputNode.nodeId) throw new Error('Project media file input is unavailable.');
+      await browser.send('DOM.setFileInputFiles', { nodeId: inputNode.nodeId, files: bundle.mediaFiles.slice(0, 2) });
+      try {
+        await waitFor(browser, `document.querySelectorAll('#veMediaBody .ve-media-row').length === ${Number(original.rawGalleryCount) + 2}`, {
+          timeoutMs: 8_000,
+          label: 'two project uploads queued'
+        });
+      } catch {
+        await browser.evaluate(`(() => { document.querySelector('#veMediaBody input[type="file"]')?.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
+        await waitFor(browser, `document.querySelectorAll('#veMediaBody .ve-media-row').length === ${Number(original.rawGalleryCount) + 2}`, {
+          timeoutMs: 8_000,
+          label: 'two project uploads queued after change'
+        });
+      }
+      const defaultRoleRows = await waitFor(browser, `(() => {
+        const rows = Array.from(document.querySelectorAll('#veMediaBody .ve-media-row[data-status="waiting"]')).map((row) => ({
+          name: row.querySelector('.ve-media-row__copy strong')?.textContent?.trim() || '',
+          roles: Array.from(row.querySelectorAll('.ve-media-role-picker input:checked')).map((input) => input.value).sort()
+        }));
+        return rows.length === 2 ? rows : null;
+      })()`, { label: 'two gallery-only project upload rows' });
+      const firstStageRequestIndex = telemetry.requests.length;
+      const firstStageStarted = performance.now();
+      await clickShell(browser, SELECTORS.mediaConfirm);
+      await waitFor(browser, `!document.querySelector('#veMediaDialog')?.open`, {
+        timeoutMs: 90_000,
+        intervalMs: 100,
+        label: 'first project bulk upload applied to draft'
+      });
+      latency('project-first-bulk-stage', performance.now() - firstStageStarted);
+      const firstStageRequests = telemetry.requests.slice(firstStageRequestIndex)
+        .filter((request) => request.method === 'POST' && request.url.pathname.endsWith('/media/staging'));
+      const firstDraft = await waitForIndexedRecord(
+        browser,
+        'record-drafts',
+        `(row) => row.slug === ${json(projectSlug)}
+          && row.content?.presentation?.publicGallery?.length === 2
+          && (row.content?.presentation?.archiveCoverMedia || '') === ''
+          && (row.content?.presentation?.detailHeroMedia || '') === ''`,
+        'gallery-only project browser draft',
+        `(row) => ({
+          key: row.key,
+          slug: row.slug,
+          baseRevision: row.baseRevision,
+          rawGalleryCount: row.content.gallery?.length || 0,
+          publicGallery: row.content.presentation.publicGallery,
+          archiveCoverMedia: row.content.presentation.archiveCoverMedia || '',
+          detailHeroMedia: row.content.presentation.detailHeroMedia || '',
+          stagedCount: row.stagedMedia?.length || 0
+        })`
+      );
+      const uploadedPaths = [...new Set(firstDraft.publicGallery || [])];
+      if (uploadedPaths.length !== 2) throw new Error('The first project batch did not produce two distinct public-gallery paths.');
+
+      await clickBinding(browser, mediaBinding.binding.bindingId);
+      await waitFor(browser, `document.querySelector('#veMediaDialog')?.open
+        && document.querySelectorAll('#veMediaBody .ve-media-row').length === ${Number(original.rawGalleryCount) + 2}`, {
+        timeoutMs: 12_000,
+        label: 'project media queue reopened from browser draft'
+      });
+      const assignRole = (canonicalPath, role) => browser.evaluate(`(() => {
+        const row = Array.from(document.querySelectorAll('#veMediaBody .ve-media-row')).find((candidate) => {
+          const image = candidate.querySelector('.ve-media-row__thumb img');
+          if (!image) return false;
+          try { return new URL(image.src, location.href).pathname === ${json(canonicalPath)}; } catch { return false; }
+        });
+        const control = row?.querySelector('.ve-media-role-picker input[value="' + CSS.escape(${json(role)}) + '"]');
+        if (!control) return { available: false, path: ${json(canonicalPath)}, role: ${json(role)} };
+        if (!control.checked) {
+          control.checked = true;
+          control.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        return { available: true, path: ${json(canonicalPath)}, role: ${json(role)} };
+      })()`);
+      const coverAssignment = await assignRole(uploadedPaths[0], 'cover');
+      const heroAssignment = await assignRole(uploadedPaths[1], 'hero');
+      const explicitRoleRows = await waitFor(browser, `(() => {
+        const rows = Array.from(document.querySelectorAll('#veMediaBody .ve-media-row')).map((row) => {
+          const image = row.querySelector('.ve-media-row__thumb img');
+          let pathname = '';
+          try { pathname = image ? new URL(image.src, location.href).pathname : ''; } catch {}
+          return {
+            pathname,
+            roles: Array.from(row.querySelectorAll('.ve-media-role-picker input:checked')).map((input) => input.value).sort()
+          };
+        });
+        const cover = rows.find((row) => row.pathname === ${json(uploadedPaths[0])} && row.roles.includes('cover'));
+        const hero = rows.find((row) => row.pathname === ${json(uploadedPaths[1])} && row.roles.includes('hero'));
+        return cover && hero ? { cover, hero } : null;
+      })()`, { label: 'independent project archive and detail roles' });
+      await clickShell(browser, SELECTORS.mediaConfirm);
+      await waitFor(browser, `!document.querySelector('#veMediaDialog')?.open`, { timeoutMs: 15_000, label: 'explicit project roles applied' });
+      const secondDraft = await waitForIndexedRecord(
+        browser,
+        'record-drafts',
+        `(row) => row.slug === ${json(projectSlug)}
+          && row.content?.presentation?.archiveCoverMedia === ${json(uploadedPaths[0])}
+          && row.content?.presentation?.detailHeroMedia === ${json(uploadedPaths[1])}`,
+        'independent project role draft',
+        `(row) => ({
+          publicGallery: row.content.presentation.publicGallery,
+          archiveCoverMedia: row.content.presentation.archiveCoverMedia || '',
+          detailHeroMedia: row.content.presentation.detailHeroMedia || '',
+          rawGalleryCount: row.content.gallery?.length || 0
+        })`
+      );
+
+      await clickShell(browser, SELECTORS.undo);
+      await waitForIndexedRecord(
+        browser,
+        'record-drafts',
+        `(row) => row.slug === ${json(projectSlug)}
+          && (row.content?.presentation?.archiveCoverMedia || '') === ''
+          && (row.content?.presentation?.detailHeroMedia || '') === ''
+          && row.content?.presentation?.publicGallery?.length === 2`,
+        'Undo restored gallery-only project draft',
+        '(row) => ({ galleryOnly: true })'
+      );
+      await clickShell(browser, SELECTORS.undo);
+      const recoveryCleared = await waitFor(
+        browser,
+        `(${indexedRecordExpression('record-drafts', `(row) => row.slug === ${json(projectSlug)}`, '(row) => ({ key: row.key })')})
+          .then((row) => row ? null : ({ cleared: true }))`,
+        { timeoutMs: 8_000, intervalMs: 100, label: 'project draft removed after Undo' }
+      );
+      const canonical = await browser.evaluate(`(async () => {
+        const response = await fetch('/api/admin/content/projects/' + encodeURIComponent(${json(projectSlug)}), {
+          credentials: 'include', cache: 'no-store'
+        });
+        const payload = await response.json();
+        const content = payload?.content || payload;
+        const presentation = content?.presentation || {};
+        return {
+          status: response.status,
+          revision: payload?.revision || '',
+          rawGalleryCount: Array.isArray(content?.gallery) ? content.gallery.length : 0,
+          archiveCoverMedia: presentation.archiveCoverMedia || '',
+          detailHeroMedia: presentation.detailHeroMedia || '',
+          publicGallery: Array.isArray(presentation.publicGallery) ? presentation.publicGallery : []
+        };
+      })()`);
+      const canonicalUnchanged = JSON.stringify(canonical) === JSON.stringify(original);
+      const saveOrBuildRequests = telemetry.requests.slice(firstStageRequestIndex).filter((request) =>
+        ['/transactions/preview', '/transactions/apply', '/validation/request'].some((endpoint) => request.url.pathname.endsWith(endpoint))
+      );
+      return {
+        issues: [
+          ...(defaultRoleRows.some((row) => JSON.stringify(row.roles) !== JSON.stringify(['gallery'])) ? ['new-project-media-not-gallery-only'] : []),
+          ...(firstStageRequests.length !== 2 ? [`project-stage-request-count:${firstStageRequests.length}`] : []),
+          ...(firstDraft.archiveCoverMedia !== original.archiveCoverMedia || firstDraft.detailHeroMedia !== original.detailHeroMedia ? ['first-upload-assigned-presentation-role'] : []),
+          ...(firstDraft.rawGalleryCount !== original.rawGalleryCount + 2 ? ['first-upload-raw-pool-incomplete'] : []),
+          ...(!coverAssignment.available || !heroAssignment.available ? ['project-role-controls-missing'] : []),
+          ...(secondDraft.archiveCoverMedia === secondDraft.detailHeroMedia
+            || secondDraft.archiveCoverMedia !== uploadedPaths[0]
+            || secondDraft.detailHeroMedia !== uploadedPaths[1] ? ['project-presentation-roles-not-independent'] : []),
+          ...(!canonicalUnchanged || !recoveryCleared?.cleared ? ['project-role-scenario-not-recovered'] : []),
+          ...(saveOrBuildRequests.length ? ['project-media-triggered-save-or-build'] : [])
+        ],
+        evidence: {
+          navigation,
+          binding: mediaBinding.binding,
+          original,
+          defaultRoleRows,
+          firstStageRequestCount: firstStageRequests.length,
+          firstStageRequests,
+          uploadedPaths,
+          firstDraft,
+          explicitAssignments: { cover: coverAssignment, hero: heroAssignment, rows: explicitRoleRows },
+          secondDraft,
+          recoveryCleared,
+          canonical,
+          canonicalUnchanged,
+          saveOrBuildRequests,
+          noSaveOrBuildRequested: saveOrBuildRequests.length === 0
+        }
+      };
+    });
+
     }
 
     async function runRequiredResilienceScenarios() {
@@ -2022,6 +2693,10 @@ async function runAcceptance(options, bundle) {
       reason: entry.reason
     }));
     const releaseMutationsReachedServer = releaseMutationRequests.filter((request) => request.status !== null && !request.failed);
+    const scenarioRegistry = visualAcceptanceScenarioSetIssues(
+      scenarios.map((entry) => entry.id),
+      options.requiredResilienceOnly ? 'required-resilience-only' : 'full'
+    );
     for (const entry of scenarios) {
       const lateHttp = entry.requests.filter((request) => request.status >= 400 && !requestMatchesAllowance(request, entry.allowedHttpFailures));
       const lateNetwork = entry.requests.filter((request) => request.failed && !isBenignBrowserCancellation(request)
@@ -2042,6 +2717,7 @@ async function runAcceptance(options, bundle) {
     const releaseFailed = releaseMutationRequests.length > 0 || releaseIntercepts.length > 0;
     const failedIds = [
       ...failedScenarios.map((entry) => entry.id),
+      ...(!scenarioRegistry.ok ? ['scenario-registry'] : []),
       ...(boundaryFailed ? ['bootstrap-or-final-boundary'] : []),
       ...(releaseFailed ? ['release-boundary'] : [])
     ];
@@ -2051,6 +2727,7 @@ async function runAcceptance(options, bundle) {
       runtimeAttestation,
       login,
       scenarios,
+      scenarioRegistry,
       telemetry: {
         requestCount: telemetry.requests.length,
         errorCount: telemetry.events.length,
@@ -2118,7 +2795,7 @@ async function main() {
       '  Add --required-resilience-only for the bounded two-tab/failure/recovery gate during development.',
       '',
       'The fixture directory must contain 20 real .jpg/.jpeg/.png files and a launcher-issued isolation-proof.json.',
-      'Optional visual-editor-acceptance.json schemaVersion 1 may define isolationProof, mediaFiles, pages.product/category/noPhotoProduct,',
+      'Optional visual-editor-acceptance.json schemaVersion 1 may define isolationProof, mediaFiles, pages.product/category/noPhotoProduct/project,',
       'feedbackBudgetMs, saveBudgetMs, and exactObservationMs. Credentials and session query values are never written to the report.',
       'The runner uses CdpBrowser(admin-no-release), accepts only loopback, and fails on any release mutation request/attempt.',
       ''

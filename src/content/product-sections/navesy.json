@@ -78,48 +78,56 @@
       "order": 10,
       "items": [
         {
+          "id": "canopy-entrance",
           "title": "Входные навесы",
           "text": "Для крылец, проходов, входных групп и зон перед дверями.",
           "order": 10,
           "isActive": true
         },
         {
+          "id": "canopy-bicycle-parking",
           "title": "Навесы для велопарковок",
           "text": "Крытые решения для велосипедов у ЖК, офисов, школ и предприятий.",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "canopy-waste-sites",
           "title": "Навесы для контейнерных площадок",
           "text": "Кровля и защитные конструкции для площадок ТКО и хозяйственных зон.",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "canopy-waiting-areas",
           "title": "Навесы для зон ожидания",
           "text": "Для проходных, остановок, территорий предприятий и общественных пространств.",
           "order": 40,
           "isActive": true
         },
         {
+          "id": "canopy-parking",
           "title": "Парковочные навесы",
           "text": "Для автомобилей, спецтехники и хозяйственных площадок.",
           "order": 50,
           "isActive": true
         },
         {
+          "id": "canopy-shade",
           "title": "Теневые навесы",
           "text": "Для дворов, парков, зон отдыха и общественных пространств.",
           "order": 60,
           "isActive": true
         },
         {
+          "id": "canopy-utility",
           "title": "Хозяйственные навесы",
           "text": "Для складских, производственных и технических зон.",
           "order": 70,
           "isActive": true
         },
         {
+          "id": "canopy-pavilions",
           "title": "Павильоны и укрытия",
           "text": "Индивидуальные конструкции под задачу объекта.",
           "order": 80,
@@ -154,26 +162,31 @@
       "order": 30,
       "steps": [
         {
+          "id": "navesy-process-2-step-1",
           "title": "Уточняем назначение и габариты",
           "order": 10,
           "isActive": true
         },
         {
+          "id": "navesy-process-2-step-2",
           "title": "Учитываем основание, крепление и условия монтажа",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "navesy-process-2-step-3",
           "title": "Подбираем конструкцию каркаса и тип кровли",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "navesy-process-2-step-4",
           "title": "Согласуем внешний вид, цвет и покрытие",
           "order": 40,
           "isActive": true
         },
         {
+          "id": "navesy-process-2-step-5",
           "title": "Изготавливаем и монтируем конструкцию",
           "order": 50,
           "isActive": true

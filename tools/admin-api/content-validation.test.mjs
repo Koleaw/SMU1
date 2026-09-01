@@ -96,6 +96,28 @@ test('supported page block types validate their own item shape', () => {
     && issue.path === `pageBlocks[${faq.pageBlocks.length - 1}].items[0].text`));
 });
 
+test('reorderable object lists and product specifications require unique persisted ids', () => {
+  const missing = aboutFixture();
+  const missingItems = missing.pageBlocks.find((block) => block.type === 'directionCards').items;
+  delete missingItems[0].id;
+  const missingResult = validateContentRecord({ collection: 'static-pages', slug: missing.slug, value: missing });
+  assert.equal(missingResult.success, false);
+  assert.ok(missingResult.errors.some((issue) => /pageBlocks\[\d+\]\.items\[0\]\.id$/u.test(issue.path)));
+
+  const duplicate = aboutFixture();
+  const duplicateItems = duplicate.pageBlocks.find((block) => block.type === 'directionCards').items;
+  duplicateItems[1].id = duplicateItems[0].id;
+  const duplicateResult = validateContentRecord({ collection: 'static-pages', slug: duplicate.slug, value: duplicate });
+  assert.equal(duplicateResult.success, false);
+  assert.ok(duplicateResult.errors.some((issue) => /pageBlocks\[\d+\]\.items\[1\]\.id$/u.test(issue.path)));
+
+  const product = readJson('src/content/products/shezlong-siluet.json');
+  product.dimensions.push({ ...product.dimensions[0], label: 'Вторая характеристика' });
+  const productResult = validateContentRecord({ collection: 'products', slug: product.slug, value: product });
+  assert.equal(productResult.success, false);
+  assert.ok(productResult.errors.some((issue) => issue.path === 'dimensions[1].id'));
+});
+
 test('unknown legacy page blocks are preserved for read/no-op and cannot be created or edited', () => {
   const value = aboutFixture();
   const legacyBlock = {

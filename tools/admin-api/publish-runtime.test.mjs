@@ -190,28 +190,39 @@ test('content gate runner proves exact checkout and returns evidence for every r
   for (const gate of CONTENT_ONLY_GATES) assert.equal(result.results[gate].ok, true);
   assert.equal(result.results['artifact-byte-identity'].ok, true);
   assert.equal(result.artifactIdentity.testedCommitSha, TESTED_SHA);
-  assert.equal(calls.length, 18);
+  assert.equal(calls.length, 23);
   assert.deepEqual(calls.slice(0, 3).map((call) => call.args[0]), ['rev-parse', 'status', 'diff-tree']);
   assert.deepEqual(calls.slice(3, -1).map((call) => call.args), [
     ['ci', '--no-audit', '--no-fund'],
     ['run', 'test:admin-h6:ci'],
+    ['run', 'qa:admin-browser'],
     ['run', 'test:h6-evidence-contracts'],
     ['run', 'check'],
     ['run', 'build'],
+    ['run', 'qa:h6:exact-targeted'],
     ['run', 'qa:performance'],
     ['run', 'qa:final:static'],
     ['run', 'deploy:prepare'],
     ['run', 'qa:performance'],
     ['run', 'qa:final:browser'],
+    ['run', 'qa:deploy-isolation'],
     ['run', 'qa:h6:route-passport'],
     ['run', 'qa:h6:public-actions'],
     ['run', 'qa:h6:admin-actions'],
+    ['run', 'qa:h6:media-privacy'],
+    ['run', 'qa:h6:backup-restore'],
     ['run', 'qa:h6:verify-evidence'],
   ]);
   assert.ok(calls.slice(3, -1).every((call) => /npm(?:\.cmd)?$/iu.test(call.command)));
   assert.deepEqual(calls.at(-1).args, [
     'tools/release/artifact-identity.mjs', '--dist', 'dist', '--tested-sha', TESTED_SHA,
   ]);
+  const commandIndexById = new Map(result.commands.map((command) => [command.id, command.index]));
+  assert.equal(result.results['deploy-isolation'].commandIndexes[0], commandIndexById.get('deploy-isolation'));
+  assert.ok(commandIndexById.get('media-privacy') < commandIndexById.get('evidence-verification'));
+  assert.ok(commandIndexById.get('backup-restore') < commandIndexById.get('evidence-verification'));
+  assert.ok(commandIndexById.get('build') < commandIndexById.get('exact-targeted-build'));
+  assert.ok(commandIndexById.get('exact-targeted-build') < commandIndexById.get('evidence-verification'));
   assert.equal(calls[0].options.env.GITHUB_TOKEN, undefined);
   assert.equal(calls[0].options.env.DEPLOY_TARGET, 'test');
   assert.equal(calls[0].options.env.PRODUCTION_DEPLOY_ENABLED, 'false');
@@ -440,6 +451,38 @@ test('retry provider reruns only the exact failed workflow or Pages workflow run
   });
   assert.equal(calls[1].endpoint, '/actions/runs/42/rerun');
   assert.equal(calls[1].options.method, 'POST');
+});
+
+test('retry provider preserves a safe human diagnostic when the OS credential broker is unavailable', async () => {
+  const providers = createGitHubPublishProviders({
+    githubRequest: async () => {
+      const error = new Error('unsafe provider detail must not be exposed');
+      error.code = 'PUBLISH_GITHUB_WRITE_CREDENTIAL_REQUIRED';
+      throw error;
+    },
+    testSiteBaseUrl: 'https://owner.github.io/repo/',
+    fetchImpl: async () => assert.fail('Smoke fetch is not expected'),
+  });
+  const push = {
+    status: 'pushed',
+    pushed: true,
+    testedSha: TESTED_SHA,
+    refs: { candidate: TESTED_SHA, preview: TESTED_SHA, protected: PROTECTED_SHA },
+  };
+
+  await assert.rejects(
+    providers.retryProvider({
+      testedSha: TESTED_SHA,
+      evidence: {
+        push,
+        workflow: { sha: TESTED_SHA, id: 43, status: 'completed', conclusion: 'failure' },
+      },
+    }),
+    (error) => error.code === 'PUBLISH_GITHUB_WRITE_CREDENTIAL_REQUIRED'
+      && error.status === 503
+      && /Credential Manager/u.test(error.message)
+      && !/unsafe provider detail/u.test(error.message)
+  );
 });
 
 test('retry provider uses repoll-only for smoke and transient failures without a GitHub write', async () => {

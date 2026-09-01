@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import {
   lstat,
@@ -6,6 +6,7 @@ import {
   readFile,
   readdir,
   realpath,
+  rename,
   stat,
   unlink,
   writeFile
@@ -376,6 +377,27 @@ const cachedVariant = async (publicPath, previous, expected) => {
   }
 };
 
+// Exact validation hydrates its disposable worktree with hard-linked cache
+// entries. Never truncate an existing derivative/manifest in place: replacing
+// the workspace directory entry keeps the read-only source cache immutable.
+const replaceOwnedOutput = async (file, bytes) => {
+  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  await writeFile(temporary, bytes, { flag: 'wx' });
+  try {
+    const existing = await lstat(file).catch((error) => {
+      if (error?.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (existing) {
+      if (!existing.isFile() || existing.isSymbolicLink()) throw new Error(`Unsafe derivative output target: ${file}`);
+      await unlink(file);
+    }
+    await rename(temporary, file);
+  } finally {
+    await unlink(temporary).catch((error) => { if (error?.code !== 'ENOENT') throw error; });
+  }
+};
+
 const encodeVariant = async (sourceBuffer, source, width, format) => {
   let pipeline = sharp(sourceBuffer, { failOn: 'warning' })
     .rotate()
@@ -421,7 +443,7 @@ const prepareGroup = async (group, previousByPath, counters) => {
       const encoded = await encodeVariant(representative.sourceBuffer, representative.source, width, format);
       const file = publicFileFor(publicPath);
       await ensureSafeDirectory(OUTPUT_ROOT, dirname(file), 'Derivative output directory');
-      await writeFile(file, encoded.buffer);
+      await replaceOwnedOutput(file, encoded.buffer);
       const variant = {
         path: publicPath,
         format,
@@ -531,7 +553,7 @@ const main = async () => {
   };
 
   await ensureSafeDirectory(PUBLIC_ROOT, OUTPUT_ROOT, 'Media output root');
-  await writeFile(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  await replaceOwnedOutput(MANIFEST_PATH, Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, 'utf8'));
   const removed = await removeStaleOutputs(expectedPublicPaths);
 
   console.log(JSON.stringify({

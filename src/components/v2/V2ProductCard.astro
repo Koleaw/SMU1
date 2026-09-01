@@ -38,7 +38,11 @@ const productUiBinding = (fieldPath: string, tool = 'short-text') => adminBindin
 ---
 
 <a
-  class:list={['v2-product-card', { 'v2-product-card--related': related, 'v2-product-card--premium': isPremium }]}
+  class:list={['v2-product-card', {
+    'v2-product-card--related': related,
+    'v2-product-card--premium': isPremium,
+    'v2-product-card--editor-missing-media': !cardImage && editorCanvas
+  }]}
   href={withBase(href)}
   data-v2-transition-label={product.title}
   data-product-card-presentation={isPremium ? 'premium' : 'standard'}
@@ -46,7 +50,12 @@ const productUiBinding = (fieldPath: string, tool = 'short-text') => adminBindin
   {...binding('order', 'reorder-item', { zoneId: product.productCategorySlug, parentSlug: product.productCategorySlug, permissions: { edit: true, reorder: true, delete: false } })}
 >
   {(cardImage || editorCanvas) && (
-    <div class="v2-product-card__media" data-v2-media {...binding('gallery', 'gallery', { role: cardImage ? 'product-card-media' : 'missing-product-media', multiple: true, coverPath: 'image' })}>
+    <div
+      class:list={['v2-product-card__media', { 'v2-product-card__media--editor-affordance': !cardImage }]}
+      data-v2-media
+      data-smu1-editor-affordance={!cardImage ? 'missing-product-media' : undefined}
+      {...binding('gallery', 'gallery', { role: cardImage ? 'product-card-media' : 'missing-product-media', multiple: true, coverPath: 'image' })}
+    >
       {cardImage ? (
       <V2ResponsiveImage
         src={cardImage}
@@ -59,9 +68,9 @@ const productUiBinding = (fieldPath: string, tool = 'short-text') => adminBindin
         data-v2-image
       />
       ) : (
-        <div class="v2-media-empty" data-smu1-editor-affordance="missing-product-media">
-          <p>Добавить фотографии</p>
-        </div>
+        <span class="v2-media-empty v2-media-empty--editor-affordance" data-smu1-editor-affordance="missing-product-media">
+          <span>Добавить фотографии</span>
+        </span>
       )}
     </div>
   )}

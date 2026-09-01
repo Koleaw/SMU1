@@ -18,6 +18,23 @@ export type AdminEditorDispositionDefinition = {
   tool?: string;
 };
 
+export type AdminListItemFieldDefinition = {
+  /** Relative path inside one structured list item. */
+  fieldPath: string;
+  label?: string;
+  /**
+   * Scalar tools are rendered in the contextual inspector. `list` may carry
+   * another explicit item contract. Generated fields are never exposed as
+   * free text and exist only to create a schema-valid fresh item.
+   */
+  tool?: 'short-text' | 'long-text' | 'link' | 'media' | 'list' | 'generated-id' | 'generated-order' | 'visibility' | 'computed';
+  itemKind?: 'string' | 'object';
+  itemFields?: AdminListItemFieldDefinition[];
+  role?: string;
+  formula?: string;
+  defaultValue?: unknown;
+};
+
 export type AdminBindingDefinition = {
   renderer: { family: string; variant?: string; version?: string };
   owner: { collection: string; slug: string };
@@ -35,6 +52,8 @@ export type AdminBindingDefinition = {
   parentSlug?: string;
   multiple?: boolean;
   itemKind?: 'string' | 'object';
+  /** Fail-closed field contract for object-list contextual editing. */
+  itemFields?: AdminListItemFieldDefinition[];
   coverPath?: string;
   heroPath?: string;
   archivePath?: string;
@@ -42,9 +61,25 @@ export type AdminBindingDefinition = {
   valuePath?: string;
   currencyPath?: string;
   hrefPath?: string;
+  /** Exact collection owning the selectable relation target. */
+  relationCollection?: string;
+  /** Exact collections owning targets in an ordered relation list. */
+  relationCollections?: string[];
+  /** Safe live projection for a visible media occurrence borrowed through a relation. */
+  relationProjection?: {
+    mediaBindingId: string;
+    mediaFieldPaths: string[];
+    positionFields?: Array<{ fieldPath: string; cssProperty: string }>;
+    applySourcePosition?: boolean;
+    strategy?: 'gateway-frame';
+    frameOffset?: number;
+    excludedMediaPaths?: string[];
+  };
 };
 
 const SESSION_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const LIST_FIELD_RE = /^[A-Za-z_$][\w$-]*(?:\[\])?(?:\.[A-Za-z_$][\w$-]*(?:\[\])?)*$/u;
+const FORBIDDEN_LIST_FIELD_PARTS = new Set(['__proto__', 'prototype', 'constructor']);
 
 export function isLocalAdminCanvas(url: URL) {
   // This value is compiled by astro.config.mjs from the conjunction of the
@@ -56,6 +91,27 @@ export function isLocalAdminCanvas(url: URL) {
     && url.searchParams.get('__smu1_editor') === '1'
     && SESSION_RE.test(url.searchParams.get('editorSession') || '')
     && /^\d{1,12}$/u.test(url.searchParams.get('editorRevision') || '');
+}
+
+/** Admin-only structural markers used by the live list projector. */
+export function adminListItem(url: URL, stableItemId: string): Record<string, string> {
+  if (!isLocalAdminCanvas(url)) return {};
+  const value = String(stableItemId || '').trim();
+  if (!value) throw new TypeError('Admin list item marker requires a stable item id.');
+  return { 'data-smu1-list-item': value };
+}
+
+export function adminListField(url: URL, fieldPath: string): Record<string, string> {
+  if (!isLocalAdminCanvas(url)) return {};
+  const value = String(fieldPath || '').trim();
+  if (!LIST_FIELD_RE.test(value) || value.split('.').some((part) => FORBIDDEN_LIST_FIELD_PARTS.has(part.replace(/\[\]$/u, '')))) {
+    throw new TypeError('Admin list field marker requires a safe relative field path.');
+  }
+  return { 'data-smu1-list-field': value };
+}
+
+export function adminListValue(url: URL): Record<string, string> {
+  return isLocalAdminCanvas(url) ? { 'data-smu1-list-value': 'true' } : {};
 }
 
 function stableHash(value: string) {
@@ -106,13 +162,38 @@ export function adminBinding(url: URL, definition: AdminBindingDefinition): Reco
     ...(definition.parentSlug ? { parentSlug: definition.parentSlug } : {}),
     ...(definition.multiple !== undefined ? { multiple: definition.multiple } : {}),
     ...(definition.itemKind ? { itemKind: definition.itemKind } : {}),
+    ...(definition.itemFields?.length ? { itemFields: structuredClone(definition.itemFields) } : {}),
     ...(definition.coverPath ? { coverPath: definition.coverPath } : {}),
     ...(definition.heroPath ? { heroPath: definition.heroPath } : {}),
     ...(definition.archivePath ? { archivePath: definition.archivePath } : {}),
     ...(definition.modePath ? { modePath: definition.modePath } : {}),
     ...(definition.valuePath ? { valuePath: definition.valuePath } : {}),
     ...(definition.currencyPath ? { currencyPath: definition.currencyPath } : {}),
-    ...(definition.hrefPath ? { hrefPath: definition.hrefPath } : {})
+    ...(definition.hrefPath ? { hrefPath: definition.hrefPath } : {}),
+    ...(definition.relationCollection ? { relationCollection: definition.relationCollection } : {}),
+    ...(definition.relationCollections?.length
+      ? { relationCollections: [...new Set(definition.relationCollections)] }
+      : {}),
+    ...(definition.relationProjection?.mediaBindingId && definition.relationProjection.mediaFieldPaths?.length
+      ? {
+          relationProjection: {
+            mediaBindingId: definition.relationProjection.mediaBindingId,
+            mediaFieldPaths: [...new Set(definition.relationProjection.mediaFieldPaths)],
+            positionFields: (definition.relationProjection.positionFields || []).map((item) => ({
+              fieldPath: item.fieldPath,
+              cssProperty: item.cssProperty
+            })),
+            applySourcePosition: definition.relationProjection.applySourcePosition === true,
+            ...(definition.relationProjection.strategy ? { strategy: definition.relationProjection.strategy } : {}),
+            ...(Number.isSafeInteger(definition.relationProjection.frameOffset)
+              ? { frameOffset: definition.relationProjection.frameOffset }
+              : {}),
+            ...(definition.relationProjection.excludedMediaPaths?.length
+              ? { excludedMediaPaths: [...new Set(definition.relationProjection.excludedMediaPaths)] }
+              : {})
+          }
+        }
+      : {})
   };
   return {
     'data-smu1-binding-id': bindingId,

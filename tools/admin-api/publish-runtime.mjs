@@ -71,17 +71,22 @@ const TOKEN_PATTERNS = [
 const COMMANDS = Object.freeze([
   Object.freeze({ id: 'npm-ci', args: ['ci', '--no-audit', '--no-fund'] }),
   Object.freeze({ id: 'admin-tests', args: ['run', 'test:admin-h6:ci'] }),
+  Object.freeze({ id: 'admin-browser-roundtrip', args: ['run', 'qa:admin-browser'] }),
   Object.freeze({ id: 'evidence-contract-tests', args: ['run', 'test:h6-evidence-contracts'] }),
   Object.freeze({ id: 'astro-check', args: ['run', 'check'] }),
   Object.freeze({ id: 'build', args: ['run', 'build'] }),
+  Object.freeze({ id: 'exact-targeted-build', args: ['run', 'qa:h6:exact-targeted'] }),
   Object.freeze({ id: 'performance-before-deploy', args: ['run', 'qa:performance'] }),
   Object.freeze({ id: 'static-qa', args: ['run', 'qa:final:static'] }),
   Object.freeze({ id: 'deploy-prepare', args: ['run', 'deploy:prepare'] }),
   Object.freeze({ id: 'performance-after-deploy', args: ['run', 'qa:performance'] }),
   Object.freeze({ id: 'browser-motion-isolation', args: ['run', 'qa:final:browser'] }),
+  Object.freeze({ id: 'deploy-isolation', args: ['run', 'qa:deploy-isolation'] }),
   Object.freeze({ id: 'route-passport', args: ['run', 'qa:h6:route-passport'] }),
   Object.freeze({ id: 'public-action-crawl', args: ['run', 'qa:h6:public-actions'] }),
   Object.freeze({ id: 'admin-visual-acceptance', args: ['run', 'qa:h6:admin-actions'] }),
+  Object.freeze({ id: 'media-privacy', args: ['run', 'qa:h6:media-privacy'] }),
+  Object.freeze({ id: 'backup-restore', args: ['run', 'qa:h6:backup-restore'] }),
   Object.freeze({ id: 'evidence-verification', args: ['run', 'qa:h6:verify-evidence'] }),
 ]);
 
@@ -524,11 +529,14 @@ export function createContentPublishGateRunner({
         ok: true,
         commandIndexes: [
           commandIndexes['admin-tests'],
+          commandIndexes['admin-browser-roundtrip'],
           commandIndexes['evidence-contract-tests'],
           commandIndexes['static-qa'],
           commandIndexes['route-passport'],
           commandIndexes['public-action-crawl'],
           commandIndexes['admin-visual-acceptance'],
+          commandIndexes['media-privacy'],
+          commandIndexes['backup-restore'],
           commandIndexes['evidence-verification'],
         ],
       },
@@ -538,10 +546,10 @@ export function createContentPublishGateRunner({
         ok: true,
         commandIndexes: [commandIndexes['performance-before-deploy'], commandIndexes['performance-after-deploy']],
       },
-      'deploy-isolation': { ok: true, commandIndexes: [commandIndexes['browser-motion-isolation']] },
+      'deploy-isolation': { ok: true, commandIndexes: [commandIndexes['deploy-isolation']] },
       'exact-media-references': {
         ok: true,
-        commandIndexes: [commandIndexes['deploy-prepare'], commandIndexes['performance-after-deploy']],
+        commandIndexes: [commandIndexes['deploy-prepare'], commandIndexes['performance-after-deploy'], commandIndexes['media-privacy']],
       },
       'publish-plan-consistency': {
         ok: true,
@@ -788,6 +796,13 @@ export function createGitHubPublishProviders({
     try {
       return await Promise.race([operation(controller.signal), timeoutPromise]);
     } catch (error) {
+      if (error?.code === 'PUBLISH_GITHUB_WRITE_CREDENTIAL_REQUIRED') {
+        throw new PublishRuntimeError(
+          'PUBLISH_GITHUB_WRITE_CREDENTIAL_REQUIRED',
+          'Повторный запуск GitHub Actions заблокирован: войдите в GitHub через системный Git Credential Manager и повторите действие.',
+          { details: endpoint ? { endpoint } : undefined, status: 503 }
+        );
+      }
       const timedOut = error instanceof PublishRuntimeError && error.code === timeoutCode;
       throw new PublishRuntimeError(timedOut ? timeoutCode : failureCode, `${label} ${timedOut ? 'timed out' : 'failed'}.`, {
         details: endpoint ? { endpoint } : undefined,

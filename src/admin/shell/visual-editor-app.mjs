@@ -1,5 +1,10 @@
 import { createAdminApiClient, AdminApiError } from '../core/api-client.mjs';
 import { createDraftStore } from '../state/draft-store.mjs';
+import {
+  bindingOwnerDependency,
+  resolveBindingProjection,
+  resolveRelationMediaProjection
+} from '../state/binding-projection.mjs';
 import { createHistoryStore, getAtPath, setAtPath } from '../state/history-store.mjs';
 import { createMediaQueueStore } from '../state/media-queue-store.mjs';
 import {
@@ -11,6 +16,7 @@ import {
   removeDirectionRelation,
   updateDirectionItem
 } from '../state/direction-presentation-editor.mjs';
+import { reorderEntityPages } from '../state/entity-reorder.mjs';
 import { createMediaScheduler } from '../../../tools/admin-api/media-scheduler.mjs';
 
 const BRIDGE_PROTOCOL = 'smu1-editor-bridge';
@@ -46,6 +52,15 @@ const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp']);
 const MAX_MEDIA_FILES = 50;
 const MAX_MEDIA_BYTES = 250 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const RELATION_COLLECTION_LABELS = Object.freeze({
+  projects: 'Объект',
+  'product-sections': 'Раздел каталога',
+  'product-categories': 'Категория',
+  products: 'Товар',
+  services: 'Услуга',
+  jobs: 'Вакансия',
+  'static-pages': 'Страница'
+});
 const PUBLISH_RUNNING_STATUSES = new Set([
   'preparing',
   'local-gates',
@@ -87,6 +102,46 @@ function deepEqual(left, right) {
   const rightKeys = Object.keys(right);
   if (leftKeys.length !== rightKeys.length) return false;
   return leftKeys.every((key) => Object.hasOwn(right, key) && deepEqual(left[key], right[key]));
+}
+
+const STRUCTURED_LIST_FIELD_PATH_RE = /^[A-Za-z_$][\w$-]*(?:\.[A-Za-z_$][\w$-]*)*$/u;
+const STRUCTURED_LIST_GENERATED_TOOLS = new Set(['generated-id', 'generated-order', 'computed']);
+const STRUCTURED_LIST_FORBIDDEN_PATH_PARTS = new Set(['__proto__', 'prototype', 'constructor']);
+const safeStructuredListFieldPath = (value) => STRUCTURED_LIST_FIELD_PATH_RE.test(value)
+  && value.split('.').every((part) => !STRUCTURED_LIST_FORBIDDEN_PATH_PARTS.has(part));
+
+export function declaredStructuredListFields(binding) {
+  const normalize = (fields) => (Array.isArray(fields) ? fields : []).flatMap((field) => {
+    if (!field || typeof field !== 'object' || !safeStructuredListFieldPath(String(field.fieldPath || ''))) return [];
+    const tool = String(field.tool || 'short-text');
+    return [{
+      fieldPath: String(field.fieldPath),
+      label: String(field.label || ''),
+      tool,
+      ...(field.itemKind ? { itemKind: field.itemKind } : {}),
+      ...(Array.isArray(field.itemFields) ? { itemFields: normalize(field.itemFields) } : {}),
+      ...(field.role ? { role: String(field.role) } : {}),
+      ...(field.formula ? { formula: String(field.formula) } : {}),
+      ...(Object.hasOwn(field, 'defaultValue') ? { defaultValue: clone(field.defaultValue) } : {})
+    }];
+  });
+  return normalize(binding?.itemFields);
+}
+
+export function createStructuredListItem(fields, position, { randomUUID = () => crypto.randomUUID() } = {}) {
+  let item = {};
+  for (const field of declaredStructuredListFields({ itemFields: fields })) {
+    let value;
+    if (Object.hasOwn(field, 'defaultValue')) value = clone(field.defaultValue);
+    else if (field.tool === 'generated-id') value = randomUUID();
+    else if (field.tool === 'generated-order') value = (position + 1) * 10;
+    else if (field.tool === 'visibility') value = true;
+    else if (field.tool === 'list') value = [];
+    else if (field.tool === 'computed') continue;
+    else value = '';
+    item = setAtPath(item, field.fieldPath, value);
+  }
+  return item;
 }
 
 function escapeHtml(value) {
@@ -151,6 +206,55 @@ function fieldLabel(path) {
   };
   const last = String(path || '').split('.').filter(Boolean).at(-1) || path;
   return labels[last] || String(last || 'Поле').replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+export function relationTargetCollections(binding) {
+  const declared = [
+    binding?.relationCollection,
+    ...(Array.isArray(binding?.relationCollections) ? binding.relationCollections : [])
+  ];
+  return [...new Set(declared
+    .map((value) => String(value || '').trim())
+    .filter((value) => COLLECTIONS.includes(value)))];
+}
+
+export function relationCandidatesForBinding(binding, summaries, { currentSlugs = [] } = {}) {
+  const collections = relationTargetCollections(binding);
+  const current = new Set((Array.isArray(currentSlugs) ? currentSlugs : [currentSlugs]).map(String));
+  const candidates = collections.flatMap((collection) => {
+    const entries = summaries instanceof Map ? summaries.get(collection) || [] : [];
+    return entries
+      .filter((entry) => entry && typeof entry.slug === 'string' && entry.slug.trim())
+      .filter((entry) => entry.isActive !== false || current.has(entry.slug))
+      .map((entry) => ({
+        collection,
+        slug: entry.slug,
+        title: String(entry.title || entry.slug),
+        typeLabel: RELATION_COLLECTION_LABELS[collection] || collection,
+        isActive: entry.isActive !== false
+      }));
+  });
+  const slugCounts = candidates.reduce((counts, candidate) => {
+    counts.set(candidate.slug, (counts.get(candidate.slug) || 0) + 1);
+    return counts;
+  }, new Map());
+  return candidates
+    .map((candidate) => Object.freeze({ ...candidate, ambiguous: slugCounts.get(candidate.slug) > 1 }))
+    .sort((left, right) => left.title.localeCompare(right.title, 'ru') || left.slug.localeCompare(right.slug, 'ru'));
+}
+
+export function moveRelationValue(items, index, destination) {
+  const current = Array.isArray(items) ? [...items] : [];
+  if (!Number.isSafeInteger(index) || index < 0 || index >= current.length) return current;
+  const [item] = current.splice(index, 1);
+  const target = destination === 'start'
+    ? 0
+    : destination === 'end'
+      ? current.length
+      : Math.min(current.length, Math.max(0, index + Number(destination)));
+  if (!Number.isFinite(target)) return Array.isArray(items) ? [...items] : [];
+  current.splice(target, 0, item);
+  return current;
 }
 
 function iconFor(descriptor) {
@@ -461,7 +565,9 @@ export async function startVisualEditor() {
     navigationRequest: 0,
     selectionRequest: 0,
     actionSequence: 0,
-    replayingCommand: false
+    replayingCommand: false,
+    projectionDependencyLoads: new Map(),
+    projectionDependencyFailures: new Set()
   };
 
   function readLocalJson(key, fallback) {
@@ -591,8 +697,8 @@ export async function startVisualEditor() {
       coalesceMs: 720,
       onChange: (_snapshot, reason) => onRecordChanged(record, reason)
     });
-    if (!deepEqual(initial, payload.content)) record.history.commit(initial, { label: 'Восстановленный черновик', force: true });
     state.records.set(key, record);
+    if (!deepEqual(initial, payload.content)) record.history.commit(initial, { label: 'Восстановленный черновик', force: true });
     if (recoveryConflict) {
       notifications.toast('Найден черновик от более старой версии. Он не перезаписал новые данные; откройте сравнение изменений.', 'warning', 0);
     } else if (recovery && !deepEqual(recovery.content, payload.content)) {
@@ -616,8 +722,8 @@ export async function startVisualEditor() {
     record.history = createHistoryStore(canonical, {
       capacity: 240, coalesceMs: 720, onChange: (_snapshot, reason) => onRecordChanged(record, reason)
     });
-    if (!deepEqual(initial, canonical)) record.history.commit(initial, { label: 'Восстановленный черновик навигации', force: true });
     state.records.set(key, record);
+    if (!deepEqual(initial, canonical)) record.history.commit(initial, { label: 'Восстановленный черновик навигации', force: true });
     if (recoveryConflict) state.remoteConflicts.set(key, { mine: recovery.content, theirs: canonical, baseRevision: recovery.baseRevision, currentRevision: payload.revision });
     return record;
   }
@@ -825,6 +931,7 @@ export async function startVisualEditor() {
     state.currentBinding = null;
     state.bindingRows = [];
     state.bindingRegistry = new Map();
+    state.projectionDependencyFailures.clear();
     state.frameRevision += 1;
     state.bridgeSequence = -1;
     state.parentSequence = 0;
@@ -892,17 +999,181 @@ export async function startVisualEditor() {
     return ensureRecord(collection, slug);
   }
 
+  function projectionRecordContent(collection, slug) {
+    const record = state.records.get(recordKey(collection, slug));
+    return record?.history?.snapshot().value;
+  }
+
+  function hydrateProjectionDependencies(dependencies) {
+    const frameRevision = state.frameRevision;
+    const pending = [];
+    for (const dependency of dependencies) {
+      const collection = String(dependency?.collection || '');
+      const slug = String(dependency?.slug || '');
+      if (!collection || !slug || state.records.has(recordKey(collection, slug))) continue;
+      const key = recordKey(collection, slug);
+      if (state.projectionDependencyFailures.has(key)) continue;
+      let request = state.projectionDependencyLoads.get(key);
+      if (!request) {
+        request = (collection === 'navigation' && slug === 'navigation'
+          ? ensureNavigationRecord()
+          : ensureRecord(collection, slug))
+          .catch((error) => {
+            if (frameRevision === state.frameRevision) {
+              state.projectionDependencyFailures.add(key);
+              notifications.toast(`Canvas сохранил production-значение: не удалось загрузить связанный источник (${error.message || 'ошибка'}).`, 'warning', 0);
+            }
+            return null;
+          })
+          .finally(() => state.projectionDependencyLoads.delete(key));
+        state.projectionDependencyLoads.set(key, request);
+      }
+      pending.push(request);
+    }
+    if (!pending.length) return;
+    void Promise.all(pending).then((records) => {
+      if (frameRevision === state.frameRevision && records.some(Boolean)) projectDraftToFrame();
+    });
+  }
+
+  function canvasMediaItem(record, rawValue, explicitAlt = '') {
+    const pathValue = mediaPath(rawValue);
+    const lease = (record?.stagedMedia || []).find((item) => item.canonicalPath === pathValue);
+    return pathValue ? {
+      src: lease ? api.stagedMediaPreviewUrl({ batchId: lease.batchId, leaseId: lease.leaseId }) : pathValue,
+      alt: explicitAlt || (typeof rawValue === 'object' ? rawValue.alt || '' : ''),
+      caption: typeof rawValue === 'object' ? rawValue.caption || '' : ''
+    } : null;
+  }
+
+  function canvasStructuredListValue(record, value, fields) {
+    if (Array.isArray(value)) return value.map((item) => canvasStructuredListValue(record, item, fields));
+    if (!value || typeof value !== 'object') return value;
+    let projected = clone(value);
+    for (const field of fields) {
+      const raw = getAtPath(value, field.fieldPath);
+      if (field.tool === 'media') {
+        projected = setAtPath(projected, field.fieldPath, canvasMediaItem(record, raw));
+      } else if (field.tool === 'list' && Array.isArray(raw)) {
+        projected = setAtPath(projected, field.fieldPath, raw.map((item) => (
+          field.itemKind === 'object'
+            ? canvasStructuredListValue(record, item, field.itemFields || [])
+            : item
+        )));
+      }
+    }
+    return projected;
+  }
+
+  function retargetBorrowedMediaBinding(relationBinding, resolution) {
+    const source = state.bindingRegistry.get(String(resolution?.mediaBindingId || ''));
+    const target = resolution?.targetOwner;
+    if (!source || !target || !['media', 'gallery'].includes(source.tool) || source.scope !== 'shared') return null;
+    const relationCollections = new Set([
+      relationBinding.relationCollection,
+      ...(Array.isArray(relationBinding.relationCollections) ? relationBinding.relationCollections : [])
+    ].filter(Boolean));
+    if (!relationCollections.has(target.collection) || !/^[a-z0-9][a-z0-9-]*$/u.test(target.slug)) return null;
+    const detailRoute = target.collection === 'projects' ? `/vypolnennye-obekty/${target.slug}/` : '';
+    const next = {
+      ...source,
+      owner: { collection: target.collection, slug: target.slug },
+      ownerCollection: target.collection,
+      recordSlug: target.slug,
+      fieldPath: resolution.sourceFieldPath,
+      scope: 'shared',
+      tool: 'media',
+      label: `Фотография объекта «${resolution.title || target.slug}»`,
+      affectedRoutes: [...new Set([
+        state.currentPage?.route,
+        ...(Array.isArray(relationBinding.affectedRoutes) ? relationBinding.affectedRoutes : []),
+        detailRoute
+      ].filter(Boolean))],
+      projection: {
+        kind: 'shared-media',
+        formula: `project.${resolution.sourceFieldPath} → ${state.currentPage?.route || relationBinding.route || 'borrowed occurrence'}`
+      },
+      multiple: false
+    };
+    state.bindingRegistry.set(next.bindingId, next);
+    for (const row of state.bindingRows) {
+      if (row.binding.bindingId === next.bindingId) row.binding = next;
+    }
+    if (state.currentBinding?.binding?.bindingId === next.bindingId) state.currentBinding.binding = next;
+    return next;
+  }
+
   function projectDraftToFrame() {
     const projections = [];
+    const dependencies = [];
     for (const row of state.bindingRows) {
       const record = recordForBinding(row.binding);
-      if (!record) continue;
-      const content = record.history.snapshot().value;
-      let value = getAtPath(content, row.binding.fieldPath);
-      const fallbackPath = row.binding.projection?.fallback;
-      if (fallbackPath && (value == null || (typeof value === 'string' && !value.trim()))) {
-        value = getAtPath(content, fallbackPath);
+      if (!record) {
+        const ownerDependency = bindingOwnerDependency(row.binding);
+        if (ownerDependency && state.draftKeys.has(recordKey(ownerDependency.collection, ownerDependency.slug))) {
+          dependencies.push(ownerDependency);
+        }
+        continue;
       }
+      const content = record.history.snapshot().value;
+      const relationResolution = resolveRelationMediaProjection(row.binding, projectionRecordContent);
+      if (relationResolution.status === 'pending') {
+        dependencies.push(...relationResolution.dependencies);
+      } else if (relationResolution.status === 'value') {
+        const target = relationResolution.value.targetOwner;
+        const targetRecord = state.records.get(recordKey(target.collection, target.slug));
+        const mediaBinding = retargetBorrowedMediaBinding(row.binding, relationResolution.value);
+        if (targetRecord && mediaBinding) {
+          const positionFields = Array.isArray(row.binding.relationProjection?.positionFields)
+            ? row.binding.relationProjection.positionFields
+            : [];
+          const positions = positionFields.flatMap((item) => (
+            /^[A-Za-z_$][\w$-]*(?:(?:\.[A-Za-z_$][\w$-]*)|(?:\[(?:\d+|[A-Za-z_$][\w$-]*)\]))*$/u.test(String(item?.fieldPath || ''))
+            && /^--[a-z][a-z0-9-]*$/u.test(String(item?.cssProperty || ''))
+              ? [{ cssProperty: item.cssProperty, value: String(getAtPath(content, item.fieldPath) || '50% 50%') }]
+              : []
+          ));
+          projections.push({
+            bindingId: row.binding.bindingId,
+            value: {
+              __smu1RelationMediaProjection: true,
+              mediaBindingId: mediaBinding.bindingId,
+              mediaBinding,
+              item: canvasMediaItem(targetRecord, relationResolution.value.mediaPath, relationResolution.value.alt),
+              positions,
+              objectPosition: row.binding.relationProjection?.applySourcePosition === true
+                ? relationResolution.value.sourcePosition
+                : ''
+            }
+          });
+        }
+      }
+      if (row.binding.tool === 'project-direction-relations') {
+        const items = getAtPath(content, row.binding.fieldPath);
+        projections.push({
+          bindingId: row.binding.bindingId,
+          value: {
+            __smu1ProjectDirectionProjection: true,
+            items: Array.isArray(items)
+              ? items.map((item) => ({
+                  id: String(item?.id || ''),
+                  label: String(item?.label || ''),
+                  context: String(item?.context || ''),
+                  href: String(item?.href || ''),
+                  order: Number(item?.order || 0)
+                }))
+              : []
+          }
+        });
+        continue;
+      }
+      const resolution = resolveBindingProjection(row.binding, projectionRecordContent);
+      if (resolution.status === 'pending') {
+        dependencies.push(...resolution.dependencies);
+        continue;
+      }
+      if (resolution.status !== 'value') continue;
+      let value = resolution.value;
       if (row.binding.tool === 'price') {
         const mode = getAtPath(content, row.binding.modePath || 'priceMode');
         const amount = getAtPath(content, row.binding.valuePath || 'priceFrom');
@@ -911,6 +1182,15 @@ export async function startVisualEditor() {
           const formatted = `${amount.toLocaleString('ru-RU')} ${currency === 'RUB' ? '₽' : currency || ''}`.trim();
           value = mode === 'from' ? `от ${formatted}` : formatted;
         } else value = mode === 'on_request' ? 'Цена по запросу' : 'Цена не указана';
+      } else if (row.binding.tool === 'crop') {
+        const view = value && typeof value === 'object' ? value : {};
+        value = {
+          __smu1CropProjection: true,
+          fit: view.fit === 'contain' ? 'contain' : 'cover',
+          positionX: Math.min(100, Math.max(0, Number(view.positionX ?? 50))),
+          positionY: Math.min(100, Math.max(0, Number(view.positionY ?? 50))),
+          scale: Math.min(3, Math.max(1, Number(view.scale ?? 1)))
+        };
       } else if (row.binding.tool === 'video') {
         const mobilePath = row.binding.mobilePath || `${row.binding.fieldPath}Mobile`;
         value = {
@@ -923,31 +1203,27 @@ export async function startVisualEditor() {
         };
       } else if (row.binding.tool === 'media' || row.binding.tool === 'gallery') {
         const rawItems = Array.isArray(value) ? value : value ? [value] : [];
-        const stagedByPath = new Map((record.stagedMedia || []).map((lease) => [lease.canonicalPath, lease]));
-        const items = rawItems.map((item) => {
-          const pathValue = mediaPath(item);
-          const lease = stagedByPath.get(pathValue);
-          return {
-            src: lease ? api.stagedMediaPreviewUrl({ batchId: lease.batchId, leaseId: lease.leaseId }) : pathValue,
-            alt: typeof item === 'object' ? item.alt || '' : '',
-            caption: typeof item === 'object' ? item.caption || '' : ''
-          };
-        }).filter((item) => item.src);
+        const items = rawItems.map((item) => canvasMediaItem(record, item)).filter(Boolean);
         value = {
           __smu1MediaProjection: true,
           items,
           paths: items.map((item) => item.src)
         };
       } else if (row.binding.tool === 'list' || (Array.isArray(value) && row.binding.tool !== 'reorder-item')) {
+        const itemFields = declaredStructuredListFields(row.binding);
         let projectedItems = value;
         if (Array.isArray(value) && row.binding.stableItemId) {
           const occurrence = value.find((item) => item && typeof item === 'object' && String(item.id || '') === String(row.binding.stableItemId));
           if (occurrence) projectedItems = occurrence;
         }
+        if (row.binding.itemKind === 'object') projectedItems = canvasStructuredListValue(record, projectedItems, itemFields);
         value = {
           __smu1ListProjection: true,
           fieldPath: row.binding.fieldPath,
           stableItemId: row.binding.stableItemId || '',
+          itemKind: row.binding.itemKind || 'string',
+          itemFields,
+          projectionTarget: row.binding.projection?.target || '',
           items: projectedItems
         };
       }
@@ -966,6 +1242,7 @@ export async function startVisualEditor() {
       projections.push({ bindingId: row.binding.bindingId, value });
     }
     if (projections.length) postToFrame('projection', { projections });
+    if (dependencies.length) hydrateProjectionDependencies(dependencies);
   }
 
   function overlayLabel(binding) {
@@ -973,6 +1250,8 @@ export async function startVisualEditor() {
     if (binding.tool === 'media' || binding.tool === 'gallery') return 'Фотографии';
     if (binding.tool === 'video') return 'Видео';
     if (binding.tool === 'price') return 'Цена';
+    if (binding.tool === 'relation-select') return binding.label || 'Выбрать связанный материал';
+    if (binding.tool === 'relation-list') return binding.label || 'Связанные материалы';
     return binding.label || fieldLabel(binding.fieldPath);
   }
 
@@ -1089,6 +1368,23 @@ export async function startVisualEditor() {
           void keyboardReorder(binding, event.key);
         });
         overlay.append(handle, moves);
+      }
+      if (binding.tool === 'relation-select' || binding.tool === 'relation-list') {
+        const relationHandle = document.createElement('button');
+        relationHandle.type = 'button';
+        relationHandle.className = 've-relation-handle';
+        relationHandle.dataset.bindingId = binding.bindingId;
+        relationHandle.dataset.controlKey = 'relation';
+        relationHandle.textContent = binding.tool === 'relation-select' ? 'Источник' : 'Связи';
+        relationHandle.title = binding.label || overlayLabel(binding);
+        relationHandle.setAttribute('aria-label', `Изменить источник: ${binding.label || fieldLabel(binding.fieldPath)}`);
+        relationHandle.style.left = `${Math.max(4, Math.min(rect.right - 76, canvasViewport.clientWidth - 80))}px`;
+        relationHandle.style.top = `${Math.max(4, rect.top + 6)}px`;
+        relationHandle.addEventListener('click', (event) => {
+          event.stopPropagation();
+          void selectBinding(binding, rect);
+        });
+        overlay.append(relationHandle);
       }
       overlay.append(button);
     }
@@ -1274,63 +1570,69 @@ export async function startVisualEditor() {
     inspectorForm.append(section);
   }
 
-  function listItemText(item) {
-    if (typeof item === 'string') return item;
-    return String(item?.text ?? item?.title ?? item?.label ?? item?.value ?? '');
-  }
-
-  function updateListItem(item, text) {
-    if (typeof item === 'string') return text;
-    if ('text' in item) return { ...item, text };
-    if ('title' in item) return { ...item, title: text };
-    if ('label' in item) return { ...item, label: text };
-    if ('value' in item) return { ...item, value: text };
-    return { ...item, text };
-  }
-
   function renderListInspector(record, binding) {
     const container = document.createElement('fieldset');
     container.innerHTML = `<legend>${escapeHtml(binding.label || fieldLabel(binding.fieldPath))}</legend>`;
     const list = document.createElement('div');
     list.className = 've-list-editor';
+
+    const hasGeneratedOrder = (fields) => fields.some((field) => field.tool === 'generated-order' && field.fieldPath === 'order');
+    const renumber = (items, fields) => items.map((entry, position) => {
+      if (!entry || typeof entry !== 'object' || (!Object.hasOwn(entry, 'order') && !hasGeneratedOrder(fields))) return entry;
+      return setAtPath(entry, 'order', (position + 1) * 10);
+    });
+
     const render = () => {
-      const items = clone(getAtPath(record.history.snapshot().value, binding.fieldPath) || []);
       list.replaceChildren();
-      items.forEach((item, index) => {
+      const renderArray = (target, arrayPath, fields, { itemKind = 'string', nested = false } = {}) => {
+        const items = clone(getAtPath(record.history.snapshot().value, arrayPath) || []);
+        const structured = itemKind === 'object' || items.some((item) => item && typeof item === 'object');
+        const stableStructuredItems = structured && fields.some((field) => field.tool === 'generated-id' && field.fieldPath === 'id');
+        const canReorder = stableStructuredItems && binding.permissions?.reorder === true;
+        const canDelete = stableStructuredItems && binding.permissions?.delete === true;
+        const canAdd = stableStructuredItems && binding.permissions?.edit !== false;
+        if (structured && fields.length === 0) {
+          const warning = document.createElement('div');
+          warning.className = 've-provenance';
+          warning.innerHTML = '<strong>Поля элемента не описаны</strong><span>Редактор остановил небезопасную правку: object-list обязан явно перечислять каждое редактируемое поле.</span>';
+          target.append(warning);
+          return;
+        }
+        if (!structured) {
+          const identityNote = document.createElement('p');
+          identityNote.className = 've-field-hint';
+          identityNote.textContent = 'Можно изменить текст каждого пункта. Добавление, удаление и перестановка отключены: у этого legacy-списка нет постоянных идентификаторов элементов.';
+          target.append(identityNote);
+        }
+
+        const commitItems = (nextItems, label) => commitField(record, arrayPath, nextItems, label);
+        items.forEach((item, index) => {
         const row = document.createElement('div');
-        row.className = 've-list-row';
+          row.className = `ve-list-row${structured ? ' ve-list-row--structured' : ''}${nested ? ' ve-list-row--nested' : ''}`;
         const handle = document.createElement('button');
         handle.type = 'button';
         handle.className = 've-list-row__handle';
         handle.textContent = '⋮⋮';
         handle.title = 'Перетащить или Alt + стрелка';
         handle.draggable = true;
-        const input = document.createElement('input');
-        input.value = listItemText(item);
-        input.setAttribute('aria-label', `${binding.label || 'Элемент'} ${index + 1}`);
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 've-list-row__remove';
         remove.textContent = '×';
         remove.setAttribute('aria-label', `Удалить элемент ${index + 1}`);
-        const commitItems = (nextItems, label) => commitField(record, binding.fieldPath, nextItems, label);
-        input.addEventListener('input', () => {
-          const current = clone(getAtPath(record.history.snapshot().value, binding.fieldPath) || []);
-          current[index] = updateListItem(current[index], input.value);
-          commitItems(current, 'Изменить элемент списка');
-        });
         remove.addEventListener('click', () => {
-          const current = clone(getAtPath(record.history.snapshot().value, binding.fieldPath) || []);
+            const current = clone(getAtPath(record.history.snapshot().value, arrayPath) || []);
           current.splice(index, 1);
           commitItems(current, 'Удалить элемент списка');
           render();
         });
         const move = (target) => {
-          const current = clone(getAtPath(record.history.snapshot().value, binding.fieldPath) || []);
+          if (!canReorder) return;
+            const current = clone(getAtPath(record.history.snapshot().value, arrayPath) || []);
           if (target < 0 || target >= current.length || target === index) return;
           const [moved] = current.splice(index, 1);
           current.splice(target, 0, moved);
-          commitItems(current.map((entry, position) => typeof entry === 'object' && entry ? { ...entry, order: (position + 1) * 10 } : entry), 'Изменить порядок списка');
+            commitItems(renumber(current, fields), 'Изменить порядок списка');
           notifications.announce(`Элемент перемещён на позицию ${target + 1}.`);
           render();
         };
@@ -1341,45 +1643,266 @@ export async function startVisualEditor() {
           if (event.key === 'Home') { event.preventDefault(); move(0); }
           if (event.key === 'End') { event.preventDefault(); move(items.length - 1); }
         });
-        handle.addEventListener('dragstart', (event) => event.dataTransfer.setData('text/plain', String(index)));
+          handle.addEventListener('dragstart', (event) => {
+            event.stopPropagation();
+            event.dataTransfer.setData('application/x-smu1-list-row', JSON.stringify({ arrayPath, index }));
+          });
         row.addEventListener('dragover', (event) => event.preventDefault());
         row.addEventListener('drop', (event) => {
+          if (!canReorder) return;
           event.preventDefault();
-          const source = Number(event.dataTransfer.getData('text/plain'));
-          if (!Number.isSafeInteger(source) || source < 0 || source >= items.length || source === index) return;
-          const current = clone(getAtPath(record.history.snapshot().value, binding.fieldPath) || []);
-          const [moved] = current.splice(source, 1);
+            event.stopPropagation();
+            let drag;
+            try { drag = JSON.parse(event.dataTransfer.getData('application/x-smu1-list-row')); }
+            catch { return; }
+            if (drag?.arrayPath !== arrayPath || !Number.isSafeInteger(drag.index) || drag.index < 0 || drag.index >= items.length || drag.index === index) return;
+            const current = clone(getAtPath(record.history.snapshot().value, arrayPath) || []);
+            const [moved] = current.splice(drag.index, 1);
           current.splice(index, 0, moved);
-          commitItems(current.map((entry, position) => typeof entry === 'object' && entry
-            ? { ...entry, order: (position + 1) * 10 }
-            : entry), 'Изменить порядок списка');
+            commitItems(renumber(current, fields), 'Изменить порядок списка');
           notifications.announce(`Элемент перемещён на позицию ${index + 1}.`);
           render();
         });
-        row.append(handle, input, remove);
-        list.append(row);
+
+          const body = document.createElement('div');
+          body.className = 've-list-row__fields';
+          if (!structured) {
+            const input = document.createElement('input');
+            input.value = String(item ?? '');
+            input.setAttribute('aria-label', `${binding.label || 'Элемент'} ${index + 1}`);
+            input.addEventListener('input', () => {
+              const current = clone(getAtPath(record.history.snapshot().value, arrayPath) || []);
+              current[index] = input.value;
+              commitItems(current, 'Изменить элемент списка');
+            });
+            body.append(input);
+          } else {
+            const itemPath = `${arrayPath}[${index}]`;
+            for (const field of fields) {
+              if (STRUCTURED_LIST_GENERATED_TOOLS.has(field.tool)) continue;
+              const fieldPath = `${itemPath}.${field.fieldPath}`;
+              const value = getAtPath(record.history.snapshot().value, fieldPath);
+              if (field.tool === 'list') {
+                const nestedFieldset = document.createElement('fieldset');
+                nestedFieldset.className = 've-list-nested';
+                const legend = document.createElement('legend');
+                legend.textContent = field.label || fieldLabel(field.fieldPath);
+                const nestedEditor = document.createElement('div');
+                nestedEditor.className = 've-list-editor';
+                nestedFieldset.append(legend, nestedEditor);
+                renderArray(nestedEditor, fieldPath, field.itemFields || [], { itemKind: field.itemKind || 'string', nested: true });
+                body.append(nestedFieldset);
+                continue;
+              }
+              if (field.tool === 'visibility') {
+                const control = document.createElement('label');
+                control.className = 've-check';
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.checked = value !== false;
+                input.addEventListener('change', () => commitField(record, fieldPath, input.checked, 'Изменить видимость элемента'));
+                const caption = document.createElement('span');
+                caption.textContent = field.label || 'Показывать на сайте';
+                control.append(input, caption);
+                body.append(control);
+                continue;
+              }
+              if (field.tool === 'media') {
+                const control = document.createElement('div');
+                control.className = 've-field ve-list-row__media';
+                const label = document.createElement('span');
+                label.textContent = field.label || fieldLabel(field.fieldPath);
+                const current = document.createElement('small');
+                current.textContent = value ? String(value) : 'Фотография не выбрана';
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 've-button';
+                button.textContent = value ? 'Заменить фотографию' : 'Добавить фотографию';
+                button.addEventListener('click', () => void openMedia({
+                  ...binding,
+                  bindingId: `${binding.bindingId}:${fieldPath}`,
+                  fieldPath,
+                  itemKind: 'string',
+                  itemFields: undefined,
+                  tool: 'media',
+                  role: field.role || 'list-item-media',
+                  multiple: false
+                }, record));
+                control.append(label, current, button);
+                body.append(control);
+                continue;
+              }
+              const control = document.createElement('label');
+              control.className = 've-field';
+              const label = document.createElement('span');
+              label.textContent = field.label || fieldLabel(field.fieldPath);
+              const input = field.tool === 'long-text' ? document.createElement('textarea') : document.createElement('input');
+              if (field.tool === 'link') input.inputMode = 'url';
+              input.value = value == null ? '' : String(value);
+              input.addEventListener('input', () => commitField(record, fieldPath, input.value, `Изменить: ${label.textContent}`));
+              control.append(label, input);
+              body.append(control);
+            }
+          }
+
+          const positionActions = document.createElement('div');
+          positionActions.className = 've-list-row__move-actions';
+          const moveUp = document.createElement('button');
+          moveUp.type = 'button'; moveUp.textContent = '↑'; moveUp.disabled = index === 0;
+          moveUp.setAttribute('aria-label', `Переместить элемент ${index + 1} выше`);
+          moveUp.addEventListener('click', () => move(index - 1));
+          const moveDown = document.createElement('button');
+          moveDown.type = 'button'; moveDown.textContent = '↓'; moveDown.disabled = index === items.length - 1;
+          moveDown.setAttribute('aria-label', `Переместить элемент ${index + 1} ниже`);
+          moveDown.addEventListener('click', () => move(index + 1));
+          positionActions.append(moveUp, moveDown);
+          if (canReorder) row.append(handle);
+          row.append(body);
+          if (canReorder) row.append(positionActions);
+          if (canDelete) row.append(remove);
+          target.append(row);
       });
       const add = document.createElement('button');
       add.type = 'button';
       add.className = 've-add-row';
       add.textContent = '+ Добавить элемент';
       add.addEventListener('click', () => {
-        const current = clone(getAtPath(record.history.snapshot().value, binding.fieldPath) || []);
-        const sample = current[0];
-        const valueKey = sample && typeof sample === 'object'
-          ? ['text', 'title', 'label', 'value'].find((key) => Object.hasOwn(sample, key)) || 'text'
-          : '';
-        current.push(typeof sample === 'object' && sample
-          ? { ...sample, id: crypto.randomUUID(), [valueKey]: '', order: (current.length + 1) * 10, isActive: true }
-          : '');
-        commitField(record, binding.fieldPath, current, 'Добавить элемент списка');
+          const current = clone(getAtPath(record.history.snapshot().value, arrayPath) || []);
+          current.push(structured ? createStructuredListItem(fields, current.length) : '');
+          commitItems(current, 'Добавить элемент списка');
         render();
       });
-      list.append(add);
+        if (canAdd) target.append(add);
+      };
+
+      const items = clone(getAtPath(record.history.snapshot().value, binding.fieldPath) || []);
+      const structured = binding.itemKind === 'object' || items.some((item) => item && typeof item === 'object');
+      const fields = structured ? declaredStructuredListFields(binding) : [];
+      renderArray(list, binding.fieldPath, fields, { itemKind: structured ? 'object' : 'string' });
     };
     render();
     container.append(list);
     inspectorForm.append(container);
+  }
+
+  function renderRelationConfigurationError(binding) {
+    const warning = document.createElement('div');
+    warning.className = 've-provenance';
+    warning.dataset.relationTool = binding.tool;
+    warning.innerHTML = '<strong>Источник связи не описан</strong><span>Редактор не будет принимать произвольный slug. Откройте технические сведения и исправьте binding registry.</span>';
+    inspectorForm.append(warning);
+  }
+
+  function renderRelationSelectInspector(record, binding) {
+    const collections = relationTargetCollections(binding);
+    if (!collections.length) {
+      renderRelationConfigurationError(binding);
+      return;
+    }
+    const value = String(getAtPath(record.history.snapshot().value, binding.fieldPath) || '');
+    const candidates = relationCandidatesForBinding(binding, state.summaries, { currentSlugs: [value] });
+    const candidatesBySlug = new Map(candidates.map((candidate) => [candidate.slug, candidate]));
+    const fieldset = document.createElement('fieldset');
+    fieldset.className = 've-relation-chooser';
+    fieldset.dataset.relationTool = 'relation-select';
+    const legend = document.createElement('legend');
+    legend.textContent = binding.label || fieldLabel(binding.fieldPath);
+    const label = document.createElement('label');
+    label.className = 've-field';
+    const title = document.createElement('span');
+    title.textContent = 'Связанный материал';
+    const select = document.createElement('select');
+    select.dataset.relationField = binding.fieldPath;
+    select.setAttribute('aria-label', binding.label || fieldLabel(binding.fieldPath));
+    if (binding.validation?.required !== true) {
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = 'Не выбрано';
+      select.append(empty);
+    }
+    for (const candidate of candidates) {
+      const option = document.createElement('option');
+      option.value = candidate.slug;
+      option.textContent = `${candidate.title} · ${candidate.typeLabel}${candidate.isActive ? '' : ' · скрыт'}`;
+      option.disabled = candidate.ambiguous;
+      select.append(option);
+    }
+    if (value && !candidatesBySlug.has(value)) {
+      const unavailable = document.createElement('option');
+      unavailable.value = value;
+      unavailable.textContent = `Недоступная связь · ${value}`;
+      unavailable.disabled = true;
+      select.append(unavailable);
+    }
+    select.value = value;
+    select.addEventListener('change', () => {
+      const previous = String(getAtPath(record.history.snapshot().value, binding.fieldPath) || '');
+      const candidate = candidatesBySlug.get(select.value);
+      if (select.value && (!candidate || candidate.ambiguous)) {
+        select.value = previous;
+        notifications.toast('Эту связь нельзя выбрать однозначно. Данные черновика не изменены.', 'warning', 0);
+        return;
+      }
+      commitField(record, binding.fieldPath, select.value, `Изменить связь: ${binding.label || fieldLabel(binding.fieldPath)}`, { force: true });
+      notifications.announce(`Выбрано: ${candidate?.title || 'не выбрано'}.`);
+    });
+    const hint = document.createElement('p');
+    hint.className = 've-field-hint';
+    hint.textContent = 'Адрес и медиа вычисляются из выбранного материала; slug не вводится вручную.';
+    label.append(title, select, hint);
+    fieldset.append(legend, label);
+    inspectorForm.append(fieldset);
+    requestAnimationFrame(() => select.focus());
+  }
+
+  function renderRelationListInspector(record, binding) {
+    const collections = relationTargetCollections(binding);
+    if (!collections.length) {
+      renderRelationConfigurationError(binding);
+      return;
+    }
+    const current = getAtPath(record.history.snapshot().value, binding.fieldPath);
+    const candidates = relationCandidatesForBinding(binding, state.summaries, {
+      currentSlugs: Array.isArray(current) ? current : []
+    }).filter((candidate) => !candidate.ambiguous);
+    const chooser = relationChooser(record, binding.fieldPath, binding.label || fieldLabel(binding.fieldPath), candidates, {
+      relationTool: 'relation-list'
+    });
+    inspectorForm.append(chooser);
+    requestAnimationFrame(() => chooser.querySelector('button,select')?.focus());
+  }
+
+  function renderProjectDirectionRelationsInspector(record) {
+    const candidates = state.pages.filter((item) => item.kind === 'direction' || item.collection === 'services');
+    const chooser = projectDirectionChooser(record, candidates);
+    chooser.dataset.relationTool = 'project-direction-relations';
+    inspectorForm.append(chooser);
+    requestAnimationFrame(() => chooser.querySelector('button,select')?.focus());
+  }
+
+  function renderCropInspector(record, binding) {
+    const path = binding.fieldPath || 'imageView';
+    const group = document.createElement('fieldset');
+    group.className = 've-relation-chooser';
+    group.dataset.cropTool = 'image-view';
+    const legend = document.createElement('legend');
+    legend.textContent = binding.label || 'Кадрирование изображения';
+    const hint = document.createElement('p');
+    hint.className = 've-field-hint';
+    hint.textContent = 'Изменения сразу видны на странице. Точная production-геометрия будет проверена в фоне после сохранения.';
+    group.append(
+      legend,
+      hint,
+      fieldControl(record, `${path}.fit`, 'Заполнение', {
+        type: 'select',
+        options: [{ value: 'cover', label: 'Заполнить область' }, { value: 'contain', label: 'Показать целиком' }]
+      }),
+      fieldControl(record, `${path}.positionX`, 'Фокус по горизонтали, %', { type: 'number', min: 0, max: 100 }),
+      fieldControl(record, `${path}.positionY`, 'Фокус по вертикали, %', { type: 'number', min: 0, max: 100 }),
+      fieldControl(record, `${path}.scale`, 'Масштаб', { type: 'number', min: 1, max: 3, step: 0.05 })
+    );
+    inspectorForm.append(group);
+    requestAnimationFrame(() => group.querySelector('select,input')?.focus());
   }
 
   function uniqueDraftSlug(collection, sourceSlug) {
@@ -1540,6 +2063,10 @@ export async function startVisualEditor() {
     if (binding.tool === 'video') renderVideoInspector(record, binding);
     else if (binding.tool === 'reorder-item') renderReorderInspector(record, binding);
     else if (binding.tool === 'price') renderPriceInspector(record, binding);
+    else if (binding.tool === 'crop') renderCropInspector(record, binding);
+    else if (binding.tool === 'relation-select') renderRelationSelectInspector(record, binding);
+    else if (binding.tool === 'relation-list') renderRelationListInspector(record, binding);
+    else if (binding.tool === 'project-direction-relations') renderProjectDirectionRelationsInspector(record);
     else if (binding.tool === 'list' || Array.isArray(value)) renderListInspector(record, binding);
     else if (binding.tool === 'link' && binding.hrefPath) {
       renderTextInspector(record, binding, value, { multiline: false });
@@ -1586,10 +2113,7 @@ export async function startVisualEditor() {
         .filter((item) => item.isActive !== false)
         .map((item) => ({ kind: 'in-record', slug: String(item.id), stableItemId: String(item.id), item, record, fieldPath: binding.fieldPath }));
     }
-    const kind = zoneId === 'project-archive' ? 'project' : zoneId === 'vacancies' ? 'job' : 'product';
-    return state.pages.filter((page) => page.isActive && (kind === 'product'
-      ? page.kind === 'product' && page.parentSlug === zoneId
-      : page.kind === kind))
+    return reorderEntityPages(state.pages, binding, zoneId)
       .sort((left, right) => {
         const leftRecord = state.records.get(recordKey(left.collection, left.slug));
         const rightRecord = state.records.get(recordKey(right.collection, right.slug));
@@ -2083,50 +2607,73 @@ export async function startVisualEditor() {
     return wrapper;
   }
 
-  function relationChooser(record, path, label, candidates) {
+  function relationChooser(record, path, label, candidates, { relationTool = 'relation-list' } = {}) {
     const section = document.createElement('fieldset');
     section.className = 've-relation-chooser';
+    section.dataset.relationTool = relationTool;
     const legend = document.createElement('legend');
     legend.textContent = label;
+    const hint = document.createElement('p');
+    hint.className = 've-field-hint';
+    hint.textContent = 'Нумерация — точный публичный порядок. Выбор идёт только из существующих материалов; slug не вводится вручную.';
     const list = document.createElement('div');
     const render = () => {
-      const current = [...(getAtPath(record.history.snapshot().value, path) || [])];
+      const stored = getAtPath(record.history.snapshot().value, path);
+      const current = Array.isArray(stored) ? [...stored] : [];
       list.replaceChildren();
       current.forEach((slug, index) => {
         const candidate = candidates.find((item) => item.slug === slug);
         const row = document.createElement('div');
         row.className = 've-relation-row';
+        row.dataset.itemId = slug;
         const copy = document.createElement('span');
-        copy.textContent = candidate?.title || slug;
-        const move = (target) => {
-          if (target < 0 || target >= current.length) return;
-          const next = current.slice();
-          const [item] = next.splice(index, 1);
-          next.splice(target, 0, item);
-          commitField(record, path, next, `Изменить порядок: ${label}`);
+        const copyTitle = document.createElement('strong');
+        copyTitle.textContent = `${index + 1}. ${candidate?.title || slug}`;
+        const copyMeta = document.createElement('small');
+        copyMeta.textContent = candidate
+          ? ` · ${candidate.typeLabel || candidate.collection || 'материал'} · ${slug}`
+          : ` · недоступная связь · ${slug}`;
+        copy.append(copyTitle, copyMeta);
+        const move = (destination, announcement) => {
+          const next = moveRelationValue(current, index, destination);
+          if (deepEqual(next, current)) return;
+          commitField(record, path, next, `Изменить порядок: ${label}`, { force: true });
+          notifications.announce(`${candidate?.title || slug}: ${announcement.toLocaleLowerCase('ru-RU')}.`);
           render();
         };
-        for (const [text, action, aria] of [['↑', () => move(index - 1), 'Выше'], ['↓', () => move(index + 1), 'Ниже'], ['×', () => { commitField(record, path, current.filter((item) => item !== slug), `Удалить связь: ${label}`); render(); }, 'Убрать']]) {
+        row.append(copy);
+        for (const [text, action, aria, disabled] of [
+          ['⇤', () => move('start', 'В начало'), 'В начало', index === 0],
+          ['↑', () => move(-1, 'Выше'), 'Выше', index === 0],
+          ['↓', () => move(1, 'Ниже'), 'Ниже', index === current.length - 1],
+          ['⇥', () => move('end', 'В конец'), 'В конец', index === current.length - 1],
+          ['×', () => {
+            commitField(record, path, current.filter((_item, itemIndex) => itemIndex !== index), `Удалить связь: ${label}`, { force: true });
+            notifications.announce(`${candidate?.title || slug}: связь убрана.`);
+            render();
+          }, 'Убрать', false]
+        ]) {
           const button = document.createElement('button');
           button.type = 'button';
           button.textContent = text;
           button.title = aria;
+          button.disabled = disabled;
           button.setAttribute('aria-label', `${aria}: ${candidate?.title || slug}`);
           button.addEventListener('click', action);
-          row.append(index === 0 && text === '↑' ? copy : document.createTextNode(''), button);
+          row.append(button);
         }
-        if (!row.contains(copy)) row.prepend(copy);
         list.append(row);
       });
       const addRow = document.createElement('div');
       addRow.className = 've-relation-add';
       const select = document.createElement('select');
       const available = candidates.filter((item) => !current.includes(item.slug));
+      select.setAttribute('aria-label', `Добавить: ${label}`);
       select.innerHTML = '<option value="">Выберите материал…</option>';
       available.forEach((item) => {
         const option = document.createElement('option');
         option.value = item.slug;
-        option.textContent = item.title;
+        option.textContent = `${item.title} · ${item.typeLabel || item.collection || 'материал'}`;
         select.append(option);
       });
       const add = document.createElement('button');
@@ -2135,15 +2682,17 @@ export async function startVisualEditor() {
       add.textContent = 'Добавить';
       add.disabled = available.length === 0;
       add.addEventListener('click', () => {
-        if (!select.value) return;
-        commitField(record, path, [...current, select.value], `Добавить связь: ${label}`);
+        const candidate = available.find((item) => item.slug === select.value);
+        if (!candidate) return;
+        commitField(record, path, [...current, candidate.slug], `Добавить связь: ${label}`, { force: true });
+        notifications.announce(`${candidate.title}: связь добавлена на позицию ${current.length + 1}.`);
         render();
       });
       addRow.append(select, add);
       list.append(addRow);
     };
     render();
-    section.append(legend, list);
+    section.append(legend, hint, list);
     return section;
   }
 
@@ -2402,7 +2951,20 @@ export async function startVisualEditor() {
         const row = document.createElement('div');
         row.className = 've-relation-row';
         const copy = document.createElement('span');
-        copy.textContent = relation.label || relation.href;
+        copy.className = 've-project-direction-copy';
+        const labelInput = document.createElement('input');
+        labelInput.value = relation.label || '';
+        labelInput.setAttribute('aria-label', `Название связанного направления ${index + 1}`);
+        const contextInput = document.createElement('input');
+        contextInput.value = relation.context || '';
+        contextInput.setAttribute('aria-label', `Подпись связанного направления ${index + 1}`);
+        const updateCopy = (field, nextValue) => {
+          current[index] = { ...current[index], [field]: nextValue };
+          commitField(record, path, current, `Изменить ${field === 'label' ? 'название' : 'подпись'} связанного направления`);
+        };
+        labelInput.addEventListener('input', () => updateCopy('label', labelInput.value));
+        contextInput.addEventListener('input', () => updateCopy('context', contextInput.value));
+        copy.append(labelInput, contextInput);
         const move = (target) => {
           if (target < 0 || target >= current.length) return;
           const next = current.slice();
@@ -2413,6 +2975,8 @@ export async function startVisualEditor() {
         const actions = [
           ['↑', () => move(index - 1), 'Выше'],
           ['↓', () => move(index + 1), 'Ниже'],
+          ['⇤', () => move(0), 'В начало'],
+          ['⇥', () => move(current.length - 1), 'В конец'],
           ['×', () => { commitField(record, path, current.filter((_, itemIndex) => itemIndex !== index).map((entry, order) => ({ ...entry, order: (order + 1) * 10 })), 'Убрать связанное направление'); render(); }, 'Убрать']
         ];
         row.append(copy);
@@ -2430,7 +2994,13 @@ export async function startVisualEditor() {
       const add = document.createElement('button'); add.type = 'button'; add.className = 've-button'; add.textContent = 'Добавить'; add.disabled = available.length === 0;
       add.addEventListener('click', () => {
         const candidate = available.find((item) => item.route === select.value); if (!candidate) return;
-        const relation = { id: `direction-${candidate.slug || candidate.route.replace(/\W+/gu, '-')}`, label: candidate.title, href: candidate.route, context: 'Связанное направление', order: (current.length + 1) * 10 };
+        const relation = {
+          id: `direction-${candidate.slug || candidate.route.replace(/\W+/gu, '-')}`,
+          label: candidate.title,
+          href: candidate.route,
+          context: candidate.kind === 'direction' ? 'Направление' : 'Услуга',
+          order: (current.length + 1) * 10
+        };
         commitField(record, path, [...current, relation], 'Добавить связанное направление'); render();
       });
       addRow.append(select, add); list.append(addRow);
@@ -2644,6 +3214,15 @@ export async function startVisualEditor() {
         fieldControl(record, 'imageView.positionY', 'Фокус по вертикали, %', { type: 'number', min: 0, max: 100 }),
         fieldControl(record, 'imageView.scale', 'Масштаб', { type: 'number', min: 1, max: 3, step: 0.05 })
       );
+    }
+    if ('companyHeroPosition' in content) {
+      general.append(focalPositionControl(record, 'companyHeroPosition', 'Фокус фотографии первого экрана'));
+    }
+    if ('customOrderHeroPosition' in content) {
+      general.append(focalPositionControl(record, 'customOrderHeroPosition', 'Фокус первого экрана на компьютере'));
+    }
+    if ('customOrderHeroMobilePosition' in content) {
+      general.append(focalPositionControl(record, 'customOrderHeroMobilePosition', 'Фокус первого экрана на телефоне'));
     }
     if (record.collection === 'projects' && content.presentation) {
       general.append(
@@ -3286,7 +3865,8 @@ export async function startVisualEditor() {
       notifications.toast(`Восстановлена незавершённая очередь: ${restored.items.length} файлов.`, 'success');
     } else state.mediaQueue = existingMediaQueue(binding, record);
     state.mediaInitialCount = state.mediaQueue.filter((item) => item.existing).length;
-    mediaSubtitle.textContent = `Источник: ${record.history.snapshot().value.title || record.slug} · ${fieldLabel(binding.fieldPath)}. Порядок очереди станет порядком публикации.`;
+    const affected = affectedRoutesForBinding(binding);
+    mediaSubtitle.textContent = `Источник: ${record.history.snapshot().value.title || record.slug} · ${record.collection} · ${fieldLabel(binding.fieldPath)}. ${affected.length ? `Используется на: ${affected.join(', ')}.` : 'Используется только здесь.'} Порядок очереди станет порядком публикации.`;
     renderMediaQueue();
     restoreFocusDialog(mediaDialog, document.activeElement);
   }

@@ -177,13 +177,23 @@ export function renderEditorWorkspace({
     clear(materialStates);
     const [material, detail, type] = exactStatus(current.collection, content, snapshot.dirty, current.conflict);
     const effectivePreviewStatus = snapshot.dirty || current.isNew ? { status: 'not-sent' } : previewStatus;
+    const exactCopy = {
+      queued: ['Проверка в очереди', 'Сохранение уже на компьютере; exact build начнётся в фоне.'],
+      running: ['Проверяется', 'Сохранение уже на компьютере; проверяется точный результат сайта.'],
+      ready: ['Готово к публикации', 'Exact-проверка текущей редакции пройдена.'],
+      failed: ['Сохранено, проверка не прошла', 'Локальные данные целы; тестовая публикация заблокирована.'],
+      stale: ['Проверка устарела', 'Повторите exact-проверку текущего сохранения.']
+    }[effectivePreviewStatus?.status];
+    const exactType = effectivePreviewStatus?.status === 'failed'
+      ? 'error'
+      : effectivePreviewStatus?.status === 'stale' ? 'warning' : 'info';
     materialStates.append(
       stateBox('Состояние материала', material, detail, type),
       stateBox(
         'Состояние тестового сайта',
-        effectivePreviewStatus?.status === 'deploy-success' ? 'Тестовый сайт обновлён' : ['preparing', 'local-gates', 'committed', 'pushed', 'workflow-queued', 'building'].includes(effectivePreviewStatus?.status) ? 'Идёт обновление preview' : effectivePreviewStatus?.status === 'failure' ? 'Обновление остановлено' : 'Не отправлено в preview',
-        effectivePreviewStatus?.status === 'deploy-success' ? 'Точная проверенная версия.' : effectivePreviewStatus?.status === 'failure' ? 'Локальные данные не потеряны.' : 'Сохранение не отправляет данные в интернет.',
-        effectivePreviewStatus?.status === 'deploy-success' ? 'success' : effectivePreviewStatus?.status === 'failure' ? 'error' : 'info'
+        exactCopy?.[0] || (effectivePreviewStatus?.status === 'deploy-success' ? 'Тестовый сайт обновлён' : ['preparing', 'local-gates', 'committed', 'pushed', 'workflow-queued', 'building'].includes(effectivePreviewStatus?.status) ? 'Идёт обновление preview' : effectivePreviewStatus?.status === 'failure' ? 'Обновление остановлено' : 'Не отправлено в preview'),
+        exactCopy?.[1] || (effectivePreviewStatus?.status === 'deploy-success' ? 'Точная проверенная версия.' : effectivePreviewStatus?.status === 'failure' ? 'Локальные данные не потеряны.' : 'Сохранение не отправляет данные в интернет.'),
+        exactCopy ? exactType : effectivePreviewStatus?.status === 'deploy-success' ? 'success' : effectivePreviewStatus?.status === 'failure' ? 'error' : 'info'
       )
     );
     undoButton.disabled = !snapshot.canUndo || current.saving;

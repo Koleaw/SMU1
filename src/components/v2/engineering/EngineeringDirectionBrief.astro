@@ -1,11 +1,11 @@
 ---
-import { adminDisposition } from '../../../admin/bindings/adminBinding';
+import { adminDisposition, adminListField, adminListItem } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   eyebrow?: string;
   title: string;
   description: string;
-  items: string[];
+  items: Array<{ id: string; title: string }>;
   titleBinding?: Record<string, string>;
   descriptionBinding?: Record<string, string>;
   itemsBinding?: Record<string, string>;
@@ -39,7 +39,7 @@ const directOrDeclared = (attributes: Record<string, string>, fragment: string, 
       </header>
       <ul class="engineering-brief__items" data-v2-reveal {...directOrDeclared(itemsBinding, 'items', 'Элементы переданы renderer-владельцем без schema binding; измените список исходного блока.')}>
         {items.map((item) => (
-          <li><strong>{item}</strong></li>
+          <li {...adminListItem(Astro.url, item.id)}><strong {...adminListField(Astro.url, 'title')}>{item.title}</strong></li>
         ))}
       </ul>
     </div>

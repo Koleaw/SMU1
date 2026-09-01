@@ -157,11 +157,12 @@ const frames = orderedFrames.map((frame): PublicGatewayFrame => {
   };
 });
 const firstFrame = frames[0];
+const isEditorCanvas = isLocalAdminCanvas(Astro.url);
 const archiveHref = v2Href('/vypolnennye-obekty/', Astro.url.pathname);
 const titleId = `${sectionId}-gateway-title`;
 const descriptionId = `${sectionId}-gateway-description`;
 const hasMedia = Boolean(firstFrame);
-const canRotate = frames.length > 1;
+const canRotate = !isEditorCanvas && frames.length > 1;
 const bindingOwner = Astro.props.bindingOwner;
 const bindingFields = Astro.props.bindingFields;
 const binding = (fieldPath: string | undefined, tool: string) => bindingOwner && fieldPath ? adminBinding(Astro.url, {
@@ -169,13 +170,36 @@ const binding = (fieldPath: string | undefined, tool: string) => bindingOwner &&
   stableItemId: `${bindingOwner.slug}-${sectionId}-${fieldPath}`, scope: 'local', tool,
   affectedRoutes: [Astro.url.pathname]
 }) : {};
-const isEditorCanvas = isLocalAdminCanvas(Astro.url);
+const editorFrame = isEditorCanvas ? orderedFrames[0] : undefined;
+const gatewayMediaBinding = editorFrame ? adminBinding(Astro.url, {
+  renderer: { family: 'project-gateway-frame', variant },
+  owner: { collection: 'projects', slug: editorFrame.ownerSlug },
+  fieldPath: editorFrame.fieldPath,
+  stableItemId: `${sectionId}-visible-frame-${editorFrame.ownerSlug}`,
+  role: editorFrame.sourceRole,
+  scope: 'shared',
+  tool: 'media',
+  label: `Фотография объекта «${editorFrame.ownerSlug}»`,
+  affectedRoutes: [Astro.url.pathname, '/vypolnennye-obekty/', `/vypolnennye-obekty/${editorFrame.ownerSlug}/`],
+  projection: { kind: 'shared-media', formula: `project.${editorFrame.fieldPath} → static editor gateway frame` },
+  permissions: { edit: true, reorder: false, delete: false }
+}) : {};
 const selectionBinding = bindingOwner ? adminBinding(Astro.url, {
   renderer: { family: 'project-gateway', variant }, owner: bindingOwner, fieldPath: projectSelectionField,
   stableItemId: `${bindingOwner.slug}-${sectionId}-project-selection`, scope: 'local', tool: 'relation-list',
+  label: 'Объекты и их порядок',
+  relationCollections: ['projects'],
   affectedRoutes: [Astro.url.pathname, '/vypolnennye-obekty/'],
   permissions: { edit: true, reorder: true, delete: false },
-  projection: { kind: 'relation', formula: 'ordered project relations → archive cover/public gallery round-robin frames' }
+  projection: { kind: 'relation', formula: 'ordered project relations → archive cover/public gallery round-robin frames' },
+  relationProjection: {
+    mediaBindingId: gatewayMediaBinding['data-smu1-binding-id'] || '',
+    mediaFieldPaths: ['presentation.archiveCoverMedia', 'presentation.publicGallery', 'presentation.detailHeroMedia'],
+    applySourcePosition: true,
+    strategy: 'gateway-frame',
+    frameOffset: variant === 'company' ? 1 : 0,
+    excludedMediaPaths: [...excluded]
+  }
 }) : {};
 ---
 
@@ -192,6 +216,7 @@ const selectionBinding = bindingOwner ? adminBinding(Astro.url, {
   data-gateway-frame-interval-ms={FRAME_INTERVAL_MS}
   data-gateway-crossfade-ms={CROSSFADE_MS}
   data-gateway-sizes={responsiveSizes}
+  data-smu1-borrowed-media-root={isEditorCanvas ? 'true' : undefined}
   style={`--gateway-crossfade-duration: ${CROSSFADE_MS}ms;`}
   {...selectionBinding}
 >
@@ -200,25 +225,6 @@ const selectionBinding = bindingOwner ? adminBinding(Astro.url, {
     variant === 'home' ? 'hf-shell hf-shell--editorial' : 'hv2-shell'
   ]}>
     <div class="v2-project-archive-gateway__stage" data-v2-reveal="media">
-      {isEditorCanvas && orderedFrames.map((frame, index) => (
-        <span
-          hidden
-          aria-hidden="true"
-          data-smu1-gateway-frame-source={index + 1}
-          {...adminBinding(Astro.url, {
-            renderer: { family: 'project-gateway-frame', variant },
-            owner: { collection: 'projects', slug: frame.ownerSlug },
-            fieldPath: frame.fieldPath,
-            stableItemId: `${sectionId}-frame-${index + 1}-${frame.ownerSlug}`,
-            role: frame.sourceRole,
-            scope: 'shared',
-            tool: frame.sourceRole === 'archive-cover' ? 'media' : 'gallery',
-            affectedRoutes: [Astro.url.pathname, '/vypolnennye-obekty/', `/vypolnennye-obekty/${frame.ownerSlug}/`],
-            projection: { kind: 'shared-media', formula: `project.${frame.fieldPath} → gateway frame ${index + 1}` },
-            permissions: { edit: true, reorder: frame.sourceRole === 'public-gallery', delete: false }
-          })}
-        ></span>
-      ))}
       <a
         class="v2-project-archive-gateway__link"
         href={archiveHref}
@@ -265,6 +271,8 @@ const selectionBinding = bindingOwner ? adminBinding(Astro.url, {
                 decoding="async"
                 style={`object-position: ${firstFrame.position};`}
                 data-gateway-current-image
+                data-smu1-borrowed-media={isEditorCanvas ? 'true' : undefined}
+                {...gatewayMediaBinding}
               />
             </picture>
           </span>

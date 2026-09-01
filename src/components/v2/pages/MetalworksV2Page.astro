@@ -46,7 +46,7 @@ const getBlockIntro = (block: { intro?: unknown; text?: string } | undefined) =>
   const intro = typeof block?.intro === 'string' ? block.intro.trim() : '';
   return intro || block?.text?.trim() || '';
 };
-const tasks = getDirectionCardItems(typesBlock).map(({ title, text }) => ({ title, text }));
+const tasks = getDirectionCardItems(typesBlock).map(({ id, title, text }) => ({ id, title, text }));
 const scope = getDirectionListItems(scopeBlock);
 const briefInputs = getDirectionStepItems(inputBlock);
 const approvedHeroImage = selectV2ProjectMedia(proofProject, {
@@ -93,10 +93,18 @@ const blockBinding = (block: unknown, field: 'title' | 'intro' | 'items' | 'step
   if (index < 0) return {};
   const source = block as { sectionId?: string; type?: string; order?: number };
   return adminBinding(Astro.url, {
-    renderer: { family: 'direction-block', variant: source.type }, owner: { collection: 'product-sections', slug: section.slug },
-    fieldPath: `pageBlocks[${index}].${field}`, stableItemId: `${source.sectionId || `${source.type}-${source.order}`}-${field}`,
-    scope: 'local', tool, affectedRoutes: [`/${section.slug}/`], itemKind
-  });
+      renderer: { family: 'direction-block', variant: source.type }, owner: { collection: 'product-sections', slug: section.slug },
+      fieldPath: `pageBlocks[${index}].${field}`, stableItemId: `${source.sectionId || `${source.type}-${source.order}`}-${field}`,
+      scope: 'local', tool, affectedRoutes: [`/${section.slug}/`], itemKind,
+      permissions: itemKind === 'object' ? { edit: true, reorder: true, delete: false } : undefined,
+      itemFields: itemKind === 'object' ? [
+        { fieldPath: 'id', tool: 'generated-id' },
+        { fieldPath: 'title', label: 'Название', tool: 'short-text' },
+        ...(field === 'items' ? [{ fieldPath: 'text', label: 'Описание', tool: 'long-text' as const }] : []),
+        { fieldPath: 'order', tool: 'generated-order' },
+        { fieldPath: 'isActive', label: 'Показывать карточку', tool: 'visibility' }
+      ] : undefined
+    });
 };
 ---
 

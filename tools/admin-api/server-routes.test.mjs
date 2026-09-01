@@ -86,7 +86,7 @@ function product(overrides = {}) {
     description: 'Подробное описание.',
     materials: ['Сталь'],
     colors: ['RAL 5005'],
-    dimensions: [{ label: 'Размер', value: '1000 × 500 мм', order: 10, isActive: true }],
+    dimensions: [{ id: 'primary-spec', label: 'Размер', value: '1000 × 500 мм', order: 10, isActive: true }],
     features: ['Преимущество'],
     customizationItems: ['Размер'],
     showDeliveryBlock: true,
@@ -439,7 +439,7 @@ test('product writes validate presentation data and catalog export round-trips t
   assert.deepEqual(item.applicationItems, premium.applicationItems);
   assert.deepEqual(item.executionVariants, premium.executionVariants);
   assert.deepEqual(item.images, [premium.image, ...premium.gallery]);
-  assert.deepEqual(item.specs, [{ name: 'Размер', value: '1000 × 500 мм', order: 10, isActive: true }]);
+  assert.deepEqual(item.specs, [{ id: 'primary-spec', name: 'Размер', value: '1000 × 500 мм', order: 10, isActive: true }]);
   assert.deepEqual(item.advantages, premium.features);
   assert.deepEqual(item.customProduction, premium.customizationItems);
   assert.equal(item.showDelivery, premium.showDeliveryBlock);
@@ -528,6 +528,7 @@ test('shared settings UI wires lossless full-site JSON export and preview-before
 
 test('publish server wiring fixes ref ownership and exposes only the exact-SHA namespace', async () => {
   const source = await fs.readFile(path.join(process.cwd(), 'tools', 'admin-api', 'server.mjs'), 'utf8');
+  const brokerSource = await fs.readFile(path.join(process.cwd(), 'tools', 'admin-api', 'github-credential-broker.mjs'), 'utf8');
   assert.match(source, /createContentPublishGateRunner, createGitHubPublishProviders/u);
   assert.match(source, /candidate:\s*['"]v4-product-final-candidate['"]/u);
   assert.match(source, /preview:\s*['"]preview['"]/u);
@@ -548,9 +549,12 @@ test('publish server wiring fixes ref ownership and exposes only the exact-SHA n
   assert.match(source, /routeExpectations:\s*\[\{\s*route:\s*['"]\/['"],\s*expected:\s*['"]html['"]\s*\}\]/u);
   assert.match(source, /routeExpectations:[\s\S]{0,160}\bpages\b/u);
   assert.match(source, /retryProvider:\s*providers\.retryProvider/u);
-  assert.match(source, /method === ['"]POST['"] && allowedWritePath/u);
-  assert.match(source, /PUBLISH_GITHUB_WRITE_TOKEN_REQUIRED/u);
-  assert.match(source, /rerun-failed-jobs\|rerun/u);
+  assert.match(source, /createGitHubApiRequest\(\{/u);
+  assert.match(brokerSource, /PUBLISH_GITHUB_WRITE_CREDENTIAL_REQUIRED/u);
+  assert.match(brokerSource, /rerun-failed-jobs\|rerun/u);
+  assert.match(brokerSource, /\['credential', 'fill'\]/u);
+  assert.doesNotMatch(source, /GITHUB_(?:DEPLOY_)?TOKEN/u);
+  assert.doesNotMatch(brokerSource, /gh\s+auth\s+token/iu);
   assert.match(source, /await publishService\?\.close\(\)/u);
   assert.doesNotMatch(source, /runGit\(\[['"]push['"]/u);
   assert.doesNotMatch(source, /git add -A|publishPaths\(|publishWholeSiteChanges\(|publishContentChanges\(/u);
@@ -571,6 +575,7 @@ test('Pages workflow deploys only an exact candidate-preview pair from preview',
   assert.match(source, /deploy-test:[\s\S]{0,240}permissions:\s*\n\s*contents:\s*read\s*\n\s*pages:\s*write\s*\n\s*id-token:\s*write/u);
   assert.match(source, /H6 production deploy is hard-disabled; the production request is check-only/u);
   assert.doesNotMatch(source, /PRODUCTION_DEPLOY_ENABLED_VAR|target="production"|deploy_kind="production"/u);
+  assert.match(source, /name: Open and reconcile every production route in public and editor modes[\s\S]{0,220}DEPLOY_TARGET: \$\{\{ steps\.deploy-meta\.outputs\.deploy_target \}\}[\s\S]{0,100}BASE_PATH: \$\{\{ steps\.deploy-meta\.outputs\.base_path \}\}/u);
   const isolationIndex = source.indexOf('npm run qa:deploy-isolation');
   const identityIndex = source.indexOf('node tools/release/artifact-identity.mjs --dist dist --tested-sha "${GITHUB_SHA}"');
   const uploadIndex = source.indexOf('actions/upload-pages-artifact@');

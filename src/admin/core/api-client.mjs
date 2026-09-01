@@ -171,6 +171,11 @@ export function createAdminApiClient({
     transactionApply: ({ transactionId, idempotencyKey, payloadHash }) => request('/transactions/apply', {
       method: 'POST', body: JSON.stringify({ recoveryClientId, transactionId, idempotencyKey, payloadHash })
     }),
+    requestExactValidation: (transactionId) => request('/validation/request', {
+      method: 'POST', body: JSON.stringify({ recoveryClientId, transactionId })
+    }),
+    exactValidationOverview: () => request('/validation/status'),
+    exactValidationRun: (runId) => request(`/validation/runs/${encodeURIComponent(runId)}`),
     history: () => request('/history'),
     exportFullSite: () => download('/json-export/full-site'),
     exportCatalog: () => download('/export-catalog'),

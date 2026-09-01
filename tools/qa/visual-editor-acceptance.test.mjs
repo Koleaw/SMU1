@@ -13,6 +13,14 @@ import {
   percentile95,
   sanitizeRequestUrl
 } from './visual-editor-acceptance.mjs';
+import { FULL_VISUAL_ACCEPTANCE_SCENARIOS } from './visual-editor-scenarios.mjs';
+
+test('visual acceptance runner declares exactly the release-required scenario registry', async () => {
+  const source = await readFile(new URL('./visual-editor-acceptance.mjs', import.meta.url), 'utf8');
+  const declared = [...source.matchAll(/\bscenario\('([^']+)'/gu)].map((match) => match[1]);
+  assert.equal(new Set(declared).size, declared.length, 'runner scenario ids must be unique');
+  assert.deepEqual([...declared].sort(), [...FULL_VISUAL_ACCEPTANCE_SCENARIOS].sort());
+});
 
 test('visual acceptance raster preflight performs a full decode, not a magic-only check', async (t) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'smu1-ve-fixture-'));
@@ -33,9 +41,28 @@ test('visual acceptance raster preflight performs a full decode, not a magic-onl
 });
 
 test('visual acceptance core browser probes are syntactically valid JavaScript', () => {
-  for (const expression of acceptanceBrowserExpressionsForTest()) {
+  const expressions = acceptanceBrowserExpressionsForTest();
+  for (const expression of expressions) {
     assert.doesNotThrow(() => new Function(`return (${expression});`));
   }
+  const borrowedMedia = expressions.find((expression) => expression.includes('data-smu1-borrowed-media-root'));
+  assert.ok(borrowedMedia);
+  assert.match(borrowedMedia, /currentSrc/u);
+  assert.match(borrowedMedia, /sourceSrcsets/u);
+  assert.match(borrowedMedia, /action\(relation\.bindingId, 'relation'\)/u);
+  assert.match(borrowedMedia, /action\(media\.bindingId, 'target'\)/u);
+  const link = expressions.find((expression) => expression.includes('fixture-link-binding'));
+  assert.ok(link);
+  assert.match(link, /hrefAttribute/u);
+  assert.match(link, /pathname/u);
+  assert.doesNotMatch(link, /return\s*\{[^}]*\bhref\s*[,}]/u, 'resolved iframe href can contain editorSession and must not enter evidence');
+});
+
+test('visual acceptance scenarios exercise the real link, global-impact, and project-role browser boundaries', async () => {
+  const source = await readFile(new URL('./visual-editor-acceptance.mjs', import.meta.url), 'utf8');
+  assert.match(source, /scenario\('link-label-href-independent'[\s\S]*#veInspectorForm \.ve-field[\s\S]*linkBindingSnapshotExpression/u);
+  assert.match(source, /scenario\('global-phone-authoritative-impact'[\s\S]*data-show-impact[\s\S]*\.ve-impact-list li/u);
+  assert.match(source, /scenario\('project-media-role-independence'[\s\S]*DOM\.setFileInputFiles[\s\S]*archiveCoverMedia[\s\S]*detailHeroMedia/u);
 });
 
 test('local production canvas excludes the unrelated Astro developer toolbar', async () => {

@@ -38,7 +38,7 @@ const projectUiBinding = (fieldPath: string, tool = 'short-text') => adminBindin
   owner: { collection: 'site-settings', slug: 'global' },
   fieldPath: `projectUi.${fieldPath}`,
   stableItemId: `project-archive-card-${project.slug}-${fieldPath}`,
-  scope: 'global',
+  scope: 'shared',
   tool,
   affectedRoutes: ['/vypolnennye-obekty/']
 });

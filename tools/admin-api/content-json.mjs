@@ -814,7 +814,11 @@ export function createContentJsonService({
           idempotencyKey,
           transactionId: operationId
         });
-        return reportPayload({ result: applied.state === 'committed' ? 'success' : applied.state, errors: [] });
+        return reportPayload({
+          result: applied.state === 'committed' ? 'success' : applied.state,
+          transactionId: applied.transactionId || operationId,
+          errors: []
+        });
       }
     }
     if (operation?.transaction && transactionService) {
@@ -837,6 +841,7 @@ export function createContentJsonService({
       return reportPayload({
         ...operation.summary,
         result: applied.state === 'committed' ? 'success' : applied.state,
+        transactionId: applied.transactionId || operationId,
         errors: []
       });
     }

@@ -139,6 +139,7 @@ export async function startAdminApp() {
     publishSelection: new Set(),
     pendingPublishStart: null,
     publishPollTimer: null,
+    exactPollTimer: null,
     current: null,
     workspace: null,
     pendingNavigation: null,
@@ -151,6 +152,8 @@ export async function startAdminApp() {
   function showLogin(message = '') {
     if (state.publishPollTimer) clearTimeout(state.publishPollTimer);
     state.publishPollTimer = null;
+    if (state.exactPollTimer) clearTimeout(state.exactPollTimer);
+    state.exactPollTimer = null;
     closeNav({ restoreFocus: false });
     state.authenticated = false;
     appView.hidden = true;
@@ -368,7 +371,7 @@ export async function startAdminApp() {
       const payload = await api.publishOverview();
       state.publishOverview = payload || { transactions: [], activeJob: null, latestJob: null };
       const readyIds = new Set((payload?.transactions || [])
-        .filter((entry) => entry.published !== true)
+        .filter((entry) => entry.published !== true && entry.publishEligible === true && entry.exactStatus === 'ready')
         .map((entry) => entry.transactionId));
       state.publishSelection = new Set([...state.publishSelection].filter((id) => readyIds.has(id)));
       const job = payload?.activeJob || payload?.latestJob;
@@ -385,9 +388,21 @@ export async function startAdminApp() {
       if (job?.jobId && ['preparing', 'local-gates', 'committed', 'pushed', 'workflow-queued', 'building'].includes(job.status)) {
         schedulePublishPoll(job.jobId, 5_000);
       }
+      if ((payload?.transactions || []).some((entry) => ['queued', 'running'].includes(entry.exactStatus))) {
+        scheduleExactPoll();
+      }
     } catch (error) {
       state.previewStatus = { status: error.code === 'ADMIN_API_OFFLINE' ? 'not-sent' : 'failure', error: error.message };
     }
+  }
+
+  function scheduleExactPoll(delay = 1_000) {
+    if (state.exactPollTimer || !state.authenticated) return;
+    state.exactPollTimer = setTimeout(async () => {
+      state.exactPollTimer = null;
+      await refreshPreviewStatus();
+      if (['overview', 'preview'].includes(router.current.view) || state.current) renderRoute();
+    }, delay);
   }
 
   function contentPathForRecord(record) {
@@ -412,7 +427,12 @@ export async function startAdminApp() {
       .filter((entry) => entry.published !== true && transactionTouchesRecord(entry, record))
       .sort((left, right) => Date.parse(right.committedAt || 0) - Date.parse(left.committedAt || 0))[0];
     return pending
-      ? { status: 'not-sent', updatedAt: pending.committedAt, transactionId: pending.transactionId }
+      ? {
+          status: pending.exactStatus || 'not-sent',
+          updatedAt: pending.exactValidation?.finishedAt || pending.exactValidation?.startedAt || pending.committedAt,
+          transactionId: pending.transactionId,
+          message: pending.exactValidation?.message || ''
+        }
       : state.previewStatus;
   }
 
@@ -432,7 +452,10 @@ export async function startAdminApp() {
       routeTransitions: result.routeTransitions || metadata.routeTransitions || [],
       recordRenames: result.recordRenames || metadata.recordRenames || [],
       canonicalMedia: [],
-      published: false
+      published: false,
+      exactStatus: result.exactScheduling?.status || 'queued',
+      publishEligible: false,
+      exactValidation: result.exactScheduling || null
     };
     state.publishOverview.transactions = [
       entry,
@@ -735,6 +758,7 @@ export async function startAdminApp() {
         onRefresh: async () => { await refreshPreviewStatus(); renderRoute(); },
         onPublish: publishSelected,
         onRetry: retryPublish,
+        onRetryExact: retryExactValidation,
         onOpenPreview: () => openTestSite(),
         onDownloadReport: downloadPublishReport
       });
@@ -1783,6 +1807,23 @@ export async function startAdminApp() {
       state.publishOverview = { ...state.publishOverview, activeJob: null, latestJob: state.previewStatus };
       renderRoute();
       notifications.toast(error.message, { type: 'error', duration: 0 });
+    }
+  }
+
+  async function retryExactValidation(transactionId) {
+    try {
+      const run = await api.requestExactValidation(transactionId);
+      state.publishOverview.transactions = (state.publishOverview.transactions || []).map((entry) => (
+        entry.transactionId === transactionId
+          ? { ...entry, exactStatus: run.status || 'queued', publishEligible: false, exactValidation: run }
+          : entry
+      ));
+      state.publishSelection.delete(transactionId);
+      renderRoute();
+      scheduleExactPoll(500);
+      notifications.toast('Повторная проверка поставлена в очередь. Локальное сохранение не изменилось.', { type: 'info' });
+    } catch (error) {
+      notifications.toast(error.message || 'Не удалось повторить exact-проверку.', { type: 'error', duration: 0 });
     }
   }
 

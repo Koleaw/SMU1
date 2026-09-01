@@ -71,7 +71,9 @@ test('hub, category and sparse production renderers consume catalogUi with exact
   assert.match(hub, /eyebrowBinding=\{globalBinding\('hub\.contactEyebrow'\)\}/u);
   assert.match(category, /primaryLabelBinding=\{globalBinding\(hasProducts/u);
   assert.match(sparse, /bindingField="gallery"/u);
-  assert.match(sparse, /sparse\.materials\[\$\{item\.sourceIndex\}\]\.label/u);
+  assert.match(sparse, /itemKind: 'object'/u);
+  assert.match(sparse, /adminListItem\(Astro\.url, item\.id\)/u);
+  assert.match(sparse, /adminListField\(Astro\.url, 'label'\)/u);
   assert.match(hero, /primaryLabelBinding\?: Record<string, string>/u);
 
   for (const literal of [

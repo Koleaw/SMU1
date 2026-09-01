@@ -89,6 +89,12 @@ const mediaBinding = cardImageUsesPrimary
   data-v2-transition-label={category.title}
   data-v2-category-state={state}
   data-v2-reveal
+  {...binding('order', 'reorder-item', {
+    role: 'category-order',
+    zoneId: category.parentSectionSlug,
+    parentSlug: category.parentSectionSlug,
+    permissions: { edit: true, reorder: true, delete: false }
+  })}
 >
   <div class="v2-category-card__media" data-v2-media {...mediaBinding}>
     {cardImage ? (

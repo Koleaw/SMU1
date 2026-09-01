@@ -25,6 +25,8 @@ npm run admin:setup
 
 Setup создаёт локальный файл `.env.admin.local` с именем пользователя, scrypt-хэшем пароля и случайным session secret. Открытый пароль в файле не хранится. Не используйте очевидный пароль и не пересылайте `.env.admin.local` по почте или в мессенджере.
 
+Не добавляйте в этот файл `GITHUB_TOKEN` или `GITHUB_DEPLOY_TOKEN`. GitHub status для публичного репозитория читается анонимно; при rate limit и для явного Retry backend обращается к системному Git Credential Manager через `git credential fill`. Секрет остаётся в памяти backend и не передаётся браузеру. Обычный `git push` продолжает использовать настроенный Credential Manager либо SSH. Если старые token-поля уже были в `.env.admin.local`, launcher остановится с безопасной диагностикой; при полностью закрытой админке `npm run admin:setup -- --rotate` удалит их вместе с ротацией локальных credentials.
+
 После setup проверьте запуск:
 
 ```bash

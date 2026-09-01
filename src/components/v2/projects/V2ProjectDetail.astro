@@ -77,7 +77,7 @@ const sectionNavItems = [
 <V2Breadcrumbs items={[
   { title: settings.projectUi.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: projectUiBinding('homeBreadcrumbLabel', 'short-text', { affectedRoutes: ['/vypolnennye-obekty/', '/vypolnennye-obekty/*'] }) },
   { title: settings.projectUi.archiveBreadcrumbLabel, href: '/design-lab/v2/vypolnennye-obekty/', editor: projectUiBinding('archiveBreadcrumbLabel', 'short-text', { affectedRoutes: ['/vypolnennye-obekty/*'] }) },
-  { title: project.title, editor: binding('title', 'heading') }
+  { title: project.title, editor: binding('title', 'heading', { role: 'breadcrumb-title', stableItemId: `${project.slug}-breadcrumb-title` }) }
 ]} />
 
 <article class:list={['v2-project-detail', { 'v2-project-detail--media-sparse': isTextOnly }]}>
@@ -87,7 +87,7 @@ const sectionNavItems = [
         <p class="hv2-eyebrow" data-v2-entrance-role="context" {...binding(categoryFieldPath, 'short-text', {
           projection: { kind: 'fallback', formula: 'category || workType || shortCategory', fallback: 'site-settings.projectUi.detailDefaultEyebrow' }
         })}>{eyebrow}</p>
-        <h1 data-v2-entrance-role="title-primary" {...binding('title', 'heading')}>{project.title}</h1>
+        <h1 data-v2-entrance-role="title-primary" {...binding('title', 'heading', { role: 'hero-title', stableItemId: `${project.slug}-hero-title` })}>{project.title}</h1>
         <V2ProjectMeta location={location} year={project.year} bindingOwner={{ collection: 'projects', slug: project.slug }} affectedRoutes={affectedRoutes} />
         <p class="v2-project-detail__lead" data-v2-entrance-role="lead" {...binding(project.result?.trim() ? 'result' : 'shortDescription', 'long-text', { projection: { kind: 'fallback', formula: 'result || shortDescription' } })}>{heroLead}</p>
         <a class="v2-project-detail__back" href={withBase('/design-lab/v2/vypolnennye-obekty/')} data-v2-entrance-role="actions-meta" {...projectUiBinding('detailArchiveBackLabel', 'link-label')}>
@@ -123,7 +123,7 @@ const sectionNavItems = [
   <V2SectionNav
     items={sectionNavItems}
     label={settings.projectUi.detailSectionNavLabel}
-    editor={projectUiBinding('detailSectionNavLabel', 'short-text')}
+    editor={projectUiBinding('detailSectionNavLabel', 'short-text', { projection: { kind: 'direct', target: 'attribute:aria-label' } })}
     editorSource="src/components/v2/projects/V2ProjectDetail.astro#sectionNavItems"
   />
 
@@ -184,7 +184,13 @@ const sectionNavItems = [
           <p class="hv2-eyebrow" {...projectUiBinding('detailDirectionsEyebrow')}>{settings.projectUi.detailDirectionsEyebrow}</p>
           <h2 id="v2-project-directions-title" {...projectUiBinding('detailDirectionsTitle', 'heading')}>{settings.projectUi.detailDirectionsTitle}</h2>
         </header>
-        <div class="v2-project-detail__direction-grid" role="list" {...binding('presentation.relatedDirections', 'list', { itemKind: 'object' })}>
+        <div class="v2-project-detail__direction-grid" role="list" {...binding('presentation.relatedDirections', 'project-direction-relations', {
+          itemKind: 'object',
+          relationCollections: ['product-sections', 'services'],
+          label: 'Связанные направления и их порядок',
+          permissions: { edit: true, reorder: true, delete: false },
+          projection: { kind: 'relation' }
+        })}>
           {relatedDirections.map((direction) => (
             <a href={withBase(direction.href)} role="listitem" data-v2-transition-label={direction.label} data-v2-reveal>
               <span>{direction.context}</span>

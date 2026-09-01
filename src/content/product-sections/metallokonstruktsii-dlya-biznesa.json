@@ -62,48 +62,56 @@
       "order": 10,
       "items": [
         {
+          "id": "metalwork-workshop-frames",
           "title": "Каркасы цехов, складов и хозяйственных зданий",
           "text": "Несущие металлокаркасы для открытого исполнения и металлическая часть обшитых конструкций производственных, складских и хозяйственных зданий.",
           "order": 10,
           "isActive": true
         },
         {
+          "id": "metalwork-load-bearing",
           "title": "Каркасы, рамы, фермы и несущие элементы",
           "text": "Металлические элементы под геометрию, назначение и рабочие нагрузки конкретного объекта.",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "metalwork-service-platforms",
           "title": "Площадки обслуживания, настилы и переходы",
           "text": "Конструкции для доступа к оборудованию, техническим зонам и рабочим участкам.",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "metalwork-stairs",
           "title": "Лестницы и марши",
           "text": "Металлические лестницы, марши и элементы переходов под размеры и привязки объекта.",
           "order": 40,
           "isActive": true
         },
         {
+          "id": "metalwork-equipment-supports",
           "title": "Опорные конструкции под оборудование и рабочие нагрузки",
           "text": "Стойки, опоры и рамы для размещения оборудования и передачи рабочих нагрузок.",
           "order": 50,
           "isActive": true
         },
         {
+          "id": "metalwork-brackets-embedded",
           "title": "Кронштейны, закладные и монтажные узлы",
           "text": "Крепёжные, опорные и соединительные элементы по чертежу, размерам или описанию задачи.",
           "order": 60,
           "isActive": true
         },
         {
+          "id": "metalwork-auxiliary",
           "title": "Вспомогательные конструкции для объекта",
           "text": "Металлические элементы, которые дополняют основную конструкцию и решают локальные задачи на объекте.",
           "order": 70,
           "isActive": true
         },
         {
+          "id": "metalwork-custom-input",
           "title": "Нестандартные конструкции по исходным данным",
           "text": "Изготовление по КМ/КМД, ТЗ, чертежу, эскизу или замеру заказчика.",
           "order": 80,
@@ -142,31 +150,37 @@
       "order": 30,
       "steps": [
         {
+          "id": "metalwork-input-site-photo",
           "title": "Фотография площадки",
           "order": 10,
           "isActive": true
         },
         {
+          "id": "metalwork-input-dimensions",
           "title": "Размеры и привязки",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "metalwork-input-sketch",
           "title": "Эскиз или референс",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "metalwork-input-drawing",
           "title": "Чертёж",
           "order": 40,
           "isActive": true
         },
         {
+          "id": "metalwork-input-km-kmd",
           "title": "КМ/КМД или ТЗ, если они есть",
           "order": 50,
           "isActive": true
         },
         {
+          "id": "metalwork-input-task-description",
           "title": "Описание задачи и условий эксплуатации",
           "order": 60,
           "isActive": true

@@ -3,10 +3,21 @@ import {
   REQUIRED_VIEWPORTS,
   REAL_UNKNOWN_ROUTE
 } from './route-passport-model.mjs';
+import {
+  FULL_VISUAL_ACCEPTANCE_SCENARIOS,
+  REQUIRED_RESILIENCE_VISUAL_ACCEPTANCE_SCENARIOS,
+  expectedVisualAcceptanceScenarios,
+  visualAcceptanceScenarioSetIssues
+} from './visual-editor-scenarios.mjs';
 
 const pairKey = (route, viewport) => `${route}@@${viewport}`;
 const canonicalJson = (value) => JSON.stringify(value);
 const exactArray = (left, right) => canonicalJson(left) === canonicalJson(right);
+export const PUBLIC_LIFECYCLE_SEMANTIC_IDS = Object.freeze([
+  'home-video',
+  'cookie-notice',
+  'contacts-map'
+]);
 const normalizedEvidenceBasePath = (value) => {
   if (typeof value !== 'string') return null;
   const raw = value.trim();
@@ -15,15 +26,68 @@ const normalizedEvidenceBasePath = (value) => {
   const normalized = `/${raw.replace(/^\/+|\/+$/gu, '')}`;
   return normalized.split('/').some((part) => part === '.' || part === '..') ? null : normalized;
 };
+const canonicalEvidencePath = (value, basePath, expectedOrigin) => {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'https:' || parsed.origin !== expectedOrigin || parsed.username || parsed.password || parsed.search || parsed.hash) return null;
+    const pathname = parsed.pathname;
+    if (basePath === '/') return pathname;
+    if (pathname === basePath) return '/';
+    return pathname.startsWith(`${basePath}/`) ? pathname.slice(basePath.length) || '/' : null;
+  } catch {
+    return null;
+  }
+};
+const robotsDirectives = (value) => new Set(String(value || '').toLowerCase().split(/[,\s]+/u).filter(Boolean));
+const routeSeoEvidenceIssues = (result, key, basePath, canonicalOrigin) => {
+  const issues = [];
+  const policy = result?.canonicalPolicy;
+  const hasCanonicalEvidence = Object.hasOwn(result || {}, 'canonical') && typeof result.canonical === 'string';
+  const hasRobotsEvidence = Boolean(Object.hasOwn(result || {}, 'robots') && typeof result.robots === 'string' && result.robots.trim());
+  const canonical = hasCanonicalEvidence ? String(result.canonical || '').trim() : null;
+  const directives = robotsDirectives(result?.robots);
+  if (!hasCanonicalEvidence) issues.push(`route-passport:canonical-evidence:${key}`);
+  if (!hasRobotsEvidence) issues.push(`route-passport:robots-evidence:${key}`);
+
+  if (policy === 'suppressed-noindex-preview') {
+    if (canonical !== '') issues.push(`route-passport:preview-canonical:${key}`);
+    if (!directives.has('noindex')) issues.push(`route-passport:preview-robots:${key}`);
+    return issues;
+  }
+  if (policy !== 'required-production-canonical') {
+    issues.push(`route-passport:canonical-policy:${key}`);
+    return issues;
+  }
+
+  if (result.routeClass === '404') {
+    if (canonical !== '') issues.push(`route-passport:production-404-canonical:${key}`);
+    if (!directives.has('noindex')) issues.push(`route-passport:production-404-robots:${key}`);
+    return issues;
+  }
+  if (!['canonical', 'alias'].includes(result.routeClass)) {
+    issues.push(`route-passport:production-route-class:${key}`);
+    return issues;
+  }
+  const expectedPath = result.routeClass === 'alias' ? result.canonicalTarget : result.route;
+  const actualPath = canonicalEvidencePath(canonical, basePath, canonicalOrigin);
+  if (!actualPath || actualPath !== expectedPath) issues.push(`route-passport:production-canonical:${key}`);
+  if (result.routeClass === 'alias') {
+    if (!directives.has('noindex') || !directives.has('nofollow') || !directives.has('noarchive')
+      || directives.has('index') || directives.has('follow') || directives.has('none')) {
+      issues.push(`route-passport:production-alias-robots:${key}`);
+    }
+    return issues;
+  }
+  if (!directives.has('index') || !directives.has('follow')
+    || directives.has('noindex') || directives.has('nofollow') || directives.has('none')) {
+    issues.push(`route-passport:production-robots:${key}`);
+  }
+  return issues;
+};
 const defaultAuthoritativeRoutes = () => buildExpectedRouteModel().routes.map((route) => route.pathname);
-export const REQUIRED_VISUAL_ACCEPTANCE_SCENARIOS = Object.freeze([
-  'two-tab-conflict',
-  'failed-exact-after-save',
-  'history-restore-new-transaction',
-  'backup-failure-after-save',
-  'export-import-lossless',
-  'expired-session-draft-recovery'
-]);
+export const REQUIRED_VISUAL_ACCEPTANCE_SCENARIOS = FULL_VISUAL_ACCEPTANCE_SCENARIOS;
+export { REQUIRED_RESILIENCE_VISUAL_ACCEPTANCE_SCENARIOS };
 const artifactEvidenceIssues = (report, prefix) => {
   const issues = [];
   if (!/^[a-f0-9]{64}$/u.test(report?.evidence?.artifactFingerprintSHA256 || '')) issues.push(`${prefix}:artifact-fingerprint`);
@@ -55,18 +119,34 @@ export function validateRoutePassportEvidence(report, options = {}) {
     ? new Map()
     : new Map(authoritativeModel.routes.map((route) => [route.pathname, route]));
   const issues = [];
+  const evidenceBasePath = normalizedEvidenceBasePath(report?.evidence?.basePath);
   if (report?.schemaVersion !== 1) issues.push('route-passport:schema-version');
   if (!report?.evidence?.sourceSHA) issues.push('route-passport:source-sha');
   if (report?.evidence?.dirty) issues.push('route-passport:dirty-source');
   if (!report?.evidence?.distFreshness?.fresh) issues.push('route-passport:stale-dist');
   if (!report?.evidence?.distFingerprintSHA256) issues.push('route-passport:dist-fingerprint');
   if (report?.evidence?.browserSafety?.mode !== 'public-read-only') issues.push('route-passport:browser-safety');
+  if (evidenceBasePath === null) issues.push('route-passport:base-path');
   issues.push(...artifactEvidenceIssues(report, 'route-passport'));
   const manifest = validateManifest(report, 'route-passport', authoritativeRoutes);
   issues.push(...manifest.issues);
   const expected = manifest.expected;
   const expectedPairs = new Set(expected.flatMap((route) => REQUIRED_VIEWPORTS.map((viewport) => pairKey(route, viewport.id))));
   const seenPairs = new Set();
+  const canonicalPolicies = new Set((report?.routeResults || []).map((result) => result?.canonicalPolicy));
+  if (canonicalPolicies.size !== 1) issues.push('route-passport:mixed-canonical-policy');
+  const productionCanonicalPolicy = canonicalPolicies.size === 1 && canonicalPolicies.has('required-production-canonical');
+  let canonicalOrigin = '';
+  if (productionCanonicalPolicy) {
+    try {
+      const parsed = new URL(String(report?.evidence?.canonicalOrigin || ''));
+      if (parsed.protocol !== 'https:' || parsed.origin !== report.evidence.canonicalOrigin || parsed.pathname !== '/') {
+        issues.push('route-passport:canonical-origin');
+      } else canonicalOrigin = parsed.origin;
+    } catch {
+      issues.push('route-passport:canonical-origin');
+    }
+  }
   for (const result of report?.routeResults || []) {
     const key = pairKey(result.route, result.viewport?.id);
     if (!expectedPairs.has(key)) issues.push(`route-passport:unexpected-pair:${key}`);
@@ -85,6 +165,7 @@ export function validateRoutePassportEvidence(report, options = {}) {
     if (result.status !== 'pass') issues.push(`route-passport:failed:${key}`);
     if (result.requestedDocumentStatus !== 200 || result.finalDocumentStatus !== 200) issues.push(`route-passport:document-status:${key}`);
     if (!Array.isArray(result.h1) || result.h1.length !== 1) issues.push(`route-passport:h1:${key}`);
+    issues.push(...routeSeoEvidenceIssues(result, key, evidenceBasePath || '/', canonicalOrigin));
     for (const field of ['visibleSections', 'media', 'backgroundMedia', 'galleries', 'interactions', 'businessOccurrences', 'sourceOwners', 'publicAssets']) {
       if (!Array.isArray(result[field])) issues.push(`route-passport:${field}:${key}`);
     }
@@ -99,6 +180,11 @@ export function validateRoutePassportEvidence(report, options = {}) {
       if (result.editor?.equivalence?.status !== 'pass' || result.editor?.equivalence?.issues?.length) issues.push(`route-passport:editor-equivalence:${key}`);
       if (!Array.isArray(result.editor?.events) || result.editor.events.some((event) => !['console-warning', 'log-warning'].includes(event.kind))) {
         issues.push(`route-passport:editor-errors:${key}`);
+      }
+      if (!Array.isArray(result.editor?.expectedDocumentEvents)) issues.push(`route-passport:editor-expected-document-events:${key}`);
+      if (result.routeClass === '404' && !result.editor?.expectedDocumentEvents?.some((event) =>
+        event.kind === 'http-response' && event.status === 404 && event.resourceType === 'Document')) {
+        issues.push(`route-passport:editor-404-document-evidence:${key}`);
       }
       if (!Array.isArray(result.editor?.occurrences)) issues.push(`route-passport:occurrence-coverage-missing:${key}`);
       if (!Array.isArray(result.editor?.mediaOccurrences)) issues.push(`route-passport:media-coverage-missing:${key}`);
@@ -136,7 +222,13 @@ export function validateRoutePassportEvidence(report, options = {}) {
       if (result.editor?.status !== 'covered' || result.editor?.equivalence?.status !== 'pass'
         || result.editor?.invalidBindings?.length || !Array.isArray(result.editor?.bindingMultiplicity) || result.editor.bindingMultiplicity.length
         || result.editor?.occurrenceCoverage?.unclassified !== 0
-        || result.editor?.mediaCoverage?.unclassified !== 0 || result.editor?.toolCoverage?.missing?.length) issues.push(`route-passport:unknown-editor:${key}`);
+        || result.editor?.mediaCoverage?.unclassified !== 0 || result.editor?.toolCoverage?.missing?.length
+        || !Array.isArray(result.editor?.events)
+        || result.editor.events.some((event) => !['console-warning', 'log-warning'].includes(event.kind))
+        || !Array.isArray(result.editor?.expectedDocumentEvents)
+        || !result.editor.expectedDocumentEvents.some((event) => event.kind === 'http-response' && event.status === 404 && event.resourceType === 'Document')) {
+        issues.push(`route-passport:unknown-editor:${key}`);
+      }
     }
   }
   for (const key of unknownExpected) if (!unknownSeen.has(key)) issues.push(`route-passport:unknown-missing:${key}`);
@@ -163,8 +255,89 @@ export function validatePublicActionEvidence(report, {
   const manifest = validateManifest(report, 'public-actions', authoritativeRoutes);
   issues.push(...manifest.issues);
   const expected = manifest.expected;
+  const requiredLifecycleIds = [
+    ...(expected.includes('/') ? ['home-video', 'cookie-notice'] : []),
+    ...(expected.includes('/kontakty/') ? ['contacts-map'] : [])
+  ];
+  const lifecycleSemantics = Array.isArray(report?.publicLifecycleSemantics) ? report.publicLifecycleSemantics : [];
+  const lifecycleSeen = new Set();
+  let lifecycleSemanticsPassed = 0;
+  let lifecycleSemanticsFailed = 0;
+  for (const semantic of lifecycleSemantics) {
+    const id = semantic?.id || '?';
+    if (!requiredLifecycleIds.includes(id)) issues.push(`public-actions:lifecycle-unexpected:${id}`);
+    if (lifecycleSeen.has(id)) issues.push(`public-actions:lifecycle-duplicate:${id}`);
+    lifecycleSeen.add(id);
+    const expectedRoute = id === 'contacts-map' ? '/kontakty/' : '/';
+    if (semantic?.route !== expectedRoute || semantic?.status !== 'pass'
+      || !Array.isArray(semantic?.issues) || semantic.issues.length
+      || !Array.isArray(semantic?.events) || semantic.events.length) {
+      issues.push(`public-actions:lifecycle-status:${id}`);
+    }
+    if (semantic?.status === 'pass') lifecycleSemanticsPassed += 1;
+    else lifecycleSemanticsFailed += 1;
+    const safety = semantic?.safety;
+    if (safety?.stateChangingRequests !== 0 || safety?.leadOrAnalyticsRequests !== 0 || safety?.interceptedAttempts !== 0) {
+      issues.push(`public-actions:lifecycle-safety:${id}`);
+    }
+
+    if (id === 'home-video') {
+      const normal = semantic?.evidence?.normalMotion;
+      const reduced = semantic?.evidence?.reducedMotion;
+      const saveData = semantic?.evidence?.saveData;
+      if (normal?.reducedMotion !== false || normal?.saveData !== false || normal?.controlReady !== true
+        || normal?.sourceLoaded !== true || !(normal?.videoRequestCount > 0)
+        || normal?.playingBeforePause !== true || normal?.pausedAfterPause !== true || normal?.playingAfterResume !== true
+        || !/включить видео/iu.test(normal?.labelAfterPause || '') || !/пауза видео/iu.test(normal?.labelAfterResume || '')
+        || !/включить фоновое видео/iu.test(normal?.ariaAfterPause || '')
+        || !/приостановить фоновое видео/iu.test(normal?.ariaAfterResume || '')) {
+        issues.push('public-actions:lifecycle-home-video-normal');
+      }
+      for (const [profile, value] of [['reduced-motion', reduced], ['save-data', saveData]]) {
+        const profileIdentity = profile === 'reduced-motion'
+          ? value?.reducedMotion === true && value?.saveData === false
+          : value?.reducedMotion === false && value?.saveData === true;
+        if (!profileIdentity || value?.controlSuppressed !== true || value?.sourceLoaded !== false || value?.videoRequestCount !== 0) {
+          issues.push(`public-actions:lifecycle-home-video-${profile}`);
+        }
+      }
+    } else if (id === 'cookie-notice') {
+      const initial = semantic?.evidence?.initial;
+      const dismissed = semantic?.evidence?.dismissed;
+      const persisted = semantic?.evidence?.persistedReload;
+      const reopened = semantic?.evidence?.footerReopen;
+      if (initial?.visible !== true || initial?.noticeKey !== null || initial?.legacyKey !== null
+        || dismissed?.hidden !== true || dismissed?.noticeKey !== 'true'
+        || persisted?.hidden !== true || persisted?.noticeKey !== 'true'
+        || reopened?.visible !== true || reopened?.noticeKey !== null || reopened?.legacyKey !== null) {
+        issues.push('public-actions:lifecycle-cookie-order');
+      }
+    } else if (id === 'contacts-map') {
+      const before = semantic?.evidence?.before;
+      const activation = semantic?.evidence?.activation;
+      const terminal = semantic?.evidence?.terminal;
+      if (before?.state !== 'idle' || before?.iframeCount !== 0 || before?.placeholderVisible !== true
+        || before?.activateEnabled !== true || activation?.clicked !== true) {
+        issues.push('public-actions:lifecycle-map-deferred');
+      }
+      const ready = terminal?.state === 'ready' && terminal?.iframeCount > 0
+        && terminal?.placeholderVisible === false && Boolean(terminal?.statusText)
+        && Boolean(terminal?.iframeTitle) && terminal?.iframeTabIndex === '0' && terminal?.focusTarget === 'iframe';
+      const failOpen = terminal?.state === 'error' && terminal?.iframeCount === 0
+        && terminal?.placeholderVisible === true && terminal?.activateEnabled === true
+        && Boolean(terminal?.statusText) && terminal?.focusTarget === 'activate';
+      if (!ready && !failOpen) issues.push('public-actions:lifecycle-map-terminal');
+    }
+  }
+  for (const id of requiredLifecycleIds) if (!lifecycleSeen.has(id)) issues.push(`public-actions:lifecycle-missing:${id}`);
   const expectedPairs = new Set(expected.flatMap((route) => REQUIRED_VIEWPORTS.map((viewport) => pairKey(route, viewport.id))));
   const seenPairs = new Set();
+  const gallerySemanticCoverage = new Set();
+  let actionOccurrences = 0;
+  let safeExecutions = 0;
+  let gallerySemanticOccurrences = 0;
+  let gallerySemanticPassed = 0;
+  let gallerySemanticFailed = 0;
   for (const routeResult of report?.routeResults || []) {
     const key = pairKey(routeResult.route, routeResult.viewport?.id);
     if (!expectedPairs.has(key)) issues.push(`public-actions:unexpected-pair:${key}`);
@@ -175,7 +348,9 @@ export function validatePublicActionEvidence(report, {
     if (routeResult.pageIdentity?.h1?.length !== 1 || !routeResult.pageIdentity?.bodyTextLength || routeResult.pageIdentity?.frameworkOverlay) {
       issues.push(`public-actions:page-identity:${key}`);
     }
-    if (!Array.isArray(routeResult.actionResults)) issues.push(`public-actions:missing-registry:${key}`);
+    if (!Array.isArray(routeResult.actionResults) || routeResult.actionResults.length === 0) issues.push(`public-actions:missing-or-empty-registry:${key}`);
+    if (routeResult.actionCount !== routeResult.actionResults?.length) issues.push(`public-actions:action-count:${key}`);
+    actionOccurrences += routeResult.actionResults?.length || 0;
     for (const action of routeResult.actionResults || []) {
       const actionId = action.action?.id || '?';
       if (!action.policy) issues.push(`public-actions:missing-policy:${key}`);
@@ -202,6 +377,36 @@ export function validatePublicActionEvidence(report, {
         issues.push(`public-actions:forbidden-execution:${key}:${actionId}`);
       }
       if (action.link?.status === 'fail') issues.push(`public-actions:link-failed:${key}:${actionId}`);
+      safeExecutions += action.executions?.length || 0;
+    }
+    const inventory = routeResult.pageIdentity?.galleryInventory;
+    const productGalleries = Array.isArray(inventory?.product) ? inventory.product : null;
+    const projectGalleries = Array.isArray(inventory?.project) ? inventory.project : null;
+    const semanticResults = Array.isArray(routeResult.gallerySemantics?.results) ? routeResult.gallerySemantics.results : null;
+    if (!productGalleries || !projectGalleries || !semanticResults) {
+      issues.push(`public-actions:gallery-semantic-registry:${key}`);
+    } else {
+      const expectedGalleries = [...productGalleries, ...projectGalleries];
+      if (semanticResults.length !== expectedGalleries.length) issues.push(`public-actions:gallery-semantic-count:${key}`);
+      const expectedMode = routeResult.viewport?.mobile ? 'mobile-swipe' : 'desktop-lightbox';
+      const expectedByKey = new Map(expectedGalleries.map((item) => [`${item.kind}:${item.index}`, item]));
+      const seenGallery = new Set();
+      for (const semantic of semanticResults) {
+        const semanticKey = `${semantic?.kind}:${semantic?.index}`;
+        if (!expectedByKey.has(semanticKey) || seenGallery.has(semanticKey) || semantic.mode !== expectedMode) {
+          issues.push(`public-actions:gallery-semantic-identity:${key}:${semanticKey}`);
+          continue;
+        }
+        seenGallery.add(semanticKey);
+        const gallery = expectedByKey.get(semanticKey);
+        const expectedStatus = routeResult.viewport?.mobile && gallery.multiple !== true ? 'not-applicable' : 'pass';
+        if (semantic.status !== expectedStatus) issues.push(`public-actions:gallery-semantic-failed:${key}:${semanticKey}`);
+        gallerySemanticOccurrences += 1;
+        if (semantic.status === 'pass') {
+          gallerySemanticPassed += 1;
+          gallerySemanticCoverage.add(`${semantic.kind}:${semantic.mode}`);
+        } else if (semantic.status === 'fail') gallerySemanticFailed += 1;
+      }
     }
   }
   for (const key of expectedPairs) if (!seenPairs.has(key)) issues.push(`public-actions:missing-pair:${key}`);
@@ -232,7 +437,8 @@ export function validatePublicActionEvidence(report, {
     if (!viewportMatches(routeResult.viewport) || routeResult.status !== 'pass' || routeResult.documentStatus !== 404
       || routeResult.pageIdentity?.h1?.length !== 1 || !/noindex/iu.test(routeResult.pageIdentity?.robots || '')
       || routeResult.pageIdentity?.overflow > 1 || routeResult.events?.length) issues.push(`public-actions:unknown-identity:${key}`);
-    if (!Array.isArray(routeResult.actionResults)) issues.push(`public-actions:unknown-registry:${key}`);
+    if (!Array.isArray(routeResult.actionResults) || routeResult.actionResults.length === 0) issues.push(`public-actions:unknown-empty-registry:${key}`);
+    if (routeResult.actionCount !== routeResult.actionResults?.length) issues.push(`public-actions:unknown-action-count:${key}`);
     for (const action of routeResult.actionResults || []) {
       const actionId = action.action?.id || '?';
       if (!action.policy || action.status !== 'pass') issues.push(`public-actions:unknown-action:${key}:${actionId}`);
@@ -253,6 +459,21 @@ export function validatePublicActionEvidence(report, {
     }
   }
   for (const key of unknownExpected) if (!unknownSeen.has(key)) issues.push(`public-actions:unknown-missing:${key}`);
+  if (report?.aggregate?.actionOccurrences !== actionOccurrences
+    || report?.aggregate?.safeExecutions !== safeExecutions
+    || report?.aggregate?.gallerySemanticOccurrences !== gallerySemanticOccurrences
+    || report?.aggregate?.gallerySemanticPassed !== gallerySemanticPassed
+    || report?.aggregate?.gallerySemanticFailed !== gallerySemanticFailed
+    || report?.aggregate?.lifecycleSemanticOccurrences !== lifecycleSemantics.length
+    || report?.aggregate?.lifecycleSemanticsPassed !== lifecycleSemanticsPassed
+    || report?.aggregate?.lifecycleSemanticsFailed !== lifecycleSemanticsFailed) {
+    issues.push('public-actions:aggregate-counts');
+  }
+  if (expected.length >= 100) {
+    for (const required of ['product:desktop-lightbox', 'product:mobile-swipe', 'project:desktop-lightbox', 'project:mobile-swipe']) {
+      if (!gallerySemanticCoverage.has(required)) issues.push(`public-actions:gallery-semantic-coverage:${required}`);
+    }
+  }
   if (report?.unknownNoJsResult?.status !== 'pass' || report.unknownNoJsResult.documentStatus !== 404
     || report.unknownNoJsResult.snapshot?.h1?.length !== 1 || report.unknownNoJsResult.snapshot?.overflow > 1
     || !/noindex/iu.test(report.unknownNoJsResult.snapshot?.robots || '')
@@ -374,15 +595,30 @@ export function validateVisualEditorAcceptanceEvidence(report, options = {}) {
     if (!scenario?.id || byId.has(scenario.id)) issues.push(`visual-acceptance:duplicate-or-invalid-scenario:${scenario?.id || '?'}`);
     else byId.set(scenario.id, scenario);
   }
-  for (const id of REQUIRED_VISUAL_ACCEPTANCE_SCENARIOS) {
+  const expectedScenarios = expectedVisualAcceptanceScenarios(executionMode);
+  const registry = visualAcceptanceScenarioSetIssues(scenarios.map((scenario) => scenario?.id), executionMode);
+  if (!registry.ok) {
+    for (const id of registry.missing) issues.push(`visual-acceptance:missing-scenario:${id}`);
+    for (const id of registry.unexpected) issues.push(`visual-acceptance:unexpected-scenario:${id}`);
+    if (registry.duplicates.length) issues.push(`visual-acceptance:duplicate-scenarios:${registry.duplicates.join(',')}`);
+    if (scenarios.length !== expectedScenarios.length) issues.push('visual-acceptance:scenario-count');
+  }
+  for (const id of expectedScenarios) {
     const scenario = byId.get(id);
     if (!scenario) {
-      issues.push(`visual-acceptance:missing-scenario:${id}`);
       continue;
     }
     if (scenario.status !== 'pass' || scenario.issues?.length || scenario.errors?.length) {
       issues.push(`visual-acceptance:scenario-failed:${id}`);
     }
+  }
+  if (report?.aggregate?.scenarios !== expectedScenarios.length
+    || report?.aggregate?.checks !== expectedScenarios.length + 2
+    || report?.aggregate?.passed !== expectedScenarios.length + 2
+    || report?.aggregate?.failed !== 0
+    || !Array.isArray(report?.aggregate?.failedIds)
+    || report.aggregate.failedIds.length) {
+    issues.push('visual-acceptance:aggregate-counts');
   }
   const evidence = (id) => byId.get(id)?.evidence || {};
   const conflict = evidence('two-tab-conflict');
@@ -418,7 +654,155 @@ export function validateVisualEditorAcceptanceEvidence(report, options = {}) {
     || expired.expired?.payload?.sessionExpired !== true) {
     issues.push('visual-acceptance:session-recovery-contract');
   }
-  return { ok: issues.length === 0, issues, requiredScenarios: REQUIRED_VISUAL_ACCEPTANCE_SCENARIOS.length, seenScenarios: byId.size };
+  if (byId.has('link-label-href-independent')) {
+    const link = evidence('link-label-href-independent');
+    const binding = link.binding || {};
+    if (link.navigation?.selectedRoute !== '/'
+      || binding.ownerCollection !== 'static-pages' || binding.ownerSlug !== 'home'
+      || binding.fieldPath !== 'heroPrimaryLabel' || binding.hrefPath !== 'heroPrimaryHref'
+      || binding.fieldPath === binding.hrefPath || binding.tool !== 'link' || !binding.bindingId
+      || link.inspector?.open !== true || link.inspector?.addressField !== 'Адрес ссылки'
+      || !Array.isArray(link.inspector?.fields) || link.inspector.fields.length !== 2
+      || !link.original?.label || !link.original?.hrefAttribute
+      || link.afterLabel?.label === link.original.label
+      || link.afterLabel?.hrefAttribute !== link.original.hrefAttribute
+      || link.afterHref?.label !== link.afterLabel?.label
+      || !link.afterHref?.hrefAttribute || link.afterHref.hrefAttribute === link.afterLabel?.hrefAttribute
+      || link.afterHref?.pathname !== '/kontakty/'
+      || link.restored?.exact !== true
+      || link.restored?.label !== link.original.label || link.restored?.hrefAttribute !== link.original.hrefAttribute
+      || link.noSaveOrBuildRequested !== true
+      || !Array.isArray(link.saveOrBuildRequests) || link.saveOrBuildRequests.length) {
+      issues.push('visual-acceptance:link-label-href-contract');
+    }
+  }
+  if (byId.has('global-phone-authoritative-impact')) {
+    const phone = evidence('global-phone-authoritative-impact');
+    const binding = phone.binding || {};
+    const normalizeRoutes = (values) => [...new Set((Array.isArray(values) ? values : []).map(String))]
+      .sort((left, right) => left.localeCompare(right, 'en'));
+    const expectedRoutes = normalizeRoutes(defaultAuthoritativeRoutes());
+    const authoritativeRoutes = normalizeRoutes(phone.authoritativeRoutes);
+    const displayedRoutes = normalizeRoutes(phone.displayedRoutes);
+    const displayedHasDuplicates = Array.isArray(phone.displayedRoutes)
+      && displayedRoutes.length !== phone.displayedRoutes.length;
+    if (phone.navigation?.selectedRoute !== '/'
+      || binding.ownerCollection !== 'site-settings' || binding.ownerSlug !== 'global'
+      || binding.fieldPath !== 'phonePrimary' || binding.tool !== 'link'
+      || binding.scope !== 'global' || !exactArray(binding.affectedRoutes, ['*'])
+      || phone.provenance?.visible !== true
+      || !/^Используется на \d+ страницах$/u.test(String(phone.provenance?.label || ''))
+      || Number(phone.provenance?.declaredCount || 0) !== expectedRoutes.length
+      || !exactArray(authoritativeRoutes, expectedRoutes)
+      || !exactArray(displayedRoutes, expectedRoutes) || displayedHasDuplicates
+      || !exactArray(normalizeRoutes(phone.uniqueDisplayedRoutes), expectedRoutes)
+      || phone.exactAuthoritativeImpact !== true) {
+      issues.push('visual-acceptance:global-phone-impact-contract');
+    }
+  }
+  if (byId.has('project-media-role-independence')) {
+    const projectMedia = evidence('project-media-role-independence');
+    const binding = projectMedia.binding || {};
+    const original = projectMedia.original || {};
+    const firstDraft = projectMedia.firstDraft || {};
+    const secondDraft = projectMedia.secondDraft || {};
+    const uploadedPaths = Array.isArray(projectMedia.uploadedPaths) ? projectMedia.uploadedPaths : [];
+    const cover = projectMedia.explicitAssignments?.cover || {};
+    const hero = projectMedia.explicitAssignments?.hero || {};
+    const explicitRows = projectMedia.explicitAssignments?.rows || {};
+    const defaultRolesValid = Array.isArray(projectMedia.defaultRoleRows)
+      && projectMedia.defaultRoleRows.length === 2
+      && projectMedia.defaultRoleRows.every((row) => exactArray(row?.roles, ['gallery']));
+    if (!binding.recordSlug
+      || projectMedia.navigation?.selectedRoute !== `/vypolnennye-obekty/${binding.recordSlug}/`
+      || binding.ownerCollection !== 'projects' || binding.fieldPath !== 'gallery'
+      || binding.tool !== 'gallery' || binding.role !== 'missing-project-media'
+      || original.status !== 200 || original.archiveCoverMedia !== '' || original.detailHeroMedia !== ''
+      || !Array.isArray(original.publicGallery) || original.publicGallery.length
+      || !defaultRolesValid || Number(projectMedia.firstStageRequestCount || 0) !== 2
+      || !Array.isArray(projectMedia.firstStageRequests) || projectMedia.firstStageRequests.length !== 2
+      || projectMedia.firstStageRequests.some((request) => request?.method !== 'POST' || !String(request?.url?.pathname || '').endsWith('/media/staging'))
+      || uploadedPaths.length !== 2 || new Set(uploadedPaths).size !== 2 || uploadedPaths.some((value) => !String(value).startsWith('/'))
+      || !exactArray(firstDraft.publicGallery, uploadedPaths)
+      || firstDraft.archiveCoverMedia !== original.archiveCoverMedia
+      || firstDraft.detailHeroMedia !== original.detailHeroMedia
+      || Number(firstDraft.rawGalleryCount) !== Number(original.rawGalleryCount) + 2
+      || cover.available !== true || cover.role !== 'cover' || cover.path !== uploadedPaths[0]
+      || hero.available !== true || hero.role !== 'hero' || hero.path !== uploadedPaths[1]
+      || explicitRows.cover?.pathname !== uploadedPaths[0] || !explicitRows.cover?.roles?.includes('cover')
+      || explicitRows.hero?.pathname !== uploadedPaths[1] || !explicitRows.hero?.roles?.includes('hero')
+      || secondDraft.archiveCoverMedia !== uploadedPaths[0]
+      || secondDraft.detailHeroMedia !== uploadedPaths[1]
+      || secondDraft.archiveCoverMedia === secondDraft.detailHeroMedia
+      || !exactArray(secondDraft.publicGallery, uploadedPaths)
+      || projectMedia.recoveryCleared?.cleared !== true
+      || projectMedia.canonicalUnchanged !== true
+      || projectMedia.canonical?.status !== 200
+      || projectMedia.canonical?.revision !== original.revision
+      || Number(projectMedia.canonical?.rawGalleryCount) !== Number(original.rawGalleryCount)
+      || !exactArray(projectMedia.canonical?.publicGallery, original.publicGallery)
+      || projectMedia.canonical?.archiveCoverMedia !== original.archiveCoverMedia
+      || projectMedia.canonical?.detailHeroMedia !== original.detailHeroMedia
+      || projectMedia.noSaveOrBuildRequested !== true
+      || !Array.isArray(projectMedia.saveOrBuildRequests) || projectMedia.saveOrBuildRequests.length) {
+      issues.push('visual-acceptance:project-media-role-contract');
+    }
+  }
+  const borrowed = evidence('borrowed-relation-media-live-projection');
+  const relation = borrowed.relationBinding || {};
+  const beforeSource = borrowed.before?.media || {};
+  const afterSource = borrowed.after?.media || {};
+  const beforeImage = borrowed.before?.image || {};
+  const afterImage = borrowed.after?.image || {};
+  const selected = borrowed.selection || {};
+  const originalDetailRoute = selected.originalSlug ? `/vypolnennye-obekty/${selected.originalSlug}/` : '';
+  const expectedDetailRoute = selected.nextSlug ? `/vypolnennye-obekty/${selected.nextSlug}/` : '';
+  if (borrowed.route !== '/o-nas/'
+    || relation.ownerCollection !== 'static-pages' || relation.ownerSlug !== 'o-nas'
+    || relation.fieldPath !== 'companyHeroProjectSlug' || relation.tool !== 'relation-select'
+    || relation.relationCollection !== 'projects' || relation.projectionKind !== 'relation'
+    || !relation.bindingId || !relation.mediaBindingId
+    || borrowed.inspector?.open !== true || borrowed.inspector?.provenanceVisible !== true
+    || Number(borrowed.inspector?.optionCount || 0) < 2 || !String(borrowed.inspector?.provenance || '').includes('Источник')
+    || !selected.originalSlug || !selected.nextSlug || selected.originalSlug === selected.nextSlug
+    || !selected.nextSource?.path || !selected.nextSource?.fieldPath
+    || beforeSource.bindingId !== relation.mediaBindingId || afterSource.bindingId !== relation.mediaBindingId
+    || beforeSource.ownerCollection !== 'projects' || afterSource.ownerCollection !== 'projects'
+    || !beforeSource.ownerSlug || beforeSource.ownerSlug === afterSource.ownerSlug
+    || afterSource.ownerSlug !== selected.nextSlug || afterSource.fieldPath !== selected.nextSource?.fieldPath
+    || beforeSource.scope !== 'shared' || beforeSource.tool !== 'media'
+    || afterSource.scope !== 'shared' || afterSource.tool !== 'media'
+    || beforeImage.visible !== true || (!beforeImage.src && !beforeImage.currentSrc)
+    || afterImage.visible !== true || (!afterImage.src && !afterImage.currentSrc)
+    || afterImage.srcset !== '' || !Array.isArray(afterImage.sourceSrcsets)
+    || afterImage.sourceSrcsets.some(Boolean)
+    || !Array.isArray(beforeSource.affectedRoutes) || !beforeSource.affectedRoutes.includes('/o-nas/')
+    || !originalDetailRoute || !beforeSource.affectedRoutes.includes(originalDetailRoute)
+    || !Array.isArray(afterSource.affectedRoutes) || !afterSource.affectedRoutes.includes('/o-nas/')
+    || !expectedDetailRoute || !afterSource.affectedRoutes.includes(expectedDetailRoute)
+    || borrowed.before?.sourceAction?.available !== true || borrowed.before?.sourceAction?.bindingId !== relation.mediaBindingId
+    || borrowed.before?.sourceAction?.controlKey !== 'target'
+    || borrowed.before?.relationAction?.available !== true || borrowed.before?.relationAction?.bindingId !== relation.bindingId
+    || borrowed.before?.relationAction?.controlKey !== 'relation'
+    || borrowed.after?.sourceAction?.available !== true || borrowed.after?.sourceAction?.bindingId !== relation.mediaBindingId
+    || borrowed.after?.sourceAction?.controlKey !== 'target'
+    || borrowed.after?.relationAction?.available !== true || borrowed.after?.relationAction?.bindingId !== relation.bindingId
+    || borrowed.after?.relationAction?.controlKey !== 'relation'
+    || borrowed.liveImageChanged !== true || borrowed.sourceRetargeted !== true
+    || borrowed.staleResponsiveSourcesCleared !== true || borrowed.sharedImpact !== true
+    || !borrowed.draftRecovery?.key || !borrowed.draftRecovery?.baseRevision
+    || borrowed.draftRecovery?.value !== selected.nextSlug
+    || borrowed.mediaDialog?.open !== true || borrowed.mediaDialog?.sourceMatches !== true
+    || borrowed.mediaDialog?.impactMatches !== true
+    || !String(borrowed.mediaDialog?.subtitle || '').includes('/o-nas/')
+    || !String(borrowed.mediaDialog?.subtitle || '').includes(expectedDetailRoute)
+    || borrowed.undo?.restoredSource !== true || borrowed.undo?.restored?.media?.ownerSlug !== selected.originalSlug
+    || borrowed.undo?.recoveryAfterUndo?.value === selected.nextSlug
+    || borrowed.saveEvidenceUnchanged !== true || borrowed.noSaveOrBuildRequested !== true
+    || !Array.isArray(borrowed.saveOrBuildRequests) || borrowed.saveOrBuildRequests.length) {
+    issues.push('visual-acceptance:borrowed-relation-media-contract');
+  }
+  return { ok: issues.length === 0, issues, requiredScenarios: expectedScenarios.length, seenScenarios: byId.size };
 }
 
 export function validateEvidenceIdentity({ routePassport, publicActions, adminActions, visualAcceptance, backupRestore }, { currentEvidence = null } = {}) {

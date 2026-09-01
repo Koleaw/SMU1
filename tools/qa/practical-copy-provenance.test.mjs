@@ -93,9 +93,26 @@ test('Company and vacancy visible labels have exact schema owners and occurrence
   }
   assert.match(archive, /pageBinding\('openPositionLabel'/u);
   assert.match(archive, /stableItemId: `vacancies-primary-label-\$\{job\.slug\}`/u);
+  assert.match(archive, /fieldPath: 'vacanciesEmptyTitle', scope: 'shared'/u);
+  assert.match(archive, /fieldPath: 'vacanciesEmptyText', scope: 'shared'/u);
   assert.match(detail, /pageBinding\(section\.titleFieldPath, 'heading'\)/u);
   assert.match(detail, /pageBinding\('telegramChannelLabel'/u);
+  assert.match(detail, /fieldPath: `vacancyDetailPage\.\$\{fieldPath\}`,[\s\S]{0,160}scope: 'shared'/u);
+  assert.match(detail, /affectedRoutes: \['\/vakansii\/\*'\]/u);
+  assert.doesNotMatch(detail, /fieldPath: `vacancyDetailPage\.\$\{fieldPath\}`,[\s\S]{0,160}scope: 'global'/u);
   assert.doesNotMatch(`${archive}\n${detail}`, />Узнать больше о СМУ-1</u);
+});
+
+test('vacancy detail shell copy has family-scoped impact in production and design-lab routes', () => {
+  for (const relativePath of [
+    'src/pages/vakansii/[slug].astro',
+    'src/pages/design-lab/v2/vakansii/[slug]/index.astro'
+  ]) {
+    const source = read(relativePath);
+    assert.match(source, /fieldPath: 'vacancyDetailPage\.shellCtaLabel'/u, relativePath);
+    assert.match(source, /scope: 'shared', tool: 'link-label', affectedRoutes: \['\/vakansii\/\*'\]/u, relativePath);
+    assert.doesNotMatch(source, /scope: 'global',[\s\S]{0,100}affectedRoutes: \['\/vakansii\/\*'\]/u, relativePath);
+  }
 });
 
 test('company and privacy shell CTA occurrences use their authoritative page owners', () => {

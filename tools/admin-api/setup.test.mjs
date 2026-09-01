@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, test } from 'node:test';
-import { parseEnvText } from './config.mjs';
+import { loadAdminEnvironment, parseEnvText } from './config.mjs';
 import {
   inferGitHubPagesConfig,
   inspectAdminSetup,
@@ -129,6 +129,58 @@ test('explicit password update preserves session secret; rotate replaces it with
   assert.notEqual(rotated.SESSION_SECRET, initial.SESSION_SECRET);
   assert.equal(await verifyPassword('third secure password!', rotated.ADMIN_PASSWORD_HASH), true);
   assert.equal((await fs.readdir(repoRoot)).some((name) => name.endsWith('.tmp')), false);
+});
+
+test('legacy GitHub tokens are fail-closed at load and removed by update/rotate without disclosure', async () => {
+  const repoRoot = await temporaryDirectory();
+  const common = {
+    repoRoot,
+    username: 'owner',
+    expectedBranch: 'candidate',
+    validateCheckout: false,
+    checkIgnored: false,
+    scrypt,
+    ...stoppedRuntime
+  };
+  await setupAdmin({ ...common, password: 'first secure password!' });
+  const filePath = path.join(repoRoot, '.env.admin.local');
+  const firstSecret = 'ghp_LEGACY_VALUE_MUST_NOT_ESCAPE_123';
+  await fs.appendFile(filePath, `GITHUB_TOKEN=${firstSecret}\n`, 'utf8');
+
+  const summary = await inspectAdminSetup({ repoRoot });
+  assert.equal(summary.hasLegacyGitHubCredential, true);
+  assert.equal(summary.configuredKeys.includes('GITHUB_TOKEN'), false);
+  assert.equal(summary.secretKeysPresent.includes('GITHUB_TOKEN'), false);
+  assert.equal(JSON.stringify(summary).includes(firstSecret), false);
+  await assert.rejects(
+    loadAdminEnvironment({ repoRoot, env: {} }),
+    (error) => error.code === 'PLAINTEXT_GITHUB_CREDENTIAL_FORBIDDEN'
+      && !String(error.message).includes(firstSecret)
+      && !JSON.stringify(error).includes(firstSecret)
+  );
+
+  const updatedResult = await setupAdmin({
+    ...common,
+    action: 'update-password',
+    password: 'second secure password!'
+  });
+  const updatedText = await fs.readFile(filePath, 'utf8');
+  assert.equal(updatedResult.removedLegacyGitHubCredentials, true);
+  assert.equal(updatedText.includes(firstSecret), false);
+  assert.doesNotMatch(updatedText, /GITHUB_TOKEN/iu);
+
+  const secondSecret = 'github_pat_LEGACY_DEPLOY_VALUE_MUST_NOT_ESCAPE_456';
+  await fs.appendFile(filePath, `GITHUB_DEPLOY_TOKEN=${secondSecret}\n`, 'utf8');
+  const rotatedResult = await setupAdmin({
+    ...common,
+    action: 'rotate',
+    password: 'third secure password!'
+  });
+  const rotatedText = await fs.readFile(filePath, 'utf8');
+  assert.equal(rotatedResult.removedLegacyGitHubCredentials, true);
+  assert.equal(rotatedText.includes(secondSecret), false);
+  assert.doesNotMatch(rotatedText, /GITHUB_(?:DEPLOY_)?TOKEN/iu);
+  assert.equal(JSON.stringify(rotatedResult).includes(secondSecret), false);
 });
 
 test('password update fails closed while the exact configured admin runtime is active', async () => {

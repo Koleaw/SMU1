@@ -1,5 +1,5 @@
 ---
-import { adminDisposition } from '../../../admin/bindings/adminBinding';
+import { adminDisposition, adminListValue } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   eyebrow?: string;
@@ -37,7 +37,7 @@ const directOrDeclared = (attributes: Record<string, string>, fragment: string, 
       </header>
       <ul class="engineering-scope__list" data-v2-reveal {...directOrDeclared(itemsBinding, 'items', 'Элементы переданы renderer-владельцем без schema binding; измените список исходного блока.')}>
         {items.map((item) => (
-          <li><p>{item}</p></li>
+          <li><p {...adminListValue(Astro.url)}>{item}</p></li>
         ))}
       </ul>
     </div>

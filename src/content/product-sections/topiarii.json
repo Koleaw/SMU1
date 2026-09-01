@@ -68,6 +68,7 @@
       "order": 10,
       "items": [
         {
+          "id": "topiary-animal-figures",
           "title": "Фигуры животных",
           "text": "Объемные декоративные фигуры для парков, дворов, баз отдыха и общественных пространств.",
           "order": 10,
@@ -81,42 +82,49 @@
           }
         },
         {
+          "id": "topiary-geometric-shapes",
           "title": "Геометрические формы",
           "text": "Шары, конусы, арки и другие формы для входных зон, аллей и благоустройства.",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "topiary-letters-logos",
           "title": "Буквы и логотипы",
           "text": "Зеленые надписи, брендированные элементы и объемные знаки для территорий и фотозон.",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "topiary-compositions",
           "title": "Декоративные композиции",
           "text": "Составные решения из нескольких фигур, форм и элементов озеленения.",
           "order": 40,
           "isActive": true
         },
         {
+          "id": "topiary-photo-zones",
           "title": "Фотозоны",
           "text": "Акцентные объекты для мероприятий, парков, торговых и общественных пространств.",
           "order": 50,
           "isActive": true
         },
         {
+          "id": "topiary-entrance-groups",
           "title": "Входные группы",
           "text": "Декоративное оформление входов, фасадных зон и территорий перед объектом.",
           "order": 60,
           "isActive": true
         },
         {
+          "id": "topiary-seasonal-decor",
           "title": "Сезонный декор",
           "text": "Фигуры и композиции под праздники, мероприятия и временное оформление.",
           "order": 70,
           "isActive": true
         },
         {
+          "id": "topiary-reference",
           "title": "По референсу",
           "text": "Индивидуальные фигуры по эскизу, фотографии, ТЗ или описанию задачи.",
           "order": 80,
@@ -153,31 +161,37 @@
       "order": 30,
       "steps": [
         {
+          "id": "topiarii-process-2-step-1",
           "title": "Уточняем место установки и задачу",
           "order": 10,
           "isActive": true
         },
         {
+          "id": "topiarii-process-2-step-2",
           "title": "Подбираем форму, размер и композицию",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "topiarii-process-2-step-3",
           "title": "Учитываем улицу или помещение, основание, ветер и крепление",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "topiarii-process-2-step-4",
           "title": "Согласуем внешний вид, цвет и плотность покрытия",
           "order": 40,
           "isActive": true
         },
         {
+          "id": "topiarii-process-2-step-5",
           "title": "Изготавливаем каркас и декоративное покрытие",
           "order": 50,
           "isActive": true
         },
         {
+          "id": "topiarii-process-2-step-6",
           "title": "При необходимости выполняем монтаж",
           "order": 60,
           "isActive": true

@@ -1,6 +1,6 @@
 ---
 import settings from '../../../content/site-settings/global.json';
-import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
+import { adminBinding, adminDisposition, adminListField, adminListItem } from '../../../admin/bindings/adminBinding';
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 
 const policy = settings.privacyPolicy;
@@ -68,8 +68,18 @@ const fixedPrefix = (source: string, reason: string) => adminDisposition(Astro.u
               const items = (block.items ?? [])
                 .slice()
                 .sort((a, b) => a.order - b.order);
-              return <ul {...legalBinding(`${blockPath}.items`, 'list', { stableItemId: block.id, itemKind: 'object' })}>
-                {items.map((item) => <li>{item.label}</li>)}
+              return <ul {...legalBinding(`${blockPath}.items`, 'list', {
+                stableItemId: block.id,
+                itemKind: 'object',
+                permissions: { edit: true, reorder: true, delete: false },
+                itemFields: [
+                  { fieldPath: 'id', tool: 'generated-id' },
+                  { fieldPath: 'label', label: 'Пункт политики', tool: 'long-text' },
+                  { fieldPath: 'order', tool: 'generated-order' },
+                  { fieldPath: 'isActive', label: 'Показывать пункт', tool: 'visibility' }
+                ]
+              })}>
+                {items.map((item) => <li {...adminListItem(Astro.url, item.id)}><span {...adminListField(Astro.url, 'label')}>{item.label}</span></li>)}
               </ul>;
             })}
             {section.id === 'contacts' && <>

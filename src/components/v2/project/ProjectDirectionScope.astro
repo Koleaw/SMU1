@@ -1,5 +1,7 @@
 ---
+import { adminListField, adminListItem, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
 interface WorkItem {
+  id: string;
   title: string;
   text?: string;
 }
@@ -21,6 +23,7 @@ const titleBinding = Astro.props.titleBinding ?? {};
 const descriptionBinding = Astro.props.descriptionBinding ?? {};
 const itemsBinding = Astro.props.itemsBinding ?? {};
 const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
+const editorCanvas = isLocalAdminCanvas(Astro.url);
 ---
 
 {items.length > 0 && (
@@ -35,9 +38,11 @@ const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
       </header>
       <ul class:list={['project-scope__list', { 'project-scope__list--featured-first': featuredFirst }]} role="list" {...itemsBinding}>
         {items.map((item, index) => (
-          <li class:list={{ 'project-scope__item--featured': featuredFirst && index === 0 }} data-v2-reveal>
-            <h3>{item.title}</h3>
-            {item.text && <p>{item.text}</p>}
+          <li class:list={{ 'project-scope__item--featured': featuredFirst && index === 0 }} data-v2-reveal {...adminListItem(Astro.url, item.id)}>
+            <h3 {...adminListField(Astro.url, 'title')}>{item.title}</h3>
+            {item.text
+              ? <p {...adminListField(Astro.url, 'text')}>{item.text}</p>
+              : editorCanvas ? <p hidden data-smu1-list-optional-field {...adminListField(Astro.url, 'text')}></p> : null}
           </li>
         ))}
       </ul>

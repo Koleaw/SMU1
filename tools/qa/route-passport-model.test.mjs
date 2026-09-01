@@ -107,3 +107,43 @@ test('inert admin compatibility pages may share public prefetch but never an edi
     await rm(temporaryRoot, { recursive: true, force: true });
   }
 });
+
+test('public artifact isolation rejects local canvas affordance markup and CSS', async () => {
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'smu1-editor-affordance-isolation-'));
+  try {
+    await mkdir(path.join(temporaryRoot, '_astro'), { recursive: true });
+    await writeFile(
+      path.join(temporaryRoot, 'index.html'),
+      '<main><button data-smu1-editor-affordance="missing-product-media">Добавить фотографии</button></main>',
+      'utf8'
+    );
+    await writeFile(
+      path.join(temporaryRoot, '_astro/public.css'),
+      '.v2-product-card--editor-missing-media{position:relative}.v2-media-empty--editor-affordance{position:absolute}',
+      'utf8'
+    );
+
+    const isolation = inspectPublicArtifactIsolation(temporaryRoot);
+    assert.equal(isolation.clean, false);
+    assert.ok(isolation.leaks.some((issue) => issue.relative === 'index.html' && issue.kind === 'binding-metadata'));
+    assert.ok(isolation.leaks.some((issue) => issue.relative === '_astro/public.css' && issue.kind === 'editor-bridge-or-bundle'));
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('public artifact isolation rejects every admin-only structural list marker family', async () => {
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'smu1-list-marker-isolation-'));
+  try {
+    await writeFile(
+      path.join(temporaryRoot, 'index.html'),
+      '<ul><li data-smu1-list-item="stable"><span data-smu1-list-field="title" data-smu1-list-value="true">Текст</span></li></ul>',
+      'utf8'
+    );
+    const isolation = inspectPublicArtifactIsolation(temporaryRoot);
+    assert.equal(isolation.clean, false);
+    assert.ok(isolation.leaks.some((issue) => issue.relative === 'index.html' && issue.kind === 'binding-metadata'));
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});

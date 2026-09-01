@@ -162,9 +162,8 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
           aria-controls={productsMenuId}
           aria-current={catalogV2 && isCatalogV2Location ? 'location' : undefined}
           data-hv2-dropdown-trigger
-          {...globalBinding('shellLabels.productsGroup', 'short-text', { stableItemId: 'header-desktop-products-group' })}
         >
-          <span>{shellLabels.productsGroup}</span>
+          <span {...globalBinding('shellLabels.productsGroup', 'short-text', { stableItemId: 'header-desktop-products-group' })}>{shellLabels.productsGroup}</span>
           <span class="hv2-header__dropdown-indicator" aria-hidden="true">
             <span class="hv2-header__dropdown-indicator-open">+</span>
             <span class="hv2-header__dropdown-indicator-close">−</span>
@@ -199,9 +198,8 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
           aria-controls={companyMenuId}
           aria-current={isCompanyV2Location ? 'location' : undefined}
           data-hv2-dropdown-trigger
-          {...globalBinding('shellLabels.companyMenu')}
         >
-          <span>{shellLabels.companyMenu}</span>
+          <span {...globalBinding('shellLabels.companyMenu', 'short-text', { stableItemId: 'header-desktop-company-menu' })}>{shellLabels.companyMenu}</span>
           <span class="hv2-header__dropdown-indicator" aria-hidden="true">
             <span class="hv2-header__dropdown-indicator-open">+</span>
             <span class="hv2-header__dropdown-indicator-close">−</span>

@@ -47,7 +47,7 @@ const TEXT_LAYOUT_FIELDS = Object.freeze(['width', 'widthPercent', 'maxWidth', '
 export const PAGE_BLOCK_SCHEMA_FIELDS = freezeArray([
   'type', 'title', 'intro', 'text', 'theme', 'background', 'grid', 'columns', 'isActive', 'order', 'sectionId',
   'items', 'items[]', 'steps',
-  ...objectArrayPaths('steps', ['title', 'text', 'order', 'isActive']).slice(1),
+  ...objectArrayPaths('steps', ['id', 'title', 'text', 'order', 'isActive']).slice(1),
   'media', 'image', 'video', 'poster', 'placeholderLabel', 'mediaPosition',
   ...objectPaths('mediaView', IMAGE_VIEW_FIELDS),
   'buttonLabel', 'buttonHref', 'textWidth', 'textAlign', 'titleSize', 'textSize', 'textWeight', 'textItalic',
@@ -151,7 +151,7 @@ const PRODUCT_PATHS = freezeArray([
   'title', 'slug', 'productCategorySlug', 'sku', 'presentationType', 'shortDescription', 'leadText', 'description',
   'solutionKicker', ...scalarArrayPaths('applicationItems'), ...scalarArrayPaths('executionVariants'),
   ...scalarArrayPaths('materials'), ...scalarArrayPaths('colors'),
-  ...objectArrayPaths('dimensions', ['label', 'value', 'order', 'isActive']),
+  ...objectArrayPaths('dimensions', ['id', 'label', 'value', 'order', 'isActive']),
   ...scalarArrayPaths('features'), 'priceMode', 'priceFrom', 'currency', 'image',
   ...objectPaths('imageView', IMAGE_VIEW_FIELDS), ...categoryGalleryPaths(), 'placeholderLabel',
   ...scalarArrayPaths('customizationItems'), 'showDeliveryBlock', 'deliveryText',
@@ -294,7 +294,7 @@ const STATIC_PAGE_PATHS = freezeArray([
   'image', ...objectPaths('imageView', IMAGE_VIEW_FIELDS), 'placeholderLabel',
   'pathwaysKicker', 'pathwaysTitle',
   ...objectArrayPaths('pathwayCards', [
-    'title', 'text', 'order', 'isActive', 'image',
+    'id', 'title', 'text', 'order', 'isActive', 'image',
     ...objectPaths('imageView', IMAGE_VIEW_FIELDS),
     'placeholderLabel', 'buttonLabel', 'buttonHref'
   ]),
@@ -926,7 +926,7 @@ const PAGE_BLOCK_LEGACY_PREFIXES = Object.freeze([
 
 const DELIBERATELY_HIDDEN_PATHS = new Set([
   'slug', 'order', 'pageBlocks[].type', 'pageBlocks[].order', 'pageBlocks[].sectionId',
-  'pageBlocks[].steps[].order', 'dimensions[].order', 'pathwayCards[].order', 'items[].order'
+  'pageBlocks[].items[].id', 'pageBlocks[].steps[].id', 'pageBlocks[].steps[].order', 'dimensions[].id', 'dimensions[].order', 'pathwayCards[].order', 'items[].order'
 ]);
 
 const PUBLIC_REQUIRED_FIELDS = deepFreeze({

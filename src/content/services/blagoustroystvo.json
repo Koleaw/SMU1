@@ -70,48 +70,56 @@
       "order": 10,
       "items": [
         {
+          "id": "landscaping-yards",
           "title": "Дворы и территории",
           "text": "Благоустройство дворов, придомовых пространств и территорий вокруг конкретного объекта.",
           "order": 10,
           "isActive": true
         },
         {
+          "id": "landscaping-entrance-groups",
           "title": "Входные группы",
           "text": "Организация входных зон с площадками, ограждениями, навесами, МАФ и декоративными элементами.",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "landscaping-recreation",
           "title": "Зоны отдыха",
           "text": "Связанные площадки для отдыха, ожидания и общения с необходимыми элементами территории.",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "landscaping-small-forms",
           "title": "МАФ и элементы благоустройства",
           "text": "Лавочки, урны, вазоны, велопарковки и другие элементы благоустройства с установкой на территории.",
           "order": 40,
           "isActive": true
         },
         {
+          "id": "landscaping-fences-canopies",
           "title": "Ограждения и навесы",
           "text": "Конструкции для зонирования, защиты и организации входных, хозяйственных и других зон.",
           "order": 50,
           "isActive": true
         },
         {
+          "id": "landscaping-utility-waste",
           "title": "Хозяйственные и контейнерные зоны",
           "text": "Обустройство контейнерных, технических и вспомогательных площадок на территории.",
           "order": 60,
           "isActive": true
         },
         {
+          "id": "landscaping-greenery-decor",
           "title": "Озеленение и декоративные элементы",
           "text": "Озеленение, топиарии, вазоны и декоративные элементы для визуально связанного пространства.",
           "order": 70,
           "isActive": true
         },
         {
+          "id": "landscaping-custom",
           "title": "Индивидуальные работы по задаче",
           "text": "Работы по ТЗ, эскизу, дизайн-проекту, фотографии территории или описанию задачи.",
           "order": 80,
@@ -168,41 +176,49 @@
       "order": 30,
       "steps": [
         {
+          "id": "blagoustroystvo-process-3-step-1",
           "title": "Лавочки, урны, вазоны, велопарковки",
           "order": 10,
           "isActive": true
         },
         {
+          "id": "blagoustroystvo-process-3-step-2",
           "title": "Навесы, перголы, павильоны",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "blagoustroystvo-process-3-step-3",
           "title": "Ограждения, калитки, ворота, болларды",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "blagoustroystvo-process-3-step-4",
           "title": "Топиарии и декоративные элементы",
           "order": 40,
           "isActive": true
         },
         {
+          "id": "blagoustroystvo-process-3-step-5",
           "title": "Освещение и фонари",
           "order": 50,
           "isActive": true
         },
         {
+          "id": "blagoustroystvo-process-3-step-6",
           "title": "Контейнерные площадки",
           "order": 60,
           "isActive": true
         },
         {
+          "id": "blagoustroystvo-process-3-step-7",
           "title": "Металлоконструкции под задачу",
           "order": 70,
           "isActive": true
         },
         {
+          "id": "blagoustroystvo-process-3-step-8",
           "title": "Монтаж и доработка территории",
           "order": 80,
           "isActive": true

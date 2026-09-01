@@ -8,8 +8,11 @@ import { Writable } from 'node:stream';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   ADMIN_ENV_FILE,
+  FORBIDDEN_LOCAL_GITHUB_CREDENTIAL_KEYS,
+  isForbiddenLocalGitHubCredentialKey,
   parseEnvText,
-  serializeEnv
+  serializeEnv,
+  withoutForbiddenLocalGitHubCredentials
 } from './config.mjs';
 import {
   checkPortAvailable as defaultCheckPortAvailable,
@@ -200,8 +203,10 @@ export function assertAdminEnvIgnored(repoRoot, envPath = path.join(repoRoot, AD
 }
 
 function safeSummary(values, filePath, exists = true) {
-  const configuredKeys = Object.keys(values).filter((key) => String(values[key] ?? '').length > 0).sort();
-  const secretKeys = ['ADMIN_PASSWORD', 'ADMIN_PASSWORD_HASH', 'SESSION_SECRET', 'GITHUB_TOKEN', 'GITHUB_DEPLOY_TOKEN'];
+  const hasLegacyGitHubCredential = Object.keys(values).some(isForbiddenLocalGitHubCredentialKey);
+  const safeValues = withoutForbiddenLocalGitHubCredentials(values);
+  const configuredKeys = Object.keys(safeValues).filter((key) => String(safeValues[key] ?? '').length > 0).sort();
+  const secretKeys = ['ADMIN_PASSWORD', 'ADMIN_PASSWORD_HASH', 'SESSION_SECRET'];
   return Object.freeze({
     exists,
     file: filePath,
@@ -210,6 +215,7 @@ function safeSummary(values, filePath, exists = true) {
     hasPasswordHash: isPasswordHash(values.ADMIN_PASSWORD_HASH),
     hasPlaintextPassword: Boolean(values.ADMIN_PASSWORD),
     hasSessionSecret: Boolean(values.SESSION_SECRET),
+    hasLegacyGitHubCredential,
     testMode: values.ADMIN_TEST_MODE === 'true'
   });
 }
@@ -407,6 +413,7 @@ export async function setupAdmin(options = {}) {
     ADMIN_ALLOW_PRODUCTION_PUBLISH: existing.ADMIN_ALLOW_PRODUCTION_PUBLISH || 'false'
   };
   delete values.ADMIN_PASSWORD;
+  for (const key of FORBIDDEN_LOCAL_GITHUB_CREDENTIAL_KEYS) delete values[key];
   if (values.PRODUCTION_DEPLOY_ENABLED === 'true' || values.ADMIN_ALLOW_PRODUCTION_PUBLISH === 'true') {
     throw new AdminSetupError('Setup не включает production publish автоматически. Отключите legacy production flags.', {
       code: 'PRODUCTION_FLAG_PRESENT'
@@ -429,6 +436,7 @@ export async function setupAdmin(options = {}) {
     action,
     created: !exists,
     rotatedSessionSecret: action === 'rotate',
+    removedLegacyGitHubCredentials: Object.keys(existing).some(isForbiddenLocalGitHubCredentialKey),
     summary: safeSummary(values, envPath, true),
     localUrl: `http://${values.ADMIN_UI_HOST}:${values.ADMIN_UI_PORT}/admin/`
   });
@@ -526,6 +534,9 @@ export async function runSetupCli(argv = process.argv.slice(2), options = {}) {
     process.stdout.write([
       `${ADMIN_ENV_FILE} уже настроен; secret values не показаны.`,
       `Настроенные поля: ${current.configuredKeys.join(', ')}`,
+      ...(current.hasLegacyGitHubCredential
+        ? ['Обнаружена устаревшая GitHub credential в local env. Launcher заблокирован; выполните --rotate для безопасного удаления.']
+        : []),
       'Файл не изменён. Для смены пароля используйте --update-password.',
       'Для смены пароля и session secret используйте --rotate только после полной остановки launcher.',
       'После следующего запуска старые cookies будут недействительны.',
@@ -576,6 +587,9 @@ export async function runSetupCli(argv = process.argv.slice(2), options = {}) {
       : ['Новые учётные данные вступят в силу при следующем запуске админки.']),
     ...(result.rotatedSessionSecret
       ? ['Session secret сменён; при следующем запуске все старые cookies будут недействительны.']
+      : []),
+    ...(result.removedLegacyGitHubCredentials
+      ? ['Устаревшая GitHub credential удалена; GitHub доступ теперь использует системный Git Credential Manager.']
       : []),
     `Админка после запуска: ${result.localUrl}`,
     'Запуск: npm run admin (или Windows owner launcher двойным кликом).',

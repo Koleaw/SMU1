@@ -9,7 +9,7 @@ import V2ProductCard from './V2ProductCard.astro';
 import V2DirectContact from './V2DirectContact.astro';
 import V2HeroHandoff from './V2HeroHandoff.astro';
 import V2SectionNav from './V2SectionNav.astro';
-import { adminBinding, isLocalAdminCanvas } from '../../admin/bindings/adminBinding';
+import { adminBinding, adminListField, adminListItem, isLocalAdminCanvas } from '../../admin/bindings/adminBinding';
 import {
   catalogV2CategoryHref,
   catalogV2ProductHref,
@@ -42,6 +42,7 @@ const features = publicTextItems(product.features);
 const customizationItems = publicTextItems(product.customizationItems);
 const dimensions = Array.isArray(product.dimensions)
   ? product.dimensions
+      .map((item, sourceIndex) => ({ ...item, sourceIndex }))
       .filter((item) => item?.isActive !== false && (item?.label?.trim() || item?.value?.trim()))
       .slice()
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
@@ -56,13 +57,13 @@ const normalizedSpecs = dimensions.map((item) => {
   const values = (item.value || '').split(/\n+/).map((line) => line.trim()).filter(Boolean);
   const isGenericLabel = genericSpecLabels.has(label.toLocaleLowerCase('ru-RU'));
   const isPair = Boolean(label && values.length > 0 && !isGenericLabel);
-  return { label, values, isGenericLabel, isPair };
+  return { id: item.id, label, values, isGenericLabel, isPair, sourceIndex: item.sourceIndex };
 });
 const pairedSpecs = normalizedSpecs.filter((item) => item.isPair);
 const textualSpecs = normalizedSpecs.flatMap((item) => {
   if (item.isPair) return [];
-  if (item.values.length > 0) return item.values;
-  return item.label && !item.isGenericLabel ? [item.label] : [];
+  if (item.values.length > 0) return item.values.map((text, lineIndex) => ({ id: item.id, text, lineIndex, sourceIndex: item.sourceIndex, field: 'value', contextField: 'label' }));
+  return item.label && !item.isGenericLabel ? [{ id: item.id, text: item.label, lineIndex: 0, sourceIndex: item.sourceIndex, field: 'label', contextField: 'value' }] : [];
 });
 const hasSpecifications = pairedSpecs.length > 0 || textualSpecs.length > 0;
 const productLead = publicCatalogCopy(product.leadText) || publicCatalogCopy(product.shortDescription);
@@ -88,9 +89,9 @@ const binding = (fieldPath: string, tool = 'long-text', options: Record<string, 
   renderer: { family: 'product-detail', variant: 'standard' }, owner: { collection: 'products', slug: product.slug },
   fieldPath, stableItemId: product.slug, scope: 'local', tool, affectedRoutes, ...options
 });
-const productUiBinding = (fieldPath: string, tool = 'short-text', occurrence = 'content') => adminBinding(Astro.url, {
+const productUiBinding = (fieldPath: string, tool = 'short-text', occurrence = 'content', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
   renderer: { family: 'global-shell', variant: 'standard-product-ui' }, owner: { collection: 'site-settings', slug: 'global' },
-  fieldPath: `productUi.${fieldPath}`, stableItemId: `standard-product-${fieldPath}-${occurrence}`, scope: 'global', tool, affectedRoutes: ['*']
+  fieldPath: `productUi.${fieldPath}`, stableItemId: `standard-product-${fieldPath}-${occurrence}`, scope: 'global', tool, affectedRoutes: ['*'], ...options
 });
 const catalogUiBinding = (fieldPath: string, occurrence: string) => adminBinding(Astro.url, {
   renderer: { family: 'product-detail', variant: 'standard-breadcrumb' },
@@ -168,13 +169,16 @@ const editorCanvas = isLocalAdminCanvas(Astro.url);
   <section
     class:list={[
       'v2-product-top',
-      { 'v2-product-top--no-media': images.length === 0, 'v2-product-top--single-media': images.length === 1 }
+      {
+        'v2-product-top--no-media': images.length === 0,
+        'v2-product-top--single-media': images.length === 1,
+        'v2-product-top--editor-missing-media': images.length === 0 && editorCanvas
+      }
     ]}
     id="product-overview"
     data-product-media-count={images.length}
     data-product-final-hero
     aria-labelledby="v2-product-title"
-    {...(images.length === 0 ? binding('gallery', 'gallery', { role: 'missing-product-media', multiple: true, coverPath: 'image' }) : {})}
   >
     <div class="hv2-shell hv2-grid v2-product-top__grid" data-product-final-track>
       <article class="v2-product-summary" data-v2-page-handoff="copy">
@@ -208,9 +212,13 @@ const editorCanvas = isLocalAdminCanvas(Astro.url);
 
       {(images.length > 0 || editorCanvas) && (
         <div
-          class="v2-product-top__gallery"
+          class:list={[
+            'v2-product-top__gallery',
+            { 'v2-product-top__gallery--editor-affordance': images.length === 0 }
+          ]}
           data-v2-reveal="entry-media"
           data-v2-entrance-role="media"
+          data-smu1-editor-affordance={images.length === 0 ? 'missing-product-media' : undefined}
           {...(images.length === 0 ? binding('gallery', 'gallery', { role: 'missing-product-media', multiple: true, coverPath: 'image' }) : {})}
         >
           {images.length > 0 ? <V2ProductGallery
@@ -224,7 +232,7 @@ const editorCanvas = isLocalAdminCanvas(Astro.url);
             bindingOwner={{ collection: 'products', slug: product.slug }}
             bindingField="gallery"
             affectedRoutes={affectedRoutes}
-          /> : <div class="v2-media-empty" data-smu1-editor-affordance="missing-product-media"><p>Добавить фотографии</p></div>}
+          /> : <button class="v2-media-empty v2-media-empty--editor-affordance" type="button" data-smu1-editor-affordance="missing-product-media"><span>Добавить фотографии</span></button>}
         </div>
       )}
     </div>
@@ -234,7 +242,7 @@ const editorCanvas = isLocalAdminCanvas(Astro.url);
   <V2SectionNav
     items={sectionNavItems}
     label={settings.productUi.standardSectionNavLabel}
-    editor={productUiBinding('standardSectionNavLabel', 'short-text', 'section-nav-label')}
+    editor={productUiBinding('standardSectionNavLabel', 'short-text', 'section-nav-label', { projection: { kind: 'direct', target: 'attribute:aria-label' } })}
   />
 
   <section class="v2-product-details" aria-label="Описание и характеристики товара">
@@ -245,7 +253,7 @@ const editorCanvas = isLocalAdminCanvas(Astro.url);
             <p class="hv2-eyebrow" {...productUiBinding('standardDescriptionEyebrow')}>{settings.productUi.standardDescriptionEyebrow}</p>
             <h2 {...productUiBinding('standardDescriptionTitle', 'heading')}>{settings.productUi.standardDescriptionTitle}</h2>
           </header>
-          <div class="v2-product-description__text" {...binding('description', 'long-text')}>
+          <div class="v2-product-description__text" {...binding('description', 'long-text', { projection: { kind: 'direct', target: 'paragraphs' } })}>
             {descriptionParagraphs.map((paragraph) => <p>{paragraph}</p>)}
           </div>
         </article>
@@ -257,22 +265,46 @@ const editorCanvas = isLocalAdminCanvas(Astro.url);
             <p class="hv2-eyebrow" {...productUiBinding('standardSpecificationsEyebrow')}>{settings.productUi.standardSpecificationsEyebrow}</p>
             <h2 id="v2-specs-title" {...productUiBinding('standardSpecificationsTitle', 'heading')}>{settings.productUi.standardSpecificationsTitle}</h2>
           </header>
-          <div class="v2-spec-content" {...binding('dimensions', 'list', { itemKind: 'object' })}>
+          <div class="v2-spec-content" {...binding('dimensions', 'list', {
+            itemKind: 'object',
+            permissions: { edit: true, reorder: true, delete: false },
+            projection: { kind: 'list', target: 'product-specifications' },
+            itemFields: [
+              { fieldPath: 'id', tool: 'generated-id' },
+              { fieldPath: 'label', label: 'Характеристика', tool: 'short-text' },
+              { fieldPath: 'value', label: 'Значение', tool: 'long-text' },
+              { fieldPath: 'order', tool: 'generated-order' },
+              { fieldPath: 'isActive', label: 'Показывать характеристику', tool: 'visibility' }
+            ]
+          })}>
             {pairedSpecs.length > 0 && (
               <dl class="v2-spec-definitions">
                 {pairedSpecs.map((item) => (
-                  <div>
-                    <dt>{item.label}</dt>
-                    <dd>{item.values.map((value) => <span>{value}</span>)}</dd>
+                  <div {...adminListItem(Astro.url, item.id)}>
+                    <dt {...adminListField(Astro.url, 'label')}>{item.label}</dt>
+                    <dd {...adminListField(Astro.url, 'value')} data-smu1-list-transform={editorCanvas ? 'lines' : undefined}>{item.values.map((value) => <span>{value}</span>)}</dd>
                   </div>
                 ))}
               </dl>
             )}
             {textualSpecs.length === 1 ? (
-              <p class="v2-spec-copy">{textualSpecs[0]}</p>
+              <p
+                class="v2-spec-copy"
+                {...adminListItem(Astro.url, textualSpecs[0].id)}
+                {...adminListField(Astro.url, textualSpecs[0].field)}
+                data-smu1-list-transform={editorCanvas ? 'line' : undefined}
+                data-smu1-list-line={editorCanvas ? String(textualSpecs[0].lineIndex) : undefined}
+                data-smu1-list-context-field={editorCanvas ? textualSpecs[0].contextField : undefined}
+              >{textualSpecs[0].text}</p>
             ) : textualSpecs.length > 1 ? (
               <ul class="v2-spec-points">
-                {textualSpecs.map((item) => <li>{item}</li>)}
+                {textualSpecs.map((item) => <li
+                  {...adminListItem(Astro.url, item.id)}
+                  {...adminListField(Astro.url, item.field)}
+                  data-smu1-list-transform={editorCanvas ? 'line' : undefined}
+                  data-smu1-list-line={editorCanvas ? String(item.lineIndex) : undefined}
+                  data-smu1-list-context-field={editorCanvas ? item.contextField : undefined}
+                >{item.text}</li>)}
               </ul>
             ) : null}
           </div>
@@ -315,7 +347,13 @@ const editorCanvas = isLocalAdminCanvas(Astro.url);
             <div><p class="hv2-eyebrow" {...productUiBinding('standardRelatedEyebrow')}>{settings.productUi.standardRelatedEyebrow}</p><h2 id="v2-related-title" {...productUiBinding(relatedTitleField, 'heading', 'related-title')}>{relatedTitle}</h2></div>
             <a class="hv2-text-link" href={withBase(relatedHref)} {...productUiBinding('standardRelatedLinkLabel', 'link-label')}>{settings.productUi.standardRelatedLinkLabel}</a>
           </header>
-          <div class="v2-product-grid v2-product-grid--related" role="list" {...binding('relatedProductSlugs', 'list', { itemKind: 'string', projection: { kind: product.relatedProductSlugs?.length ? 'direct' : 'fallback', fallback: 'category order' } })}>
+          <div class="v2-product-grid v2-product-grid--related" role="list" {...binding('relatedProductSlugs', 'relation-list', {
+            itemKind: 'string',
+            relationCollections: ['products'],
+            label: 'Связанные товары и их порядок',
+            permissions: { edit: true, reorder: true, delete: false },
+            projection: { kind: product.relatedProductSlugs?.length ? 'relation' : 'fallback', fallback: 'category order' }
+          })}>
             {displayRelatedProducts.map((item) => (
               <div role="listitem"><V2ProductCard product={item.product} href={relatedProductHref(item)} related /></div>
             ))}

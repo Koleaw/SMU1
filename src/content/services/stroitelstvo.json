@@ -69,48 +69,56 @@
       "order": 10,
       "items": [
         {
+          "id": "construction-industrial-buildings",
           "title": "Производственные и хозяйственные здания",
           "text": "Подготовка площадки, основания и фундаменты, сборка и обшивка каркасного здания — в составе согласованной задачи на конкретном объекте.",
           "order": 10,
           "isActive": true
         },
         {
+          "id": "construction-site-prep",
           "title": "Подготовка площадок",
           "text": "Подготовка участка и площадки в составе согласованных строительных или монтажных работ.",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "construction-foundations",
           "title": "Фундаменты и основания",
           "text": "Устройство оснований и заливка фундаментов для согласованной задачи на объекте.",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "construction-entrance-groups",
           "title": "Входные группы",
           "text": "Строительные и монтажные работы в зоне входа: площадки, конструкции, ограждения и элементы оформления.",
           "order": 40,
           "isActive": true
         },
         {
+          "id": "construction-utility-areas",
           "title": "Хозяйственные и технические зоны",
           "text": "Обустройство хозяйственных, технических, контейнерных и вспомогательных площадок.",
           "order": 50,
           "isActive": true
         },
         {
+          "id": "construction-installation",
           "title": "Монтаж конструкций и элементов",
           "text": "Монтаж согласованных конструкций, ограждений, навесов и отдельных элементов на объекте.",
           "order": 60,
           "isActive": true
         },
         {
+          "id": "construction-repair-reinforcement",
           "title": "Ремонт, укрепление и доработка",
           "text": "Ремонт, укрепление и доработка существующих объектов и конструкций в рамках согласованной задачи.",
           "order": 70,
           "isActive": true
         },
         {
+          "id": "construction-custom",
           "title": "Строительно-монтажные работы по задаче",
           "text": "Работы по ТЗ, чертежу, эскизу или замеру с уточнением состава на конкретном объекте.",
           "order": 80,
@@ -168,41 +176,49 @@
       "order": 30,
       "steps": [
         {
+          "id": "stroitelstvo-process-3-step-1",
           "title": "Замер и уточнение задачи",
           "order": 10,
           "isActive": true
         },
         {
+          "id": "stroitelstvo-process-3-step-2",
           "title": "Подбор материалов и конструктивного решения",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "stroitelstvo-process-3-step-3",
           "title": "Изготовление металлоконструкций при необходимости",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "stroitelstvo-process-3-step-4",
           "title": "Основания и крепления под конструкции",
           "order": 40,
           "isActive": true
         },
         {
+          "id": "stroitelstvo-process-3-step-5",
           "title": "Монтаж навесов, ограждений, МАФ и элементов благоустройства",
           "order": 50,
           "isActive": true
         },
         {
+          "id": "stroitelstvo-process-3-step-6",
           "title": "Обшивка, покраска и защитные покрытия",
           "order": 60,
           "isActive": true
         },
         {
+          "id": "stroitelstvo-process-3-step-7",
           "title": "Доработка существующих конструкций",
           "order": 70,
           "isActive": true
         },
         {
+          "id": "stroitelstvo-process-3-step-8",
           "title": "Поэтапное выполнение работ",
           "order": 80,
           "isActive": true

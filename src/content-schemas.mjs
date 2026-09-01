@@ -1,6 +1,10 @@
 import { z } from 'astro/zod';
 
 const pageBlockThemeSchema = z.enum(['dark', 'light', 'graphite']);
+const stablePageBlockItemTypes = new Set([
+  'directionCards', 'benefits', 'gallery', 'faq', 'costFactors', 'cardGrid',
+  'listPanel', 'exampleGrid', 'factorList', 'solutions'
+]);
 
 const imageViewSchema = z.object({
   fit: z.enum(['cover', 'contain']),
@@ -28,17 +32,17 @@ const textLayoutSchema = z.object({
 }).strict();
 
 const pageCardItemSchema = z.object({
-  title: z.string(), text: z.string(), order: z.number(), isActive: z.boolean().optional(),
+  id: z.string().min(1), title: z.string(), text: z.string(), order: z.number(), isActive: z.boolean().optional(),
   image: z.string().optional(), imageView: imageViewSchema.optional(), placeholderLabel: z.string().optional(),
   buttonLabel: z.string().optional(), buttonHref: z.string().optional()
 }).loose();
 
 const pageProcessStepSchema = z.object({
-  title: z.string(), text: z.string().optional(), order: z.number(), isActive: z.boolean().optional()
+  id: z.string().min(1).optional(), title: z.string(), text: z.string().optional(), order: z.number(), isActive: z.boolean().optional()
 }).loose();
 
 const productSpecItemSchema = z.object({
-  label: z.string(), value: z.string(), order: z.number().optional(), isActive: z.boolean().optional()
+  id: z.string().min(1), label: z.string(), value: z.string(), order: z.number().optional(), isActive: z.boolean().optional()
 }).strict();
 
 const projectImageItemSchema = z.union([
@@ -302,7 +306,23 @@ const pageBlockSchema = z.object({
   textWeight: z.union([z.string(), z.number()]).optional(), textItalic: z.boolean().optional(),
   textStyle: textStyleSchema.optional(), titleStyle: textStyleSchema.optional(), layout: textLayoutSchema.optional(),
   paddingTop: z.string().optional(), paddingBottom: z.string().optional()
-}).loose();
+}).loose().superRefine((block, context) => {
+  const requireUniqueIds = (items, path) => {
+    const ids = new Set();
+    items.forEach((item, index) => {
+      const id = typeof item?.id === 'string' ? item.id.trim() : '';
+      if (!id) {
+        context.addIssue({ code: 'custom', path: [path, index, 'id'], message: 'Элементу списка нужен постоянный id для безопасной перестановки.' });
+      } else if (ids.has(id)) {
+        context.addIssue({ code: 'custom', path: [path, index, 'id'], message: `Повторяющийся id элемента списка: ${id}.` });
+      }
+      if (id) ids.add(id);
+    });
+  };
+  const objectItems = (block.items || []).filter((item) => item && typeof item === 'object');
+  if (stablePageBlockItemTypes.has(block.type) && objectItems.length) requireUniqueIds(objectItems, 'items');
+  if (block.type === 'process' && (block.steps || []).length) requireUniqueIds(block.steps || [], 'steps');
+});
 
 export const contentSchemas = {
   'product-sections': z.object({
@@ -348,6 +368,11 @@ export const contentSchemas = {
       && (typeof product.priceFrom !== 'number' || !Number.isFinite(product.priceFrom) || product.priceFrom < 0)) {
       context.addIssue({ code: 'custom', path: ['priceFrom'], message: 'Для цены «от» или точной цены укажите неотрицательное числовое значение.' });
     }
+    const dimensionIds = new Set();
+    (product.dimensions || []).forEach((item, index) => {
+      if (dimensionIds.has(item.id)) context.addIssue({ code: 'custom', path: ['dimensions', index, 'id'], message: `Повторяющийся id характеристики: ${item.id}.` });
+      dimensionIds.add(item.id);
+    });
   }),
   services: z.object({
     title: z.string(), slug: z.string(), shortDescription: z.string(), heroTitle: z.string(), heroDescription: z.string(),

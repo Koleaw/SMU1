@@ -47,7 +47,7 @@ const scopeBlock = pageBlocks.find((block) => blockSectionId(block) === 'landsca
 const contextsBlock = pageBlocks.find((block) => blockSectionId(block) === 'landscaping-contexts')
   || getProjectDirectionBlock(service, 'listPanel');
 const briefBlock = pageBlocks.find((block) => blockSectionId(block) === 'landscaping-brief');
-const scopeItems = getDirectionCardItems(scopeBlock).map(({ title, text }) => ({ title, text }));
+const scopeItems = getDirectionCardItems(scopeBlock).map(({ id, title, text }) => ({ id, title, text }));
 const contexts = getDirectionListItems(contextsBlock);
 const briefInputs = getDirectionListItems(briefBlock);
 
@@ -98,10 +98,18 @@ const blockBinding = (block: unknown, field: 'title' | 'intro' | 'items', tool: 
   if (index < 0) return {};
   const source = block as { sectionId?: string; type?: string; order?: number };
   return adminBinding(Astro.url, {
-    renderer: { family: 'direction-block', variant: source.type }, owner: { collection: 'services', slug: service.slug },
-    fieldPath: `pageBlocks[${index}].${field}`, stableItemId: `${source.sectionId || `${source.type}-${source.order}`}-${field}`,
-    scope: 'local', tool, affectedRoutes: [`/${service.slug}/`], itemKind
-  });
+      renderer: { family: 'direction-block', variant: source.type }, owner: { collection: 'services', slug: service.slug },
+      fieldPath: `pageBlocks[${index}].${field}`, stableItemId: `${source.sectionId || `${source.type}-${source.order}`}-${field}`,
+      scope: 'local', tool, affectedRoutes: [`/${service.slug}/`], itemKind,
+      permissions: itemKind === 'object' ? { edit: true, reorder: true, delete: false } : undefined,
+      itemFields: itemKind === 'object' ? [
+        { fieldPath: 'id', tool: 'generated-id' },
+        { fieldPath: 'title', label: 'Название', tool: 'short-text' },
+        { fieldPath: 'text', label: 'Описание', tool: 'long-text' },
+        { fieldPath: 'order', tool: 'generated-order' },
+        { fieldPath: 'isActive', label: 'Показывать карточку', tool: 'visibility' }
+      ] : undefined
+    });
 };
 ---
 

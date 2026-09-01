@@ -33,7 +33,7 @@ const binding = (fieldPath: string, tool = 'long-text', options: Record<string, 
 });
 const pageBinding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
   renderer: { family: 'practical', variant: 'vacancy-detail' }, owner: { collection: 'site-settings', slug: 'global' },
-  fieldPath: `vacancyDetailPage.${fieldPath}`, stableItemId: `vacancy-detail-${fieldPath}`, scope: 'global', tool,
+  fieldPath: `vacancyDetailPage.${fieldPath}`, stableItemId: `vacancy-detail-${fieldPath}`, scope: 'shared', tool,
   affectedRoutes: ['/vakansii/*'], ...options
 });
 const globalBinding = (fieldPath: string, tool = 'short-text') => adminBinding(Astro.url, {

@@ -1,0 +1,114 @@
+/*
+ * This stylesheet is injected only by PublicV2Layout's explicit local-admin
+ * branch. It must never be linked or emitted as part of a public artifact.
+ * Affordances are overlays: they can select an absent media role without
+ * becoming a new production-layout child.
+ */
+
+.v2-product-top--editor-missing-media .v2-product-top__grid {
+  position: relative;
+}
+
+.v2-product-top__gallery--editor-affordance {
+  position: absolute !important;
+  z-index: 4;
+  right: 0;
+  bottom: 26px;
+  width: calc((100% - 48px) / 2);
+  height: calc(100% - var(--hv2-header-height) - 44px);
+  min-height: 0 !important;
+  grid-column: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.v2-media-empty--editor-affordance {
+  position: absolute;
+  inset: 0;
+  display: grid !important;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  place-items: center;
+  padding: 12px;
+  border: 1px dashed rgb(255 255 255 / 0.62);
+  color: #fff;
+  background: rgb(16 23 32 / 0.72) !important;
+  box-shadow: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.v2-media-empty--editor-affordance > span {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 13px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgb(16 23 32 / 0.88);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.v2-media-empty--editor-affordance:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: -4px;
+}
+
+.v2-product-card--editor-missing-media {
+  position: relative;
+}
+
+.v2-product-card__media--editor-affordance {
+  position: absolute !important;
+  z-index: 4;
+  top: 10px;
+  right: 10px;
+  width: min(176px, calc(100% - 20px)) !important;
+  height: 46px !important;
+  min-height: 0 !important;
+  aspect-ratio: auto !important;
+  overflow: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.v2-product-card__media--editor-affordance .v2-media-empty--editor-affordance {
+  border-color: rgb(16 23 32 / 0.45);
+  color: var(--hv2-text-primary);
+  background: rgb(255 255 255 / 0.9) !important;
+}
+
+.v2-product-card__media--editor-affordance .v2-media-empty--editor-affordance > span {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 10px;
+  color: #fff;
+}
+
+@media (max-width: 980px) {
+  .v2-product-top__gallery--editor-affordance {
+    right: 12px;
+    bottom: 12px;
+    width: min(220px, calc(100% - 24px));
+    height: 50px;
+    margin: 0 !important;
+  }
+
+  .v2-product-top__gallery--editor-affordance .v2-media-empty--editor-affordance {
+    position: absolute;
+    padding: 5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-media-empty--editor-affordance {
+    transition: none !important;
+  }
+}

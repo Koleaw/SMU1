@@ -19,6 +19,22 @@ const BUSY_STATUSES = new Set([
   'preparing', 'local-gates', 'committed', 'pushed', 'workflow-queued', 'building', 'unknown-network-result'
 ]);
 
+const EXACT_STATUS_COPY = Object.freeze({
+  queued: 'Проверка поставлена в очередь',
+  running: 'Проверяется точный результат',
+  failed: 'Сохранено, но проверка не прошла',
+  stale: 'Проверка отсутствует или устарела',
+  ready: 'Готово к публикации'
+});
+
+export function publishableLocalTransactions(transactions = []) {
+  return (Array.isArray(transactions) ? transactions : []).filter((entry) => (
+    entry?.published !== true
+    && entry?.exactStatus === 'ready'
+    && entry?.publishEligible === true
+  ));
+}
+
 function currentJob(overview) {
   return overview?.activeJob || overview?.latestJob || null;
 }
@@ -72,6 +88,7 @@ export function renderPublishPanel({
   onRefresh,
   onPublish,
   onRetry,
+  onRetryExact,
   onOpenPreview,
   onDownloadReport
 }) {
@@ -79,7 +96,8 @@ export function renderPublishPanel({
   root.className = 'admin-page';
 
   const transactions = Array.isArray(overview.transactions) ? overview.transactions : [];
-  const ready = transactions.filter((entry) => entry.published !== true);
+  const local = transactions.filter((entry) => entry.published !== true);
+  const ready = publishableLocalTransactions(transactions);
   const published = transactions.filter((entry) => entry.published === true);
   const readyIds = new Set(ready.map((entry) => entry.transactionId));
   const selection = new Set(selectedTransactionIds.filter((id) => readyIds.has(id)));
@@ -96,18 +114,21 @@ export function renderPublishPanel({
     publishButton.disabled = ready.length === 0 || selection.size === 0 || BUSY_STATUSES.has(state);
   }
 
-  if (!ready.length) {
+  if (!local.length) {
     list.append(element('div', { className: 'admin-empty' }, [
       icon('check'),
       element('strong', { text: 'Нет неопубликованных локальных сохранений' }),
       element('p', { text: 'Сначала сохраните изменение на компьютере. Оно появится здесь отдельной целой транзакцией.' })
     ]));
   } else {
-    for (const entry of ready) {
+    for (const entry of local) {
       const label = entry.summary || entry.transactionId;
+      const exactStatus = EXACT_STATUS_COPY[entry.exactStatus] ? entry.exactStatus : 'stale';
+      const selectable = exactStatus === 'ready' && entry.publishEligible === true;
       const checkbox = element('input', {
         attrs: { type: 'checkbox', 'aria-label': `Выбрать: ${label}` },
-        checked: selection.has(entry.transactionId),
+        checked: selectable && selection.has(entry.transactionId),
+        disabled: !selectable,
         on: {
           change: (event) => {
             if (event.currentTarget.checked) selection.add(entry.transactionId);
@@ -117,12 +138,24 @@ export function renderPublishPanel({
           }
         }
       });
-      list.append(element('label', { className: 'admin-switch' }, [
+      const retry = entry.exactRetryEligible === true && typeof onRetryExact === 'function'
+        ? element('button', {
+            className: 'admin-btn admin-btn--small',
+            attrs: { type: 'button' },
+            on: { click: () => onRetryExact(entry.transactionId) }
+          }, ['Повторить проверку'])
+        : null;
+      list.append(element('div', { className: 'admin-switch' }, [
         element('span', { className: 'admin-switch__copy' }, [
           element('strong', { text: label }),
           element('small', {
             text: `${entry.changedPaths?.length || 0} файл(а) · ${entry.affectedRoutes?.length || 0} маршрут(а) · ${formatHumanTime(entry.committedAt)}`
-          })
+          }),
+          element('small', { text: EXACT_STATUS_COPY[exactStatus] }),
+          exactStatus === 'failed' && entry.exactValidation?.message
+            ? element('small', { text: entry.exactValidation.message })
+            : null,
+          retry
         ]),
         checkbox,
         element('span', { className: 'admin-switch__control', attrs: { 'aria-hidden': 'true' } })
@@ -147,18 +180,18 @@ export function renderPublishPanel({
         element('section', { className: 'admin-card' }, [
           element('div', { className: 'admin-card__header' }, [
             element('div', {}, [
-              element('h2', { text: 'Готовые локальные изменения' }),
-              element('p', { text: 'Публикуются только целые сохранения. Зависимости будут добавлены в план автоматически и показаны до подтверждения.' })
+              element('h2', { text: 'Локальные изменения' }),
+              element('p', { text: 'Выбрать можно только текущую редакцию с успешной exact-проверкой. Зависимости будут добавлены в план автоматически.' })
             ]),
             ready.length ? element('div', { className: 'admin-heading-actions' }, [
               element('button', { className: 'admin-btn admin-btn--small', attrs: { type: 'button' }, on: { click: () => {
                 const ids = ready.map((entry) => entry.transactionId);
                 onSelectionChange?.(ids);
-                renderPublishPanel({ root, overview, selectedTransactionIds: ids, onSelectionChange, onRefresh, onPublish, onRetry, onOpenPreview, onDownloadReport });
+                renderPublishPanel({ root, overview, selectedTransactionIds: ids, onSelectionChange, onRefresh, onPublish, onRetry, onRetryExact, onOpenPreview, onDownloadReport });
               } } }, ['Выбрать все готовые']),
               element('button', { className: 'admin-btn admin-btn--small', attrs: { type: 'button' }, on: { click: () => {
                 onSelectionChange?.([]);
-                renderPublishPanel({ root, overview, selectedTransactionIds: [], onSelectionChange, onRefresh, onPublish, onRetry, onOpenPreview, onDownloadReport });
+                renderPublishPanel({ root, overview, selectedTransactionIds: [], onSelectionChange, onRefresh, onPublish, onRetry, onRetryExact, onOpenPreview, onDownloadReport });
               } } }, ['Снять выбор'])
             ]) : null
           ]),

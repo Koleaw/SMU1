@@ -22,7 +22,7 @@ const shellCtaBinding = (occurrence: string) => adminBinding(Astro.url, {
   renderer: { family: 'global-shell', variant: 'vacancy-detail' },
   owner: { collection: 'site-settings', slug: 'global' },
   fieldPath: 'vacancyDetailPage.shellCtaLabel', stableItemId: `vacancy-detail-shell-cta-${occurrence}`,
-  scope: 'global', tool: 'link-label', affectedRoutes: ['/vakansii/*']
+  scope: 'shared', tool: 'link-label', affectedRoutes: ['/vakansii/*']
 });
 ---
 

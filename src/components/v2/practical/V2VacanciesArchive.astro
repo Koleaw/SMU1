@@ -72,8 +72,8 @@ const jobBinding = (job: V2JobRecord, fieldPath: string, tool = 'long-text', opt
       ) : (
         <article class="practical-vacancies__empty" data-v2-reveal>
           <p class="hv2-eyebrow" {...pageBinding('emptyEyebrow', 'short-text')}>{copy.emptyEyebrow}</p>
-          <h2 {...adminBinding(Astro.url, { renderer: { family: 'practical', variant: 'vacancies-empty' }, owner: { collection: 'site-settings', slug: 'global' }, fieldPath: 'vacanciesEmptyTitle', scope: 'global', tool: 'heading', affectedRoutes: ['/vakansii/'] })}>{settings.vacanciesEmptyTitle}</h2>
-          <p {...adminBinding(Astro.url, { renderer: { family: 'practical', variant: 'vacancies-empty' }, owner: { collection: 'site-settings', slug: 'global' }, fieldPath: 'vacanciesEmptyText', scope: 'global', tool: 'long-text', affectedRoutes: ['/vakansii/'] })}>{settings.vacanciesEmptyText}</p>
+          <h2 {...adminBinding(Astro.url, { renderer: { family: 'practical', variant: 'vacancies-empty' }, owner: { collection: 'site-settings', slug: 'global' }, fieldPath: 'vacanciesEmptyTitle', scope: 'shared', tool: 'heading', affectedRoutes: ['/vakansii/'] })}>{settings.vacanciesEmptyTitle}</h2>
+          <p {...adminBinding(Astro.url, { renderer: { family: 'practical', variant: 'vacancies-empty' }, owner: { collection: 'site-settings', slug: 'global' }, fieldPath: 'vacanciesEmptyText', scope: 'shared', tool: 'long-text', affectedRoutes: ['/vakansii/'] })}>{settings.vacanciesEmptyText}</p>
         </article>
       )}
     </div>

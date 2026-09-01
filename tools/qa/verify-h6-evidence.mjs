@@ -17,6 +17,7 @@ import {
 import { sourceWorkingTreeDirty } from './git-evidence.mjs';
 import { validateMediaPrivacyEvidence } from './media-privacy-evidence.mjs';
 import { validateBackupRestoreDrillEvidence } from './backup-restore-drill.mjs';
+import { validateExactTargetedBuildEvidence } from './exact-targeted-build-evidence.mjs';
 
 const root = process.cwd();
 const argv = process.argv.slice(2);
@@ -24,7 +25,7 @@ const hasFlag = (flag) => argv.includes(flag);
 const option = (name, fallback) => argv.find((value) => value.startsWith(`${name}=`))?.slice(name.length + 1) || fallback;
 if (hasFlag('--help') || hasFlag('-h')) {
   process.stdout.write(`Verify H6 machine-readable browser evidence\n\n`);
-  process.stdout.write(`  node tools/qa/verify-h6-evidence.mjs --passport=<json> --public-actions=<json> --admin-actions=<json> --visual-acceptance=<json> --media-privacy=<json> --backup-restore=<json>\n`);
+  process.stdout.write(`  node tools/qa/verify-h6-evidence.mjs --passport=<json> --public-actions=<json> --admin-actions=<json> --visual-acceptance=<json> --media-privacy=<json> --backup-restore=<json> --exact-targeted=<json>\n`);
   process.stdout.write(`  Strict editor and isolated-admin gates are enabled by default.\n`);
   process.stdout.write(`  Developer-only relaxations: --allow-missing-editor-coverage --allow-deferred-admin-actions.\n`);
   process.exit(0);
@@ -35,7 +36,8 @@ const filenames = {
   adminActions: path.resolve(root, option('--admin-actions', '.admin-runtime/h6-qa/admin-action-crawl.json')),
   visualAcceptance: path.resolve(root, option('--visual-acceptance', '.admin-runtime/h6-qa/visual-editor-acceptance.json')),
   mediaPrivacy: path.resolve(root, option('--media-privacy', '.admin-runtime/h6-qa/media-privacy-chain.json')),
-  backupRestore: path.resolve(root, option('--backup-restore', '.admin-runtime/h6-qa/backup-restore-drill.json'))
+  backupRestore: path.resolve(root, option('--backup-restore', '.admin-runtime/h6-qa/backup-restore-drill.json')),
+  exactTargeted: path.resolve(root, option('--exact-targeted', '.admin-runtime/h6-qa/exact-targeted-build.json'))
 };
 const distRoot = path.resolve(root, option('--dist', 'dist'));
 const readJson = async (filename) => JSON.parse(await readFile(filename, 'utf8'));
@@ -45,7 +47,8 @@ const reports = {
   adminActions: await readJson(filenames.adminActions),
   visualAcceptance: await readJson(filenames.visualAcceptance),
   mediaPrivacy: await readJson(filenames.mediaPrivacy),
-  backupRestore: await readJson(filenames.backupRestore)
+  backupRestore: await readJson(filenames.backupRestore),
+  exactTargeted: await readJson(filenames.exactTargeted)
 };
 const git = (...args) => {
   try { return execFileSync('git', args, { cwd: root, encoding: 'utf8', windowsHide: true }).trim(); }
@@ -87,6 +90,13 @@ const results = {
   backupRestore: validateBackupRestoreDrillEvidence(reports.backupRestore, {
     expectedSourceSHA: currentEvidence.sourceSHA,
     expectedBranch: currentEvidence.branch
+  }),
+  exactTargeted: validateExactTargetedBuildEvidence(reports.exactTargeted, {
+    expectedSourceSHA: currentEvidence.sourceSHA,
+    expectedBranch: currentEvidence.branch,
+    expectedBasePath: reports.routePassport?.evidence?.basePath,
+    expectedHtmlFileHashes: currentEvidence.htmlFileHashes,
+    expectedRouteCount: productionRoutes.length
   }),
   identity: validateEvidenceIdentity(reports, { currentEvidence })
 };

@@ -45,6 +45,7 @@
       "order": 20,
       "items": [
         {
+          "id": "ograzhdeniya-i-zabory-directioncards-1-item-1",
           "title": "Заборы",
           "text": "Ограждения периметра для частных, коммерческих и производственных территорий.",
           "image": "/uploads/03ba6b83-ca31-468f-8c76-189dc4080572-1780248471243.jpeg",
@@ -61,6 +62,7 @@
           }
         },
         {
+          "id": "ograzhdeniya-i-zabory-directioncards-1-item-2",
           "title": "Ворота",
           "text": "Распашные и откатные решения под проем, тип открывания и условия эксплуатации.",
           "image": "/uploads/chatgpt-image-31-2026-18-07-49-1780248482346.png",
@@ -77,6 +79,7 @@
           }
         },
         {
+          "id": "ograzhdeniya-i-zabory-directioncards-1-item-3",
           "title": "Калитки",
           "text": "Калитки под линию ограждения, проходную зону, фурнитуру и внешний вид территории.",
           "image": "/uploads/chatgpt-image-31-2026-18-17-16-1780248503511.png",
@@ -93,6 +96,7 @@
           }
         },
         {
+          "id": "ograzhdeniya-i-zabory-directioncards-1-item-4",
           "title": "Секционные ограждения",
           "text": "Модульные секции для территорий, где важны повторяемость, монтаж и аккуратный внешний вид.",
           "image": "/uploads/chatgpt-image-31-2026-19-45-02-1780248513639.png",
@@ -109,6 +113,7 @@
           }
         },
         {
+          "id": "ograzhdeniya-i-zabory-directioncards-1-item-5",
           "title": "Декоративные ограждения",
           "text": "Решения для входных зон, дворов, общественных пространств и коммерческих территорий.",
           "image": "/assets/images/placeholders/street-furniture.svg",
@@ -119,6 +124,7 @@
           "isActive": false
         },
         {
+          "id": "ograzhdeniya-i-zabory-directioncards-1-item-6",
           "title": "Газонные ограждения",
           "text": "Низкие ограждения для зонирования газонов, дорожек, дворов и благоустроенных территорий.",
           "image": "/uploads/chatgpt-image-may-28-2026-02-49-39-pm-1-6-1780248534908.png",
@@ -135,6 +141,7 @@
           }
         },
         {
+          "id": "ograzhdeniya-i-zabory-directioncards-1-item-7",
           "title": "Перила и поручни",
           "text": "Ограждения лестниц, пандусов, входных групп и зон с перепадами высоты.",
           "image": "/uploads/chatgpt-image-31-2026-18-03-29-1780248547259.png",
@@ -151,6 +158,7 @@
           }
         },
         {
+          "id": "ograzhdeniya-i-zabory-directioncards-1-item-8",
           "title": "Столбики и болларды",
           "text": "Элементы ограничения проезда, защиты зон и визуального разделения потоков.",
           "image": "/assets/images/placeholders/street-furniture.svg",
@@ -161,6 +169,7 @@
           "isActive": true
         },
         {
+          "id": "ograzhdeniya-i-zabory-directioncards-1-item-9",
           "title": "Ограждения контейнерных площадок",
           "text": "Конструкции для ТКО и хозяйственных зон с учетом доступа, обслуживания и внешнего вида.",
           "image": "/uploads/chatgpt-image-31-2026-18-03-46-1780248556068.png",
@@ -201,24 +210,28 @@
       "order": 40,
       "steps": [
         {
+          "id": "ograzhdeniya-i-zabory-process-3-step-1",
           "title": "Уточняем исходные данные",
           "text": "Размеры, высоту, основание, проходы, въезды, назначение территории и условия монтажа.",
           "order": 10,
           "isActive": true
         },
         {
+          "id": "ograzhdeniya-i-zabory-process-3-step-2",
           "title": "Собираем конструктив",
           "text": "Подбираем профиль, заполнение, опоры, крепления, фурнитуру и дополнительные узлы.",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "ograzhdeniya-i-zabory-process-3-step-3",
           "title": "Согласуем внешний вид",
           "text": "Фиксируем цвет, покрытие, декоративные элементы и привязку к архитектуре объекта.",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "ograzhdeniya-i-zabory-process-3-step-4",
           "title": "Готовим расчет и производство",
           "text": "Собираем объем материалов, сроки, этапность изготовления и условия вывода на объект.",
           "order": 40,
@@ -237,31 +250,37 @@
       "order": 50,
       "items": [
         {
+          "id": "ograzhdeniya-i-zabory-costfactors-4-item-1",
           "text": "протяженность, высота и конфигурация линии ограждения",
           "order": 10,
           "isActive": true
         },
         {
+          "id": "ograzhdeniya-i-zabory-costfactors-4-item-2",
           "text": "основание, опоры, способ крепления и условия монтажа",
           "order": 20,
           "isActive": true
         },
         {
+          "id": "ograzhdeniya-i-zabory-costfactors-4-item-3",
           "text": "материал, сечение профиля и сложность сварки",
           "order": 30,
           "isActive": true
         },
         {
+          "id": "ograzhdeniya-i-zabory-costfactors-4-item-4",
           "text": "тип заполнения, декоративные элементы и фурнитура",
           "order": 40,
           "isActive": true
         },
         {
+          "id": "ograzhdeniya-i-zabory-costfactors-4-item-5",
           "text": "ворота, калитки, поручни, болларды и дополнительные узлы",
           "order": 50,
           "isActive": true
         },
         {
+          "id": "ograzhdeniya-i-zabory-costfactors-4-item-6",
           "text": "покрытие, цвет, транспортировка, сроки и доступ к объекту",
           "order": 60,
           "isActive": true

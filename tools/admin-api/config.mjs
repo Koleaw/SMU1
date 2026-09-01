@@ -7,6 +7,12 @@ export const DEFAULT_ADMIN_API_HOST = '127.0.0.1';
 export const DEFAULT_ADMIN_API_PORT = 8787;
 export const DEFAULT_ADMIN_UI_HOST = '127.0.0.1';
 export const DEFAULT_ADMIN_UI_PORT = 4321;
+export const FORBIDDEN_LOCAL_GITHUB_CREDENTIAL_KEYS = Object.freeze([
+  'GITHUB_DEPLOY_TOKEN',
+  'GITHUB_TOKEN'
+]);
+
+const FORBIDDEN_LOCAL_GITHUB_CREDENTIAL_KEY_SET = new Set(FORBIDDEN_LOCAL_GITHUB_CREDENTIAL_KEYS);
 
 const INSECURE_VALUES = new Set([
   '',
@@ -72,6 +78,24 @@ export function encodeEnvValue(value) {
   return /^[A-Za-z0-9_./:@+-]*$/u.test(normalized) ? normalized : JSON.stringify(normalized);
 }
 
+export function isForbiddenLocalGitHubCredentialKey(key) {
+  return FORBIDDEN_LOCAL_GITHUB_CREDENTIAL_KEY_SET.has(String(key ?? '').toUpperCase());
+}
+
+export function withoutForbiddenLocalGitHubCredentials(values = {}) {
+  return Object.fromEntries(Object.entries(values)
+    .filter(([key]) => !isForbiddenLocalGitHubCredentialKey(key)));
+}
+
+function assertNoForbiddenLocalGitHubCredentials(values, filePath = '') {
+  if (!Object.keys(values).some(isForbiddenLocalGitHubCredentialKey)) return;
+  const location = filePath ? ` в ${path.basename(filePath)}` : '';
+  throw new AdminConfigError(
+    `Plaintext GitHub credentials${location} запрещены. Удалите legacy-поля; .env.admin.local можно очистить через npm run admin:setup -- --rotate. Git использует Credential Manager или SSH.`,
+    { code: 'PLAINTEXT_GITHUB_CREDENTIAL_FORBIDDEN' }
+  );
+}
+
 export function serializeEnv(values, options = {}) {
   const preferredOrder = options.order ?? [
     'ADMIN_USERNAME',
@@ -90,8 +114,6 @@ export function serializeEnv(values, options = {}) {
     'ADMIN_EXPECTED_BRANCH',
     'ADMIN_GIT_REMOTE',
     'GITHUB_REPOSITORY',
-    'GITHUB_DEPLOY_TOKEN',
-    'GITHUB_TOKEN',
     'TEST_SITE_URL',
     'TEST_BASE_PATH',
     'BASE_PATH',
@@ -100,14 +122,15 @@ export function serializeEnv(values, options = {}) {
     'ADMIN_ALLOW_PRODUCTION_PUBLISH',
     'SITE_URL'
   ];
+  const safeValues = withoutForbiddenLocalGitHubCredentials(values);
   const keys = [
-    ...preferredOrder.filter((key) => Object.hasOwn(values, key)),
-    ...Object.keys(values).filter((key) => !preferredOrder.includes(key)).sort()
+    ...preferredOrder.filter((key) => Object.hasOwn(safeValues, key)),
+    ...Object.keys(safeValues).filter((key) => !preferredOrder.includes(key)).sort()
   ];
   const header = options.header === false
     ? []
     : ['# Локальная конфигурация админки СМУ-1. Не коммитить.', '# Пароль здесь не хранится — только scrypt hash.'];
-  return `${[...header, ...keys.map((key) => `${key}=${encodeEnvValue(values[key])}`)].join('\n')}\n`;
+  return `${[...header, ...keys.map((key) => `${key}=${encodeEnvValue(safeValues[key])}`)].join('\n')}\n`;
 }
 
 export async function readEnvFile(filePath, options = {}) {
@@ -128,6 +151,7 @@ export async function loadAdminEnvironment(options = {}) {
     const filePath = path.resolve(repoRoot, fileName);
     try {
       const parsed = await readEnvFile(filePath);
+      assertNoForbiddenLocalGitHubCredentials(parsed, filePath);
       Object.assign(values, parsed);
       loadedFiles.push(filePath);
     } catch (error) {
@@ -135,6 +159,7 @@ export async function loadAdminEnvironment(options = {}) {
     }
   }
   for (const [key, value] of Object.entries(options.env ?? process.env)) {
+    if (isForbiddenLocalGitHubCredentialKey(key)) continue;
     if (typeof value === 'string' && value.length > 0) values[key] = value;
   }
   return { repoRoot, values, loadedFiles };
@@ -220,6 +245,7 @@ function insecure(value) {
 }
 
 export function validateAdminConfig(rawValues = {}, options = {}) {
+  assertNoForbiddenLocalGitHubCredentials(rawValues);
   const raw = { ...rawValues };
   const testMode = raw.ADMIN_TEST_MODE === 'true';
   const allowIpv6 = booleanValue(raw.ADMIN_ALLOW_IPV6_LOOPBACK, false);

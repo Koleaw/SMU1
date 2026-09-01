@@ -17,11 +17,17 @@ import {
   ExactValidationError,
   runExactSnapshot
 } from './exact-validation-service.mjs';
+import {
+  decoratePublishOverviewWithExact,
+  isCommittedSave,
+  queuedExactReceipt
+} from './exact-lifecycle.mjs';
 import { BackupServiceError, createBackupService } from './backup-service.mjs';
 import { createReleaseControl, createH6PreviewHostingAdapter } from './release-control.mjs';
 import { createPublishService } from './publish-service.mjs';
 import { createContentPublishGateRunner, createGitHubPublishProviders } from './publish-runtime.mjs';
 import { createPublishGitEnvironment, runGitProcess } from './publish-planner.mjs';
+import { createGitHubApiRequest } from './github-credential-broker.mjs';
 import { createWriterLease } from './writer-lease.mjs';
 import { createWorktreeMutationGuard } from './worktree-guard.mjs';
 import {
@@ -342,10 +348,6 @@ async function getGitHubRepository() {
   return parseGitHubRemote(remote);
 }
 
-function getGitHubToken() {
-  return String(config.GITHUB_DEPLOY_TOKEN || config.GITHUB_TOKEN || '').trim();
-}
-
 function maskSecrets(text = '') {
   let safe = String(text || '');
   const secretValues = Object.entries(config)
@@ -363,53 +365,11 @@ function maskSecrets(text = '') {
     .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [secret]');
 }
 
-async function githubRequest(pathname, options = {}) {
-  const method = String(options.method || 'GET').toUpperCase();
-  const relativePath = String(pathname || '');
-  const allowedReadPath = /^\/actions\/workflows\/deploy\.yml\/runs(?:\?|$)/u.test(relativePath)
-    || /^\/deployments(?:\?|$)/u.test(relativePath)
-    || /^\/deployments\/[1-9][0-9]*\/statuses(?:\?|$)/u.test(relativePath);
-  const allowedWritePath = /^\/actions\/runs\/[1-9][0-9]*\/(?:rerun-failed-jobs|rerun)$/u.test(relativePath);
-  if (!((method === 'GET' && allowedReadPath) || (method === 'POST' && allowedWritePath))
-    || relativePath.includes('\\')
-    || /[\u0000-\u001F\u007F]/u.test(relativePath)) {
-    throw publishApiError('PUBLISH_GITHUB_PATH_DENIED', 'GitHub API path не разрешён publish runtime.', 500);
-  }
-  const token = getGitHubToken();
-  if (method === 'POST' && !token) {
-    throw publishApiError(
-      'PUBLISH_GITHUB_WRITE_TOKEN_REQUIRED',
-      'Для повторного запуска GitHub Actions нужен локально настроенный GitHub token.',
-      503
-    );
-  }
-  const repository = await getGitHubRepository();
-  if (!repository) {
-    throw new Error('Не удалось определить GitHub repository. Укажите GITHUB_REPOSITORY=owner/repo.');
-  }
-
-  const headers = {
-    Accept: 'application/vnd.github+json',
-    'X-GitHub-Api-Version': '2026-03-10'
-  };
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  const response = await fetch(`https://api.github.com/repos/${repository.owner}/${repository.repo}${relativePath}`, {
-    method,
-    headers,
-    redirect: 'error',
-    ...(options.signal ? { signal: options.signal } : {})
-  });
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(maskSecrets(`GitHub API ${response.status}: ${text || response.statusText}`));
-  }
-
-  const contentType = response.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) return response.json();
-  return response.text();
-}
+const githubRequest = createGitHubApiRequest({
+  getRepository: getGitHubRepository,
+  environment: process.env,
+  fetchImpl: (...args) => fetch(...args)
+});
 
 async function buildGitHubPublicationInfo(branch, commitSha, target = 'test') {
   const repository = await getGitHubRepository();
@@ -1368,7 +1328,8 @@ async function applyCompatibilityTransaction(req, session, body, operations, use
     payloadHash: preview.payloadHash
   });
   scheduleBackupAfterCommit(applied, preview.transactionId);
-  return { preview, applied };
+  const exactScheduling = scheduleExactAfterCommit(applied, preview.transactionId, context);
+  return { preview, applied, exactScheduling };
 }
 
 function compatibilityTransactionReceipt(transaction) {
@@ -1378,7 +1339,8 @@ function compatibilityTransactionReceipt(transaction) {
     affectedRoutes: transaction.preview.metadata?.affectedRoutes || [],
     routeExpectations: transaction.preview.metadata?.routeExpectations || [],
     routeTransitions: transaction.preview.metadata?.routeTransitions || [],
-    recordRenames: transaction.preview.metadata?.recordRenames || []
+    recordRenames: transaction.preview.metadata?.recordRenames || [],
+    exactScheduling: transaction.exactScheduling || null
   };
 }
 
@@ -1477,7 +1439,8 @@ await localPreview.initialize();
 
 const deterministicExactRunner = testFaultsEnabled && process.env.ADMIN_TEST_EXACT_MODE === 'deterministic'
   ? async ({ snapshot }) => {
-      await new Promise((resolve) => setTimeout(resolve, 60));
+      const delayMs = Math.max(0, Math.min(5_000, Number(process.env.ADMIN_TEST_EXACT_DELAY_MS || 60)));
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
       if (testFaults.nextExactFailure) {
         testFaults.nextExactFailure = false;
         throw new ExactValidationError('EXACT_TEST_INJECTED_FAILURE', 'Изолированная QA-проверка воспроизвела отказ exact build.', {
@@ -1502,16 +1465,61 @@ const deterministicExactRunner = testFaultsEnabled && process.env.ADMIN_TEST_EXA
       };
     }
   : null;
+const deterministicExactSnapshotBuilder = deterministicExactRunner
+  ? async ({ runId, transaction }) => {
+      const sourceSha = await currentGitHead();
+      const identity = crypto.createHash('sha256')
+        .update(JSON.stringify({ runId, transactionId: transaction.transactionId, metadata: transaction.metadata || {} }))
+        .digest('hex');
+      return {
+        runId,
+        transactionId: transaction.transactionId,
+        sourceSha,
+        schemaHash: crypto.createHash('sha256').update('h6-test-schema').digest('hex'),
+        bindingRegistryHash: crypto.createHash('sha256').update('h6-test-bindings').digest('hex'),
+        h5PipelineHash: crypto.createHash('sha256').update('h6-test-h5').digest('hex'),
+        snapshotSha256: identity,
+        affectedRoutes: transaction.metadata?.affectedRoutes || [],
+        routeExpectations: transaction.metadata?.routeExpectations || [],
+        closureTransactionIds: transaction.metadata?.exactClosureTransactionIds || [transaction.transactionId],
+        files: [],
+        snapshotRoot: path.join(exactValidationRuntimeDir, 'snapshots', runId)
+      };
+    }
+  : null;
+const exactValidationRepoRoot = deterministicExactRunner ? transactionRepoRoot : repoRoot;
+const exactValidationRuntimeDir = path.join(exactValidationRepoRoot, '.admin-runtime', 'exact-validation');
 const exactValidation = createExactValidationService({
-  repoRoot,
-  runtimeDir: path.join(repoRoot, '.admin-runtime', 'exact-validation'),
+  repoRoot: exactValidationRepoRoot,
+  runtimeDir: exactValidationRuntimeDir,
   transactionService: contentTransactions,
   environment: process.env,
+  ...(deterministicExactSnapshotBuilder ? { snapshotBuilder: deterministicExactSnapshotBuilder } : {}),
+  ...(deterministicExactRunner ? { identityValidator: async () => ({ ok: true, reasons: [] }) } : {}),
   ...(deterministicExactRunner
     ? { runner: deterministicExactRunner }
     : { runner: (request) => runExactSnapshot({ repoRoot, environment: process.env, ...request }) })
 });
 await exactValidation.initialize();
+
+function scheduleExactAfterCommit(result, transactionId = null, ownership = {}) {
+  const committedId = transactionId || result?.transactionId || null;
+  if (!committedId || !isCommittedSave(result)) return null;
+  const receipt = queuedExactReceipt(committedId);
+  // Isolated API tests opt into the deterministic runner explicitly. Letting a
+  // fixture Save spawn the real Astro/H5 build would make unrelated route tests
+  // non-deterministic; the owner runtime always schedules the real exact build.
+  if (config.ADMIN_TEST_MODE && !deterministicExactRunner) return null;
+  void exactValidation.request({
+    owner: ownership.owner,
+    sessionFingerprint: ownership.sessionFingerprint,
+    recoveryClientId: ownership.recoveryClientId,
+    transactionId: committedId
+  }).catch((error) => {
+    console.error(`[admin-api] exact validation scheduling failed [${error?.code || 'EXACT_SCHEDULE_FAILED'}]: ${maskSecrets(error?.message || error)}`);
+  });
+  return receipt;
+}
 
 let backupService = null;
 let backupInitializationError = null;
@@ -1608,10 +1616,9 @@ async function getPublishService() {
       smokeRunner: providers.smokeRunner,
       retryProvider: providers.retryProvider,
       requireVerifiedArtifact: true,
-      // Anonymous GitHub API reads are limited to 60 requests/hour. Keep the
-      // owner flow usable without a token, while authenticated status polling
-      // may remain responsive.
-      pollIntervalMs: getGitHubToken() ? 15_000 : 75_000,
+      // Anonymous fallback remains available for public repository reads;
+      // the conservative interval also avoids depending on credential state.
+      pollIntervalMs: 75_000,
       environment: process.env
     });
     try {
@@ -1956,13 +1963,15 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/admin/transactions/apply' && req.method === 'POST') {
       const body = await readBody(req);
+      const exactOwnership = transactionContext(req, authSession, body);
       const result = await contentTransactions.apply({
         ...transactionOwnership(req, authSession, body),
         transactionId: body?.transactionId,
         payloadHash: body?.payloadHash
       });
       scheduleBackupAfterCommit(result, body?.transactionId);
-      sendJson(res, 200, result);
+      const exactScheduling = scheduleExactAfterCommit(result, body?.transactionId, exactOwnership);
+      sendJson(res, 200, { ...result, exactScheduling });
       return;
     }
 
@@ -2115,14 +2124,17 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/admin/json-import/apply' && req.method === 'POST') {
       const body = await readBody(req);
+      const exactOwnership = transactionContext(req, authSession, body);
       const result = await contentJson.apply({
         owner: authUser,
         ...transactionOwnership(req, authSession, body),
         operationId: body?.operationId,
         replaceConfirmed: body?.replaceConfirmed === true
       });
-      scheduleBackupAfterCommit(result, result.result === 'success' ? body?.operationId : null);
-      sendJson(res, result.result === 'success' ? 200 : 409, result);
+      const transactionId = result.result === 'success' ? (result.transactionId || body?.operationId) : null;
+      scheduleBackupAfterCommit(result, transactionId);
+      const exactScheduling = scheduleExactAfterCommit(result, transactionId, exactOwnership);
+      sendJson(res, result.result === 'success' ? 200 : 409, { ...result, transactionId, exactScheduling });
       return;
     }
 
@@ -2162,7 +2174,8 @@ const server = http.createServer(async (req, res) => {
       assertPublishOperationAllowed();
       const publishService = await getPublishService();
       const status = await publishService.overview(publishOwnership(req, authSession));
-      sendJson(res, 200, withPublishPreviewUrl(status));
+      const exactStatus = await exactValidation.overview(transactionContext(req, authSession));
+      sendJson(res, 200, withPublishPreviewUrl(decoratePublishOverviewWithExact(status, exactStatus)));
       return;
     }
 

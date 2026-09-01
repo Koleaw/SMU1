@@ -2,6 +2,7 @@
 import { imageViewStyle } from '../catalogV2Data';
 import type { DirectionCardItem } from './directionV2Data';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import { adminListField, adminListItem, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   eyebrow?: string;
@@ -36,6 +37,7 @@ const titleBinding = Astro.props.titleBinding ?? {};
 const descriptionBinding = Astro.props.descriptionBinding ?? {};
 const itemsBinding = Astro.props.itemsBinding ?? {};
 const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
+const editorCanvas = isLocalAdminCanvas(Astro.url);
 ---
 
 {items.length > 0 && (
@@ -80,9 +82,10 @@ const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
               ]}
               role="listitem"
               data-v2-reveal
+              {...adminListItem(Astro.url, item.id)}
             >
               {item.image ? (
-                <figure class="direction-type-card__media" data-v2-media>
+                <figure class="direction-type-card__media" data-v2-media data-smu1-list-media-host={editorCanvas ? 'true' : undefined}>
                   <V2ResponsiveImage
                     src={item.image}
                     alt=""
@@ -91,12 +94,19 @@ const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
                     loading="lazy"
                     decoding="async"
                     data-v2-image
+                    {...adminListField(Astro.url, 'image')}
                   />
+                </figure>
+              ) : editorCanvas ? (
+                <figure class="direction-type-card__media" data-v2-media hidden data-smu1-list-media-host="true" data-smu1-list-optional-media>
+                  <img alt="" data-v2-image {...adminListField(Astro.url, 'image')} />
                 </figure>
               ) : null}
               <div class="direction-type-card__body">
-                <h3>{item.title}</h3>
-                {item.text && <p>{item.text}</p>}
+                <h3 {...adminListField(Astro.url, 'title')}>{item.title}</h3>
+                {item.text
+                  ? <p {...adminListField(Astro.url, 'text')}>{item.text}</p>
+                  : editorCanvas ? <p hidden data-smu1-list-optional-field {...adminListField(Astro.url, 'text')}></p> : null}
               </div>
             </article>
           ))}
@@ -104,11 +114,13 @@ const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
       ) : presentation === 'open' ? (
         <ol class="direction-types__open-list" data-v2-reveal {...itemsBinding}>
           {items.map((item, index) => (
-            <li class="direction-type-entry">
-              <span class="direction-type-entry__index" aria-hidden="true">{indexLabel(index)}</span>
+            <li class="direction-type-entry" {...adminListItem(Astro.url, item.id)}>
+              <span class="direction-type-entry__index" aria-hidden="true" {...adminListField(Astro.url, 'ordinal')}>{indexLabel(index)}</span>
               <div class="direction-type-entry__body">
-                <h3>{item.title}</h3>
-                {item.text && <p>{item.text}</p>}
+                <h3 {...adminListField(Astro.url, 'title')}>{item.title}</h3>
+                {item.text
+                  ? <p {...adminListField(Astro.url, 'text')}>{item.text}</p>
+                  : editorCanvas ? <p hidden data-smu1-list-optional-field {...adminListField(Astro.url, 'text')}></p> : null}
               </div>
             </li>
           ))}
@@ -136,9 +148,10 @@ const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
                 data-direction-type-state={hasMedia ? 'has-media' : 'no-media'}
                 data-direction-type-featured={isFeatured ? 'true' : undefined}
                 data-direction-type-media-order={mediaOrdinal === undefined ? undefined : mediaOrdinal + 1}
+                {...adminListItem(Astro.url, item.id)}
               >
                 {item.image ? (
-                  <figure class="direction-type-editorial__media" data-v2-media>
+                  <figure class="direction-type-editorial__media" data-v2-media data-smu1-list-media-host={editorCanvas ? 'true' : undefined}>
                     <V2ResponsiveImage
                       src={item.image}
                       alt={item.imageAlt || item.title}
@@ -149,14 +162,21 @@ const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
                       style={imageViewStyle(item.imageView)}
                       data-direction-type-media-fit={item.imageView?.fit || 'cover'}
                       data-v2-image
+                      {...adminListField(Astro.url, 'image')}
                     />
+                  </figure>
+                ) : editorCanvas ? (
+                  <figure class="direction-type-editorial__media" data-v2-media hidden data-smu1-list-media-host="true" data-smu1-list-optional-media>
+                    <img alt={item.imageAlt || item.title} data-v2-image {...adminListField(Astro.url, 'image')} />
                   </figure>
                 ) : null}
                 <div class="direction-type-editorial__body">
-                  <span class="direction-type-entry__index" aria-hidden="true">{indexLabel(index)}</span>
+                    <span class="direction-type-entry__index" aria-hidden="true" {...adminListField(Astro.url, 'ordinal')}>{indexLabel(index)}</span>
                   <div class="direction-type-editorial__copy">
-                    <h3>{item.title}</h3>
-                    {item.text && <p>{item.text}</p>}
+                    <h3 {...adminListField(Astro.url, 'title')}>{item.title}</h3>
+                    {item.text
+                      ? <p {...adminListField(Astro.url, 'text')}>{item.text}</p>
+                      : editorCanvas ? <p hidden data-smu1-list-optional-field {...adminListField(Astro.url, 'text')}></p> : null}
                   </div>
                 </div>
               </li>

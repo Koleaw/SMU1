@@ -4,7 +4,7 @@ import home from '../../../content/static-pages/home.json';
 import { v2Href } from '../../../utils/v2Routes';
 import { loadV2Directions } from '../../../utils/v2Directions';
 import { getV2Regions, getV2TelegramLabel } from '../../../utils/v2SiteSettings';
-import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
+  import { adminBinding, adminDisposition, adminListField, adminListItem } from '../../../admin/bindings/adminBinding';
 import HomeV2Footer from '../home-v2/HomeV2Footer.astro';
 import HomeV2Header from '../home-v2/HomeV2Header.astro';
 import { getHomeV2Presentation } from '../home-v2/homeV2Presentation';
@@ -249,8 +249,19 @@ const globalHrefDisposition = (fieldPath: string, reason: string) => adminDispos
           </a>
         </div>
 
-        <ol class="hf-intake__sequence" aria-label="Что можно прислать" data-reveal data-v2-reveal="group">
-          {intakeItems.map((item) => <li {...homeBinding('intakeItems', 'list', { stableItemId: item.id, itemKind: 'object' })}><strong>{item.label}</strong><span class="hf-intake__format">{item.format}</span></li>)}
+        <ol class="hf-intake__sequence" aria-label="Что можно прислать" data-reveal data-v2-reveal="group" {...homeBinding('intakeItems', 'list', {
+            stableItemId: 'home-intake-items',
+            itemKind: 'object',
+            permissions: { edit: true, reorder: true, delete: false },
+            itemFields: [
+              { fieldPath: 'id', tool: 'generated-id' },
+              { fieldPath: 'label', label: 'Материал', tool: 'short-text' },
+              { fieldPath: 'format', label: 'Формат', tool: 'short-text' },
+              { fieldPath: 'order', tool: 'generated-order' },
+              { fieldPath: 'isActive', label: 'Показывать пункт', tool: 'visibility' }
+            ]
+          })}>
+          {intakeItems.map((item) => <li {...adminListItem(Astro.url, item.id)}><strong {...adminListField(Astro.url, 'label')}>{item.label}</strong><span class="hf-intake__format" {...adminListField(Astro.url, 'format')}>{item.format}</span></li>)}
         </ol>
       </div>
     </section>

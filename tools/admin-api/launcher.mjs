@@ -5,7 +5,7 @@ import net from 'node:net';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { ADMIN_ENV_FILE, loadAdminConfig } from './config.mjs';
+import { ADMIN_ENV_FILE, isForbiddenLocalGitHubCredentialKey, loadAdminConfig } from './config.mjs';
 import { resolveAstroCli } from './astro-cli.mjs';
 import {
   createAdminHealthIdentity,
@@ -429,6 +429,9 @@ export function createChildEnvironments(raw, config, options = {}) {
     CONTENT_WRITE_MODE: 'local',
     PUBLIC_ADMIN_API_BASE: config.PUBLIC_ADMIN_API_BASE
   };
+  for (const key of Object.keys(api)) {
+    if (isForbiddenLocalGitHubCredentialKey(key)) delete api[key];
+  }
   const ui = {
     ...createSafeNodeChildEnvironment(sourceEnvironment),
     NODE_ENV: 'development',

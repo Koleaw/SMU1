@@ -99,7 +99,7 @@ TEST_BASE_PATH=/<repo>
 
 `PRODUCTION_DEPLOY_ENABLED` в H6 всегда остаётся `false`. Запрос production через `workflow_dispatch` принудительно переводится в test/check-only и ничего не публикует. Наличие future production UI не отменяет запрет production publish в локальной админке.
 
-Для расширенного чтения статусов локальная админка может использовать `GITHUB_REPOSITORY=owner/repo` и read-capable `GITHUB_DEPLOY_TOKEN`/`GITHUB_TOKEN`. Без token exact-SHA status тоже работает для public repository, но server опрашивает GitHub реже, чтобы не исчерпать anonymous API limit. Git push использует настроенную Git-аутентификацию remote; секреты никогда не должны попадать в UI, отчёт, commit или tracked env-файл.
+Локальная админка использует `GITHUB_REPOSITORY=owner/repo`, но plaintext `GITHUB_TOKEN` и `GITHUB_DEPLOY_TOKEN` запрещены даже в ignored `.env.admin.local`. Exact-SHA status для public repository сначала читается анонимно; при исчерпании anonymous limit backend может получить credential только через системный `git credential fill` (Git Credential Manager/OS keychain). Повторный запуск workflow без системной credential честно блокируется. Секрет остаётся только в памяти backend, не сериализуется и не попадает в UI или лог. Git push по HTTPS использует тот же Credential Manager, а по SSH — настроенный SSH agent/key; браузеру credentials не передаются.
 
 ## Полный release исходного кода
 

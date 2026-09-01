@@ -11,6 +11,7 @@ import {
 export type ServiceData = CollectionEntry<'services'>['data'];
 
 export interface DirectionCardItem {
+  id: string;
   title: string;
   text?: string;
   image?: string;
@@ -21,6 +22,7 @@ export interface DirectionCardItem {
 }
 
 export interface DirectionStepItem {
+  id: string;
   title: string;
   order?: number;
   isActive?: boolean;
@@ -110,7 +112,7 @@ export const getDirectionStepItems = (block?: DirectionBlock) =>
   (Array.isArray(block?.steps) ? block.steps : [])
     .filter((item) => item.isActive !== false && item.title?.trim())
     .sort(byOrderAndTitle)
-    .map((item) => item.title.trim());
+    .map((item) => ({ ...item, title: item.title.trim() }));
 
 export const getDirectionGalleryImages = (products: ProductData[], includePrimary = false) => {
   const images = products.flatMap((product) => [

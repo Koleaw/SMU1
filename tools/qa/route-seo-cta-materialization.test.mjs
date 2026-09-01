@@ -18,6 +18,7 @@ test('project and product card business labels have exact shared owners', () => 
   assert.match(projectCard, /settings\.projectUi\.archiveCardCtaLabel/u);
   assert.match(projectCard, /projectUiBinding\('archiveCardCtaLabel', 'link-label'\)/u);
   assert.match(projectCard, /project-archive-card-\$\{project\.slug\}-\$\{fieldPath\}/u);
+  assert.match(projectCard, /scope: 'shared',[\s\S]{0,100}affectedRoutes: \['\/vypolnennye-obekty\/'\]/u);
 
   for (const [fieldPath, value] of Object.entries({
     cardPremiumLabel: 'Решение для объекта',

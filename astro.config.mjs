@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import { exactPrerenderIntegration } from './tools/admin-api/exact-prerender-integration.mjs';
 
 const DEV_SITE_URL = 'http://localhost:4321';
 const inferDeployTarget = () => {
@@ -23,6 +24,7 @@ const IS_PRODUCTION_DEPLOY = DEPLOY_TARGET === 'production';
 const IS_TEST_DEPLOY = DEPLOY_TARGET === 'test';
 const IS_EXPLICIT_LOCAL_ADMIN = DEPLOY_TARGET === 'development'
   && process.env.SMU1_LOCAL_ADMIN === 'true';
+const IS_EXACT_PRERENDER = process.env.SMU1_EXACT_PRERENDER === 'true';
 const STRICT_SITE_URL_REQUIRED = IS_PRODUCTION_DEPLOY || process.env.REQUIRE_SITE_URL === 'true';
 const TEMPORARY_SITE_URL_PATTERNS = [/example\./i, /\.invalid(?::\d+)?\/?$/i, /localhost/i, /127\.0\.0\.1/i, /\.github\.io/i];
 
@@ -115,11 +117,12 @@ export default defineConfig({
     prefetchAll: false,
     defaultStrategy: 'hover'
   },
-  integrations: IS_TEST_DEPLOY
-    ? []
-    : [sitemap({
-      filter: isSitemapPageAllowed
-    })],
+  integrations: [
+    ...(IS_TEST_DEPLOY ? [] : [sitemap({ filter: isSitemapPageAllowed })]),
+    ...(IS_EXACT_PRERENDER
+      ? [exactPrerenderIntegration({ manifestPath: process.env.SMU1_EXACT_ROUTE_MANIFEST })]
+      : [])
+  ],
   vite: {
     server: {
       proxy: {

@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 330
     permissions:
       contents: read
@@ -138,8 +138,8 @@ jobs:
 
       - run: npm ci
 
-      - name: Run H6 admin tests (non-browser)
-        run: npm run test:admin-h6:ci
+      - name: Run H6 admin tests and secondary editor browser round-trip
+        run: npm run qa:h6:admin
 
       - name: Validate H6 browser evidence contracts
         run: npm run test:h6-evidence-contracts
@@ -165,6 +165,12 @@ jobs:
           DEPLOY_TARGET: ${{ steps.deploy-meta.outputs.deploy_target }}
           PRODUCTION_DEPLOY_ENABLED: ${{ steps.deploy-meta.outputs.production_enabled }}
           SITE_URL: ${{ steps.deploy-meta.outputs.effective_site_url }}
+          TEST_SITE_URL: ${{ steps.deploy-meta.outputs.test_site_url }}
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
+      - name: Prove targeted exact SSG against the full production build
+        run: npm run qa:h6:exact-targeted
+        env:
           TEST_SITE_URL: ${{ steps.deploy-meta.outputs.test_site_url }}
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
 
@@ -202,7 +208,10 @@ jobs:
       - name: Open and reconcile every production route in public and editor modes
         run: npm run qa:h6:route-passport
         env:
+          DEPLOY_TARGET: ${{ steps.deploy-meta.outputs.deploy_target }}
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+          SITE_URL: ${{ steps.deploy-meta.outputs.effective_site_url }}
+          TEST_SITE_URL: ${{ steps.deploy-meta.outputs.test_site_url }}
 
       - name: Crawl every public action in four deterministic shards
         run: npm run qa:h6:public-actions
@@ -252,7 +261,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     permissions:
       contents: read

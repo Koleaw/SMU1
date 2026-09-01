@@ -15,7 +15,12 @@ import {
   verifyCredentials,
   verifyPassword
 } from './security.mjs';
-import { assertSecureOperation, serializeEnv, validateAdminConfig } from './config.mjs';
+import {
+  assertSecureOperation,
+  loadAdminEnvironment,
+  serializeEnv,
+  validateAdminConfig
+} from './config.mjs';
 
 const fastScrypt = { N: 16384, r: 8, p: 1, keyLength: 32, salt: Buffer.alloc(24, 7) };
 
@@ -209,6 +214,9 @@ test('normal config rejects insecure defaults, external bind and non-local write
   assert.throws(() => validateAdminConfig({ ...safe, CONTENT_WRITE_MODE: 'remote' }), {
     code: 'WRITE_MODE_DENIED'
   });
+  assert.throws(() => validateAdminConfig({ ...safe, GITHUB_TOKEN: 'must-never-be-configured' }), {
+    code: 'PLAINTEXT_GITHUB_CREDENTIAL_FORBIDDEN'
+  });
   assert.throws(() => validateAdminConfig({
     ...safe,
     ADMIN_ALLOWED_ORIGINS: 'https://example.github.io'
@@ -223,11 +231,12 @@ test('normal config rejects insecure defaults, external bind and non-local write
   assert.throws(() => assertSecureOperation(testConfig, 'publish'), { code: 'INSECURE_PUBLISH_DENIED' });
 });
 
-test('env serialization keeps publish and Pages configuration in a stable preferred order', () => {
+test('env serialization keeps safe publish configuration ordered and drops forbidden GitHub token keys', async () => {
   const serialized = serializeEnv({
     SITE_URL: 'https://www.example.test',
     TEST_BASE_PATH: '/preview',
     GITHUB_TOKEN: 'read-token',
+    github_deploy_token: 'case-variant-token',
     ADMIN_ALLOW_PRODUCTION_PUBLISH: 'false',
     GITHUB_REPOSITORY: 'owner/repo',
     ADMIN_GIT_REMOTE: 'origin',
@@ -244,8 +253,6 @@ test('env serialization keeps publish and Pages configuration in a stable prefer
     'ADMIN_EXPECTED_BRANCH',
     'ADMIN_GIT_REMOTE',
     'GITHUB_REPOSITORY',
-    'GITHUB_DEPLOY_TOKEN',
-    'GITHUB_TOKEN',
     'TEST_SITE_URL',
     'TEST_BASE_PATH',
     'BASE_PATH',
@@ -256,4 +263,19 @@ test('env serialization keeps publish and Pages configuration in a stable prefer
     'A_EXTRA',
     'Z_EXTRA'
   ]);
+  assert.equal(serialized.includes('read-token'), false);
+  assert.equal(serialized.includes('deploy-token'), false);
+  assert.equal(serialized.includes('case-variant-token'), false);
+  assert.doesNotMatch(serialized, /github_(?:deploy_)?token/iu);
+
+  const loaded = await loadAdminEnvironment({
+    repoRoot: process.cwd(),
+    fileNames: [],
+    env: {
+      GITHUB_TOKEN: 'inherited-token',
+      github_deploy_token: 'case-variant-inherited-token',
+      GITHUB_REPOSITORY: 'owner/repo'
+    }
+  });
+  assert.deepEqual(loaded.values, { GITHUB_REPOSITORY: 'owner/repo' });
 });

@@ -286,13 +286,14 @@ test('real Admin API exposes exact health identity and releases writer lease on 
   await assert.rejects(() => fs.access(path.join(contentRoot, '.admin-runtime', 'writer-owner.lock')), { code: 'ENOENT' });
 });
 
-test('Astro UI receives only a safe allowlist while API retains required secrets', () => {
+test('Astro UI receives only a safe allowlist while API retains admin secrets but drops GitHub tokens', () => {
   const environment = {
     PATH: 'safe-path',
     TEMP: 'safe-temp',
     ADMIN_PASSWORD_HASH: 'process-password-hash',
     SESSION_SECRET: 'process-session-secret',
     GITHUB_TOKEN: 'process-token',
+    github_deploy_token: 'process-case-variant-token',
     GIT_CONFIG_COUNT: '1',
     NODE_OPTIONS: '--require=unexpected-code'
   };
@@ -310,7 +311,9 @@ test('Astro UI receives only a safe allowlist while API retains required secrets
 
   assert.equal(childEnvironments.api.ADMIN_PASSWORD_HASH, 'configured-password-hash');
   assert.equal(childEnvironments.api.SESSION_SECRET, 'configured-session-secret');
-  assert.equal(childEnvironments.api.GITHUB_DEPLOY_TOKEN, 'configured-deploy-token');
+  for (const forbidden of ['GITHUB_TOKEN', 'GITHUB_DEPLOY_TOKEN', 'github_deploy_token']) {
+    assert.equal(Object.hasOwn(childEnvironments.api, forbidden), false, `${forbidden} must not reach Admin API`);
+  }
   assert.equal(childEnvironments.ui.PATH, 'safe-path');
   assert.equal(childEnvironments.ui.PUBLIC_ADMIN_HEALTH_MARKER, createAdminUiHealthMarker(REPO_IDENTITY));
   assert.equal(childEnvironments.ui.SMU1_ADMIN_LAUNCHER_REPO_IDENTITY, REPO_IDENTITY);

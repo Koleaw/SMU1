@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { PUBLIC_LIFECYCLE_SEMANTIC_IDS } from './evidence-contract.mjs';
 import { REQUIRED_VIEWPORTS, REAL_UNKNOWN_ROUTE } from './route-passport-model.mjs';
 
 const exactJson = (left, right) => JSON.stringify(left) === JSON.stringify(right);
@@ -86,6 +87,11 @@ export function mergePublicActionShards(reports, {
     const routeKeys = deterministicRoutes.flatMap((route) => REQUIRED_VIEWPORTS.map((viewport) => pairKey(route, viewport.id)));
     requireExactKeys(report.routeResults || [], routeKeys, (result) => pairKey(result.route, result.viewport?.id), `shard ${shard.index} route results`);
     requireExactKeys(report.noJsResults || [], deterministicRoutes, (result) => result.route, `shard ${shard.index} no-JS results`);
+    const lifecycleIds = [
+      ...(deterministicRoutes.includes('/') ? ['home-video', 'cookie-notice'] : []),
+      ...(deterministicRoutes.includes('/kontakty/') ? ['contacts-map'] : [])
+    ];
+    requireExactKeys(report.publicLifecycleSemantics || [], lifecycleIds, (result) => result.id, `shard ${shard.index} public lifecycle semantics`);
   }
 
   const identityFields = [
@@ -108,6 +114,7 @@ export function mergePublicActionShards(reports, {
 
   const routeResults = ordered.flatMap((report) => report.routeResults || []);
   const noJsResults = ordered.flatMap((report) => report.noJsResults || []);
+  const publicLifecycleSemantics = ordered.flatMap((report) => report.publicLifecycleSemantics || []);
   const routeOrder = new Map(expected.map((route, index) => [route, index]));
   const viewportOrder = new Map(REQUIRED_VIEWPORTS.map((viewport, index) => [viewport.id, index]));
   routeResults.sort((left, right) => (routeOrder.get(left.route) - routeOrder.get(right.route))
@@ -117,6 +124,11 @@ export function mergePublicActionShards(reports, {
   const expectedPairs = expected.flatMap((route) => REQUIRED_VIEWPORTS.map((viewport) => pairKey(route, viewport.id)));
   requireExactKeys(routeResults, expectedPairs, (result) => pairKey(result.route, result.viewport?.id), 'merged route results');
   requireExactKeys(noJsResults, expected, (result) => result.route, 'merged no-JS results');
+  const requiredLifecycleIds = PUBLIC_LIFECYCLE_SEMANTIC_IDS.filter((id) => id === 'contacts-map'
+    ? expected.includes('/kontakty/')
+    : expected.includes('/'));
+  requireExactKeys(publicLifecycleSemantics, requiredLifecycleIds, (result) => result.id, 'merged public lifecycle semantics');
+  publicLifecycleSemantics.sort((left, right) => PUBLIC_LIFECYCLE_SEMANTIC_IDS.indexOf(left.id) - PUBLIC_LIFECYCLE_SEMANTIC_IDS.indexOf(right.id));
 
   const unknownResults = ordered.flatMap((report) => report.unknownResults || []);
   requireExactKeys(
@@ -176,6 +188,7 @@ export function mergePublicActionShards(reports, {
     },
     routeResults,
     noJsResults,
+    publicLifecycleSemantics,
     unknownResults,
     unknownNoJsResult: unknownNoJs[0],
     aggregate: {
@@ -184,6 +197,12 @@ export function mergePublicActionShards(reports, {
       actionOccurrences: routeResults.reduce((count, result) => count + (result.actionCount || 0), 0),
       safeExecutions: routeResults.reduce((count, result) => count + (result.actionResults || [])
         .reduce((totalExecutions, action) => totalExecutions + (action.executions?.length || 0), 0), 0),
+      gallerySemanticOccurrences: routeResults.reduce((count, result) => count + (result.gallerySemantics?.results?.length || 0), 0),
+      gallerySemanticPassed: routeResults.reduce((count, result) => count + (result.gallerySemantics?.results || []).filter((item) => item.status === 'pass').length, 0),
+      gallerySemanticFailed: routeResults.reduce((count, result) => count + (result.gallerySemantics?.results || []).filter((item) => item.status === 'fail').length, 0),
+      lifecycleSemanticOccurrences: publicLifecycleSemantics.length,
+      lifecycleSemanticsPassed: publicLifecycleSemantics.filter((item) => item.status === 'pass').length,
+      lifecycleSemanticsFailed: publicLifecycleSemantics.filter((item) => item.status === 'fail').length,
       protectedLeadOrFileActions: routeResults.reduce((count, result) => count + (result.actionResults || [])
         .filter((action) => action.policy === 'protected-form-action').length, 0),
       unknownViewportsPassed: unknownResults.filter((result) => result.status === 'pass').length,

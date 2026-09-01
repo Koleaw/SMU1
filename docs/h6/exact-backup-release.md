@@ -10,7 +10,7 @@
 4. Exact service создаёт immutable snapshot: Git `source SHA` плюс точные content/media-дельты, schema hash и H5 pipeline hash.
 
 Текущий H6 target — GitHub Pages. Его URL изменяемый: следующая тестовая публикация обновляет содержимое по тому же адресу. Интерфейс не называет такую ссылку immutable и показывает это ограничение рядом с URL. Неизменяемыми и проверяемыми остаются snapshot, artifact manifest, deployed SHA и release evidence; статус готовности появляется только после их побайтовой сверки и live smoke. Выдача отдельного immutable deployment URL остаётся обязательным критерием trial/выбора hosting adapter в H7.
-5. В фоне строится production artifact теми же Astro components и `npm run build`. Результат связывается с revision и содержит SHA-256 artifact manifest, число/размер файлов, largest file и проверки affected routes.
+5. В фоне `npm run build:exact` запускает тот же production SSG, но его prerenderer получает server-derived affected-route closure immutable snapshot и выдаёт HTML только для затронутых routes (для удалённого route — canonical `404.html`). Общая Vite/Astro compile-фаза и проверенный H5 cache переиспользуются; это не full all-route gate. Результат связывается с revision и содержит SHA-256 artifact manifest, число/размер файлов, largest file, точный selected route set и проверки affected routes.
 6. `POST /api/admin/publish/preview-plan` повторно проверяет exact evidence на сервере. Состояние кнопки в браузере не является trust boundary.
 
 Exact queue допускает не более одной активной сборки и одной последней ожидающей. Промежуточная ожидающая revision получает `superseded`; результат активной сборки получает `stale`, если за время работы появилась новая revision. Failed/stale result никогда не открывает preview gate.
@@ -93,4 +93,4 @@ node --test tools/admin-api/exact-validation-service.test.mjs \
 
 Он доказывает coalescing/stale rejection, retry failed exact, server publish gate, checksum/dedup/retention, нефатальный quota failure, portable export, restore conflict и atomic restore receipt. Эти tests включены в `test:admin-transactions` и `test:admin-publish`.
 
-Полный реальный build и новый-machine restore drill должны дополнительно запускаться из clean clone финального SHA перед H6 preview release; unit tests не заменяют этот evidence.
+Перед H6 preview release `qa:h6:exact-targeted` действительно вызывает immutable exact runner, побайтно сравнивает репрезентативный route каждого renderer variant с уже выполненной полной production SSG, доказывает отсутствие unrelated HTML и неизменность source H5 cache. Полный all-route build, этот targeted parity gate и новый-machine restore drill запускаются из clean clone финального SHA; unit tests их не заменяют.

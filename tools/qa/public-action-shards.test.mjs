@@ -8,7 +8,7 @@ import {
 } from './public-action-shards.mjs';
 import { REQUIRED_VIEWPORTS, REAL_UNKNOWN_ROUTE } from './route-passport-model.mjs';
 
-const routes = ['/first/', '/second/'];
+const routes = ['/', '/kontakty/'];
 const baseEvidence = {
   sourceSHA: 'abc123',
   branch: 'candidate',
@@ -32,9 +32,19 @@ const routeResult = (route, viewport) => ({
   route,
   viewport,
   status: 'pass',
-  pageIdentity: { h1: [route], bodyTextLength: 10, frameworkOverlay: false },
-  actionCount: 0,
-  actionResults: [],
+  pageIdentity: { h1: [route], bodyTextLength: 10, frameworkOverlay: false, galleryInventory: { product: [], project: [] } },
+  actionCount: 1,
+  actionResults: [{
+    action: { id: `${route}-link`, visible: true, disabled: false },
+    policy: 'internal-link-action',
+    status: 'pass',
+    executions: [
+      { mode: 'click', status: 'pass', routeMatches: true, anchorMatches: true },
+      { mode: 'keyboard-enter', status: 'pass', routeMatches: true, anchorMatches: true }
+    ],
+    link: { status: 'pass' }
+  }],
+  gallerySemantics: { inventory: { product: [], project: [] }, results: [] },
   events: [],
   issues: []
 });
@@ -53,11 +63,59 @@ const unknownResult = (viewport) => ({
   documentStatus: 404,
   status: 'pass',
   pageIdentity: { h1: ['Не найдено'], bodyTextLength: 10, robots: 'noindex', overflow: 0 },
-  actionCount: 0,
-  actionResults: [],
+  actionCount: 1,
+  actionResults: [{
+    action: { id: 'unknown-link', visible: true, disabled: false }, policy: 'internal-link-action', status: 'pass',
+    executions: [{ mode: 'click', status: 'pass' }, { mode: 'keyboard-enter', status: 'pass' }]
+  }],
+  gallerySemantics: { inventory: { product: [], project: [] }, results: [] },
   events: [],
   issues: []
 });
+const lifecycleResult = (id) => {
+  const common = {
+    id,
+    route: id === 'contacts-map' ? '/kontakty/' : '/',
+    status: 'pass',
+    issues: [],
+    events: [],
+    safety: { stateChangingRequests: 0, leadOrAnalyticsRequests: 0, interceptedAttempts: 0 }
+  };
+  if (id === 'home-video') return {
+    ...common,
+    evidence: {
+      normalMotion: {
+        reducedMotion: false, saveData: false, controlReady: true, sourceLoaded: true, videoRequestCount: 1,
+        playingBeforePause: true, pausedAfterPause: true, playingAfterResume: true,
+        labelAfterPause: 'Включить видео', labelAfterResume: 'Пауза видео',
+        ariaAfterPause: 'Включить фоновое видео', ariaAfterResume: 'Приостановить фоновое видео'
+      },
+      reducedMotion: { reducedMotion: true, saveData: false, controlSuppressed: true, sourceLoaded: false, videoRequestCount: 0 },
+      saveData: { reducedMotion: false, saveData: true, controlSuppressed: true, sourceLoaded: false, videoRequestCount: 0 }
+    }
+  };
+  if (id === 'cookie-notice') return {
+    ...common,
+    evidence: {
+      initial: { visible: true, noticeKey: null, legacyKey: null },
+      dismissed: { hidden: true, noticeKey: 'true' },
+      persistedReload: { hidden: true, noticeKey: 'true' },
+      footerReopen: { visible: true, noticeKey: null, legacyKey: null }
+    }
+  };
+  return {
+    ...common,
+    evidence: {
+      before: { state: 'idle', iframeCount: 0, placeholderVisible: true, activateEnabled: true },
+      activation: { clicked: true },
+      terminal: {
+        state: 'error', iframeCount: 0, placeholderVisible: true, activateEnabled: true,
+        statusText: 'Карту не удалось загрузить. Используйте ссылку ниже.',
+        iframeTitle: '', iframeTabIndex: '', focusTarget: 'activate'
+      }
+    }
+  };
+};
 
 const shardReport = (index) => {
   const assignedRoutes = routesForPublicActionShard(routes, { index, total: 2 });
@@ -80,6 +138,10 @@ const shardReport = (index) => {
     },
     routeResults: assignedRoutes.flatMap((route) => REQUIRED_VIEWPORTS.map((viewport) => routeResult(route, viewport))),
     noJsResults: assignedRoutes.map(noJsResult),
+    publicLifecycleSemantics: [
+      ...(assignedRoutes.includes('/') ? [lifecycleResult('home-video'), lifecycleResult('cookie-notice')] : []),
+      ...(assignedRoutes.includes('/kontakty/') ? [lifecycleResult('contacts-map')] : [])
+    ],
     unknownResults: index === 1 ? REQUIRED_VIEWPORTS.map(unknownResult) : [],
     unknownNoJsResult: index === 1 ? {
       route: REAL_UNKNOWN_ROUTE,
@@ -108,12 +170,16 @@ test('merger accepts only a complete concrete shard set and produces verifier-co
   assert.equal(merged.manifest.concreteCoverage, true);
   assert.equal(merged.manifest.openedRouteViewportPairs, 4);
   assert.deepEqual(merged.routeResults.map((result) => [result.route, result.viewport.id]), [
-    ['/first/', 'desktop-1440x900'], ['/first/', 'mobile-390x844'],
-    ['/second/', 'desktop-1440x900'], ['/second/', 'mobile-390x844']
+    ['/', 'desktop-1440x900'], ['/', 'mobile-390x844'],
+    ['/kontakty/', 'desktop-1440x900'], ['/kontakty/', 'mobile-390x844']
   ]);
+  assert.deepEqual(merged.publicLifecycleSemantics.map((result) => result.id), ['home-video', 'cookie-notice', 'contacts-map']);
   assert.equal(merged.evidence.shards.length, 2);
   assert.deepEqual(merged.evidence.shards.map((item) => item.sourceFile), ['shard-1.json', 'shard-2.json']);
   assert.equal(validatePublicActionEvidence(merged, { authoritativeRoutes: routes }).ok, true);
+  const brokenMapTerminal = structuredClone(merged);
+  brokenMapTerminal.publicLifecycleSemantics.find((result) => result.id === 'contacts-map').evidence.terminal.focusTarget = 'other';
+  assert.match(validatePublicActionEvidence(brokenMapTerminal, { authoritativeRoutes: routes }).issues.join('\n'), /lifecycle-map-terminal/u);
 
   assert.throws(() => mergePublicActionShards([reports[0], structuredClone(reports[0])]), /Duplicate public action shard/u);
   const missingPair = structuredClone(reports);
@@ -122,4 +188,7 @@ test('merger accepts only a complete concrete shard set and produces verifier-co
   const wrongArtifact = structuredClone(reports);
   wrongArtifact[1].evidence.artifactFingerprintSHA256 = 'c'.repeat(64);
   assert.throws(() => mergePublicActionShards(wrongArtifact), /full artifact fingerprint/u);
+  const missingLifecycle = structuredClone(reports);
+  missingLifecycle[0].publicLifecycleSemantics.pop();
+  assert.throws(() => mergePublicActionShards(missingLifecycle), /public lifecycle semantics is missing/u);
 });

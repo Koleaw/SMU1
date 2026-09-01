@@ -1,4 +1,5 @@
 ---
+import { adminListValue } from '../../../admin/bindings/adminBinding';
 interface Props {
   eyebrow?: string;
   title: string;
@@ -26,7 +27,7 @@ const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
         <p {...descriptionBinding}>{description}</p>
       </header>
       <ul class="project-brief__items" role="list" data-v2-reveal {...itemsBinding}>
-        {items.map((item) => <li>{item}</li>)}
+        {items.map((item) => <li><span {...adminListValue(Astro.url)}>{item}</span></li>)}
       </ul>
     </div>
   </section>

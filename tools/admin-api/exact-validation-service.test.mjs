@@ -9,8 +9,11 @@ import {
   createExactSnapshot,
   createExactValidationService,
   ExactValidationError,
+  hydrateExactMediaCache,
   installSnapshotBlobAtomically,
   renameAtomicWithTransientRetry,
+  proveExactRunIdentity,
+  transactionWithCumulativeExactClosure,
   EXACT_BINDING_REGISTRY_PATHS,
   EXACT_CONTENT_SCHEMA_PATHS,
   EXACT_H5_PIPELINE_PATHS
@@ -152,11 +155,11 @@ async function fixture(t, options = {}) {
   const controls = [];
   let active = 0;
   let maxActive = 0;
-  const runner = options.runner || (async ({ run }) => {
+  const runner = options.runner || (async ({ run, snapshot }) => {
     active += 1;
     maxActive = Math.max(maxActive, active);
     const control = deferred();
-    controls.push({ runId: run.runId, control });
+    controls.push({ runId: run.runId, snapshot, control });
     try { return await control.promise; } finally { active -= 1; }
   });
   const service = createExactValidationService({
@@ -174,10 +177,13 @@ async function fixture(t, options = {}) {
       snapshotSha256: String(transaction.transactionId).padEnd(64, '0').slice(0, 64).replace(/[^a-f0-9]/gu, 'd'),
       affectedRoutes: transaction.metadata.affectedRoutes,
       routeExpectations: transaction.metadata.routeExpectations,
+      closureTransactionIds: transaction.metadata.exactClosureTransactionIds,
       files: [],
       snapshotRoot: path.join(repoRoot, '.admin-runtime', 'exact', 'snapshots', runId)
     }),
-    runner
+    runner,
+    identityValidator: options.identityValidator || (async () => ({ ok: true, reasons: [] })),
+    ...(options.now ? { now: options.now } : {})
   });
   await service.initialize();
   t.after(async () => {
@@ -204,6 +210,11 @@ test('exact queue runs one active build, keeps only latest pending, and rejects 
   await waitFor(() => fx.controls.length === 2);
   assert.equal((await fx.service.get({ ...OWNER, runId: one.runId })).status, 'stale');
   assert.equal(fx.controls[1].runId, three.runId);
+  assert.deepEqual(fx.controls[1].snapshot.routeExpectations, [
+    { route: '/route-1/', expected: 'html' },
+    { route: '/route-2/', expected: 'html' },
+    { route: '/route-3/', expected: 'html' }
+  ], 'latest pending exact snapshot carries the cumulative unverified route closure');
   fx.controls[1].control.resolve({ artifact: { manifestSha256: 'f'.repeat(64), fileCount: 11, totalBytes: 110 }, diagnostics: { routeChecks: [] } });
   await waitFor(async () => (await fx.service.get({ ...OWNER, runId: three.runId })).status === 'passed');
 
@@ -217,9 +228,111 @@ test('exact queue runs one active build, keeps only latest pending, and rejects 
   );
 });
 
+test('concurrent requests from different recovery profiles serialize snapshot closure repo-wide', async (t) => {
+  const fx = await fixture(t);
+  fx.commit('tx-tab-one', 1);
+  fx.commit('tx-tab-two', 2);
+  const firstPromise = fx.service.request({ ...OWNER, recoveryClientId: 'tab-one', transactionId: 'tx-tab-one' });
+  const secondPromise = fx.service.request({ ...OWNER, recoveryClientId: 'tab-two', transactionId: 'tx-tab-two' });
+  const [first, second] = await Promise.all([firstPromise, secondPromise]);
+  await waitFor(() => fx.controls.length === 1);
+  fx.controls[0].control.resolve({ artifact: { manifestSha256: '1'.repeat(64), fileCount: 1, totalBytes: 1 }, diagnostics: { routeChecks: [] } });
+  await waitFor(() => fx.controls.length === 2);
+  assert.equal(fx.controls[1].runId, second.runId);
+  assert.deepEqual(fx.controls[1].snapshot.routeExpectations, [
+    { route: '/route-1/', expected: 'html' },
+    { route: '/route-2/', expected: 'html' }
+  ]);
+  assert.deepEqual(fx.controls[1].snapshot.closureTransactionIds, ['tx-tab-one', 'tx-tab-two']);
+  fx.controls[1].control.resolve({ artifact: { manifestSha256: '2'.repeat(64), fileCount: 1, totalBytes: 1 }, diagnostics: { routeChecks: [] } });
+  await waitFor(async () => (await fx.service.get({ ...OWNER, recoveryClientId: 'tab-two', runId: second.runId })).status === 'passed');
+  await assert.rejects(
+    fx.service.get({ ...OWNER, recoveryClientId: 'tab-one', runId: second.runId }),
+    (error) => error.code === 'EXACT_RUN_NOT_FOUND'
+  );
+  assert.ok(first.runId);
+});
+
+test('the same owner transaction reuses queued, running and passed exact runs without duplicate work', async (t) => {
+  const fx = await fixture(t);
+  fx.commit('tx-idempotent', 1);
+  const firstPromise = fx.service.request({ ...OWNER, transactionId: 'tx-idempotent' });
+  const duplicatePromise = fx.service.request({ ...OWNER, transactionId: 'tx-idempotent' });
+  const [first, duplicate] = await Promise.all([firstPromise, duplicatePromise]);
+  assert.equal(duplicate.runId, first.runId);
+  await waitFor(() => fx.controls.length === 1);
+  fx.controls[0].control.resolve({ artifact: { manifestSha256: '3'.repeat(64), fileCount: 1, totalBytes: 1 }, diagnostics: { routeChecks: [] } });
+  await waitFor(async () => (await fx.service.get({ ...OWNER, runId: first.runId })).status === 'passed');
+  const afterPass = await fx.service.request({ ...OWNER, transactionId: 'tx-idempotent' });
+  assert.equal(afterPass.runId, first.runId);
+  assert.equal(fx.controls.length, 1, 'duplicate requests never start a second runner');
+  assert.equal((await fx.service.overview(OWNER)).runs.filter((run) => run.transactionId === 'tx-idempotent').length, 1);
+});
+
+test('a passed exact revision resets the cumulative closure while latest semantics win for repeated routes', () => {
+  const transaction = {
+    transactionId: 'tx-current',
+    metadata: {
+      affectedRoutes: ['/same/', '/new/'],
+      routeExpectations: [
+        { route: '/same/', expected: 'html' },
+        { route: '/new/', expected: 'html' }
+      ]
+    }
+  };
+  const prior = {
+    transactionId: 'tx-prior',
+    status: 'failed',
+    closureTransactionIds: ['tx-older', 'tx-prior'],
+    routeExpectations: [
+      { route: '/old/', expected: 'html' },
+      { route: '/same/', expected: 'not-found' }
+    ]
+  };
+  const cumulative = transactionWithCumulativeExactClosure(transaction, prior);
+  assert.deepEqual(cumulative.metadata.routeExpectations, [
+    { route: '/new/', expected: 'html' },
+    { route: '/old/', expected: 'html' },
+    { route: '/same/', expected: 'html' }
+  ]);
+  assert.deepEqual(cumulative.metadata.exactClosureTransactionIds, ['tx-older', 'tx-prior', 'tx-current']);
+  const reset = transactionWithCumulativeExactClosure(transaction, { ...prior, status: 'passed' });
+  assert.deepEqual(reset.metadata.routeExpectations, transaction.metadata.routeExpectations.sort((a, b) => a.route.localeCompare(b.route, 'en')));
+  assert.deepEqual(reset.metadata.exactClosureTransactionIds, ['tx-current']);
+});
+
+test('exact media cache hydration is bounded and uses independent workspace directory entries', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-exact-media-cache-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const source = path.join(root, 'source');
+  const destination = path.join(root, 'workspace', 'public', '_media', 'h5');
+  await fs.mkdir(path.join(source, 'aa'), { recursive: true });
+  await Promise.all([
+    fs.writeFile(path.join(source, 'manifest.json'), '{"schemaVersion":1}\n'),
+    fs.writeFile(path.join(source, 'aa', 'variant.webp'), Buffer.from('fixture-variant'))
+  ]);
+  const result = await hydrateExactMediaCache({ sourceRoot: source, destinationRoot: destination, maxFiles: 3, maxBytes: 100 });
+  assert.equal(result.available, true);
+  assert.equal(result.files, 2);
+  assert.equal(result.hardlinked + result.copied, 2);
+  assert.deepEqual(await fs.readFile(path.join(destination, 'aa', 'variant.webp')), Buffer.from('fixture-variant'));
+  await fs.unlink(path.join(destination, 'aa', 'variant.webp'));
+  assert.deepEqual(await fs.readFile(path.join(source, 'aa', 'variant.webp')), Buffer.from('fixture-variant'), 'workspace unlink cannot remove source cache');
+  await assert.rejects(
+    hydrateExactMediaCache({ sourceRoot: source, destinationRoot: path.join(source, 'nested') }),
+    (error) => error.code === 'EXACT_MEDIA_CACHE_PATH_INVALID'
+  );
+  await assert.rejects(
+    hydrateExactMediaCache({ sourceRoot: source, destinationRoot: path.join(root, 'too-many'), maxFiles: 1 }),
+    (error) => error.code === 'EXACT_MEDIA_CACHE_LIMIT'
+  );
+});
+
 test('failed exact build preserves committed revision, blocks publish, and can be retried', async (t) => {
   let attempt = 0;
+  const fixedNow = new Date('2026-09-01T12:00:00.000Z');
   const fx = await fixture(t, {
+    now: () => fixedNow,
     runner: async () => {
       attempt += 1;
       if (attempt === 1) throw new ExactValidationError('EXACT_BUILD_FAILED', 'fixture failure', { status: 422 });
@@ -235,9 +348,13 @@ test('failed exact build preserves committed revision, blocks publish, and can b
   );
 
   const retried = await fx.service.request({ ...OWNER, transactionId: 'tx-retry' });
+  assert.notEqual(retried.runId, failedRun.runId, 'a failed run remains explicitly retryable');
   await waitFor(async () => (await fx.service.get({ ...OWNER, runId: retried.runId })).status === 'passed');
   assert.equal((await fx.service.get({ ...OWNER, runId: failedRun.runId })).current, false);
   assert.equal((await fx.service.assertPublishable({ ...OWNER, transactionIds: ['tx-retry'] })).runId, retried.runId);
+  const overview = await fx.service.overview(OWNER);
+  assert.equal(overview.runs[0].runId, retried.runId, 'requestSequence breaks equal requestedAt retry ties');
+  assert.equal(overview.runs[0].requestSequence > overview.runs[1].requestSequence, true);
 });
 
 test('a later committed save makes a previously passed exact result stale at server publish gate', async (t) => {
@@ -251,6 +368,26 @@ test('a later committed save makes a previously passed exact result stale at ser
   await assert.rejects(
     fx.service.assertPublishable({ ...OWNER, transactionIds: ['tx-current'] }),
     (error) => error.code === 'EXACT_RESULT_STALE' && error.details.latestTransactionId === 'tx-newer'
+  );
+});
+
+test('a persisted passed result becomes stale before overview or publish when source identity changes', async (t) => {
+  let identityCurrent = true;
+  const fx = await fixture(t, {
+    runner: async () => ({ artifact: { manifestSha256: 'b'.repeat(64), fileCount: 1, totalBytes: 10 } }),
+    identityValidator: async () => ({ ok: identityCurrent, reasons: identityCurrent ? [] : ['source-sha'] })
+  });
+  fx.commit('tx-identity', 1);
+  const run = await fx.service.request({ ...OWNER, transactionId: 'tx-identity' });
+  await waitFor(async () => (await fx.service.get({ ...OWNER, runId: run.runId })).status === 'passed');
+  identityCurrent = false;
+  const overview = await fx.service.overview(OWNER);
+  assert.equal(overview.current, null);
+  assert.equal(overview.runs[0].status, 'stale');
+  assert.deepEqual(overview.runs[0].diagnostics.identityRevalidation.reasons, ['source-sha']);
+  await assert.rejects(
+    fx.service.assertPublishable({ ...OWNER, transactionIds: ['tx-identity'] }),
+    (error) => error.code === 'EXACT_PUBLISH_BLOCKED'
   );
 });
 
@@ -296,8 +433,19 @@ test('default immutable snapshot anchors Git source SHA, content bytes, schema a
   const item = snapshot.files[0];
   const blob = path.join(runtimeDir, 'blobs', 'sha256', item.sha256.slice(0, 2), item.sha256.slice(2));
   assert.deepEqual(await fs.readFile(blob), nextBytes);
+  const identityRun = {
+    sourceSha: snapshot.sourceSha,
+    schemaHash: snapshot.schemaHash,
+    bindingRegistryHash: snapshot.bindingRegistryHash,
+    h5PipelineHash: snapshot.h5PipelineHash,
+    snapshot
+  };
+  assert.equal((await proveExactRunIdentity({ repoRoot, run: identityRun })).ok, true);
   await fs.writeFile(path.join(repoRoot, 'src', 'content', 'products', 'bench.json'), '{"title":"Ещё новее"}\n');
   assert.deepEqual(await fs.readFile(blob), nextBytes, 'snapshot bytes do not follow later working-tree writes');
+  const changedIdentity = await proveExactRunIdentity({ repoRoot, run: identityRun });
+  assert.equal(changedIdentity.ok, false);
+  assert.ok(changedIdentity.reasons.includes('snapshot-files'));
 
   await fs.writeFile(path.join(repoRoot, 'src', 'renderer.ts'), 'export const dirty = true;\n');
   await assert.rejects(
@@ -325,4 +473,13 @@ test('every named exact schema, binding and H5 identity input exists in the repo
     }
   }
   assert.equal(EXACT_H5_PIPELINE_PATHS.includes('tools/performance/media-config.mjs'), false);
+});
+
+test('real exact runner keeps the release BASE_PATH identity and returns per-route byte evidence', async () => {
+  const source = await fs.readFile(new URL('./exact-validation-service.mjs', import.meta.url), 'utf8');
+  assert.match(source, /const exactBasePath = exactBuildBasePath\(environment\.BASE_PATH \|\| environment\.TEST_BASE_PATH \|\| '\/'\)/u);
+  assert.match(source, /BASE_PATH: exactBasePath,\s*TEST_BASE_PATH: exactBasePath/u);
+  assert.match(source, /routeSha256: routeBytes \? sha256\(routeBytes\) : null/u);
+  assert.match(source, /fallback404Sha256: fallbackBytes \? sha256\(fallbackBytes\) : null/u);
+  assert.match(source, /targetedHtmlRoutes,/u);
 });

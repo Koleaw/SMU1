@@ -98,12 +98,12 @@ export function fingerprintArtifact(distRoot, relativeFiles = discoverArtifactFi
 
 export function inspectPublicArtifactIsolation(distRoot, relativeFiles = discoverArtifactFiles(distRoot)) {
   const forbiddenPatterns = [
-    ['binding-metadata', /data-smu1-(?:binding|editor-disposition)/iu],
+    ['binding-metadata', /data-smu1-(?:binding|list-(?:item|field|value)|editor-(?:affordance|canvas|disposition))/iu],
     ['editor-render-flag', /__smu1_editor|editorSession|editorRevision/iu],
     ['admin-api-client', /\/api\/admin(?:\/|['"`?])/iu],
     ['admin-csrf', /x-admin-csrf/iu],
     ['active-admin-shell', /data-(?:visual-admin-root|admin-shell)|id\s*=\s*["'](?:veApp|adminRoot)["']/iu],
-    ['editor-bridge-or-bundle', /visual-editor-app|editor-bridge|binding-registry/iu]
+    ['editor-bridge-or-bundle', /visual-editor-app|editor-bridge|binding-registry|--editor-(?:affordance|missing-media)/iu]
   ];
   const leaks = [];
   const adminHtml = relativeFiles.filter((relative) => relative.startsWith('admin/') && HTML_FILE.test(relative));

@@ -28,7 +28,14 @@ test('Home and Company gateways use an explicit ordered project relation with ex
   assert.match(gateway, /const presentations = projectSlugs\.map/u);
   assert.match(gateway, /fieldPath: 'presentation\.archiveCoverMedia'/u);
   assert.match(gateway, /fieldPath: `presentation\.publicGallery\[\$\{index\}\]`/u);
-  assert.match(gateway, /data-smu1-gateway-frame-source/u);
+  assert.match(gateway, /const gatewayMediaBinding = editorFrame \? adminBinding/u);
+  assert.match(gateway, /data-smu1-borrowed-media=\{isEditorCanvas \? 'true' : undefined\}/u);
+  assert.match(gateway, /mediaBindingId: gatewayMediaBinding\['data-smu1-binding-id'\]/u);
+  assert.match(gateway, /mediaFieldPaths: \['presentation\.archiveCoverMedia', 'presentation\.publicGallery', 'presentation\.detailHeroMedia'\]/u);
+  assert.match(gateway, /applySourcePosition: true/u);
+  assert.match(gateway, /strategy: 'gateway-frame'/u);
+  assert.match(gateway, /frameOffset: variant === 'company' \? 1 : 0/u);
+  assert.match(gateway, /excludedMediaPaths: \[\.\.\.excluded\]/u);
   assert.match(gateway, /type PublicGatewayFrame = Omit<GatewayFrame, 'ownerSlug' \| 'fieldPath' \| 'sourceRole'>/u);
   assert.match(gateway, /tool: 'relation-list'/u);
   for (const source of [homeRenderer, companyRenderer]) {
@@ -51,14 +58,17 @@ test('Company and Custom Order media presentation is schema-owned and contextual
   assert.doesNotMatch(companyRenderer, /item\.project\.slug === 'kompleks-rabot/u);
   assert.match(companyRenderer, /item\.project\.slug === page\.companyHeroProjectSlug/u);
   assert.match(companyRenderer, /pageBinding\('companyHeroProjectSlug', 'relation-select'/u);
-  assert.match(companyRenderer, /pageBinding\('companyHeroPosition', 'focal-position'/u);
+  assert.match(companyRenderer, /positionFields: \[\{ fieldPath: 'companyHeroPosition', cssProperty: '--company-hero-position' \}\]/u);
+  assert.match(companyRenderer, /data-smu1-borrowed-media=\{isEditorCanvas \? 'true' : undefined\}/u);
+  assert.match(companyRenderer, /\.\.\.companyHeroMediaBinding/u);
 
   assert.equal(customOrder.customOrderHeroProjectSlug, 'gorodskie-kacheli-dlya-obshchestvennyh-territoriy');
   assert.match(customData, /heroPresentation\?\.detailHeroMedia/u);
   assert.doesNotMatch(customData, /sourcePage\.image\?\.trim/u);
   assert.match(customRenderer, /pageBinding\('customOrderHeroProjectSlug', 'relation-select'/u);
-  assert.match(customRenderer, /pageBinding\('customOrderHeroPosition', 'focal-position'/u);
-  assert.match(customRenderer, /pageBinding\('customOrderHeroMobilePosition', 'focal-position'/u);
+  assert.match(customRenderer, /fieldPath: 'customOrderHeroPosition', cssProperty: '--custom-order-hero-position'/u);
+  assert.match(customRenderer, /fieldPath: 'customOrderHeroMobilePosition', cssProperty: '--custom-order-hero-position-mobile'/u);
+  assert.match(customRenderer, /\.\.\.customOrderHeroMediaBinding/u);
   assert.match(customRenderer, /pageBinding\('relatedDirectionSlugs', 'relation-list'/u);
   assert.match(customRenderer, /owner: \{ collection: 'projects', slug: heroMedia\.ownerSlug \}/u);
   assert.match(customRenderer, /const breadcrumbItems = \[/u);

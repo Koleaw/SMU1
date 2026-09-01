@@ -1,7 +1,8 @@
 ---
-import { adminDisposition } from '../../../admin/bindings/adminBinding';
+import { adminDisposition, adminListField, adminListItem, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
 
 interface TaskItem {
+  id: string;
   title: string;
   text?: string;
 }
@@ -24,6 +25,7 @@ const descriptionBinding = Astro.props.descriptionBinding ?? {};
 const itemsBinding = Astro.props.itemsBinding ?? {};
 const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
 const editorSource = Astro.props.editorSource ?? 'src/components/v2/engineering/EngineeringDirectionTasks.astro#Astro.props';
+const editorCanvas = isLocalAdminCanvas(Astro.url);
 const directOrDeclared = (attributes: Record<string, string>, fragment: string, reason: string) =>
   Object.keys(attributes).length > 0
     ? attributes
@@ -44,10 +46,12 @@ const directOrDeclared = (attributes: Record<string, string>, fragment: string, 
       </header>
       <ul class="engineering-tasks__list" {...directOrDeclared(itemsBinding, 'items', 'Карточки переданы renderer-владельцем без schema binding; измените список исходного блока.')}>
         {items.map((item) => (
-          <li data-v2-reveal>
+          <li data-v2-reveal {...adminListItem(Astro.url, item.id)}>
             <div>
-              <h3>{item.title}</h3>
-              {item.text && <p>{item.text}</p>}
+              <h3 {...adminListField(Astro.url, 'title')}>{item.title}</h3>
+              {item.text
+                ? <p {...adminListField(Astro.url, 'text')}>{item.text}</p>
+                : editorCanvas ? <p hidden data-smu1-list-optional-field {...adminListField(Astro.url, 'text')}></p> : null}
             </div>
           </li>
         ))}

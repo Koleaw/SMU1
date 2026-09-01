@@ -10,7 +10,7 @@ import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import V2DirectContact from '../V2DirectContact.astro';
 import V2SectionNav from '../V2SectionNav.astro';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
-import { adminBinding, adminDisposition, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
+  import { adminBinding, adminDisposition, adminListField, adminListItem, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   page: CollectionEntry<'static-pages'>['data'];
@@ -18,7 +18,7 @@ interface Props {
 }
 
 type AboutCard = {
-  id?: string;
+  id: string;
   title?: string;
   text?: string;
   order?: number;
@@ -119,6 +119,25 @@ const blockPath = (block: AboutBlock | undefined, suffix: string) => {
   const index = block ? pageBlocks.indexOf(block) : -1;
   return index >= 0 ? `pageBlocks[${index}].${suffix}` : suffix;
 };
+const companyHeroMediaBinding = productionProject ? adminBinding(Astro.url, {
+  renderer: { family: 'practical', variant: 'company-hero-media' },
+  owner: { collection: 'projects', slug: productionProject.project.slug },
+  fieldPath: 'presentation.detailHeroMedia', stableItemId: 'company-hero-project-media',
+  scope: 'shared', tool: 'media', label: `Фотография объекта «${productionProject.project.title}»`,
+  affectedRoutes: [pageRoute, productionProject.productionRoute], role: 'detail-hero', multiple: false,
+  projection: { kind: 'shared-media', formula: 'project.presentation.detailHeroMedia → company hero' }
+}) : {};
+const companyHeroRelationBinding = pageBinding('companyHeroProjectSlug', 'relation-select', {
+  stableItemId: 'company-hero-source', role: 'company-hero-source',
+  label: 'Объект-источник фотографии',
+  relationCollection: 'projects', validation: { required: true },
+  projection: { kind: 'relation', formula: 'companyHeroProjectSlug → project.presentation.detailHeroMedia' },
+  relationProjection: {
+    mediaBindingId: companyHeroMediaBinding['data-smu1-binding-id'] || '',
+    mediaFieldPaths: ['presentation.detailHeroMedia', 'presentation.archiveCoverMedia', 'presentation.publicGallery'],
+    positionFields: [{ fieldPath: 'companyHeroPosition', cssProperty: '--company-hero-position' }]
+  }
+});
 ---
 
 <article class="practical-company">
@@ -132,24 +151,9 @@ const blockPath = (block: AboutBlock | undefined, suffix: string) => {
         class="practical-company__hero-image"
         data-v2-media
         data-v2-entrance-role="media"
-        {...pageBinding('companyHeroProjectSlug', 'relation-select', {
-          stableItemId: 'company-hero-source', role: 'company-hero-source',
-          projection: { kind: 'relation', formula: 'companyHeroProjectSlug → project.presentation.detailHeroMedia' }
-        })}
+        data-smu1-borrowed-media-root={isEditorCanvas ? 'true' : undefined}
+        {...companyHeroRelationBinding}
       >
-        {isEditorCanvas && productionProject && (
-          <>
-            <span hidden aria-hidden="true" {...adminBinding(Astro.url, {
-              renderer: { family: 'practical', variant: 'company-hero-media' }, owner: { collection: 'projects', slug: productionProject.project.slug },
-              fieldPath: 'presentation.detailHeroMedia', stableItemId: 'company-hero-project-media', scope: 'shared', tool: 'media',
-              affectedRoutes: [pageRoute, productionProject.productionRoute], role: 'detail-hero', multiple: false,
-              projection: { kind: 'shared-media', formula: 'project.presentation.detailHeroMedia → company hero' }
-            })}></span>
-            <span hidden aria-hidden="true" {...pageBinding('companyHeroPosition', 'focal-position', {
-              stableItemId: 'company-hero-position', role: 'desktop-crop'
-            })}></span>
-          </>
-        )}
         <V2ResponsiveImage
           src={heroMedia.src}
           alt={heroMedia.alt}
@@ -160,6 +164,8 @@ const blockPath = (block: AboutBlock | undefined, suffix: string) => {
           decoding="async"
           data-v2-image
           data-v2-page-critical
+          data-smu1-borrowed-media={isEditorCanvas ? 'true' : undefined}
+          {...companyHeroMediaBinding}
         />
         <div class="v2-media-empty" aria-hidden="true"><p>Изображение компании недоступно</p></div>
       </div>
@@ -231,11 +237,22 @@ const blockPath = (block: AboutBlock | undefined, suffix: string) => {
       </dl>
 
       {capabilities.length > 0 && (
-        <div class="practical-company__capabilities" aria-label="Основные возможности компании">
-          {capabilities.map((item, index) => (
-            <article {...pageBinding(blockPath(capabilitiesBlock, 'items'), 'list', { stableItemId: item.id ?? `capability-${index}`, itemKind: 'object' })}>
-              <h3>{item.title}</h3>
-              <p>{item.text}</p>
+        <div class="practical-company__capabilities" aria-label="Основные возможности компании" {...pageBinding(blockPath(capabilitiesBlock, 'items'), 'list', {
+          stableItemId: 'company-capabilities',
+          itemKind: 'object',
+          permissions: { edit: true, reorder: true, delete: false },
+          itemFields: [
+            { fieldPath: 'id', tool: 'generated-id' },
+            { fieldPath: 'title', label: 'Название возможности', tool: 'short-text' },
+            { fieldPath: 'text', label: 'Описание', tool: 'long-text' },
+            { fieldPath: 'order', tool: 'generated-order' },
+            { fieldPath: 'isActive', label: 'Показывать возможность', tool: 'visibility' }
+          ]
+        })}>
+          {capabilities.map((item) => (
+            <article {...adminListItem(Astro.url, item.id)}>
+              <h3 {...adminListField(Astro.url, 'title')}>{item.title}</h3>
+              <p {...adminListField(Astro.url, 'text')}>{item.text}</p>
             </article>
           ))}
         </div>

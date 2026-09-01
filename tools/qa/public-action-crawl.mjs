@@ -4,6 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { classifyPublicAction, validateContactProtocol } from './action-crawl-core.mjs';
 import { CdpBrowser, createDistServer } from './cdp-browser.mjs';
+import { PUBLIC_LIFECYCLE_SEMANTIC_IDS } from './evidence-contract.mjs';
 import { sourceWorkingTreeDirty } from './git-evidence.mjs';
 import { parsePublicActionShard, routesForPublicActionShard } from './public-action-shards.mjs';
 import {
@@ -53,6 +54,15 @@ if (options.help) {
 }
 
 const progress = (message) => process.stderr.write(`[h6-public-actions] ${message}\n`);
+const DEFAULT_BLOCKED_PUBLIC_URLS = Object.freeze([
+  '*mc.yandex.ru*',
+  '*google-analytics.com*',
+  '*googletagmanager.com*',
+  '*formspree.io*',
+  '*api.web3forms.com*'
+]);
+const LEAD_OR_ANALYTICS_URL = /(?:mc\.yandex\.ru|metrika|webvisor|google-analytics\.com|googletagmanager\.com|formspree\.io|api\.web3forms\.com)/iu;
+const VIDEO_ASSET_URL = /\.(?:mp4|webm)(?:$|[?#])/iu;
 const git = (...args) => {
   try { return execFileSync('git', args, { cwd: root, encoding: 'utf8', windowsHide: true }).trim(); }
   catch { return ''; }
@@ -471,8 +481,400 @@ const exerciseCurrentSurface = async ({ requestedUrl, loadedLocation }) => {
   return actionResults;
 };
 
+const galleryInventoryExpression = `(() => ({
+  product: Array.from(document.querySelectorAll('[data-v2-product-gallery]')).map((root, index) => ({
+    kind: 'product', index, multiple: Boolean(root.querySelector('[data-v2-gallery-status]'))
+  })),
+  project: Array.from(document.querySelectorAll('[data-v2-project-gallery]')).map((root, index) => ({
+    kind: 'project', index, multiple: Boolean(root.querySelector('[data-v2-project-gallery-status]'))
+  }))
+}))()`;
+
+const exerciseGallerySemantics = async (viewport) => {
+  const inventory = await browser.evaluate(galleryInventoryExpression);
+  const results = [];
+  for (const descriptor of [...inventory.product, ...inventory.project]) {
+    const rootSelector = descriptor.kind === 'product' ? '[data-v2-product-gallery]' : '[data-v2-project-gallery]';
+    if (viewport.mobile) {
+      if (!descriptor.multiple) {
+        results.push({ ...descriptor, mode: 'mobile-swipe', status: 'not-applicable', reason: 'single-image-gallery' });
+        continue;
+      }
+      const swipe = await browser.evaluate(`(async () => {
+        const root = document.querySelectorAll(${JSON.stringify(rootSelector)})[${descriptor.index}];
+        const stage = root?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '.v2-product-gallery__stage' : '[data-v2-project-gallery-swipe]')});
+        const status = root?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '[data-v2-gallery-status]' : '[data-v2-project-gallery-status]')});
+        if (!stage || !status) return null;
+        const before = status.textContent?.replace(/\\s+/gu, ' ').trim() || '';
+        stage.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', pointerId: 701, clientX: 330, clientY: 330 }));
+        stage.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch', pointerId: 701, clientX: 80, clientY: 336 }));
+        await new Promise((resolve) => setTimeout(resolve, 90));
+        const afterHorizontal = status.textContent?.replace(/\\s+/gu, ' ').trim() || '';
+        stage.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', pointerId: 702, clientX: 205, clientY: 210 }));
+        stage.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch', pointerId: 702, clientX: 211, clientY: 390 }));
+        await new Promise((resolve) => setTimeout(resolve, 90));
+        return {
+          before,
+          afterHorizontal,
+          afterVertical: status.textContent?.replace(/\\s+/gu, ' ').trim() || '',
+          touchAction: getComputedStyle(stage).touchAction
+        };
+      })()`);
+      const passed = Boolean(swipe && swipe.before && swipe.afterHorizontal
+        && swipe.before !== swipe.afterHorizontal && swipe.afterHorizontal === swipe.afterVertical);
+      results.push({ ...descriptor, mode: 'mobile-swipe', status: passed ? 'pass' : 'fail', swipe });
+      continue;
+    }
+
+    const opened = await browser.evaluate(`(async () => {
+      const root = document.querySelectorAll(${JSON.stringify(rootSelector)})[${descriptor.index}];
+      const status = root?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '[data-v2-gallery-status]' : '[data-v2-project-gallery-status]')});
+      const next = root?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '[data-v2-gallery-next]' : '[data-v2-project-gallery-next]')});
+      const previous = root?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '[data-v2-gallery-prev]' : '[data-v2-project-gallery-prev]')});
+      let navigation = null;
+      if (status && next && previous) {
+        const before = status.textContent?.replace(/\\s+/gu, ' ').trim() || '';
+        next.click(); await new Promise((resolve) => setTimeout(resolve, 80));
+        const afterNext = status.textContent?.replace(/\\s+/gu, ' ').trim() || '';
+        previous.click(); await new Promise((resolve) => setTimeout(resolve, 80));
+        navigation = { before, afterNext, afterPrevious: status.textContent?.replace(/\\s+/gu, ' ').trim() || '' };
+      }
+      const opener = root?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '[data-v2-gallery-open]' : '[data-v2-project-gallery-open]')});
+      const dialog = root?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '[data-v2-product-lightbox]' : '[data-v2-project-lightbox]')});
+      const close = dialog?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '[data-v2-lightbox-close]' : '[data-v2-project-lightbox-close]')});
+      const image = dialog?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '[data-v2-lightbox-image]' : '[data-v2-project-lightbox-image]')});
+      if (!opener || !dialog || !close || !image) return { navigation, missing: true };
+      opener.focus(); opener.click(); await new Promise((resolve) => setTimeout(resolve, 100));
+      const focusable = Array.from(dialog.querySelectorAll('button:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])'))
+        .filter((item) => !item.hasAttribute('hidden'));
+      const first = focusable[0]; const last = focusable.at(-1);
+      const initialFocus = document.activeElement === close;
+      last?.focus();
+      last?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', code: 'Tab', bubbles: true, cancelable: true }));
+      return {
+        navigation,
+        open: dialog.open,
+        initialFocus,
+        focusWrapped: Boolean(first && document.activeElement === first),
+        fit: getComputedStyle(image).objectFit
+      };
+    })()`);
+    await browser.dispatchKey('Escape', { code: 'Escape', windowsVirtualKeyCode: 27 });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const closed = await browser.evaluate(`(() => {
+      const root = document.querySelectorAll(${JSON.stringify(rootSelector)})[${descriptor.index}];
+      const opener = root?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '[data-v2-gallery-open]' : '[data-v2-project-gallery-open]')});
+      const dialog = root?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '[data-v2-product-lightbox]' : '[data-v2-project-lightbox]')});
+      return { open: Boolean(dialog?.open), focusReturned: Boolean(opener && document.activeElement === opener) };
+    })()`);
+    const navigationPassed = !descriptor.multiple || Boolean(opened?.navigation
+      && opened.navigation.before !== opened.navigation.afterNext
+      && opened.navigation.before === opened.navigation.afterPrevious);
+    const passed = navigationPassed && opened?.open === true && opened?.initialFocus === true
+      && opened?.focusWrapped === true && opened?.fit === 'contain'
+      && closed?.open === false && closed?.focusReturned === true;
+    results.push({ ...descriptor, mode: 'desktop-lightbox', status: passed ? 'pass' : 'fail', opened, closed });
+  }
+  return { inventory, results };
+};
+
+const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const waitForBrowserValue = async (expression, { timeoutMs = 8_000, label = 'browser condition' } = {}) => {
+  const deadline = Date.now() + timeoutMs;
+  let lastValue = null;
+  while (Date.now() < deadline) {
+    lastValue = await browser.evaluate(expression).catch(() => null);
+    if (lastValue) return lastValue;
+    await delay(60);
+  }
+  throw new Error(`Timed out waiting for ${label}; last value: ${JSON.stringify(lastValue)}`);
+};
+const clickLifecycleControl = async (selector) => {
+  const clicked = await browser.evaluate(`(() => {
+    const control = document.querySelector(${JSON.stringify(selector)});
+    if (!(control instanceof HTMLElement)) return false;
+    control.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+    control.focus({ preventScroll: true });
+    control.click();
+    return true;
+  })()`);
+  if (!clicked) throw new Error(`Lifecycle control is missing: ${selector}`);
+};
+const lifecycleSafetySince = (requestIndex, interceptIndex) => {
+  const scenarioRequests = requests.slice(requestIndex);
+  const intercepted = browser.safetyEvidence().intercepted.slice(interceptIndex);
+  const stateChanging = scenarioRequests.filter((request) => !['GET', 'HEAD', 'OPTIONS'].includes(request.method));
+  const leadOrAnalytics = scenarioRequests.filter((request) => LEAD_OR_ANALYTICS_URL.test(request.url || ''));
+  return {
+    stateChangingRequests: stateChanging.length
+      + intercepted.filter((request) => request.reason === 'state-changing-request').length,
+    leadOrAnalyticsRequests: leadOrAnalytics.length
+      + intercepted.filter((request) => request.reason === 'analytics-or-form').length,
+    interceptedAttempts: intercepted.length,
+    unexpectedRequests: [...stateChanging, ...leadOrAnalytics],
+    intercepted
+  };
+};
+const executeLifecycleSemantic = async ({ id, route, run }) => {
+  context.route = route;
+  context.viewport = REQUIRED_VIEWPORTS[0].id;
+  context.actionId = `lifecycle:${id}`;
+  const eventIndex = events.length;
+  const requestIndex = requests.length;
+  const interceptIndex = browser.safetyEvidence().intercepted.length;
+  const issues = [];
+  let evidence = {};
+  try {
+    const result = await run();
+    evidence = result?.evidence || {};
+    issues.push(...(result?.issues || []));
+  } catch (error) {
+    issues.push(`probe-error:${error instanceof Error ? error.message : String(error)}`);
+  }
+  const scenarioEvents = events.slice(eventIndex);
+  const safety = lifecycleSafetySince(requestIndex, interceptIndex);
+  if (scenarioEvents.length) issues.push(`runtime-errors:${scenarioEvents.length}`);
+  if (safety.stateChangingRequests) issues.push(`state-changing-requests:${safety.stateChangingRequests}`);
+  if (safety.leadOrAnalyticsRequests) issues.push(`lead-or-analytics-requests:${safety.leadOrAnalyticsRequests}`);
+  if (safety.interceptedAttempts) issues.push(`safety-intercepts:${safety.interceptedAttempts}`);
+  return { id, route, status: issues.length ? 'fail' : 'pass', issues, evidence, events: scenarioEvents, safety };
+};
+
+const homeVideoStateExpression = `(() => {
+  const video = document.querySelector('[data-hf-hero-video]');
+  const toggle = document.querySelector('[data-hf-video-toggle]');
+  const label = document.querySelector('[data-hf-video-toggle-label]');
+  if (!(video instanceof HTMLVideoElement) || !(toggle instanceof HTMLButtonElement)) return null;
+  return {
+    paused: video.paused,
+    ended: video.ended,
+    readyState: video.readyState,
+    currentTime: video.currentTime,
+    source: video.getAttribute('src') || '',
+    currentSource: video.currentSrc || '',
+    sourceLoaded: Boolean(video.getAttribute('src') || video.currentSrc),
+    controlReady: !toggle.hidden && !toggle.disabled && toggle.getAttribute('aria-hidden') !== 'true',
+    controlSuppressed: toggle.hidden || toggle.disabled || toggle.getAttribute('aria-hidden') === 'true',
+    label: label?.textContent?.replace(/\\s+/gu, ' ').trim() || '',
+    ariaLabel: toggle.getAttribute('aria-label') || ''
+  };
+})()`;
+
+const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
+  id: 'home-video',
+  route: '/',
+  run: async () => {
+    const homeUrl = `${origin}${withBase('/')}`;
+    const evidence = {};
+    let saveDataScriptIdentifier = '';
+    try {
+      await browser.setViewport(REQUIRED_VIEWPORTS[0]);
+      await browser.emulateMedia({ reducedMotion: false });
+      await browser.send('Storage.clearDataForOrigin', { origin: originValue, storageTypes: 'all' }).catch(() => {});
+      const normalRequestIndex = requests.length;
+      context.actionId = 'lifecycle:home-video:normal-motion';
+      await browser.navigate(homeUrl);
+      await settleInteractiveSurface();
+      await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state?.controlReady && state?.sourceLoaded ? state : null; })()`, {
+        timeoutMs: 12_000,
+        label: 'normal-motion Home video control'
+      });
+      let playing = await browser.evaluate(homeVideoStateExpression);
+      if (playing?.paused) {
+        await clickLifecycleControl('[data-hf-video-toggle]');
+      }
+      playing = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused && state.readyState >= 2 ? state : null; })()`, {
+        timeoutMs: 12_000,
+        label: 'Home video playback'
+      });
+      await clickLifecycleControl('[data-hf-video-toggle]');
+      const paused = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state?.paused ? state : null; })()`, {
+        label: 'Home video pause'
+      });
+      await clickLifecycleControl('[data-hf-video-toggle]');
+      const resumed = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused ? state : null; })()`, {
+        label: 'Home video resume'
+      });
+      evidence.normalMotion = {
+        reducedMotion: false,
+        saveData: false,
+        controlReady: playing.controlReady === true,
+        sourceLoaded: playing.sourceLoaded === true,
+        videoRequestCount: requests.slice(normalRequestIndex).filter((request) => VIDEO_ASSET_URL.test(request.url || '')).length,
+        playingBeforePause: playing.paused === false,
+        pausedAfterPause: paused.paused === true,
+        playingAfterResume: resumed.paused === false,
+        labelAfterPause: paused.label,
+        labelAfterResume: resumed.label,
+        ariaAfterPause: paused.ariaLabel,
+        ariaAfterResume: resumed.ariaLabel
+      };
+
+      await browser.emulateMedia({ reducedMotion: true });
+      await browser.send('Storage.clearDataForOrigin', { origin: originValue, storageTypes: 'all' }).catch(() => {});
+      const reducedRequestIndex = requests.length;
+      context.actionId = 'lifecycle:home-video:reduced-motion';
+      await browser.navigate(homeUrl);
+      await settleInteractiveSurface();
+      await delay(700);
+      const reduced = await browser.evaluate(homeVideoStateExpression);
+      evidence.reducedMotion = {
+        reducedMotion: true,
+        saveData: false,
+        controlSuppressed: reduced?.controlSuppressed === true,
+        sourceLoaded: reduced?.sourceLoaded === true,
+        videoRequestCount: requests.slice(reducedRequestIndex).filter((request) => VIDEO_ASSET_URL.test(request.url || '')).length
+      };
+
+      await browser.emulateMedia({ reducedMotion: false });
+      const saveDataScript = await browser.send('Page.addScriptToEvaluateOnNewDocument', {
+        source: `(() => {
+          const original = navigator.connection;
+          const constrained = original ? new Proxy(original, {
+            get(target, property) {
+              if (property === 'saveData') return true;
+              if (property === 'effectiveType') return '4g';
+              const value = Reflect.get(target, property, target);
+              return typeof value === 'function' ? value.bind(target) : value;
+            }
+          }) : { saveData: true, effectiveType: '4g' };
+          Object.defineProperty(navigator, 'connection', { configurable: true, get: () => constrained });
+        })();`
+      });
+      saveDataScriptIdentifier = saveDataScript.identifier || '';
+      await browser.send('Storage.clearDataForOrigin', { origin: originValue, storageTypes: 'all' }).catch(() => {});
+      const saveDataRequestIndex = requests.length;
+      context.actionId = 'lifecycle:home-video:save-data';
+      await browser.navigate(homeUrl);
+      await settleInteractiveSurface();
+      await delay(700);
+      const saveData = await browser.evaluate(homeVideoStateExpression);
+      evidence.saveData = {
+        reducedMotion: false,
+        saveData: await browser.evaluate('navigator.connection?.saveData === true'),
+        controlSuppressed: saveData?.controlSuppressed === true,
+        sourceLoaded: saveData?.sourceLoaded === true,
+        videoRequestCount: requests.slice(saveDataRequestIndex).filter((request) => VIDEO_ASSET_URL.test(request.url || '')).length
+      };
+    } finally {
+      if (saveDataScriptIdentifier) {
+        await browser.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: saveDataScriptIdentifier }).catch(() => {});
+      }
+      await browser.emulateMedia({ reducedMotion: true }).catch(() => {});
+    }
+    const issues = [];
+    const normal = evidence.normalMotion;
+    if (!normal?.controlReady || !normal?.sourceLoaded || !(normal.videoRequestCount > 0)
+      || !normal.playingBeforePause || !normal.pausedAfterPause || !normal.playingAfterResume
+      || !/включить видео/iu.test(normal.labelAfterPause || '') || !/пауза видео/iu.test(normal.labelAfterResume || '')) {
+      issues.push('normal-motion-pause-resume');
+    }
+    for (const [profile, value] of [['reduced-motion', evidence.reducedMotion], ['save-data', evidence.saveData]]) {
+      if (!value?.controlSuppressed || value?.sourceLoaded !== false || value?.videoRequestCount !== 0) issues.push(`${profile}-suppression`);
+    }
+    return { evidence, issues };
+  }
+});
+
+const cookieStateExpression = `(() => {
+  const banner = document.querySelector('[data-cookie-banner]');
+  return {
+    present: Boolean(banner),
+    visible: Boolean(banner && !banner.hidden && !banner.hasAttribute('hidden')),
+    hidden: Boolean(banner?.hidden || banner?.hasAttribute('hidden')),
+    noticeKey: localStorage.getItem('smu1_cookie_notice_closed'),
+    legacyKey: localStorage.getItem('smu1_cookie_consent')
+  };
+})()`;
+const exerciseCookieLifecycle = () => executeLifecycleSemantic({
+  id: 'cookie-notice',
+  route: '/',
+  run: async () => {
+    const homeUrl = `${origin}${withBase('/')}`;
+    await browser.setViewport(REQUIRED_VIEWPORTS[0]);
+    await browser.emulateMedia({ reducedMotion: true });
+    await browser.send('Storage.clearDataForOrigin', { origin: originValue, storageTypes: 'all' }).catch(() => {});
+    context.actionId = 'lifecycle:cookie:initial';
+    await browser.navigate(homeUrl);
+    await settleInteractiveSurface();
+    const initial = await waitForBrowserValue(`(() => { const state = (${cookieStateExpression}); return state.present && state.visible ? state : null; })()`, { label: 'initial cookie notice' });
+    context.actionId = 'lifecycle:cookie:dismiss';
+    await clickLifecycleControl('[data-cookie-notice-close]');
+    const dismissed = await waitForBrowserValue(`(() => { const state = (${cookieStateExpression}); return state.hidden && state.noticeKey === 'true' ? state : null; })()`, { label: 'cookie dismissal persistence' });
+    context.actionId = 'lifecycle:cookie:persisted-reload';
+    await browser.navigate(homeUrl);
+    await settleInteractiveSurface();
+    const persistedReload = await waitForBrowserValue(`(() => { const state = (${cookieStateExpression}); return state.hidden && state.noticeKey === 'true' ? state : null; })()`, { label: 'persisted cookie dismissal after reload' });
+    context.actionId = 'lifecycle:cookie:footer-reopen';
+    await clickLifecycleControl('[data-open-cookie-settings]');
+    const footerReopen = await waitForBrowserValue(`(() => { const state = (${cookieStateExpression}); return state.visible && state.noticeKey === null && state.legacyKey === null ? state : null; })()`, { label: 'footer cookie notice reopen' });
+    await clickLifecycleControl('[data-cookie-notice-close]');
+    const evidence = { initial, dismissed, persistedReload, footerReopen };
+    const issues = [];
+    if (initial.noticeKey !== null || initial.legacyKey !== null || !initial.visible) issues.push('initial-state');
+    if (!dismissed.hidden || dismissed.noticeKey !== 'true') issues.push('dismiss-state');
+    if (!persistedReload.hidden || persistedReload.noticeKey !== 'true') issues.push('persisted-reload');
+    if (!footerReopen.visible || footerReopen.noticeKey !== null || footerReopen.legacyKey !== null) issues.push('footer-reopen');
+    return { evidence, issues };
+  }
+});
+
+const mapStateExpression = `(() => {
+  const root = document.querySelector('[data-v2-yandex-map]');
+  const placeholder = root?.querySelector('[data-v2-map-placeholder]');
+  const activate = root?.querySelector('[data-v2-map-activate]');
+  const status = root?.querySelector('[data-v2-map-status]');
+  const frame = root?.querySelector('iframe');
+  return {
+    present: Boolean(root),
+    state: root?.getAttribute('data-v2-map-state') || '',
+    iframeCount: root?.querySelectorAll('iframe').length || 0,
+    placeholderVisible: Boolean(placeholder && !placeholder.hasAttribute('hidden')),
+    activateEnabled: Boolean(activate && !activate.disabled),
+    statusText: status?.textContent?.replace(/\\s+/gu, ' ').trim() || '',
+    iframeTitle: frame?.getAttribute('title') || '',
+    iframeTabIndex: frame?.getAttribute('tabindex') || '',
+    focusTarget: document.activeElement === frame ? 'iframe' : document.activeElement === activate ? 'activate' : 'other'
+  };
+})()`;
+const exerciseContactsMapLifecycle = () => executeLifecycleSemantic({
+  id: 'contacts-map',
+  route: '/kontakty/',
+  run: async () => {
+    const contactsUrl = `${origin}${withBase('/kontakty/')}`;
+    await browser.setViewport(REQUIRED_VIEWPORTS[0]);
+    await browser.emulateMedia({ reducedMotion: true });
+    await browser.send('Network.setBlockedURLs', { urls: [...DEFAULT_BLOCKED_PUBLIC_URLS, '*api-maps.yandex.ru*'] });
+    try {
+      await browser.send('Storage.clearDataForOrigin', { origin: originValue, storageTypes: 'all' }).catch(() => {});
+      context.actionId = 'lifecycle:contacts-map:deferred';
+      await browser.navigate(contactsUrl);
+      await settleInteractiveSurface();
+      const before = await waitForBrowserValue(`(() => { const state = (${mapStateExpression}); return state.present && state.state === 'idle' ? state : null; })()`, { label: 'deferred Contacts map' });
+      context.actionId = 'lifecycle:contacts-map:activate';
+      await clickLifecycleControl('[data-v2-map-activate]');
+      const terminal = await waitForBrowserValue(`(() => { const state = (${mapStateExpression}); return state && (state.state === 'ready' || state.state === 'error') ? state : null; })()`, {
+        timeoutMs: 8_000,
+        label: 'Contacts map terminal state'
+      });
+      const evidence = { before, activation: { clicked: true }, terminal };
+      const ready = terminal.state === 'ready' && terminal.iframeCount > 0 && !terminal.placeholderVisible
+        && Boolean(terminal.statusText) && Boolean(terminal.iframeTitle) && terminal.iframeTabIndex === '0' && terminal.focusTarget === 'iframe';
+      const failOpen = terminal.state === 'error' && terminal.iframeCount === 0 && terminal.placeholderVisible
+        && terminal.activateEnabled && Boolean(terminal.statusText) && terminal.focusTarget === 'activate';
+      const issues = [];
+      if (before.iframeCount !== 0 || !before.placeholderVisible || !before.activateEnabled) issues.push('not-deferred-before-activation');
+      if (!ready && !failOpen) issues.push('missing-ready-or-fail-open-terminal');
+      return { evidence, issues };
+    } finally {
+      await browser.send('Network.setBlockedURLs', { urls: [...DEFAULT_BLOCKED_PUBLIC_URLS] }).catch(() => {});
+    }
+  }
+});
+
 const routeResults = [];
 const noJsResults = [];
+const publicLifecycleSemantics = [];
 // Cross-page anchors must stay verifiable when routes are divided between workers.
 // Indexing each concrete emitted HTML file is deterministic and does not substitute
 // for the required browser opening of every route/viewport pair.
@@ -498,11 +900,13 @@ try {
         title: document.title,
         h1: Array.from(document.querySelectorAll('h1')).map((item) => item.textContent?.replace(/\\s+/gu, ' ').trim()).filter(Boolean),
         bodyTextLength: document.body?.innerText?.trim().length || 0,
-        frameworkOverlay: Boolean(document.querySelector('vite-error-overlay,nextjs-portal,[data-nextjs-dialog-overlay],[data-error-overlay]'))
+        frameworkOverlay: Boolean(document.querySelector('vite-error-overlay,nextjs-portal,[data-nextjs-dialog-overlay],[data-error-overlay]')),
+        galleryInventory: (${galleryInventoryExpression})
       }))()`);
       const loadedLocation = pageIdentity.location;
       anchorIndex.set(normalizeRoute(new URL(loadedLocation).pathname), await browser.evaluate(`Array.from(document.querySelectorAll('[id]')).map((item) => item.id)`));
       const actionResults = await exerciseCurrentSurface({ requestedUrl, loadedLocation });
+      const gallerySemantics = await exerciseGallerySemantics(viewport);
       const routeEvents = events.slice(routeEventIndex);
       const issues = [];
       const expectedFinalRoute = expected.routeClass === 'alias' ? expected.canonicalTarget : expected.pathname;
@@ -510,11 +914,13 @@ try {
       if (pageIdentity.h1.length !== 1) issues.push(`h1-count:${pageIdentity.h1.length}`);
       if (!pageIdentity.bodyTextLength) issues.push('blank-page');
       if (pageIdentity.frameworkOverlay) issues.push('framework-error-overlay');
+      if (actionResults.length === 0) issues.push('empty-action-registry');
       if (actionResults.some((result) => result.status === 'fail')) issues.push(`actions-failed:${actionResults.filter((result) => result.status === 'fail').length}`);
+      if (gallerySemantics.results.some((result) => result.status === 'fail')) issues.push(`gallery-semantics-failed:${gallerySemantics.results.filter((result) => result.status === 'fail').length}`);
       if (routeEvents.length) issues.push(`route-runtime-errors:${routeEvents.length}`);
       routeResults.push({
         route: expected.pathname, routeClass: expected.routeClass, viewport, requestedUrl,
-        pageIdentity, actionCount: actionResults.length, actionResults, events: routeEvents, issues, status: issues.length ? 'fail' : 'pass'
+        pageIdentity, actionCount: actionResults.length, actionResults, gallerySemantics, events: routeEvents, issues, status: issues.length ? 'fail' : 'pass'
       });
       completed += 1;
       if (completed % 20 === 0 || completed === routesToCrawl.length * REQUIRED_VIEWPORTS.length) {
@@ -555,6 +961,19 @@ try {
     }
   }
 
+  const ownedRoutes = new Set(routesToCrawl.map((route) => route.pathname));
+  const lifecycleExercises = new Map([
+    ['home-video', { route: '/', exercise: exerciseHomeVideoLifecycle }],
+    ['cookie-notice', { route: '/', exercise: exerciseCookieLifecycle }],
+    ['contacts-map', { route: '/kontakty/', exercise: exerciseContactsMapLifecycle }]
+  ]);
+  for (const id of PUBLIC_LIFECYCLE_SEMANTIC_IDS) {
+    const descriptor = lifecycleExercises.get(id);
+    if (!descriptor || !ownedRoutes.has(descriptor.route)) continue;
+    progress(`checking public lifecycle semantic ${id}`);
+    publicLifecycleSemantics.push(await descriptor.exercise());
+  }
+
   const unknownResults = [];
   for (const viewport of runUnknownProbe ? REQUIRED_VIEWPORTS : []) {
     context.route = REAL_UNKNOWN_ROUTE;
@@ -592,6 +1011,7 @@ try {
     if (!/noindex/iu.test(pageIdentity.robots)) issues.push('unknown-not-noindex');
     if (pageIdentity.overflow > 1) issues.push(`horizontal-overflow:${pageIdentity.overflow}`);
     if (pageIdentity.frameworkOverlay) issues.push('framework-error-overlay');
+    if (actionResults.length === 0) issues.push('empty-action-registry');
     if (actionResults.some((result) => result.status === 'fail')) issues.push(`actions-failed:${actionResults.filter((result) => result.status === 'fail').length}`);
     if (routeEvents.length) issues.push(`route-runtime-errors:${routeEvents.length}`);
     unknownResults.push({
@@ -602,6 +1022,7 @@ try {
       pageIdentity,
       actionCount: actionResults.length,
       actionResults,
+      gallerySemantics: { inventory: { product: [], project: [] }, results: [] },
       events: routeEvents,
       issues,
       status: issues.length ? 'fail' : 'pass'
@@ -693,6 +1114,7 @@ try {
     },
     routeResults,
     noJsResults,
+    publicLifecycleSemantics,
     unknownResults,
     unknownNoJsResult,
     aggregate: {
@@ -700,6 +1122,12 @@ try {
       routeViewportsFailed: failedActions.length,
       actionOccurrences: routeResults.reduce((count, result) => count + result.actionCount, 0),
       safeExecutions: routeResults.reduce((count, result) => count + result.actionResults.reduce((total, action) => total + action.executions.length, 0), 0),
+      gallerySemanticOccurrences: routeResults.reduce((count, result) => count + (result.gallerySemantics?.results?.length || 0), 0),
+      gallerySemanticPassed: routeResults.reduce((count, result) => count + (result.gallerySemantics?.results || []).filter((item) => item.status === 'pass').length, 0),
+      gallerySemanticFailed: routeResults.reduce((count, result) => count + (result.gallerySemantics?.results || []).filter((item) => item.status === 'fail').length, 0),
+      lifecycleSemanticOccurrences: publicLifecycleSemantics.length,
+      lifecycleSemanticsPassed: publicLifecycleSemantics.filter((item) => item.status === 'pass').length,
+      lifecycleSemanticsFailed: publicLifecycleSemantics.filter((item) => item.status === 'fail').length,
       protectedLeadOrFileActions: routeResults.reduce((count, result) => count + result.actionResults.filter((action) => action.policy === 'protected-form-action').length, 0),
       unknownViewportsPassed: unknownResults.filter((result) => result.status === 'pass').length,
       unknownViewportsFailed: unknownResults.filter((result) => result.status === 'fail').length,
@@ -717,6 +1145,7 @@ try {
   if (options.json) process.stdout.write(`${JSON.stringify(output)}\n`);
   else process.stdout.write(`${JSON.stringify({ manifest: output.manifest, aggregate: output.aggregate, output: options.output }, null, 2)}\n`);
   if (!artifactIsolation.clean || failedActions.length || failedNoJs.length
+    || publicLifecycleSemantics.some((result) => result.status === 'fail')
     || unknownResults.some((result) => result.status === 'fail') || unknownNoJsResult?.status === 'fail') process.exitCode = 1;
 } finally {
   await browser.send('Emulation.setScriptExecutionDisabled', { value: false }).catch(() => {});

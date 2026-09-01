@@ -113,7 +113,7 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
         {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} {...navigationAttributes(item, 'desktop-direction')}>{item.label}</a>)}
       </nav>
       <details class="hv2-footer__accordion">
-        <summary {...globalBinding('shellLabels.directionsGroup', 'short-text', { stableItemId: 'footer-mobile-directions-group' })}>{shellLabels.directionsGroup} <span aria-hidden="true"></span></summary>
+        <summary><span {...globalBinding('shellLabels.directionsGroup', 'short-text', { stableItemId: 'footer-mobile-directions-group' })}>{shellLabels.directionsGroup}</span> <span aria-hidden="true"></span></summary>
         <nav class="hv2-footer__directions hv2-footer__accordion-content" aria-label="Направления СМУ-1">
           {directions.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} {...navigationAttributes(item, 'mobile-direction')}>{item.label}</a>)}
         </nav>
@@ -126,7 +126,7 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
         {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} {...navigationAttributes(item, 'desktop-company')}>{item.label}</a>)}
       </nav>
       <details class="hv2-footer__accordion">
-        <summary {...globalBinding('shellLabels.workAndCompanyGroup', 'short-text', { stableItemId: 'footer-mobile-company-group' })}>{shellLabels.workAndCompanyGroup} <span aria-hidden="true"></span></summary>
+        <summary><span {...globalBinding('shellLabels.workAndCompanyGroup', 'short-text', { stableItemId: 'footer-mobile-company-group' })}>{shellLabels.workAndCompanyGroup}</span> <span aria-hidden="true"></span></summary>
         <nav class="hv2-footer__company hv2-footer__accordion-content" aria-label="Работа и компания">
           {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} {...navigationAttributes(item, 'mobile-company')}>{item.label}</a>)}
         </nav>

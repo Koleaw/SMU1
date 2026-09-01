@@ -90,7 +90,11 @@ const editor = spawn(process.execPath, createParentBoundNodeArgs(astroCli, [
     // compatibility switch is present. With --ignore-lock the child remains a
     // foreground process that is bound to, and cleaned up with, this QA run.
     ASTRO_DEV_BACKGROUND: 'foreground-parent-bound',
-    BASE_PATH: basePath,
+    // The local editor launcher always serves the production renderer from
+    // the loopback origin root. The public artifact may still be deployed
+    // below a repository base such as /SMU1; that base is passed separately
+    // to the public route-passport child below.
+    BASE_PATH: '/',
     DEPLOY_TARGET: 'development',
     SMU1_LOCAL_ADMIN: 'true',
     SMU1_ADMIN_LAUNCHER_REPO_IDENTITY: repoIdentity,
@@ -105,8 +109,7 @@ editor.stdout.on('data', (chunk) => { rendererLog = `${rendererLog}${chunk}`.sli
 editor.stderr.on('data', (chunk) => { rendererLog = `${rendererLog}${chunk}`.slice(-16_000); });
 
 try {
-  const normalizedBase = basePath === '/' ? '' : `/${String(basePath).replace(/^\/+|\/+$/gu, '')}`;
-  await waitForHttp(`${origin}${normalizedBase}/`, editor);
+  await waitForHttp(`${origin}/`, editor);
   await run(process.execPath, [
     path.join(root, 'tools', 'qa', 'route-passport-browser.mjs'),
     `--editor-origin=${origin}`,

@@ -9,7 +9,7 @@ const customOrder = (await getCollection('static-pages')).find(({ data }) => dat
 const taskInputs = (customOrder?.customOrderSourceMaterials ?? [])
   .filter((item) => item.isActive !== false && Boolean(item.label.trim()))
   .sort((a, b) => a.order - b.order)
-  .map((item) => item.label.trim());
+  .map((item) => ({ id: item.id, label: item.label.trim() }));
 const copy = settings.contactsPage;
 const shellCtaBinding = (occurrence: string) => adminBinding(Astro.url, {
   renderer: { family: 'global-shell', variant: 'contacts' },
