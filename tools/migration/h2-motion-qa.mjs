@@ -44,6 +44,7 @@ if (options.help) {
   process.stdout.write(`      Test an existing local origin. Deterministic media faults and the temporary base build are skipped.\n`);
   process.stdout.write(`  Optional: --headful, --json, --artifacts=/absolute/path, --github-base=/SMU1/,\n`);
   process.stdout.write(`            --skip-base-build, --keep-profile, SMU1_H4_ARTIFACT_ROOT=/absolute/path,\n`);
+  process.stdout.write(`            SMU1_H2_MOTION_QA_TEMP_ROOT=/same-filesystem/path,\n`);
   process.stdout.write(`            CHROME_PATH=/path/to/chrome.\n`);
   process.exit(0);
 }
@@ -330,7 +331,19 @@ const handoffFixture = ({
 };
 
 if (!options.externalOrigin && !options.skipBaseBuild) {
-  baseBuildRoot = await mkdtemp(path.join(os.tmpdir(), 'smu1-h2-base-build-'));
+  // Astro 7 promotes prerendered assets with rename(), so the output directory
+  // must live on the same filesystem as the checkout's .astro working directory.
+  const baseBuildTempBase = path.resolve(
+    process.env.SMU1_H2_MOTION_QA_TEMP_ROOT || path.join(root, '.admin-runtime', 'h2-motion-base-build')
+  );
+  await mkdir(baseBuildTempBase, { recursive: true });
+  const [repoDevice, tempDevice] = await Promise.all([stat(root), stat(baseBuildTempBase)]);
+  if (repoDevice.dev !== tempDevice.dev) {
+    throw new Error(
+      `SMU1_H2_MOTION_QA_TEMP_ROOT must use the checkout filesystem to support Astro asset promotion: ${baseBuildTempBase}`
+    );
+  }
+  baseBuildRoot = await mkdtemp(path.join(baseBuildTempBase, 'run-'));
   const { build } = await import('astro');
   await build({
     root: pathToFileURL(`${root}${path.sep}`),

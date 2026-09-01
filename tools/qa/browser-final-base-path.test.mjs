@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 
@@ -33,4 +34,12 @@ test('final browser QA base-path parser rejects ambiguous or escaping inputs', (
     assert.throws(() => normalizeBrowserFinalBasePath(value), /Invalid browser QA BASE_PATH/u);
   }
   assert.throws(() => withBrowserFinalBasePath('https://example.test/', '/SMU1'), /absolute pathname/u);
+});
+
+test('motion QA keeps the temporary Astro outDir on the checkout filesystem', async () => {
+  const source = await readFile(path.resolve('tools/migration/h2-motion-qa.mjs'), 'utf8');
+  assert.match(source, /path\.join\(root, '\.admin-runtime', 'h2-motion-base-build'\)/u);
+  assert.match(source, /Promise\.all\(\[stat\(root\), stat\(baseBuildTempBase\)\]\)/u);
+  assert.match(source, /repoDevice\.dev !== tempDevice\.dev/u);
+  assert.doesNotMatch(source, /mkdtemp\(path\.join\(os\.tmpdir\(\), 'smu1-h2-base-build-'\)\)/u);
 });
