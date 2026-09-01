@@ -7,6 +7,8 @@ import {
   vacancyV2Route,
   type V2JobRecord
 } from '../../../../../components/v2/practical/practicalV2Data';
+import settings from '../../../../../content/site-settings/global.json';
+import { adminBinding } from '../../../../../admin/bindings/adminBinding';
 
 export async function getStaticPaths() {
   const jobs = await loadActiveV2Jobs();
@@ -15,16 +17,26 @@ export async function getStaticPaths() {
 
 const { job } = Astro.props as { job: V2JobRecord };
 const currentPath = vacancyV2Route(job);
+const copy = settings.vacancyDetailPage;
+const shellCtaBinding = (occurrence: string) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'vacancy-detail' },
+  owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: 'vacancyDetailPage.shellCtaLabel', stableItemId: `vacancy-detail-shell-cta-${occurrence}`,
+  scope: 'global', tool: 'link-label', affectedRoutes: ['/vakansii/*']
+});
 ---
 
 <PracticalV2Layout
   title={`${job.title} — вакансии СМУ-1`}
-  description={job.shortDescription}
+  description={job.seoDescription}
   canonicalPath={vacancyProductionRoute(job)}
   currentPath={currentPath}
   kind="vacancy"
   contactHref="#vacancy-contact"
-  ctaLabel="Откликнуться"
+  ctaLabel={copy.shellCtaLabel}
+  headerCtaBinding={shellCtaBinding('header-desktop')}
+  headerMobileCtaBinding={shellCtaBinding('header-mobile')}
+  mobileCtaBinding={shellCtaBinding('footer-mobile')}
 >
   <V2VacancyDetail job={job} />
 </PracticalV2Layout>

@@ -17,9 +17,10 @@ async function fixture(t) {
   const blue = await sharp({ create: { width: 20, height: 10, channels: 3, background: '#00f' } }).webp().toBuffer();
   await fs.writeFile(path.join(root, 'public', 'uploads', 'red.jpg'), red);
   await fs.writeFile(path.join(root, 'public', 'uploads', 'blue.webp'), blue);
+  await fs.writeFile(path.join(root, 'public', 'uploads', 'hero.mp4'), Buffer.from('existing-canonical-video'));
   await fs.writeFile(path.join(root, 'public', '_media', 'h5', 'generated.jpg'), red);
   await fs.writeFile(path.join(root, 'src', 'content', 'products', 'bench.json'), JSON.stringify({
-    slug: 'bench', image: '/uploads/red.jpg', gallery: ['/uploads/red.jpg', '/_media/h5/generated.jpg']
+    slug: 'bench', image: '/uploads/red.jpg', gallery: ['/uploads/red.jpg', '/_media/h5/generated.jpg'], heroVideo: '/uploads/hero.mp4'
   }));
   await fs.writeFile(path.join(root, 'src', 'data', 'navigation.json'), '[]');
   await fs.writeFile(path.join(root, 'src', 'data', 'yandex.json'), '{}');
@@ -30,9 +31,9 @@ test('library indexes canonical originals with pagination, metadata and exact re
   const { root } = await fixture(t);
   const service = createMediaLibraryService({ repoRoot: root });
   const all = await service.list({ page: 1, pageSize: 1 });
-  assert.equal(all.total, 2);
+  assert.equal(all.total, 3);
   assert.equal(all.items.length, 1);
-  assert.equal(all.pages, 2);
+  assert.equal(all.pages, 3);
   const used = await service.list({ usage: 'used', search: 'red' });
   assert.equal(used.total, 1);
   assert.equal(used.items[0].path, '/uploads/red.jpg');
@@ -41,6 +42,12 @@ test('library indexes canonical originals with pagination, metadata and exact re
   assert.equal(used.items[0].height, 30);
   assert.equal(used.items[0].sha256.length, 64);
   assert.equal(used.items.some((item) => item.path.includes('_media/h5')), false);
+  const existingVideo = await service.list({ usage: 'used', search: 'hero.mp4' });
+  assert.equal(existingVideo.total, 1, 'existing canonical video remains available for selection');
+  assert.equal(existingVideo.items[0].path, '/uploads/hero.mp4');
+  assert.equal(existingVideo.items[0].format, 'mp4');
+  assert.equal(existingVideo.items[0].width, null);
+  assert.equal(existingVideo.items[0].height, null);
   const unreferenced = await service.list({ usage: 'unreferenced' });
   assert.deepEqual(unreferenced.items.map((item) => item.path), ['/uploads/blue.webp']);
 });

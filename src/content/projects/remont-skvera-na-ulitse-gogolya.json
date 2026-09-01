@@ -12,6 +12,20 @@
   "order": 2,
   "isActive": true,
   "year": 2024,
+  "presentation": {
+    "publicGallery": [],
+    "archiveCoverPosition": "50% 50%",
+    "archiveCoverOrientation": "landscape",
+    "detailHeroPosition": "50% 50%",
+    "relatedDirections": [
+      { "id": "landscaping", "label": "Благоустройство территорий", "href": "/blagoustroystvo-territoriy/", "context": "Работы для общественных, коммерческих и частных территорий.", "order": 10 },
+      { "id": "street-furniture", "label": "Уличная мебель", "href": "/ulichnaya-mebel/", "context": "Изделия для общественных и частных территорий.", "order": 20 }
+    ],
+    "mediaRoles": {
+      "/assets/images/placeholders/landscaping.svg": ["excluded"],
+      "/assets/images/placeholders/street-furniture.svg": ["excluded"]
+    }
+  },
   "seoTitle": "Частичный ремонт сквера на улице Гоголя — СМУ-1",
   "seoDescription": "Кейс СМУ-1: частичный ремонт сквера на улице Гоголя в Кургане и установка 10 урн для городской территории."
 }

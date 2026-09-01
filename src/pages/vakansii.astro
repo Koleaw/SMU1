@@ -2,18 +2,30 @@
 import PracticalV2Layout from '../components/v2/practical/PracticalV2Layout.astro';
 import V2VacanciesArchive from '../components/v2/practical/V2VacanciesArchive.astro';
 import { loadActiveV2Jobs } from '../components/v2/practical/practicalV2Data';
+import settings from '../content/site-settings/global.json';
+import { adminBinding } from '../admin/bindings/adminBinding';
 
 const jobs = await loadActiveV2Jobs();
+const copy = settings.vacanciesPage;
+const shellCtaBinding = (occurrence: string) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'vacancies-archive' },
+  owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: 'vacanciesPage.shellCtaLabel', stableItemId: `vacancies-shell-cta-${occurrence}`,
+  scope: 'local', tool: 'link-label', affectedRoutes: ['/vakansii/']
+});
 ---
 
 <PracticalV2Layout
-  title="Вакансии — СМУ-1"
-  description="Актуальные вакансии СМУ-1."
+  title={copy.seoTitle}
+  description={copy.seoDescription}
   canonicalPath="/vakansii/"
   currentPath={Astro.url.pathname}
   kind="vacancies"
   contactHref="/kontakty/"
-  ctaLabel="Связаться"
+  ctaLabel={copy.shellCtaLabel}
+  headerCtaBinding={shellCtaBinding('header-desktop')}
+  headerMobileCtaBinding={shellCtaBinding('header-mobile')}
+  mobileCtaBinding={shellCtaBinding('footer-mobile')}
 >
   <V2VacanciesArchive jobs={jobs} />
 </PracticalV2Layout>

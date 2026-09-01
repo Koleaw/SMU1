@@ -3,9 +3,11 @@ import yandex from '../../../data/yandex.json';
 
 interface Props {
   title: string;
+  editorAttributes?: Record<string, string>;
 }
 
 const { title } = Astro.props as Props;
+const editorAttributes = Astro.props.editorAttributes ?? {};
 ---
 
 <div
@@ -15,6 +17,7 @@ const { title } = Astro.props as Props;
   data-v2-yandex-map
   data-v2-map-title={title}
   data-v2-map-constructor={yandex.map.constructorSrc}
+  {...editorAttributes}
 >
   <div class="practical-yandex-map__placeholder" data-v2-map-placeholder hidden>
     <p>Интерактивная карта загружается по запросу.</p>

@@ -18,6 +18,7 @@ import {
   writeFile
 } from 'node:fs/promises';
 import { promisify } from 'node:util';
+import { resolveAstroCli } from './astro-cli.mjs';
 import { hashPassword } from './security.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -667,8 +668,9 @@ try {
     status: proxyReady.status
   });
 
+  const astroCli = await resolveAstroCli(prepared.sandbox);
   astroHandle = startChild('minimal Astro admin server', process.execPath, [
-    path.join(prepared.sandbox, 'node_modules', 'astro', 'astro.js'),
+    astroCli,
     'dev', '--host', '127.0.0.1', '--port', String(sitePort)
   ], {
     cwd: prepared.sandbox,
@@ -681,6 +683,7 @@ try {
       TEST_SITE_URL: siteOrigin,
       BASE_PATH: '/',
       DEPLOY_TARGET: 'development',
+      SMU1_LOCAL_ADMIN: 'true',
       TEMP: processTempDir,
       TMP: processTempDir
     })
@@ -851,7 +854,7 @@ try {
       && item.pathname === '/api/admin/publish/status'), { requests: during });
   };
 
-  const editorUrl = `${siteOrigin}/admin/?view=catalog&collection=products&slug=${encodeURIComponent(sourceProduct.slug)}`;
+  const editorUrl = `${siteOrigin}/admin/all-materials/?view=catalog&collection=products&slug=${encodeURIComponent(sourceProduct.slug)}`;
   await navigate(editorUrl);
   requireCheck('admin.login-screen', await waitForCondition(`!document.querySelector('#adminLogin')?.hidden && document.querySelector('#adminApp')?.hidden === true`, 12_000), {});
 

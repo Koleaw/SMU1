@@ -12,6 +12,33 @@
   "order": 1,
   "isActive": true,
   "year": 2023,
+  "presentation": {
+    "archiveCoverMedia": "/uploads/project-da0872c68d9a09f0a7d2f995.jpg",
+    "detailHeroMedia": "/uploads/project-da0872c68d9a09f0a7d2f995.jpg",
+    "publicGallery": [
+      "/uploads/project-248f17177df30b29ab9b231a.jpg",
+      "/uploads/project-da0872c68d9a09f0a7d2f995.jpg",
+      "/uploads/project-13f617982c8070a1abe2c203.jpg"
+    ],
+    "archiveCoverPosition": "50% 55%",
+    "archiveCoverOrientation": "landscape",
+    "detailHeroPosition": "50% 56%",
+    "relatedDirections": [
+      { "id": "landscaping", "label": "Благоустройство территорий", "href": "/blagoustroystvo-territoriy/", "context": "Работы для общественных, коммерческих и частных территорий.", "order": 10 },
+      { "id": "fences", "label": "Ограждения и заборы", "href": "/ograzhdeniya-i-zabory/", "context": "Ограждения, перила и решения для границ территории.", "order": 20 },
+      { "id": "street-furniture", "label": "Уличная мебель", "href": "/ulichnaya-mebel/", "context": "Изделия для общественных и частных территорий.", "order": 30 }
+    ],
+    "altOverrides": {
+      "/uploads/project-248f17177df30b29ab9b231a.jpg": "Ограждение на благоустроенной набережной реки Тобол",
+      "/uploads/project-da0872c68d9a09f0a7d2f995.jpg": "Готовая территория набережной с лестницей, лавочками и ограждениями",
+      "/uploads/project-13f617982c8070a1abe2c203.jpg": "Работы на участке набережной реки Тобол"
+    },
+    "mediaRoles": {
+      "/uploads/project-248f17177df30b29ab9b231a.jpg": ["landscaping", "finished-result", "proof"],
+      "/uploads/project-da0872c68d9a09f0a7d2f995.jpg": ["landscaping", "finished-result", "hero", "proof"],
+      "/uploads/project-13f617982c8070a1abe2c203.jpg": ["landscaping", "process"]
+    }
+  },
   "seoTitle": "Благоустройство набережной реки Тобол — СМУ-1",
   "seoDescription": "Кейс СМУ-1: благоустройство участка набережной реки Тобол в Кургане, асфальтирование, ограждения, лестница, лавочки и урны."
 }

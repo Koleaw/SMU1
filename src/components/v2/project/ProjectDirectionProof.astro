@@ -3,6 +3,15 @@ import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import type { V2ProjectMedia } from '../mediaRoleAdapter';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
+
+interface ProjectEditorSource {
+  owner: { collection: string; slug: string };
+  descriptionField: 'whatWasDone' | 'shortDescription';
+  mediaField?: string;
+  mediaFormula?: string;
+  affectedRoutes?: string[];
+}
 
 interface FeaturedProject {
   title: string;
@@ -12,6 +21,7 @@ interface FeaturedProject {
   href: string;
   images: V2ProjectMedia[];
   featureIndex?: number;
+  editor?: ProjectEditorSource;
 }
 
 interface SupportingProject {
@@ -20,19 +30,93 @@ interface SupportingProject {
   year?: number;
   description: string;
   href: string;
+  editor?: ProjectEditorSource;
 }
 
 interface Props {
+  eyebrow?: string;
   title: string;
+  proofDescription?: string;
+  linkLabel?: string;
+  supportingLinkLabel?: string;
   featured: FeaturedProject;
   supporting?: SupportingProject[];
+  editorSource?: string;
+  eyebrowBinding?: Record<string, string>;
+  titleBinding?: Record<string, string>;
+  proofDescriptionBinding?: Record<string, string>;
+  linkLabelBinding?: Record<string, string>;
+  supportingLinkLabelBinding?: Record<string, string>;
 }
 
-const { title, featured, supporting = [] } = Astro.props as Props;
+const {
+  eyebrow = 'Выполненные работы',
+  title,
+  proofDescription = 'Завершённые здания и точный состав выполненных работ на производственной территории.',
+  linkLabel = 'Смотреть полный объект',
+  supportingLinkLabel = 'Смотреть объект',
+  featured,
+  supporting = []
+} = Astro.props as Props;
 const meta = (project: { city?: string; year?: number }) => [project.city, project.year].filter(Boolean).join(' · ');
 const safeFeatureIndex = Math.max(0, Math.min(featured.featureIndex ?? 0, featured.images.length - 1));
 const featureImage = featured.images[safeFeatureIndex];
 const sequence = featured.images.filter((_, index) => index !== safeFeatureIndex);
+const editorSource = Astro.props.editorSource ?? 'src/components/v2/project/ProjectDirectionProof.astro#Astro.props';
+const declared = (fragment: string, reason: string, tool = 'page-settings') => adminDisposition(Astro.url, {
+  kind: 'contextual', reason, source: `${editorSource}#${fragment}`, tool
+});
+const sourcePath = (project: FeaturedProject | SupportingProject, fields: string) => project.editor
+  ? `src/content/${project.editor.owner.collection}/${project.editor.owner.slug}.json#${fields}`
+  : `${editorSource}#project.${fields}`;
+const projectBinding = (
+  project: FeaturedProject | SupportingProject,
+  fieldPath: string | undefined,
+  tool: string,
+  options: Record<string, unknown> = {}
+) => project.editor && fieldPath
+  ? adminBinding(Astro.url, {
+      renderer: { family: 'direction-proof', variant: 'construction-project' },
+      owner: project.editor.owner, fieldPath,
+      stableItemId: `${project.editor.owner.slug}-construction-proof-${fieldPath}`,
+      scope: 'shared', tool,
+      affectedRoutes: project.editor.affectedRoutes ?? [Astro.url.pathname],
+      ...options
+    })
+  : {};
+const directOrDeclared = (
+  project: FeaturedProject | SupportingProject,
+  fieldPath: string | undefined,
+  tool: string,
+  fragment: string,
+  reason: string
+) => project.editor && fieldPath
+  ? projectBinding(project, fieldPath, tool)
+  : declared(fragment, reason, tool);
+const metaDisposition = (project: FeaturedProject | SupportingProject) => adminDisposition(Astro.url, {
+  kind: 'derived',
+  reason: 'Строка места и года объединяет два реквизита проекта; они редактируются раздельно в карточке объекта.',
+  source: sourcePath(project, 'city,year'),
+  tool: 'page-settings'
+});
+const mediaAttributes = featured.editor?.mediaField
+  ? projectBinding(featured, featured.editor.mediaField, 'gallery', {
+      role: 'construction-proof-gallery', multiple: true,
+      permissions: { edit: true, reorder: false, delete: false },
+      projection: {
+        kind: 'derived',
+        formula: featured.editor.mediaFormula
+          || 'project media whose presentation.mediaRoles contain construction-building + finished-result + proof'
+      }
+    })
+  : adminDisposition(Astro.url, {
+      kind: 'derived',
+      reason: 'Proof-кадры отобраны по media roles проекта; откройте presentation media карточки объекта.',
+      source: `${editorSource}#featured.images`,
+      tool: 'media'
+    });
+const localOrDeclared = (attributes: Record<string, string> | undefined, fragment: string, reason: string, tool = 'page-settings') =>
+  attributes && Object.keys(attributes).length > 0 ? attributes : declared(fragment, reason, tool);
 ---
 
 {featureImage && (
@@ -40,14 +124,14 @@ const sequence = featured.images.filter((_, index) => index !== safeFeatureIndex
   <div class="hv2-shell">
     <header class="project-proof__heading hv2-grid" data-v2-reveal>
       <div>
-        <p class="hv2-eyebrow">Выполненные работы</p>
-        <h2 id="project-proof-title">{title}</h2>
+        <p class="hv2-eyebrow" {...localOrDeclared(Astro.props.eyebrowBinding, 'eyebrow', 'Надзаголовок proof-секции передан без schema binding.')}>{eyebrow}</p>
+        <h2 id="project-proof-title" {...localOrDeclared(Astro.props.titleBinding, 'title', 'Заголовок proof-секции передан без schema binding.', 'heading')}>{title}</h2>
       </div>
-      <p>Завершённые здания и точный состав выполненных работ на производственной территории.</p>
+      <p {...localOrDeclared(Astro.props.proofDescriptionBinding, 'description', 'Пояснение proof-секции передано без schema binding.', 'long-text')}>{proofDescription}</p>
     </header>
 
     <article class="project-proof__featured">
-      <div class="project-proof__media" data-v2-reveal>
+      <div class="project-proof__media" data-v2-reveal {...mediaAttributes}>
         <figure class="project-proof__feature" data-v2-media>
           <V2ResponsiveImage
             src={featureImage.src}
@@ -78,10 +162,10 @@ const sequence = featured.images.filter((_, index) => index !== safeFeatureIndex
         )}
       </div>
       <div class="project-proof__story" data-v2-reveal>
-        <p class="project-proof__meta">{meta(featured)}</p>
-        <h3>{featured.title}</h3>
-        <p>{featured.description}</p>
-        <a href={withBase(featured.href)}>Смотреть полный объект</a>
+        <p class="project-proof__meta" {...metaDisposition(featured)}>{meta(featured)}</p>
+        <h3 {...directOrDeclared(featured, 'title', 'heading', 'featured.title', 'Название featured-проекта передано без owner binding.')}>{featured.title}</h3>
+        <p {...directOrDeclared(featured, featured.editor?.descriptionField, 'long-text', 'featured.description', 'Описание featured-проекта передано без owner binding.')}>{featured.description}</p>
+        <a href={withBase(featured.href)}><span {...localOrDeclared(Astro.props.linkLabelBinding, 'linkLabel', 'Подпись ссылки proof-секции передана без schema binding.', 'link-label')}>{linkLabel}</span></a>
       </div>
     </article>
 
@@ -90,10 +174,10 @@ const sequence = featured.images.filter((_, index) => index !== safeFeatureIndex
         {supporting.map((project) => (
           <article class="project-proof-card project-proof-card--no-media" role="listitem" data-v2-reveal>
             <div>
-              <p class="project-proof__meta">{meta(project)}</p>
-              <h3>{project.title}</h3>
-              <p>{project.description}</p>
-              <a href={withBase(project.href)}>Смотреть объект</a>
+              <p class="project-proof__meta" {...metaDisposition(project)}>{meta(project)}</p>
+              <h3 {...directOrDeclared(project, 'title', 'heading', 'supporting.title', 'Название supporting-проекта передано без owner binding.')}>{project.title}</h3>
+              <p {...directOrDeclared(project, project.editor?.descriptionField, 'long-text', 'supporting.description', 'Описание supporting-проекта передано без owner binding.')}>{project.description}</p>
+              <a href={withBase(project.href)}><span {...localOrDeclared(Astro.props.supportingLinkLabelBinding, 'supportingLinkLabel', 'Подпись ссылки supporting-проекта передана без schema binding.', 'link-label')}>{supportingLinkLabel}</span></a>
             </div>
           </article>
         ))}

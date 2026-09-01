@@ -4,6 +4,7 @@ import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import type { V2ProjectMedia } from '../mediaRoleAdapter';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import { adminBinding } from '../../../admin/bindings/adminBinding';
 import { resolveV2ResponsiveMedia, type V2MediaRole } from '../../../utils/v2ResponsiveMedia';
 import '../../../styles/v2/projects-v2.css';
 
@@ -13,6 +14,9 @@ interface Props {
   galleryKey: string;
   eagerFirst?: boolean;
   variant?: 'detail' | 'proof';
+  bindingOwner?: { collection: string; slug: string };
+  bindingField?: string;
+  affectedRoutes?: string[];
 }
 
 const {
@@ -61,6 +65,15 @@ const galleryData = galleryImages.map((image) => ({
   main: responsivePayload(image.src, 'gallery', gallerySizes),
   lightbox: responsivePayload(image.src, 'lightbox', '100vw')
 }));
+const bindingOwner = Astro.props.bindingOwner;
+const bindingField = Astro.props.bindingField;
+const galleryBinding = bindingOwner && bindingField ? adminBinding(Astro.url, {
+  renderer: { family: 'project-gallery', variant }, owner: bindingOwner, fieldPath: bindingField,
+  stableItemId: `${bindingOwner.slug}-${galleryKey}`, role: 'public-gallery', scope: 'shared', tool: 'gallery',
+  affectedRoutes: Astro.props.affectedRoutes ?? [Astro.url.pathname], permissions: { edit: true, reorder: true, delete: true },
+  multiple: true, archivePath: 'presentation.archiveCoverMedia', coverPath: 'presentation.archiveCoverMedia',
+  heroPath: 'presentation.detailHeroMedia'
+}) : {};
 ---
 
 {hasImages && (
@@ -69,6 +82,7 @@ const galleryData = galleryImages.map((image) => ({
     id={galleryId}
     aria-label={`Галерея объекта «${title}»`}
     data-v2-project-gallery
+    {...galleryBinding}
   >
     <div class="v2-project-gallery__stage" data-v2-project-gallery-context data-v2-project-gallery-swipe>
       <div class="v2-project-gallery__media" data-v2-project-gallery-media>

@@ -11,6 +11,7 @@ import {
   createManifestFromCommittedTransaction,
   createPublishService,
 } from './publish-service.mjs';
+import { parseReleaseIdentityBytes, serializeReleaseIdentity } from '../release/artifact-identity.mjs';
 
 const BASE = '1'.repeat(40);
 const TESTED = '2'.repeat(40);
@@ -24,6 +25,39 @@ const ACTOR = {
 };
 
 const fp = (value) => `sha256:${crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex')}`;
+
+function exactEvidence(overrides = {}) {
+  return {
+    version: 1,
+    kind: 'smu1-verified-local-revision',
+    exactRunId: `exact-${'1'.repeat(32)}`,
+    sourceTransactionId: 'txn-001',
+    sourceRevision: '6'.repeat(64),
+    sourceBaseSha: BASE,
+    transactionIds: ['txn-001'],
+    contentSchemaHash: '7'.repeat(64),
+    bindingRegistryHash: '8'.repeat(64),
+    h5PipelineHash: '9'.repeat(64),
+    snapshotSha256: 'a'.repeat(64),
+    artifactManifestSha256: 'b'.repeat(64),
+    fileCount: 111,
+    totalBytes: 123456,
+    largestFile: { path: 'assets/video/hero.mp4', bytes: 12345 },
+    ...overrides,
+  };
+}
+
+function releaseArtifactIdentity(testedCommitSha = TESTED) {
+  return parseReleaseIdentityBytes(serializeReleaseIdentity({
+    version: 1,
+    kind: 'smu1-release-artifact-identity',
+    testedCommitSha,
+    artifactManifestSha256: 'c'.repeat(64),
+    fileCount: 10,
+    totalBytes: 100,
+    largestFile: { path: 'index.html', bytes: 40, sha256: 'd'.repeat(64) },
+  }));
+}
 
 function tx(overrides = {}) {
   return {
@@ -122,7 +156,7 @@ function tracker() {
   return createPublishStatusTracker({
     workflowProvider: async ({ testedSha }) => ({ sha: testedSha, status: 'completed', conclusion: 'success' }),
     pagesProvider: async ({ testedSha }) => ({ sha: testedSha, status: 'completed', conclusion: 'success' }),
-    smokeRunner: async ({ testedSha, affectedRoutes, routeExpectations }) => ({
+    smokeRunner: async ({ testedSha, affectedRoutes, routeExpectations, artifactIdentity }) => ({
       sha: testedSha,
       ok: true,
       checkedRoutes: affectedRoutes,
@@ -134,6 +168,9 @@ function tracker() {
         status: expected === 'html' ? 200 : 404,
         outcome: expected === 'html' ? 'html' : 'intentional-not-found',
       })),
+      artifactIdentity,
+      byteIdentityVerified: true,
+      identityVerified: true,
     }),
     now: () => new Date('2026-08-17T10:00:00Z'),
   });
@@ -159,6 +196,7 @@ function runner(count = { prepare: 0, push: 0 }) {
         gates: {
           ok: true,
           testedSha: TESTED,
+          artifactIdentity: releaseArtifactIdentity(),
           results: { 'schema-transaction-validation': { ok: true, log: 'strip-me' } },
         },
         commands: [{ args: ['strip-me'] }],
@@ -253,6 +291,49 @@ test('preview is owner/recovery-bound and survives authenticated session rotatio
   await service.close();
 });
 
+test('strict preview plan and job are bound to one exact run, revision and snapshot', async (t) => {
+  const root = await temporaryRoot(t);
+  const service = createPublishService(options(root, { requireVerifiedArtifact: true }));
+  await assert.rejects(
+    service.preview({ ...ACTOR, transactionIds: ['txn-001'] }),
+    (error) => error.code === 'PUBLISH_EXACT_EVIDENCE_REQUIRED' && error.status === 409,
+  );
+
+  const verification = exactEvidence();
+  const plan = await service.preview({
+    ...ACTOR,
+    transactionIds: ['txn-001'],
+    verifiedArtifact: verification,
+  });
+  assert.equal(plan.verification.exactRunId, verification.exactRunId);
+  assert.equal(plan.verification.sourceRevision, verification.sourceRevision);
+  assert.equal(plan.verification.snapshotSha256, verification.snapshotSha256);
+  const ownedPlan = await service.getPlan({ ...ACTOR, planId: plan.planId });
+  assert.deepEqual(ownedPlan.verification, plan.verification);
+
+  await assert.rejects(
+    service.start({
+      ...ACTOR,
+      planId: plan.planId,
+      idempotencyKey: 'publish-exact-stale',
+      verifiedArtifact: exactEvidence({ snapshotSha256: 'c'.repeat(64) }),
+    }),
+    (error) => error.code === 'PUBLISH_EXACT_EVIDENCE_STALE' && error.status === 409,
+  );
+
+  const job = await service.start({
+    ...ACTOR,
+    planId: plan.planId,
+    idempotencyKey: 'publish-exact-current',
+    verifiedArtifact: verification,
+  });
+  assert.deepEqual(job.verification, plan.verification);
+  assert.deepEqual(job.evidence.sourceVerification, plan.verification);
+  const report = await service.report({ ...ACTOR, jobId: job.jobId });
+  assert.deepEqual(report.job.verification, plan.verification);
+  await service.close();
+});
+
 test('prepare, push, exact deployment persistence and idempotent terminal repeat', async (t) => {
   const root = await temporaryRoot(t);
   const count = { prepare: 0, push: 0 };
@@ -302,9 +383,12 @@ test('post-push failure retries the same tested SHA without another commit or pu
       id: 101,
     }),
     pagesProvider: async ({ testedSha }) => ({ sha: testedSha, status: 'completed', conclusion: 'success' }),
-    smokeRunner: async ({ testedSha, affectedRoutes, routeExpectations }) => ({
+    smokeRunner: async ({ testedSha, affectedRoutes, routeExpectations, artifactIdentity }) => ({
       sha: testedSha,
       ok: true,
+      byteIdentityVerified: true,
+      identityVerified: true,
+      artifactIdentity,
       checkedRoutes: affectedRoutes,
       routeExpectations,
       checks: routeExpectations.map(({ route, expected }) => ({

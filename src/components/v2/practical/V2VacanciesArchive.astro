@@ -5,32 +5,43 @@ const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import type { V2JobRecord } from './practicalV2Data';
 import { vacancyV2Route } from './practicalV2Data';
+import { adminBinding } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   jobs: V2JobRecord[];
 }
 
 const { jobs } = Astro.props as Props;
+const copy = settings.vacanciesPage;
 const jobFacts = (job: V2JobRecord) => [
-  job.city ? { label: 'Город', value: job.city } : null,
-  job.employmentType ? { label: 'Занятость', value: job.employmentType } : null,
-  job.salary ? { label: 'Оплата', value: job.salary } : null
-].filter((item): item is { label: string; value: string } => Boolean(item));
+  job.city ? { label: copy.cityLabel, labelFieldPath: 'cityLabel', value: job.city, fieldPath: 'city' } : null,
+  job.employmentType ? { label: copy.employmentTypeLabel, labelFieldPath: 'employmentTypeLabel', value: job.employmentType, fieldPath: 'employmentType' } : null,
+  job.salary ? { label: copy.salaryLabel, labelFieldPath: 'salaryLabel', value: job.salary, fieldPath: 'salary' } : null
+].filter((item): item is { label: string; labelFieldPath: string; value: string; fieldPath: string } => Boolean(item));
+const pageBinding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'practical', variant: 'vacancies-archive' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `vacanciesPage.${fieldPath}`, stableItemId: `vacancies-${fieldPath}`, scope: 'local', tool,
+  affectedRoutes: ['/vakansii/'], ...options
+});
+const jobBinding = (job: V2JobRecord, fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'vacancy-card', variant: 'archive' }, owner: { collection: 'jobs', slug: job.slug },
+  fieldPath, stableItemId: job.slug, scope: 'shared', tool, affectedRoutes: ['/vakansii/', `/vakansii/${job.slug}/`], ...options
+});
 ---
 
 <V2Breadcrumbs items={[
-  { title: 'Главная', href: '/design-lab/home-v2/' },
-  { title: 'Вакансии' }
+  { title: copy.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: pageBinding('homeBreadcrumbLabel', 'short-text', { stableItemId: 'vacancies-home-breadcrumb' }) },
+  { title: copy.breadcrumbLabel, editor: pageBinding('breadcrumbLabel', 'short-text', { stableItemId: 'vacancies-current-breadcrumb' }) }
 ]} />
 
 <article class="practical-vacancies">
   <header class="practical-hero practical-vacancies__hero">
     <div class="hv2-shell practical-vacancies__hero-grid" data-v2-page-handoff="copy">
       <div data-v2-reveal>
-        <p class="hv2-eyebrow" data-v2-entrance-role="context">Работа в СМУ-1</p>
-        <h1 data-v2-entrance-role="title-primary">Вакансии</h1>
+        <p class="hv2-eyebrow" data-v2-entrance-role="context" {...pageBinding('eyebrow', 'short-text')}>{copy.eyebrow}</p>
+        <h1 data-v2-entrance-role="title-primary" {...pageBinding('title', 'heading')}>{copy.title}</h1>
       </div>
-      <p data-v2-reveal data-v2-entrance-role="lead">Здесь размещаются актуальные вакансии СМУ-1. В списке показаны только открытые позиции.</p>
+      <p data-v2-reveal data-v2-entrance-role="lead" {...pageBinding('description', 'long-text')}>{copy.description}</p>
     </div>
   </header>
 
@@ -39,30 +50,30 @@ const jobFacts = (job: V2JobRecord) => [
       {jobs.length > 0 ? (
           <div class:list={['practical-vacancies__cards', { 'practical-vacancies__cards--single': jobs.length === 1 }]}>
             {jobs.map((job) => (
-              <article class="practical-vacancy-card" data-v2-reveal>
+              <article class="practical-vacancy-card" data-v2-reveal {...jobBinding(job, 'order', 'reorder-item', { zoneId: 'vacancies', permissions: { edit: true, reorder: true, delete: false } })}>
                 <div>
-                  <p class="hv2-eyebrow">Открытая позиция</p>
-                  <h2>{job.title}</h2>
-                  {job.shortDescription && <p>{job.shortDescription}</p>}
+                  <p class="hv2-eyebrow" {...pageBinding('openPositionLabel', 'short-text', { stableItemId: `vacancies-open-position-${job.slug}` })}>{copy.openPositionLabel}</p>
+                  <h2 {...jobBinding(job, 'title', 'heading')}>{job.title}</h2>
+                  {job.shortDescription && <p {...jobBinding(job, 'shortDescription', 'long-text')}>{job.shortDescription}</p>}
                 </div>
                 {jobFacts(job).length > 0 && (
                   <dl>
                     {jobFacts(job).map((fact) => (
-                      <div><dt>{fact.label}</dt><dd>{fact.value}</dd></div>
+                      <div><dt {...pageBinding(fact.labelFieldPath, 'short-text', { stableItemId: `vacancies-${job.slug}-${fact.labelFieldPath}` })}>{fact.label}</dt><dd {...jobBinding(job, fact.fieldPath, 'short-text')}>{fact.value}</dd></div>
                     ))}
                   </dl>
                 )}
-                <a class="hv2-button hv2-button--primary" href={withBase(vacancyV2Route(job))}>
-                  Подробнее
+                <a class="hv2-button hv2-button--primary" href={withBase(vacancyV2Route(job))} {...pageBinding('primaryLabel', 'button-label', { stableItemId: `vacancies-primary-label-${job.slug}` })}>
+                  {copy.primaryLabel}
                 </a>
               </article>
             ))}
           </div>
       ) : (
         <article class="practical-vacancies__empty" data-v2-reveal>
-          <p class="hv2-eyebrow">Вакансии</p>
-          <h2>{settings.vacanciesEmptyTitle}</h2>
-          <p>{settings.vacanciesEmptyText}</p>
+          <p class="hv2-eyebrow" {...pageBinding('emptyEyebrow', 'short-text')}>{copy.emptyEyebrow}</p>
+          <h2 {...adminBinding(Astro.url, { renderer: { family: 'practical', variant: 'vacancies-empty' }, owner: { collection: 'site-settings', slug: 'global' }, fieldPath: 'vacanciesEmptyTitle', scope: 'global', tool: 'heading', affectedRoutes: ['/vakansii/'] })}>{settings.vacanciesEmptyTitle}</h2>
+          <p {...adminBinding(Astro.url, { renderer: { family: 'practical', variant: 'vacancies-empty' }, owner: { collection: 'site-settings', slug: 'global' }, fieldPath: 'vacanciesEmptyText', scope: 'global', tool: 'long-text', affectedRoutes: ['/vakansii/'] })}>{settings.vacanciesEmptyText}</p>
         </article>
       )}
     </div>
@@ -70,9 +81,9 @@ const jobFacts = (job: V2JobRecord) => [
 
   <nav class="practical-related-pages" aria-label="Связанные страницы">
     <div class="hv2-shell">
-      <p>Узнать больше о СМУ-1</p>
-      <a href={withBase('/design-lab/v2/o-nas/')}>О компании</a>
-      <a href={withBase('/design-lab/v2/kontakty/')}>Контакты</a>
+      <p {...pageBinding('relatedEyebrow', 'short-text')}>{copy.relatedEyebrow}</p>
+      <a href={withBase('/design-lab/v2/o-nas/')} {...pageBinding('relatedCompanyLabel', 'link-label')}>{copy.relatedCompanyLabel}</a>
+      <a href={withBase('/design-lab/v2/kontakty/')} {...pageBinding('relatedContactsLabel', 'link-label')}>{copy.relatedContactsLabel}</a>
     </div>
   </nav>
 </article>

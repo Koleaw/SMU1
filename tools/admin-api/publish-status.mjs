@@ -1,3 +1,8 @@
+import {
+  normalizeReleaseIdentityEvidence,
+  releaseIdentityEvidenceMatches,
+} from '../release/artifact-identity.mjs';
+
 const FULL_GIT_SHA_PATTERN = /^[a-f0-9]{40}$/u;
 
 export const PUBLISH_STATUSES = Object.freeze({
@@ -174,6 +179,18 @@ function smokeProvesRouteExpectations(smoke, affectedRoutes, routeExpectations) 
   });
 }
 
+function requiredArtifactIdentity(value, testedSha) {
+  try {
+    return normalizeReleaseIdentityEvidence(value, { expectedTestedCommitSha: testedSha });
+  } catch (error) {
+    throw new PublishStatusError(
+      'PUBLISH_STATUS_ARTIFACT_IDENTITY_INVALID',
+      'Local gate evidence must contain the deterministic dist identity for the exact tested SHA.',
+      { testedSha, code: error?.code || null },
+    );
+  }
+}
+
 export function createPublishStatus({
   planFingerprint,
   baseHead,
@@ -258,6 +275,12 @@ export function transitionPublishStatus(record, {
     const workflowSha = evidence.workflow?.sha ?? evidence.workflow?.headSha;
     const pagesSha = evidence.pages?.sha ?? evidence.pages?.commitSha;
     const smokeSha = evidence.smoke?.sha ?? evidence.smoke?.testedSha;
+    const localArtifactIdentity = record.evidence?.localGates?.artifactIdentity;
+    const artifactIdentityMatches = releaseIdentityEvidenceMatches(
+      localArtifactIdentity,
+      evidence.smoke?.artifactIdentity,
+      { expectedTestedCommitSha: exactSha },
+    );
     if (workflowSha !== exactSha
       || evidence.workflow?.status !== 'completed'
       || evidence.workflow?.conclusion !== 'success'
@@ -266,10 +289,13 @@ export function transitionPublishStatus(record, {
       || evidence.pages?.conclusion !== 'success'
       || smokeSha !== exactSha
       || evidence.smoke?.ok !== true
+      || evidence.smoke?.byteIdentityVerified !== true
+      || evidence.smoke?.identityVerified !== true
+      || !artifactIdentityMatches
       || !smokeProvesRouteExpectations(evidence.smoke, record.affectedRoutes, record.routeExpectations)) {
       throw new PublishStatusError(
         'PUBLISH_SUCCESS_EVIDENCE_INVALID',
-        'Deploy success requires successful workflow, Pages deployment, and live smoke for the exact tested SHA.',
+        'Deploy success requires workflow, Pages, byte identity, and live smoke for the exact tested SHA.',
         { testedSha: exactSha, evidence },
       );
     }
@@ -346,6 +372,7 @@ export function createPublishStatusTracker({ workflowProvider, pagesProvider, sm
         { receipt },
       );
     }
+    requiredArtifactIdentity(receipt.gates.artifactIdentity, receipt.testedSha);
     return transition(record, {
       status: PUBLISH_STATUSES.COMMITTED,
       testedSha: receipt?.testedSha,
@@ -474,15 +501,20 @@ export function createPublishStatusTracker({ workflowProvider, pagesProvider, sm
 
     const smokeRoutes = [...record.affectedRoutes];
     const routeExpectations = record.routeExpectations.map((item) => ({ ...item }));
+    const artifactIdentity = requiredArtifactIdentity(record.evidence?.localGates?.artifactIdentity, testedSha);
     const smoke = await smokeRunner({
       testedSha,
       affectedRoutes: smokeRoutes,
       routeExpectations,
       pages,
+      artifactIdentity,
     });
     if (!smoke
       || providerSha(smoke) !== testedSha
       || smoke.ok !== true
+      || smoke.byteIdentityVerified !== true
+      || smoke.identityVerified !== true
+      || !releaseIdentityEvidenceMatches(artifactIdentity, smoke.artifactIdentity, { expectedTestedCommitSha: testedSha })
       || !smokeProvesRouteExpectations(smoke, smokeRoutes, routeExpectations)) {
       return transition(record, {
         status: PUBLISH_STATUSES.FAILURE,

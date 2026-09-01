@@ -12,9 +12,11 @@ import ConstructionV2Page from '../components/v2/pages/ConstructionV2Page.astro'
 import LandscapingV2Page from '../components/v2/pages/LandscapingV2Page.astro';
 import MetalworksV2Page from '../components/v2/pages/MetalworksV2Page.astro';
 import TopiaryV2Page from '../components/v2/pages/TopiaryV2Page.astro';
+import V2NotFoundRoute from '../components/v2/not-found/V2NotFoundRoute.astro';
 import PracticalV2Layout from '../components/v2/practical/PracticalV2Layout.astro';
 import V2CompanyPage from '../components/v2/practical/V2CompanyPage.astro';
 import { loadPublishedV2ProjectPresentations } from '../components/v2/projects/projectV2Data';
+import { adminBinding } from '../admin/bindings/adminBinding';
 
 export async function getStaticPaths() {
   const [productSections, services, staticPages] = await Promise.all([
@@ -42,7 +44,27 @@ export async function getStaticPaths() {
   return [...productSectionPaths, ...servicePaths, ...staticPagePaths];
 }
 
-const { item, itemType } = Astro.props as { item: any; itemType: string };
+let { item, itemType } = Astro.props as { item?: any; itemType?: string };
+if (!item) {
+  const requestedSlug = String(Astro.params.slug || '');
+  const [productSections, services, staticPages] = await Promise.all([
+    getCollection('product-sections'),
+    getCollection('services'),
+    getCollection('static-pages')
+  ]);
+  item = productSections.find(({ data }) => data.isActive && data.slug !== 'ulichnaya-mebel' && data.slug === requestedSlug)?.data;
+  itemType = item ? 'product-section' : undefined;
+  if (!item) {
+    item = services.find(({ data }) => data.isActive && data.slug === requestedSlug)?.data;
+    itemType = item ? 'service' : undefined;
+  }
+  if (!item) {
+    item = staticPages.find(({ data }) => data.isActive !== false
+      && !['home', 'custom-order', 'vypolnennye-obekty'].includes(data.slug)
+      && data.slug === requestedSlug)?.data;
+    itemType = item ? 'static-page' : undefined;
+  }
+}
 const supportedSlugs = new Set([
   'navesy-i-kozyrki',
   'metallokonstruktsii-dlya-biznesa',
@@ -52,40 +74,43 @@ const supportedSlugs = new Set([
   'stroitelstvo-i-remonty',
   'o-nas'
 ]);
-if (!supportedSlugs.has(item.slug)) {
-  throw new Error(`Production V2 dispatcher has no approved renderer for /${item.slug}/ (${itemType}).`);
+if (item && !supportedSlugs.has(item.slug)) {
+  throw new Error(`Production V2 dispatcher has no approved renderer for /${item.slug}/ (${itemType || 'unknown'}).`);
 }
 
-const snapshot = await loadCatalogV2Snapshot();
-const catalogSection = item.slug === 'ograzhdeniya-i-zabory'
-  ? snapshot.sections.find((section) => section.slug === item.slug)
+const snapshot = item ? await loadCatalogV2Snapshot() : undefined;
+const catalogSection = item?.slug === 'ograzhdeniya-i-zabory'
+  ? snapshot?.sections.find((section) => section.slug === item.slug)
   : undefined;
-if (item.slug === 'ograzhdeniya-i-zabory' && !catalogSection) {
+if (item?.slug === 'ograzhdeniya-i-zabory' && !catalogSection) {
   throw new Error('Active product section ograzhdeniya-i-zabory was not found.');
 }
-const categories = catalogSection ? getActiveSectionCategories(snapshot, catalogSection.slug) : [];
+const categories = catalogSection && snapshot ? getActiveSectionCategories(snapshot, catalogSection.slug) : [];
 const categoryProductCounts = Object.fromEntries(categories.map((category) => [
   category.slug,
-  getCategoryProducts(snapshot, category.slug).length
+  snapshot ? getCategoryProducts(snapshot, category.slug).length : 0
 ]));
-const catalogLinks = catalogSection ? createCatalogV2Links(snapshot, catalogSection.slug) : undefined;
+const catalogLinks = catalogSection && snapshot ? createCatalogV2Links(snapshot, catalogSection.slug) : undefined;
 
-const projectOrder = [
-  'kompleks-rabot-na-proizvodstvennoy-territorii',
-  'blagoustroystvo-naberezhnoy-reki-tobol'
-];
-const publishedProjects = item.slug === 'o-nas' ? await loadPublishedV2ProjectPresentations() : [];
+const projectOrder: string[] = Array.isArray(item?.relatedProjectSlugs) ? item.relatedProjectSlugs : [];
+const publishedProjects = item?.slug === 'o-nas' ? await loadPublishedV2ProjectPresentations() : [];
 const companyProjects = projectOrder
-  .map((slug) => publishedProjects.find((project) => project.project.slug === slug))
-  .filter((project): project is NonNullable<typeof project> => Boolean(project));
+  .map((slug: string) => publishedProjects.find((project) => project.project.slug === slug))
+  .filter((project): project is (typeof publishedProjects)[number] => project !== undefined);
 const companyOgImage = companyProjects[0]?.publicGallery[0]?.src ?? companyProjects[0]?.detailHeroMedia?.src;
+const companyShellCtaBinding = (occurrence: string) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'company' }, owner: { collection: 'static-pages', slug: 'o-nas' },
+  fieldPath: 'shellCtaLabel', stableItemId: `company-shell-cta-${occurrence}`, scope: 'local', tool: 'button-label',
+  affectedRoutes: ['/o-nas/']
+});
 ---
 
-{item.slug === 'navesy-i-kozyrki' && <CanopiesV2Page />}
-{item.slug === 'metallokonstruktsii-dlya-biznesa' && <MetalworksV2Page />}
-{item.slug === 'topiarii' && <TopiaryV2Page />}
-{item.slug === 'blagoustroystvo-territoriy' && <LandscapingV2Page />}
-{item.slug === 'stroitelstvo-i-remonty' && <ConstructionV2Page />}
+{!item && <V2NotFoundRoute />}
+{item?.slug === 'navesy-i-kozyrki' && <CanopiesV2Page />}
+{item?.slug === 'metallokonstruktsii-dlya-biznesa' && <MetalworksV2Page />}
+{item?.slug === 'topiarii' && <TopiaryV2Page />}
+{item?.slug === 'blagoustroystvo-territoriy' && <LandscapingV2Page />}
+{item?.slug === 'stroitelstvo-i-remonty' && <ConstructionV2Page />}
 {catalogSection && catalogLinks && (
   <CatalogSectionV2
     section={catalogSection}
@@ -96,7 +121,7 @@ const companyOgImage = companyProjects[0]?.publicGallery[0]?.src ?? companyProje
     productFinalPrototype="hub"
   />
 )}
-{item.slug === 'o-nas' && (
+{item?.slug === 'o-nas' && (
   <PracticalV2Layout
     title={item.seoTitle}
     description={item.seoDescription}
@@ -105,7 +130,10 @@ const companyOgImage = companyProjects[0]?.publicGallery[0]?.src ?? companyProje
     ogImage={companyOgImage}
     kind="company"
     contactHref="#contact"
-    ctaLabel="Получить расчёт"
+    ctaLabel={item.shellCtaLabel}
+    headerCtaBinding={companyShellCtaBinding('header-desktop')}
+    headerMobileCtaBinding={companyShellCtaBinding('header-mobile')}
+    mobileCtaBinding={companyShellCtaBinding('footer-mobile')}
     headerMode="overlay"
     catalogRootClass="catalog-v2--company"
   >

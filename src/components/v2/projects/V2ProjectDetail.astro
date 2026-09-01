@@ -10,6 +10,8 @@ import V2ProjectMeta from './V2ProjectMeta.astro';
 import V2SectionNav from '../V2SectionNav.astro';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 import '../../../styles/v2/projects-v2.css';
+import { adminBinding } from '../../../admin/bindings/adminBinding';
+import settings from '../../../content/site-settings/global.json';
 
 interface Props {
   presentation: V2ProjectPresentation;
@@ -27,48 +29,69 @@ const {
   relatedDirections,
   isTextOnly
 } = presentation;
-const eyebrow = presentation.category || 'Выполненный объект';
+const affectedRoutes = [presentation.productionRoute, '/vypolnennye-obekty/'];
+const binding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'project-detail', variant: isTextOnly ? 'text-only' : 'media' },
+  owner: { collection: 'projects', slug: project.slug }, fieldPath, stableItemId: project.slug,
+  scope: 'local', tool, affectedRoutes, ...options
+});
+const projectUiBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'project-detail', variant: isTextOnly ? 'text-only' : 'media' },
+  owner: { collection: 'site-settings', slug: 'global' }, fieldPath: `projectUi.${fieldPath}`,
+  stableItemId: `${project.slug}-${fieldPath}`, scope: 'shared', tool,
+  affectedRoutes: ['/vypolnennye-obekty/*'], ...options
+});
+const eyebrow = presentation.category || settings.projectUi.detailDefaultEyebrow;
+const categoryFieldPath = project.category?.trim()
+  ? 'category'
+  : project.workType?.trim()
+    ? 'workType'
+    : project.shortCategory?.trim()
+      ? 'shortCategory'
+      : 'category';
 const heroLead = project.result?.trim() || project.shortDescription;
 const additionalFacts = [
-  project.summary && project.summary !== project.shortDescription ? { title: 'Об объекте', text: project.summary } : null,
-  project.task ? { title: 'Задача', text: project.task } : null,
+  project.summary && project.summary !== project.shortDescription ? { title: settings.projectUi.detailFactSummaryLabel, titleField: 'detailFactSummaryLabel', text: project.summary, fieldPath: 'summary' } : null,
+  project.task ? { title: settings.projectUi.detailFactTaskLabel, titleField: 'detailFactTaskLabel', text: project.task, fieldPath: 'task' } : null,
   project.workTypes?.length
-    ? { title: 'Виды работ', text: project.workTypes.join(', ') }
-    : project.workType ? { title: 'Виды работ', text: project.workType } : null,
-  project.scope ? { title: 'Объём работ', text: project.scope } : null,
+    ? { title: settings.projectUi.detailFactWorkTypesLabel, titleField: 'detailFactWorkTypesLabel', text: project.workTypes.join(', '), fieldPath: 'workTypes' }
+    : project.workType ? { title: settings.projectUi.detailFactWorkTypesLabel, titleField: 'detailFactWorkTypesLabel', text: project.workType, fieldPath: 'workType' } : null,
+  project.scope ? { title: settings.projectUi.detailFactScopeLabel, titleField: 'detailFactScopeLabel', text: project.scope, fieldPath: 'scope' } : null,
   projectTextItems(project.materials).length
-    ? { title: 'Материалы', text: projectTextItems(project.materials).join(', ') }
+    ? { title: settings.projectUi.detailFactMaterialsLabel, titleField: 'detailFactMaterialsLabel', text: projectTextItems(project.materials).join(', '), fieldPath: 'materials' }
     : null,
   projectTextItems(project.features).length
-    ? { title: 'Особенности объекта', text: projectTextItems(project.features).join(', ') }
+    ? { title: settings.projectUi.detailFactFeaturesLabel, titleField: 'detailFactFeaturesLabel', text: projectTextItems(project.features).join(', '), fieldPath: 'features' }
     : null
-].filter((item): item is { title: string; text: string } => Boolean(item?.text));
+].filter((item): item is { title: string; titleField: string; text: string; fieldPath: string } => Boolean(item?.text));
 const sectionNavItems = [
-  { id: 'project-overview', label: 'Обзор' },
-  { id: 'project-work', label: 'Что выполнено' },
-  ...(additionalFacts.length > 0 ? [{ id: 'project-facts', label: 'Сведения' }] : []),
-  ...(publicGallery.length > 0 ? [{ id: 'project-gallery', label: 'Фотографии' }] : []),
-  ...(relatedDirections.length > 0 ? [{ id: 'project-directions', label: 'Направления' }] : []),
-  { id: 'contact', label: 'Обсудить задачу' }
+  { id: 'project-overview', label: settings.projectUi.detailNavOverviewLabel, editor: projectUiBinding('detailNavOverviewLabel') },
+  { id: 'project-work', label: settings.projectUi.detailNavWorkLabel, editor: projectUiBinding('detailNavWorkLabel') },
+  ...(additionalFacts.length > 0 ? [{ id: 'project-facts', label: settings.projectUi.detailNavFactsLabel, editor: projectUiBinding('detailNavFactsLabel') }] : []),
+  ...(publicGallery.length > 0 ? [{ id: 'project-gallery', label: settings.projectUi.detailNavGalleryLabel, editor: projectUiBinding('detailNavGalleryLabel') }] : []),
+  ...(relatedDirections.length > 0 ? [{ id: 'project-directions', label: settings.projectUi.detailNavDirectionsLabel, editor: projectUiBinding('detailNavDirectionsLabel') }] : []),
+  { id: 'contact', label: settings.projectUi.detailNavContactLabel, editor: projectUiBinding('detailNavContactLabel') }
 ];
 ---
 
 <V2Breadcrumbs items={[
-  { title: 'Главная', href: '/design-lab/home-v2/' },
-  { title: 'Выполненные объекты', href: '/design-lab/v2/vypolnennye-obekty/' },
-  { title: project.title }
+  { title: settings.projectUi.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: projectUiBinding('homeBreadcrumbLabel', 'short-text', { affectedRoutes: ['/vypolnennye-obekty/', '/vypolnennye-obekty/*'] }) },
+  { title: settings.projectUi.archiveBreadcrumbLabel, href: '/design-lab/v2/vypolnennye-obekty/', editor: projectUiBinding('archiveBreadcrumbLabel', 'short-text', { affectedRoutes: ['/vypolnennye-obekty/*'] }) },
+  { title: project.title, editor: binding('title', 'heading') }
 ]} />
 
 <article class:list={['v2-project-detail', { 'v2-project-detail--media-sparse': isTextOnly }]}>
-  <header class="v2-project-detail__hero" id="project-overview">
+  <header class="v2-project-detail__hero" id="project-overview" {...(!heroMedia ? binding('gallery', 'gallery', { role: 'missing-project-media', multiple: true, archivePath: 'presentation.archiveCoverMedia', coverPath: 'presentation.archiveCoverMedia', heroPath: 'presentation.detailHeroMedia' }) : {})}>
     <div class="hv2-shell v2-project-detail__hero-grid">
       <div class="v2-project-detail__hero-copy" data-v2-reveal data-v2-page-handoff="copy">
-        <p class="hv2-eyebrow" data-v2-entrance-role="context">{eyebrow}</p>
-        <h1 data-v2-entrance-role="title-primary">{project.title}</h1>
-        <V2ProjectMeta location={location} year={project.year} />
-        <p class="v2-project-detail__lead" data-v2-entrance-role="lead">{heroLead}</p>
-        <a class="v2-project-detail__back" href={withBase('/design-lab/v2/vypolnennye-obekty/')} data-v2-entrance-role="actions-meta">
-          Все объекты
+        <p class="hv2-eyebrow" data-v2-entrance-role="context" {...binding(categoryFieldPath, 'short-text', {
+          projection: { kind: 'fallback', formula: 'category || workType || shortCategory', fallback: 'site-settings.projectUi.detailDefaultEyebrow' }
+        })}>{eyebrow}</p>
+        <h1 data-v2-entrance-role="title-primary" {...binding('title', 'heading')}>{project.title}</h1>
+        <V2ProjectMeta location={location} year={project.year} bindingOwner={{ collection: 'projects', slug: project.slug }} affectedRoutes={affectedRoutes} />
+        <p class="v2-project-detail__lead" data-v2-entrance-role="lead" {...binding(project.result?.trim() ? 'result' : 'shortDescription', 'long-text', { projection: { kind: 'fallback', formula: 'result || shortDescription' } })}>{heroLead}</p>
+        <a class="v2-project-detail__back" href={withBase('/design-lab/v2/vypolnennye-obekty/')} data-v2-entrance-role="actions-meta" {...projectUiBinding('detailArchiveBackLabel', 'link-label')}>
+          {settings.projectUi.detailArchiveBackLabel}
         </a>
       </div>
       {heroMedia && (
@@ -78,6 +101,7 @@ const sectionNavItems = [
           data-v2-media
           data-v2-reveal
           data-v2-entrance-role="media"
+          {...binding('gallery', 'gallery', { role: 'detail-hero', multiple: true, archivePath: 'presentation.archiveCoverMedia', coverPath: 'presentation.archiveCoverMedia', heroPath: 'presentation.detailHeroMedia' })}
         >
           <V2ResponsiveImage
             src={heroMedia.src}
@@ -96,14 +120,19 @@ const sectionNavItems = [
     </div>
   </header>
 
-  <V2SectionNav items={sectionNavItems} label="Разделы объекта" />
+  <V2SectionNav
+    items={sectionNavItems}
+    label={settings.projectUi.detailSectionNavLabel}
+    editor={projectUiBinding('detailSectionNavLabel', 'short-text')}
+    editorSource="src/components/v2/projects/V2ProjectDetail.astro#sectionNavItems"
+  />
 
   <section class="v2-project-detail__work" id="project-work" aria-labelledby="v2-project-work-title">
     <div class="hv2-shell v2-project-detail__work-grid">
       <div data-v2-reveal>
-        <h2 id="v2-project-work-title">Что было выполнено</h2>
+        <h2 id="v2-project-work-title" {...projectUiBinding('detailWorkTitle', 'heading')}>{settings.projectUi.detailWorkTitle}</h2>
       </div>
-      <p data-v2-reveal>{project.whatWasDone}</p>
+      <p data-v2-reveal {...binding('whatWasDone', 'long-text')}>{project.whatWasDone}</p>
     </div>
   </section>
 
@@ -111,13 +140,13 @@ const sectionNavItems = [
     <section class="v2-project-detail__facts" id="project-facts" aria-labelledby="v2-project-facts-title">
       <div class="hv2-shell">
         <header data-v2-reveal>
-          <p class="hv2-eyebrow">Сведения об объекте</p>
-          <h2 id="v2-project-facts-title">По опубликованным данным</h2>
+          <p class="hv2-eyebrow" {...projectUiBinding('detailFactsEyebrow')}>{settings.projectUi.detailFactsEyebrow}</p>
+          <h2 id="v2-project-facts-title" {...projectUiBinding('detailFactsTitle', 'heading')}>{settings.projectUi.detailFactsTitle}</h2>
         </header>
         <div class="v2-project-detail__facts-grid" data-v2-scroll-section>
           {additionalFacts.map((fact) => (
-            <section data-v2-reveal data-v2-scroll-role="card">
-              <h3>{fact.title}</h3>
+            <section data-v2-reveal data-v2-scroll-role="card" {...binding(fact.fieldPath, Array.isArray(project[fact.fieldPath as keyof typeof project]) ? 'list' : 'long-text')}>
+              <h3 {...projectUiBinding(fact.titleField, 'heading')}>{fact.title}</h3>
               <p>{fact.text}</p>
             </section>
           ))}
@@ -130,8 +159,8 @@ const sectionNavItems = [
     <section class="v2-project-detail__gallery" id="project-gallery" aria-labelledby="v2-project-gallery-title">
       <div class="hv2-shell">
         <header class="v2-project-detail__section-heading" data-v2-reveal>
-          <p class="hv2-eyebrow">Фотографии объекта</p>
-          <h2 id="v2-project-gallery-title">Объект в кадрах</h2>
+          <p class="hv2-eyebrow" {...projectUiBinding('detailGalleryEyebrow')}>{settings.projectUi.detailGalleryEyebrow}</p>
+          <h2 id="v2-project-gallery-title" {...projectUiBinding('detailGalleryTitle', 'heading')}>{settings.projectUi.detailGalleryTitle}</h2>
         </header>
         <div data-v2-reveal>
           <V2ProjectGallery
@@ -139,6 +168,9 @@ const sectionNavItems = [
             title={project.title}
             galleryKey={`detail-${project.slug}`}
             variant="detail"
+            bindingOwner={{ collection: 'projects', slug: project.slug }}
+            bindingField="gallery"
+            affectedRoutes={affectedRoutes}
           />
         </div>
       </div>
@@ -149,10 +181,10 @@ const sectionNavItems = [
     <section class="v2-project-detail__directions" id="project-directions" aria-labelledby="v2-project-directions-title">
       <div class="hv2-shell">
         <header class="v2-project-detail__section-heading" data-v2-reveal>
-          <p class="hv2-eyebrow">Связанные направления</p>
-          <h2 id="v2-project-directions-title">Продолжить по задаче</h2>
+          <p class="hv2-eyebrow" {...projectUiBinding('detailDirectionsEyebrow')}>{settings.projectUi.detailDirectionsEyebrow}</p>
+          <h2 id="v2-project-directions-title" {...projectUiBinding('detailDirectionsTitle', 'heading')}>{settings.projectUi.detailDirectionsTitle}</h2>
         </header>
-        <div class="v2-project-detail__direction-grid" role="list">
+        <div class="v2-project-detail__direction-grid" role="list" {...binding('presentation.relatedDirections', 'list', { itemKind: 'object' })}>
           {relatedDirections.map((direction) => (
             <a href={withBase(direction.href)} role="listitem" data-v2-transition-label={direction.label} data-v2-reveal>
               <span>{direction.context}</span>
@@ -165,17 +197,17 @@ const sectionNavItems = [
   )}
 
   {(previous || next) && (
-    <nav class="v2-project-detail__navigation" aria-label="Переходы между выполненными объектами">
+    <nav class="v2-project-detail__navigation" aria-label="Переходы между выполненными объектами" {...binding('order', 'derived', { scope: 'derived', projection: { kind: 'derived', formula: 'active projects sorted by order' }, permissions: { edit: false, reorder: false, delete: false } })}>
       <div class="hv2-shell">
         {previous && (
           <a href={withBase(previous.v2Route)} rel="prev" data-v2-transition-label={previous.project.title}>
-            <span>Предыдущий объект</span>
+            <span {...projectUiBinding('detailPreviousLabel')}>{settings.projectUi.detailPreviousLabel}</span>
             <strong>{previous.project.title}</strong>
           </a>
         )}
         {next && (
           <a href={withBase(next.v2Route)} rel="next" data-v2-transition-label={next.project.title}>
-            <span>Следующий объект</span>
+            <span {...projectUiBinding('detailNextLabel')}>{settings.projectUi.detailNextLabel}</span>
             <strong>{next.project.title}</strong>
           </a>
         )}
@@ -184,11 +216,17 @@ const sectionNavItems = [
   )}
 
   <V2DirectContact
-    eyebrow="Прямая связь"
-    title="Обсудим похожую задачу"
-    description="Кратко опишите объект и имеющиеся исходные материалы — обсудим задачу и подготовим расчёт."
-    primaryLabel="Написать в Telegram"
-    secondaryLabel="Все выполненные объекты"
+    eyebrow={settings.projectUi.detailContactEyebrow}
+    title={settings.projectUi.detailContactTitle}
+    description={settings.projectUi.detailContactDescription}
+    primaryLabel={settings.projectUi.detailContactPrimaryLabel}
+    secondaryLabel={settings.projectUi.detailContactSecondaryLabel}
     secondaryHref="/design-lab/v2/vypolnennye-obekty/"
+    eyebrowBinding={projectUiBinding('detailContactEyebrow')}
+    titleBinding={projectUiBinding('detailContactTitle', 'heading')}
+    descriptionBinding={projectUiBinding('detailContactDescription', 'long-text')}
+    primaryLabelBinding={projectUiBinding('detailContactPrimaryLabel', 'link-label', { hrefPath: 'telegram' })}
+    secondaryLabelBinding={projectUiBinding('detailContactSecondaryLabel', 'link-label')}
+    editorSource="src/components/v2/projects/V2ProjectDetail.astro#contact"
   />
 </article>

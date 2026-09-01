@@ -5,7 +5,6 @@ const IMAGE_UPLOAD_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp']);
 const IMAGE_REFERENCE_EXTENSIONS = new Set([...IMAGE_UPLOAD_EXTENSIONS, 'svg']);
 const VIDEO_EXTENSIONS = new Set(['mp4', 'webm']);
 const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
-const VIDEO_MAX_BYTES = 90 * 1024 * 1024;
 const WINDOW_ITEMS = 10;
 
 function clientId() { return crypto.randomUUID(); }
@@ -43,14 +42,12 @@ function incompatiblePathMessage(pathname, kind) {
 function preflightFile(file, kind) {
   const ext = extension(file.name);
   if (ext === 'heic' || ext === 'heif') return 'HEIC/HEIF пока не поддерживается. На телефоне экспортируйте фото как JPG или WebP и выберите его снова.';
+  if (kind === 'video') return 'Новые видео пока нельзя загружать: безопасная полная проверка и очистка метаданных видео не подключены. Выберите уже сохранённое видео из медиатеки.';
   if (kind === 'image' && !IMAGE_UPLOAD_EXTENSIONS.has(ext)) return 'Для новой фотографии выберите JPG, PNG или WebP. SVG, GIF, PDF, HEIC и архивы запрещены для загрузки.';
   const roleError = incompatiblePathMessage(file.name, kind);
   if (roleError) return `${roleError} SVG, GIF, PDF, HEIC и архивы запрещены для новых загрузок.`;
-  const isVideo = kind === 'video';
   if (file.size <= 0) return 'Файл пустой.';
-  if (file.size > (isVideo ? VIDEO_MAX_BYTES : IMAGE_MAX_BYTES)) return isVideo
-    ? 'Видео больше 90 МБ. Сожмите или укоротите файл перед загрузкой.'
-    : 'Фото больше 10 МБ. Экспортируйте уменьшенную JPG/WebP-копию, сохранив исходник отдельно.';
+  if (file.size > IMAGE_MAX_BYTES) return 'Фото больше 10 МБ. Экспортируйте уменьшенную JPG/WebP-копию, сохранив исходник отдельно.';
   return '';
 }
 
@@ -248,13 +245,13 @@ export function createMediaDialog({ dialog, body, confirmButton, notifications, 
     clear(body);
     const kind = mediaKind(context);
     const allowsMultiple = Boolean(context?.multiple) && kind === 'image';
-    const picker = element('input', {
-      attrs: { type: 'file', accept: kind === 'video' ? '.mp4,.webm' : '.jpg,.jpeg,.png,.webp', multiple: allowsMultiple },
+    const picker = kind === 'image' ? element('input', {
+      attrs: { type: 'file', accept: '.jpg,.jpeg,.png,.webp', multiple: allowsMultiple },
       style: 'position:absolute;opacity:0;pointer-events:none',
       on: { change: (event) => { addFiles(event.currentTarget.files); event.currentTarget.value = ''; } }
-    });
-    const pickButton = element('button', { className: 'admin-btn admin-btn--primary', attrs: { type: 'button' }, on: { click: () => picker.click() } }, [icon('upload'), kind === 'video' ? 'Выбрать одно видео' : allowsMultiple ? 'Выбрать несколько фото' : 'Выбрать одно фото']);
-    const dropzone = element('div', {
+    }) : null;
+    const pickButton = picker ? element('button', { className: 'admin-btn admin-btn--primary', attrs: { type: 'button' }, on: { click: () => picker.click() } }, [icon('upload'), allowsMultiple ? 'Выбрать несколько фото' : 'Выбрать одно фото']) : null;
+    const dropzone = picker ? element('div', {
       className: 'admin-alert',
       attrs: { tabindex: '0', role: 'button', 'aria-label': 'Перетащите фотографии сюда или нажмите, чтобы выбрать' },
       on: {
@@ -264,21 +261,29 @@ export function createMediaDialog({ dialog, body, confirmButton, notifications, 
         dragleave: (event) => { delete event.currentTarget.dataset.dragover; },
         drop: (event) => { event.preventDefault(); delete event.currentTarget.dataset.dragover; addFiles(event.dataTransfer?.files || []); }
       }
-    }, [icon('upload'), element('p', { text: kind === 'video'
-      ? 'Перетащите один MP4/WebM сюда или нажмите для выбора. Видео загружается отдельно от пакетной очереди фотографий.'
-      : `Перетащите ${allowsMultiple ? 'фотографии' : 'фотографию'} сюда или нажмите для выбора. Загрузка начнётся только после подтверждения.` })]);
+    }, [icon('upload'), element('p', { text: `Перетащите ${allowsMultiple ? 'фотографии' : 'фотографию'} сюда или нажмите для выбора. Загрузка начнётся только после подтверждения.` })]) : null;
+    const uploadControls = picker
+      ? [
+          picker,
+          element('div', { className: 'admin-alert' }, [icon('info'), element('p', { text: 'Начальный порядок получен от устройства. Проверьте его до сохранения. Сервер дополнительно проверит реальные байты, формат и размеры.' })]),
+          dropzone
+        ]
+      : [element('div', { className: 'admin-alert admin-alert--warning' }, [
+          icon('warning'),
+          element('p', { text: 'Новые видео пока нельзя загружать: безопасная полная проверка и очистка метаданных видео не подключены. Уже сохранённое MP4/WebM можно выбрать из медиатеки.' })
+        ])];
     body.append(
-      picker,
-      element('div', { className: 'admin-alert' }, [icon('info'), element('p', { text: 'Начальный порядок получен от устройства. Проверьте его до сохранения. Сервер дополнительно проверит реальные байты, формат и размеры.' })]),
-      dropzone,
+      ...uploadControls,
       element('div', { className: 'admin-quick-actions', style: 'margin:16px 0' }, [
         pickButton,
-        typeof loadLibrary === 'function' ? element('button', { className: 'admin-btn', attrs: { type: 'button' }, on: { click: () => void openLibrary({ page: 1, search: library?.search || '' }) } }, [icon('image'), 'Добавить из медиатеки']) : null,
+        typeof loadLibrary === 'function' ? element('button', { className: 'admin-btn', attrs: { type: 'button' }, on: { click: () => void openLibrary({ page: 1, search: library?.search || '' }) } }, [icon(kind === 'video' ? 'media' : 'image'), kind === 'video' ? 'Выбрать сохранённое видео' : 'Добавить из медиатеки']) : null,
         element('button', { className: 'admin-btn', attrs: { type: 'button' }, on: { click: () => { queue.sort((left, right) => (left.file?.name || left.existingPath).localeCompare(right.file?.name || right.existingPath, 'ru')); render(); } } }, ['По имени']),
         element('button', { className: 'admin-btn', attrs: { type: 'button' }, on: { click: () => { queue = queue.slice().reverse(); render(); } } }, ['Обратный порядок']),
         element('button', { className: 'admin-btn', attrs: { type: 'button' }, on: { click: () => { queue.sort((left, right) => left.sourceOrder - right.sourceOrder); render(); } } }, ['Вернуть исходный порядок'])
       ]),
-      element('p', { className: 'admin-field__hint', text: `Окна загрузки: до ${WINDOW_ITEMS} файлов, не более двух запросов одновременно. Порядок очереди сохраняется независимо от скорости ответа.` })
+      element('p', { className: 'admin-field__hint', text: kind === 'video'
+        ? 'Новые видео не отправляются в staging. Доступен только выбор уже сохранённого canonical MP4/WebM.'
+        : `Окна загрузки: до ${WINDOW_ITEMS} файлов, не более двух запросов одновременно. Порядок очереди сохраняется независимо от скорости ответа.` })
     );
     if (busy) {
       body.append(element('div', { className: 'admin-alert admin-alert--warning' }, [
@@ -331,7 +336,7 @@ export function createMediaDialog({ dialog, body, confirmButton, notifications, 
       ]));
     }
     const list = element('div', { className: 'admin-section-stack', attrs: { 'aria-label': 'Очередь файлов' } }, queue.map(row));
-    body.append(queue.length ? list : element('div', { className: 'admin-empty' }, [icon('image'), element('strong', { text: 'Фотографии ещё не выбраны' }), element('p', { text: 'Файлы остаются в браузере до явного подтверждения. Постоянная бесхозная загрузка не создаётся.' })]));
+    body.append(queue.length ? list : element('div', { className: 'admin-empty' }, [icon(kind === 'video' ? 'media' : 'image'), element('strong', { text: kind === 'video' ? 'Видео не выбрано' : 'Фотографии ещё не выбраны' }), element('p', { text: kind === 'video' ? 'Выберите уже сохранённое видео из медиатеки.' : 'Файлы остаются в браузере до явного подтверждения. Постоянная бесхозная загрузка не создаётся.' })]));
     updateConfirm();
   }
 

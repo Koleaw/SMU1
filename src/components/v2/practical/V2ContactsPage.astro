@@ -6,6 +6,7 @@ import { getV2Regions, getV2TelegramLabel } from '../../../utils/v2SiteSettings'
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import V2YandexMap from './V2YandexMap.astro';
+import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   taskInputs: string[];
@@ -22,21 +23,37 @@ for (const key of ['lang', 'scroll', 'um']) {
   if (value) mapWidgetUrl.searchParams.set(key, value);
 }
 mapWidgetUrl.searchParams.set('source', 'constructor-api');
+const copy = settings.contactsPage;
+const pageBinding = (fieldPath: string, tool = 'long-text') => adminBinding(Astro.url, {
+  renderer: { family: 'practical', variant: 'contacts' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `contactsPage.${fieldPath}`, stableItemId: `contacts-${fieldPath}`, scope: 'local', tool,
+  affectedRoutes: ['/kontakty/']
+});
+const globalBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'contacts' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath, scope: 'global', tool, affectedRoutes: ['*'], ...options
+});
+const integrationDisposition = (fieldPath: string, reason: string) => adminDisposition(Astro.url, {
+  kind: 'global', reason, source: `src/data/yandex.json#${fieldPath}`, tool: 'integration-settings'
+});
+const routeDisposition = (fragment: string, reason: string) => adminDisposition(Astro.url, {
+  kind: 'derived', reason, source: `src/components/v2/practical/V2ContactsPage.astro#${fragment}`, tool: 'page-settings'
+});
 ---
 
 <V2Breadcrumbs items={[
-  { title: 'Главная', href: '/design-lab/home-v2/' },
-  { title: 'Контакты' }
+  { title: copy.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: pageBinding('homeBreadcrumbLabel', 'short-text') },
+  { title: copy.breadcrumbLabel, editor: pageBinding('breadcrumbLabel', 'short-text') }
 ]} />
 
 <article class="practical-contacts">
   <header class="practical-hero practical-contacts__hero">
     <div class="hv2-shell practical-contacts__hero-grid" data-v2-page-handoff="copy">
       <div data-v2-reveal>
-        <p class="hv2-eyebrow" data-v2-entrance-role="context">Связь</p>
-        <h1 data-v2-entrance-role="title-primary">Контакты</h1>
+        <p class="hv2-eyebrow" data-v2-entrance-role="context" {...pageBinding('eyebrow', 'short-text')}>{copy.eyebrow}</p>
+        <h1 data-v2-entrance-role="title-primary" {...pageBinding('title', 'heading')}>{copy.title}</h1>
       </div>
-      <p data-v2-reveal data-v2-entrance-role="lead">Позвоните или напишите в Telegram либо на электронную почту, чтобы обсудить изделие, конструкцию или работы на объекте.</p>
+      <p data-v2-reveal data-v2-entrance-role="lead" {...pageBinding('description', 'long-text')}>{copy.description}</p>
     </div>
   </header>
 
@@ -49,8 +66,8 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
           aria-label={`Позвонить по основному телефону ${settings.phonePrimary}`}
           data-v2-reveal
         >
-          <span>Основной телефон</span>
-          <strong>{settings.phonePrimary}</strong>
+          <span {...pageBinding('primaryPhoneLabel', 'short-text')}>{copy.primaryPhoneLabel}</span>
+          <strong {...globalBinding('phonePrimary', 'link', { hrefPath: 'phonePrimary' })}>{settings.phonePrimary}</strong>
         </a>
         {settings.phoneSecondary && (
           <a
@@ -59,8 +76,8 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
             aria-label={`Позвонить по дополнительному телефону ${settings.phoneSecondary}`}
             data-v2-reveal
           >
-            <span>Дополнительный телефон</span>
-            <strong>{settings.phoneSecondary}</strong>
+            <span {...pageBinding('secondaryPhoneLabel', 'short-text')}>{copy.secondaryPhoneLabel}</span>
+            <strong {...globalBinding('phoneSecondary', 'link', { hrefPath: 'phoneSecondary' })}>{settings.phoneSecondary}</strong>
           </a>
         )}
         <a
@@ -71,8 +88,8 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
           aria-label={`Написать в Telegram ${telegramLabel}`}
           data-v2-reveal
         >
-          <span>Telegram</span>
-          <strong>{telegramLabel}</strong>
+          <span {...pageBinding('telegramCardLabel', 'short-text')}>{copy.telegramCardLabel}</span>
+          <strong {...globalBinding('telegramLabel', 'link', { hrefPath: 'telegram' })}>{telegramLabel}</strong>
         </a>
         <a
           class="practical-contact-card practical-contact-card--email"
@@ -80,8 +97,8 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
           aria-label={`Написать на электронную почту ${settings.email}`}
           data-v2-reveal
         >
-          <span>Электронная почта</span>
-          <strong>{settings.email}</strong>
+          <span {...pageBinding('emailCardLabel', 'short-text')}>{copy.emailCardLabel}</span>
+          <strong {...globalBinding('email', 'link', { hrefPath: 'email' })}>{settings.email}</strong>
         </a>
       </div>
     </div>
@@ -90,31 +107,36 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
   <section class="practical-contacts__details" aria-labelledby="contacts-address-title">
     <div class="hv2-shell practical-contacts__details-grid">
       <article class="practical-contacts__address" data-v2-reveal>
-        <p class="hv2-eyebrow">Адрес</p>
-        <h2 id="contacts-address-title">{settings.address}</h2>
-        <p>Объект СМУ-1 отмечен на действующей карте.</p>
+        <p class="hv2-eyebrow" {...pageBinding('addressEyebrow', 'short-text')}>{copy.addressEyebrow}</p>
+        <h2 id="contacts-address-title" {...globalBinding('address', 'long-text')}>{settings.address}</h2>
+        <p {...pageBinding('addressDescription', 'long-text')}>{copy.addressDescription}</p>
         {regions.length > 0 && (
-          <p class="practical-contacts__regions"><strong>География:</strong> {regions.join(' · ')}</p>
+          <p class="practical-contacts__regions"><strong {...pageBinding('regionsLabel', 'short-text')}>{copy.regionsLabel}</strong> <span {...globalBinding('regions', 'list')}>{regions.join(' · ')}</span></p>
         )}
         <iframe
           class="practical-contacts__rating"
           src={yandex.ratingBadge.src}
           width={yandex.ratingBadge.width}
           height={yandex.ratingBadge.height}
-          title="Рейтинг СМУ-1 в Яндекс Бизнес"
+          title={copy.ratingTitle}
           loading="lazy"
+          {...integrationDisposition('ratingBadge', 'Виджет рейтинга и его адрес настраиваются в защищённых настройках интеграций; подпись доступна в настройках страницы контактов.')}
         ></iframe>
       </article>
       <div class="practical-contacts__map" data-v2-reveal>
-        <V2YandexMap title={`Яндекс Карта: ${settings.address}`} />
+        <V2YandexMap
+          title={`Яндекс Карта: ${settings.address}`}
+          editorAttributes={integrationDisposition('map', 'Провайдер и URL карты являются настройкой интеграции, а не редактируемым текстом страницы.')}
+        />
         <a
           class="practical-contacts__map-link"
           href={mapWidgetUrl.toString()}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Открыть адрес ${settings.address} в Яндекс Картах`}
+          {...integrationDisposition('map.constructorSrc', 'Адрес перехода вычисляется из проверенной конфигурации Яндекс Карт.')}
         >
-          Открыть в Яндекс Картах
+          <span {...pageBinding('mapLinkLabel', 'link-label')}>{copy.mapLinkLabel}</span>
         </a>
       </div>
     </div>
@@ -124,11 +146,15 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
     <section class="practical-contacts__brief" aria-labelledby="contacts-brief-title">
       <div class="hv2-shell practical-contacts__brief-grid">
         <header data-v2-reveal>
-          <p class="hv2-eyebrow">Начать обсуждение</p>
-          <h2 id="contacts-brief-title">Что можно прислать</h2>
-          <p>Достаточно доступных материалов: недостающие вводные можно уточнить в разговоре.</p>
+          <p class="hv2-eyebrow" {...pageBinding('briefEyebrow', 'short-text')}>{copy.briefEyebrow}</p>
+          <h2 id="contacts-brief-title" {...pageBinding('briefTitle', 'heading')}>{copy.briefTitle}</h2>
+          <p {...pageBinding('briefDescription', 'long-text')}>{copy.briefDescription}</p>
         </header>
-        <ul data-v2-reveal>
+        <ul data-v2-reveal {...adminBinding(Astro.url, {
+          renderer: { family: 'practical', variant: 'contacts-brief' }, owner: { collection: 'static-pages', slug: 'custom-order' },
+          fieldPath: 'customOrderSourceMaterials', stableItemId: 'contacts-task-inputs', scope: 'shared', tool: 'list',
+          affectedRoutes: ['/kontakty/', '/izgotovlenie-na-zakaz/'], itemKind: 'object'
+        })}>
           {taskInputs.map((item) => (
             <li><strong>{item}</strong></li>
           ))}
@@ -140,18 +166,18 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
   <section class="practical-contacts__legal" aria-labelledby="contacts-legal-title">
     <div class="hv2-shell practical-contacts__legal-grid">
       <div data-v2-reveal>
-        <p class="hv2-eyebrow">Реквизиты</p>
-        <h2 id="contacts-legal-title">{settings.companyName}</h2>
-        <p>{settings.legalAddress}</p>
+        <p class="hv2-eyebrow" {...pageBinding('requisitesEyebrow', 'short-text')}>{copy.requisitesEyebrow}</p>
+        <h2 id="contacts-legal-title" {...globalBinding('companyName')}>{settings.companyName}</h2>
+        <p {...globalBinding('legalAddress', 'long-text')}>{settings.legalAddress}</p>
       </div>
       <dl data-v2-reveal>
-        <div><dt>ИНН</dt><dd>{settings.inn}</dd></div>
-        <div><dt>КПП</dt><dd>{settings.kpp}</dd></div>
-        <div><dt>ОГРН</dt><dd>{settings.ogrn}</dd></div>
+        <div><dt {...pageBinding('innLabel', 'short-text')}>{copy.innLabel}</dt><dd {...globalBinding('inn')}>{settings.inn}</dd></div>
+        <div><dt {...pageBinding('kppLabel', 'short-text')}>{copy.kppLabel}</dt><dd {...globalBinding('kpp')}>{settings.kpp}</dd></div>
+        <div><dt {...pageBinding('ogrnLabel', 'short-text')}>{copy.ogrnLabel}</dt><dd {...globalBinding('ogrn')}>{settings.ogrn}</dd></div>
       </dl>
       <div class="practical-contacts__related" data-v2-reveal>
-        <a href={withBase('/design-lab/v2/o-nas/')}>О компании</a>
-        <a href={withBase('/design-lab/v2/vakansii/')}>Вакансии</a>
+        <a href={withBase('/design-lab/v2/o-nas/')} {...routeDisposition('about-route', 'Адрес вычисляется из канонического route страницы компании.')}><span {...pageBinding('aboutLabel', 'link-label')}>{copy.aboutLabel}</span></a>
+        <a href={withBase('/design-lab/v2/vakansii/')} {...routeDisposition('vacancies-route', 'Адрес вычисляется из канонического route архива вакансий.')}><span {...pageBinding('vacanciesLabel', 'link-label')}>{copy.vacanciesLabel}</span></a>
       </div>
     </div>
   </section>
@@ -159,15 +185,15 @@ mapWidgetUrl.searchParams.set('source', 'constructor-api');
   <section class="practical-contacts__cta" aria-labelledby="contacts-cta-title">
     <div class="hv2-shell practical-contacts__cta-grid">
       <div data-v2-reveal>
-        <p class="hv2-eyebrow hv2-eyebrow--light">Обсудить задачу</p>
-        <h2 id="contacts-cta-title">Свяжемся и уточним исходные данные</h2>
+        <p class="hv2-eyebrow hv2-eyebrow--light" {...pageBinding('ctaEyebrow', 'short-text')}>{copy.ctaEyebrow}</p>
+        <h2 id="contacts-cta-title" {...pageBinding('ctaTitle', 'heading')}>{copy.ctaTitle}</h2>
       </div>
       <div class="hv2-actions" data-v2-reveal>
         <a class="hv2-button hv2-button--light" href={settings.telegram} target="_blank" rel="noopener noreferrer">
-          Написать в Telegram
+          <span {...pageBinding('primaryLabel', 'button-label')}>{copy.primaryLabel}</span>
         </a>
         <a class="hv2-button hv2-button--contrast" href={`tel:${tel(settings.phonePrimary)}`}>
-          Позвонить
+          <span {...pageBinding('secondaryLabel', 'button-label')}>{copy.secondaryLabel}</span>
         </a>
       </div>
     </div>

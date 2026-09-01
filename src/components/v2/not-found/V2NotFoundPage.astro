@@ -4,30 +4,41 @@ import { getV2TelegramLabel } from '../../../utils/v2SiteSettings';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import settings from '../../../content/site-settings/global.json';
 import '../../../styles/v2/not-found-v2.css';
+import { adminBinding } from '../../../admin/bindings/adminBinding';
 
 const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
 const telegramLabel = getV2TelegramLabel(settings);
+const copy = settings.notFoundPage;
+const pageBinding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'not-found', variant: '404' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `notFoundPage.${fieldPath}`, stableItemId: `not-found-${fieldPath}`, scope: 'shared', tool,
+  affectedRoutes: ['/404.html', '/__unknown__'], ...options
+});
+const globalBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'not-found' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath, scope: 'global', tool, affectedRoutes: ['*'], ...options
+});
 ---
 
 <div class="not-found-v2">
   <section class="not-found-v2__main" aria-labelledby="not-found-v2-title" data-home-v2-header-sentinel>
     <div class="hv2-shell hv2-grid not-found-v2__grid">
       <div class="not-found-v2__copy" data-v2-reveal>
-        <p class="hv2-eyebrow" data-v2-entrance-role="context">Навигация</p>
-        <h1 id="not-found-v2-title" data-v2-entrance-role="title-primary">Страница не найдена</h1>
-        <p data-v2-entrance-role="lead">Возможно, адрес изменился или в ссылке есть ошибка. Вернитесь на главную либо откройте список направлений.</p>
+        <p class="hv2-eyebrow" data-v2-entrance-role="context" {...pageBinding('eyebrow', 'short-text')}>{copy.eyebrow}</p>
+        <h1 id="not-found-v2-title" data-v2-entrance-role="title-primary" {...pageBinding('title', 'heading')}>{copy.title}</h1>
+        <p data-v2-entrance-role="lead" {...pageBinding('description', 'long-text')}>{copy.description}</p>
         <div class="not-found-v2__actions" data-v2-entrance-role="actions-meta">
-          <a class="hv2-button hv2-button--primary" href={withBase('/design-lab/home-v2/')}>На главную</a>
-          <a class="hv2-text-link" href={withBase('/design-lab/home-v2/#directions')}>Посмотреть направления</a>
+          <a class="hv2-button hv2-button--primary" href={withBase(copy.primaryHref)} {...pageBinding('primaryLabel', 'link-label', { hrefPath: 'notFoundPage.primaryHref' })}>{copy.primaryLabel}</a>
+          <a class="hv2-text-link" href={withBase(copy.secondaryHref)} {...pageBinding('secondaryLabel', 'link-label', { hrefPath: 'notFoundPage.secondaryHref' })}>{copy.secondaryLabel}</a>
         </div>
       </div>
 
       <aside class="not-found-v2__contacts" id="contact" aria-labelledby="not-found-v2-contacts-title" data-v2-reveal data-v2-entrance-role="support">
-        <p class="hv2-eyebrow">Нужна помощь?</p>
-        <h2 id="not-found-v2-contacts-title">Свяжитесь с СМУ-1</h2>
-        <a href={phoneHref}><span>Телефон</span><strong>{settings.phonePrimary}</strong></a>
-        <a href={settings.telegram} target="_blank" rel="noopener noreferrer"><span>Telegram</span><strong>{telegramLabel}</strong></a>
-        <a href={`mailto:${settings.email}`}><span>Email</span><strong>{settings.email}</strong></a>
+        <p class="hv2-eyebrow" {...pageBinding('ctaEyebrow', 'short-text')}>{copy.ctaEyebrow}</p>
+        <h2 id="not-found-v2-contacts-title" {...pageBinding('ctaTitle', 'heading')}>{copy.ctaTitle}</h2>
+        <a href={phoneHref}><span {...pageBinding('phoneLabel', 'short-text')}>{copy.phoneLabel}</span><strong {...globalBinding('phonePrimary')}>{settings.phonePrimary}</strong></a>
+        <a href={settings.telegram} target="_blank" rel="noopener noreferrer"><span {...pageBinding('telegramLabel', 'short-text')}>{copy.telegramLabel}</span><strong {...globalBinding('telegramLabel', 'link', { projection: { kind: 'fallback', formula: 'telegramLabel || Telegram username from telegram' }, hrefPath: 'telegram' })}>{telegramLabel}</strong></a>
+        <a href={`mailto:${settings.email}`}><span {...pageBinding('emailLabel', 'short-text')}>{copy.emailLabel}</span><strong {...globalBinding('email')}>{settings.email}</strong></a>
       </aside>
     </div>
   </section>

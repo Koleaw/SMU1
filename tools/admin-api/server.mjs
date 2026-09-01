@@ -12,6 +12,13 @@ import { revisionForBytes } from './transaction-engine.mjs';
 import { createMediaStagingService } from './media-staging.mjs';
 import { createMediaLibraryService } from './media-library.mjs';
 import { createLocalPreviewService } from './local-preview.mjs';
+import {
+  createExactValidationService,
+  ExactValidationError,
+  runExactSnapshot
+} from './exact-validation-service.mjs';
+import { BackupServiceError, createBackupService } from './backup-service.mjs';
+import { createReleaseControl, createH6PreviewHostingAdapter } from './release-control.mjs';
 import { createPublishService } from './publish-service.mjs';
 import { createContentPublishGateRunner, createGitHubPublishProviders } from './publish-runtime.mjs';
 import { createPublishGitEnvironment, runGitProcess } from './publish-planner.mjs';
@@ -119,11 +126,19 @@ const TRANSACTION_SINGLETONS = process.env.ADMIN_TEST_CONTENT_ROOT
   : DATA_SINGLETONS;
 
 const NAVIGATION_PATH = path.join(repoRoot, 'src', 'data', 'navigation.json');
-const MAX_VIDEO_UPLOAD_SIZE = 90 * 1024 * 1024;
-const MAX_UPLOAD_SIZE = MAX_VIDEO_UPLOAD_SIZE;
+const MAX_RASTER_UPLOAD_SIZE = 10 * 1024 * 1024;
 const DEPLOY_TARGETS = new Set(['test', 'production']);
 const MAX_JSON_IMPORT_BODY_SIZE = 12 * 1024 * 1024;
-const API_CAPABILITIES = { contentJson: 1, contentBundles: 1, transactions: 1, mediaStaging: 1, publish: 1 };
+const API_CAPABILITIES = {
+  contentJson: 1,
+  contentBundles: 1,
+  transactions: 1,
+  mediaStaging: 1,
+  exactValidation: 1,
+  backups: 1,
+  releaseControl: 1,
+  publish: 1
+};
 const CONTENT_SCHEMA_VERSION = 'h6-content-v1';
 const REPORT_LOG_LINES = 200;
 const DEFAULT_PREVIEW_BRANCH = 'preview';
@@ -652,7 +667,7 @@ function readBody(req, maxBytes = 1_000_000) {
   });
 }
 
-function readRawBody(req, maxBytes = MAX_UPLOAD_SIZE + 1024) {
+function readRawBody(req, maxBytes = MAX_RASTER_UPLOAD_SIZE + 64 * 1024) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
@@ -1033,7 +1048,12 @@ function publishOwnership(req, session, body = {}) {
 }
 
 function withPublishPreviewUrl(payload) {
-  return { ...payload, previewUrl: configuredPublishSite().previewUrl };
+  return {
+    ...payload,
+    previewUrl: configuredPublishSite().previewUrl,
+    previewUrlKind: 'mutable-github-pages',
+    previewUrlIsImmutable: false
+  };
 }
 
 function parseMultipartFormData(buffer, contentType) {
@@ -1347,6 +1367,7 @@ async function applyCompatibilityTransaction(req, session, body, operations, use
     transactionId: preview.transactionId,
     payloadHash: preview.payloadHash
   });
+  scheduleBackupAfterCommit(applied, preview.transactionId);
   return { preview, applied };
 }
 
@@ -1363,6 +1384,18 @@ function compatibilityTransactionReceipt(transaction) {
 
 const { config } = await loadAdminConfig({ repoRoot });
 assertSecureOperation(config, 'startup');
+const testFaultsRequested = process.env.ADMIN_TEST_FAULTS_ENABLED === 'true';
+const testFaultsEnabled = testFaultsRequested
+  && config.ADMIN_TEST_MODE === true
+  && Boolean(process.env.ADMIN_TEST_CONTENT_ROOT);
+if (testFaultsRequested && !testFaultsEnabled) {
+  throw new Error('ADMIN_TEST_FAULTS_ENABLED requires explicit test mode and an isolated ADMIN_TEST_CONTENT_ROOT.');
+}
+const testFaults = {
+  nextExactFailure: false,
+  nextBackupFailure: false,
+  backupStatus: null
+};
 const worktreeGuard = config.ADMIN_TEST_MODE && process.env.ADMIN_TEST_CONTENT_ROOT
   ? null
   : createWorktreeMutationGuard({
@@ -1442,6 +1475,92 @@ const localPreview = createLocalPreviewService({
 });
 await localPreview.initialize();
 
+const deterministicExactRunner = testFaultsEnabled && process.env.ADMIN_TEST_EXACT_MODE === 'deterministic'
+  ? async ({ snapshot }) => {
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      if (testFaults.nextExactFailure) {
+        testFaults.nextExactFailure = false;
+        throw new ExactValidationError('EXACT_TEST_INJECTED_FAILURE', 'Изолированная QA-проверка воспроизвела отказ exact build.', {
+          status: 422,
+          details: { synthetic: true }
+        });
+      }
+      return {
+        artifact: {
+          manifestSha256: snapshot.snapshotSha256,
+          fileCount: snapshot.files?.length || 0,
+          totalBytes: (snapshot.files || []).reduce((sum, item) => sum + Number(item.bytes || 0), 0)
+        },
+        diagnostics: {
+          syntheticTestMode: true,
+          routeChecks: (snapshot.routeExpectations || []).map((expectation) => ({
+            route: expectation.route,
+            expected: expectation.expected,
+            ok: true
+          }))
+        }
+      };
+    }
+  : null;
+const exactValidation = createExactValidationService({
+  repoRoot,
+  runtimeDir: path.join(repoRoot, '.admin-runtime', 'exact-validation'),
+  transactionService: contentTransactions,
+  environment: process.env,
+  ...(deterministicExactRunner
+    ? { runner: deterministicExactRunner }
+    : { runner: (request) => runExactSnapshot({ repoRoot, environment: process.env, ...request }) })
+});
+await exactValidation.initialize();
+
+let backupService = null;
+let backupInitializationError = null;
+if (!config.ADMIN_TEST_MODE) {
+  try {
+    const configuredBackupRoot = String(config.ADMIN_BACKUP_DIR || '').trim();
+    backupService = createBackupService({
+      repoRoot,
+      backupRoot: configuredBackupRoot
+        ? path.resolve(repoRoot, configuredBackupRoot)
+        : path.join(path.dirname(repoRoot), `${path.basename(repoRoot)}-backups`),
+      runtimeDir: path.join(repoRoot, '.admin-runtime', 'backup'),
+      transactionService: contentTransactions,
+      retention: Number(config.ADMIN_BACKUP_RETENTION || 20),
+      maxBytes: Number(config.ADMIN_BACKUP_MAX_BYTES || 20 * 1024 * 1024 * 1024)
+    });
+    await backupService.initialize();
+  } catch (error) {
+    backupInitializationError = error;
+    backupService = null;
+    console.error(`[admin-api] backup unavailable [${error?.code || 'BACKUP_INIT_FAILED'}]: ${error?.message || error}`);
+  }
+}
+
+function scheduleBackupAfterCommit(result, transactionId = null) {
+  const committedId = transactionId || result?.transactionId || null;
+  if (testFaultsEnabled && testFaults.nextBackupFailure && committedId
+    && ['committed', 'success'].includes(String(result?.state || result?.result || ''))) {
+    testFaults.nextBackupFailure = false;
+    const at = new Date().toISOString();
+    testFaults.backupStatus = {
+      version: 1,
+      configured: true,
+      pending: 0,
+      lastSuccess: null,
+      lastAttempt: { transactionId: committedId, status: 'failed', at },
+      lastError: {
+        code: 'BACKUP_TEST_INJECTED_FAILURE',
+        message: 'Изолированная QA-проверка воспроизвела недоступный каталог резервных копий.',
+        at
+      },
+      syntheticTestMode: true
+    };
+    return;
+  }
+  if (!backupService || !committedId || !['committed', 'success'].includes(String(result?.state || result?.result || ''))) return;
+  backupService.scheduleAfterSave({ transactionId: committedId });
+}
+
 let publishServiceInstance = null;
 let publishServicePromise = null;
 
@@ -1488,6 +1607,7 @@ async function getPublishService() {
       pagesProvider: providers.pagesProvider,
       smokeRunner: providers.smokeRunner,
       retryProvider: providers.retryProvider,
+      requireVerifiedArtifact: true,
       // Anonymous GitHub API reads are limited to 60 requests/hour. Keep the
       // owner flow usable without a token, while authenticated status polling
       // may remain responsive.
@@ -1511,6 +1631,11 @@ async function getPublishService() {
     throw error;
   }
 }
+
+const releaseControl = createReleaseControl({
+  exactValidation,
+  hostingAdapter: createH6PreviewHostingAdapter({ getPublishService })
+});
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -1619,6 +1744,137 @@ const server = http.createServer(async (req, res) => {
     }
     const authUser = authSession.username;
 
+    if (pathname === '/api/admin/__test__/faults' && req.method === 'POST') {
+      if (!testFaultsEnabled) {
+        sendJson(res, 404, { error: 'Not found', code: 'NOT_FOUND' });
+        return;
+      }
+      const body = await readBody(req);
+      const allowed = new Set(['nextExactFailure', 'nextBackupFailure', 'expireSession']);
+      const unknown = Object.keys(body || {}).filter((key) => !allowed.has(key));
+      if (unknown.length || !Object.values(body || {}).some((value) => value === true)) {
+        sendJson(res, 400, { error: 'Некорректная test-fault команда.', code: 'TEST_FAULT_INVALID' });
+        return;
+      }
+      if (body.nextExactFailure === true) {
+        if (!deterministicExactRunner) {
+          sendJson(res, 409, { error: 'Deterministic exact test runner не включён.', code: 'TEST_EXACT_MODE_REQUIRED' });
+          return;
+        }
+        testFaults.nextExactFailure = true;
+      }
+      if (body.nextBackupFailure === true) {
+        testFaults.nextBackupFailure = true;
+        testFaults.backupStatus = null;
+      }
+      const response = {
+        ok: true,
+        syntheticTestMode: true,
+        armed: {
+          nextExactFailure: testFaults.nextExactFailure,
+          nextBackupFailure: testFaults.nextBackupFailure
+        },
+        sessionExpired: body.expireSession === true
+      };
+      if (body.expireSession === true) sessions.expire(authSession.token);
+      sendJson(res, 200, response);
+      return;
+    }
+
+    if (pathname === '/api/admin/validation/request' && req.method === 'POST') {
+      const body = await readBody(req);
+      const result = await exactValidation.request({
+        ...transactionContext(req, authSession, body),
+        transactionId: body?.transactionId
+      });
+      sendJson(res, 202, result);
+      return;
+    }
+
+    if (pathname === '/api/admin/validation/status' && req.method === 'GET') {
+      const result = await exactValidation.overview(transactionContext(req, authSession));
+      sendJson(res, 200, result);
+      return;
+    }
+
+    const exactRunMatch = pathname.match(/^\/api\/admin\/validation\/runs\/(exact-[a-f0-9]{32})$/u);
+    if (exactRunMatch && req.method === 'GET') {
+      const result = await exactValidation.get({
+        ...transactionContext(req, authSession),
+        runId: exactRunMatch[1]
+      });
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (pathname === '/api/admin/backups/status' && req.method === 'GET') {
+      const report = testFaultsEnabled && testFaults.backupStatus
+        ? testFaults.backupStatus
+        : backupService
+        ? await backupService.status()
+        : {
+            configured: false,
+            pending: 0,
+            lastSuccess: null,
+            lastError: backupInitializationError
+              ? { code: backupInitializationError.code || 'BACKUP_INIT_FAILED', message: backupInitializationError.message }
+              : { code: 'BACKUP_DISABLED_IN_TEST_MODE', message: 'Резервное копирование отключено только в тестовом runtime.' }
+          };
+      sendJson(res, 200, report);
+      return;
+    }
+
+    if (pathname === '/api/admin/backups' && req.method === 'GET') {
+      if (!backupService) throw new BackupServiceError(
+        backupInitializationError?.code || 'BACKUP_UNAVAILABLE',
+        backupInitializationError?.message || 'Каталог резервных копий сейчас недоступен.',
+        { status: 503 }
+      );
+      sendJson(res, 200, await backupService.list());
+      return;
+    }
+
+    if (pathname === '/api/admin/backups/export' && req.method === 'POST') {
+      if (!backupService) throw new BackupServiceError('BACKUP_UNAVAILABLE', 'Каталог резервных копий сейчас недоступен.', { status: 503 });
+      sendJson(res, 201, await backupService.createManual());
+      return;
+    }
+
+    const backupActionMatch = pathname.match(/^\/api\/admin\/backups\/(backup-[0-9]{8}t[0-9]{6}z-[a-f0-9]{12})\/(verify|export|restore-preview)$/u);
+    if (backupActionMatch && req.method === 'POST') {
+      if (!backupService) throw new BackupServiceError('BACKUP_UNAVAILABLE', 'Каталог резервных копий сейчас недоступен.', { status: 503 });
+      const body = await readBody(req);
+      const [, snapshotId, action] = backupActionMatch;
+      const ownership = transactionContext(req, authSession, body);
+      const result = action === 'verify'
+        ? await backupService.verify({ snapshotId })
+        : action === 'export'
+          ? await backupService.exportPortable({ snapshotId })
+          : await backupService.previewRestore({ ...ownership, snapshotId });
+      sendJson(res, 200, result);
+      return;
+    }
+
+    const backupRestoreApplyMatch = pathname.match(/^\/api\/admin\/backups\/restore\/(restore-[a-f0-9]{32})\/apply$/u);
+    if (backupRestoreApplyMatch && req.method === 'POST') {
+      if (!backupService) throw new BackupServiceError('BACKUP_UNAVAILABLE', 'Каталог резервных копий сейчас недоступен.', { status: 503 });
+      const body = await readBody(req);
+      const result = await backupService.applyRestore({
+        ...transactionContext(req, authSession, body),
+        restoreId: backupRestoreApplyMatch[1]
+      });
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (pathname === '/api/admin/release/production' && req.method === 'POST') {
+      await releaseControl.requestProduction();
+    }
+
+    if (pathname === '/api/admin/release/rollback' && req.method === 'POST') {
+      await releaseControl.rollback();
+    }
+
     if (pathname === '/api/admin/local-preview' && req.method === 'POST') {
       const body = await readBody(req);
       const collection = String(body?.collection || '');
@@ -1705,6 +1961,7 @@ const server = http.createServer(async (req, res) => {
         transactionId: body?.transactionId,
         payloadHash: body?.payloadHash
       });
+      scheduleBackupAfterCommit(result, body?.transactionId);
       sendJson(res, 200, result);
       return;
     }
@@ -1864,6 +2121,7 @@ const server = http.createServer(async (req, res) => {
         operationId: body?.operationId,
         replaceConfirmed: body?.replaceConfirmed === true
       });
+      scheduleBackupAfterCommit(result, result.result === 'success' ? body?.operationId : null);
       sendJson(res, result.result === 'success' ? 200 : 409, result);
       return;
     }
@@ -1871,11 +2129,11 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/admin/publish/preview-plan' && req.method === 'POST') {
       assertPublishOperationAllowed();
       const body = await readBody(req);
-      const publishService = await getPublishService();
-      const plan = await publishService.preview({
+      const transactionIds = body?.transactionIds ?? body?.selectedTransactionIds ?? [];
+      const plan = await releaseControl.preparePreview({
         ...publishOwnership(req, authSession, body),
         target: body?.target,
-        transactionIds: body?.transactionIds ?? body?.selectedTransactionIds ?? []
+        transactionIds
       });
       sendJson(res, 200, withPublishPreviewUrl(plan));
       return;
@@ -1885,10 +2143,16 @@ const server = http.createServer(async (req, res) => {
       assertPublishOperationAllowed();
       const body = await readBody(req);
       const publishService = await getPublishService();
-      const job = await publishService.start({
+      const ownedPlan = await publishService.getPlan({
+        ...publishOwnership(req, authSession, body),
+        planId: body?.planId
+      });
+      const job = await releaseControl.requestPreview({
         ...publishOwnership(req, authSession, body),
         target: body?.target,
-        planId: body?.planId
+        planId: ownedPlan.planId,
+        transactionIds: ownedPlan.selectedTransactionIds,
+        sourceRevision: ownedPlan.verification?.sourceRevision
       });
       sendJson(res, job.status === 'empty' ? 200 : 202, withPublishPreviewUrl(job));
       return;
@@ -1978,7 +2242,7 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 400, { error: 'Ожидается multipart/form-data', code: 'MEDIA_MULTIPART_REQUIRED' });
         return;
       }
-      const raw = await readRawBody(req, MAX_VIDEO_UPLOAD_SIZE + 64 * 1024);
+      const raw = await readRawBody(req, MAX_RASTER_UPLOAD_SIZE + 64 * 1024);
       const form = parseMultipartFormData(raw, contentType);
       if (form.files.length !== 1 || form.files[0].fieldName !== 'file') {
         sendJson(res, 400, { error: 'За один staging-запрос принимается ровно один файл.', code: 'MEDIA_FILE_COUNT_INVALID' });
@@ -2001,7 +2265,7 @@ const server = http.createServer(async (req, res) => {
       catch (error) { if (error?.code !== 'ENOENT') throw error; }
       sendJson(res, 201, {
         ...staged,
-        baseRevision: revisionForBytes(file.fileBuffer),
+        baseRevision: `sha256:${staged.validation.sha256}:${staged.validation.bytes}`,
         destinationBaseRevision: revisionForBytes(destinationBytes),
         usage: await mediaStaging.usage()
       });
@@ -2282,6 +2546,8 @@ async function shutdown(signal) {
   const publishService = publishServiceInstance
     || (publishServicePromise ? await publishServicePromise.catch(() => null) : null);
   await publishService?.close();
+  await exactValidation.close();
+  await backupService?.close();
   await writerLease.release();
   clearTimeout(forcedExit);
   process.exit(signal ? 0 : (process.exitCode || 0));

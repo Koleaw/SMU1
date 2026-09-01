@@ -8,6 +8,13 @@ import {
   fingerprintPublishPlan,
   hashPublishBytes,
 } from './publish-planner.mjs';
+import {
+  RELEASE_IDENTITY_RELATIVE_PATH,
+  normalizeReleaseIdentityEvidence,
+  parseReleaseIdentityBytes,
+  readAndVerifyReleaseIdentity,
+  releaseIdentityEvidenceMatches,
+} from '../release/artifact-identity.mjs';
 
 const FULL_SHA_PATTERN = /^[a-f0-9]{40}$/u;
 const DEFAULT_MAX_OUTPUT_BYTES = 32 * 1024;
@@ -64,12 +71,18 @@ const TOKEN_PATTERNS = [
 const COMMANDS = Object.freeze([
   Object.freeze({ id: 'npm-ci', args: ['ci', '--no-audit', '--no-fund'] }),
   Object.freeze({ id: 'admin-tests', args: ['run', 'test:admin-h6:ci'] }),
+  Object.freeze({ id: 'evidence-contract-tests', args: ['run', 'test:h6-evidence-contracts'] }),
   Object.freeze({ id: 'astro-check', args: ['run', 'check'] }),
   Object.freeze({ id: 'build', args: ['run', 'build'] }),
   Object.freeze({ id: 'performance-before-deploy', args: ['run', 'qa:performance'] }),
+  Object.freeze({ id: 'static-qa', args: ['run', 'qa:final:static'] }),
   Object.freeze({ id: 'deploy-prepare', args: ['run', 'deploy:prepare'] }),
   Object.freeze({ id: 'performance-after-deploy', args: ['run', 'qa:performance'] }),
-  Object.freeze({ id: 'deploy-isolation', args: ['run', 'qa:deploy-isolation'] }),
+  Object.freeze({ id: 'browser-motion-isolation', args: ['run', 'qa:final:browser'] }),
+  Object.freeze({ id: 'route-passport', args: ['run', 'qa:h6:route-passport'] }),
+  Object.freeze({ id: 'public-action-crawl', args: ['run', 'qa:h6:public-actions'] }),
+  Object.freeze({ id: 'admin-visual-acceptance', args: ['run', 'qa:h6:admin-actions'] }),
+  Object.freeze({ id: 'evidence-verification', args: ['run', 'qa:h6:verify-evidence'] }),
 ]);
 
 export class PublishRuntimeError extends Error {
@@ -485,17 +498,47 @@ export function createContentPublishGateRunner({
       const executed = await runChecked(npmCommand, command.args, command.id);
       commandIndexes[command.id] = executed.evidence.index;
     }
+    const identityCommand = await runChecked(
+      process.execPath,
+      ['tools/release/artifact-identity.mjs', '--dist', 'dist', '--tested-sha', sha],
+      'release-artifact-identity',
+    );
+    commandIndexes['release-artifact-identity'] = identityCommand.evidence.index;
+    let artifactIdentity;
+    try {
+      artifactIdentity = await readAndVerifyReleaseIdentity({
+        distRoot: path.join(realCheckoutRoot, 'dist'),
+        expectedTestedCommitSha: sha,
+      });
+    } catch (error) {
+      throw new PublishRuntimeError(
+        'PUBLISH_GATE_ARTIFACT_IDENTITY_INVALID',
+        'The deterministic release artifact identity is missing or does not match dist.',
+        { details: { code: error?.code || 'RELEASE_IDENTITY_FAILED' } },
+      );
+    }
 
     const results = {
       'schema-transaction-validation': { ok: true, commandIndexes: [commandIndexes['admin-tests']] },
-      'targeted-admin-tests': { ok: true, commandIndexes: [commandIndexes['admin-tests']] },
+      'targeted-admin-tests': {
+        ok: true,
+        commandIndexes: [
+          commandIndexes['admin-tests'],
+          commandIndexes['evidence-contract-tests'],
+          commandIndexes['static-qa'],
+          commandIndexes['route-passport'],
+          commandIndexes['public-action-crawl'],
+          commandIndexes['admin-visual-acceptance'],
+          commandIndexes['evidence-verification'],
+        ],
+      },
       'astro-check': { ok: true, commandIndexes: [commandIndexes['astro-check']] },
       'build-media-prepare': { ok: true, commandIndexes: [commandIndexes.build] },
       'h5-media-budgets': {
         ok: true,
         commandIndexes: [commandIndexes['performance-before-deploy'], commandIndexes['performance-after-deploy']],
       },
-      'deploy-isolation': { ok: true, commandIndexes: [commandIndexes['deploy-isolation']] },
+      'deploy-isolation': { ok: true, commandIndexes: [commandIndexes['browser-motion-isolation']] },
       'exact-media-references': {
         ok: true,
         commandIndexes: [commandIndexes['deploy-prepare'], commandIndexes['performance-after-deploy']],
@@ -506,6 +549,12 @@ export function createContentPublishGateRunner({
         fingerprint: planFingerprint,
         pathCount: plan.paths.length,
       },
+      'artifact-byte-identity': {
+        ok: true,
+        commandIndexes: [commandIndexes['release-artifact-identity']],
+        testedCommitSha: artifactIdentity.testedCommitSha,
+        artifactManifestSha256: artifactIdentity.artifactManifestSha256,
+      },
     };
 
     return deepFreeze({
@@ -514,6 +563,7 @@ export function createContentPublishGateRunner({
       ok: true,
       testedSha: sha,
       planFingerprint,
+      artifactIdentity,
       results,
       commands,
     });
@@ -925,6 +975,106 @@ export function createGitHubPublishProviders({
     );
   }
 
+  async function fetchIdentityMarker(url) {
+    return timedRequest(
+      (signal) => fetchImpl(url, {
+        method: 'GET',
+        redirect: 'manual',
+        cache: 'no-store',
+        signal,
+        headers: {
+          Accept: 'application/json',
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+        },
+      }),
+      {
+        timeoutCode: 'PUBLISH_SMOKE_IDENTITY_TIMEOUT',
+        failureCode: 'PUBLISH_SMOKE_IDENTITY_NETWORK_ERROR',
+        label: 'Pages release identity request',
+      },
+    );
+  }
+
+  async function inspectArtifactIdentity(testedSha, localEvidence) {
+    let expected;
+    try {
+      expected = normalizeReleaseIdentityEvidence(localEvidence, { expectedTestedCommitSha: testedSha });
+    } catch (error) {
+      return { ok: false, code: 'PUBLISH_SMOKE_LOCAL_IDENTITY_INVALID', detailCode: error?.code || null };
+    }
+    let currentUrl = routeUrl(pagesBase, `/${RELEASE_IDENTITY_RELATIVE_PATH}`);
+    currentUrl.searchParams.set('release', testedSha);
+    const redirects = [];
+    for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
+      let response;
+      try {
+        response = await fetchIdentityMarker(currentUrl);
+      } catch (error) {
+        return {
+          ok: false,
+          code: error?.code === 'PUBLISH_SMOKE_IDENTITY_TIMEOUT' ? error.code : 'PUBLISH_SMOKE_IDENTITY_NETWORK_ERROR',
+          redirects,
+        };
+      }
+      const status = Number(response?.status ?? 0);
+      if (status >= 300 && status < 400) {
+        const location = response?.headers?.get?.('location');
+        await response?.body?.cancel?.().catch(() => {});
+        if (!location) return { ok: false, code: 'PUBLISH_SMOKE_IDENTITY_REDIRECT_INVALID', status, redirects };
+        let nextUrl;
+        try { nextUrl = new URL(location, currentUrl); } catch {
+          return { ok: false, code: 'PUBLISH_SMOKE_IDENTITY_REDIRECT_INVALID', status, redirects };
+        }
+        if (!isWithinPagesBase(nextUrl, pagesBase)) {
+          return { ok: false, code: 'PUBLISH_SMOKE_IDENTITY_REDIRECT_UNSAFE', status, redirects };
+        }
+        if (!nextUrl.search) nextUrl.searchParams.set('release', testedSha);
+        redirects.push(nextUrl.pathname);
+        currentUrl = nextUrl;
+        continue;
+      }
+      const contentType = String(response?.headers?.get?.('content-type') ?? '').toLowerCase().split(';')[0].trim();
+      const declaredLength = Number(response?.headers?.get?.('content-length') || 0);
+      if (status !== 200 || contentType !== 'application/json'
+        || (Number.isFinite(declaredLength) && declaredLength > 64 * 1024)) {
+        await response?.body?.cancel?.().catch(() => {});
+        return { ok: false, code: 'PUBLISH_SMOKE_IDENTITY_RESPONSE_INVALID', status, contentType, redirects };
+      }
+      let bytes;
+      try {
+        bytes = Buffer.from(await response.arrayBuffer());
+      } catch {
+        return { ok: false, code: 'PUBLISH_SMOKE_IDENTITY_NETWORK_ERROR', status, redirects };
+      }
+      let observed;
+      try {
+        observed = parseReleaseIdentityBytes(bytes, { expectedTestedCommitSha: testedSha });
+      } catch (error) {
+        return {
+          ok: false,
+          code: error?.code === 'RELEASE_IDENTITY_SHA_MISMATCH'
+            ? 'PUBLISH_SMOKE_IDENTITY_STALE'
+            : 'PUBLISH_SMOKE_IDENTITY_INVALID',
+          detailCode: error?.code || null,
+          status,
+          redirects,
+        };
+      }
+      if (!releaseIdentityEvidenceMatches(expected, observed, { expectedTestedCommitSha: testedSha })) {
+        return {
+          ok: false,
+          code: 'PUBLISH_SMOKE_IDENTITY_MANIFEST_MISMATCH',
+          status,
+          redirects,
+          observed,
+        };
+      }
+      return { ok: true, status, redirects, observed };
+    }
+    return { ok: false, code: 'PUBLISH_SMOKE_IDENTITY_TOO_MANY_REDIRECTS', redirects };
+  }
+
   async function inspectRoute(route, expected) {
     if (!safeRoute(route)) return { route, ok: false, code: 'PUBLISH_SMOKE_ROUTE_INVALID' };
     let currentUrl = routeUrl(pagesBase, route);
@@ -987,7 +1137,7 @@ export function createGitHubPublishProviders({
     return { route, ok: false, code: 'PUBLISH_SMOKE_TOO_MANY_REDIRECTS', redirects };
   }
 
-  async function smokeRunner({ testedSha, affectedRoutes, routeExpectations, pages } = {}) {
+  async function smokeRunner({ testedSha, affectedRoutes, routeExpectations, pages, artifactIdentity } = {}) {
     const sha = assertFullSha(testedSha);
     if (!pages
       || pages.sha !== sha
@@ -998,11 +1148,19 @@ export function createGitHubPublishProviders({
     const expectations = normalizeSmokeRouteContract(affectedRoutes, routeExpectations);
     const routes = expectations.map((item) => item.route);
     const checks = [];
+    const artifactIdentityCheck = await inspectArtifactIdentity(sha, artifactIdentity);
     for (const expectation of expectations) {
       const check = await inspectRoute(expectation.route, expectation.expected);
       checks.push(check.expected ? check : { ...check, expected: expectation.expected });
     }
     const failures = checks.filter((item) => item.ok !== true).map((item) => ({ ...item }));
+    if (!artifactIdentityCheck.ok) {
+      failures.unshift({
+        route: `/${RELEASE_IDENTITY_RELATIVE_PATH}`,
+        expected: 'release-identity',
+        ...artifactIdentityCheck,
+      });
+    }
     return deepFreeze({
       sha,
       ok: failures.length === 0,
@@ -1011,6 +1169,9 @@ export function createGitHubPublishProviders({
       routeExpectations: expectations.map((item) => ({ ...item })),
       checks,
       failures,
+      artifactIdentity: artifactIdentityCheck.observed || null,
+      byteIdentityVerified: artifactIdentityCheck.ok === true,
+      identityVerified: artifactIdentityCheck.ok === true,
     });
   }
 

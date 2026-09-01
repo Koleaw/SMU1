@@ -7,6 +7,10 @@ interface Props {
   variant?: 'engineering' | 'visual';
   presentation?: 'panel' | 'open';
   id?: string;
+  titleBinding?: Record<string, string>;
+  descriptionBinding?: Record<string, string>;
+  itemsBinding?: Record<string, string>;
+  eyebrowBinding?: Record<string, string>;
 }
 
 const {
@@ -20,6 +24,10 @@ const {
 } = Astro.props as Props;
 
 const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
+const titleBinding = Astro.props.titleBinding ?? {};
+const descriptionBinding = Astro.props.descriptionBinding ?? {};
+const itemsBinding = Astro.props.itemsBinding ?? {};
+const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
 ---
 
 {items.length > 0 && (
@@ -35,18 +43,18 @@ const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
   >
     <div class="hv2-shell hv2-grid direction-scope__grid">
       <header class="direction-scope__heading" data-v2-reveal>
-        <p class="hv2-eyebrow">{eyebrow}</p>
-        <h2 id={`${id}-title`}>{title}</h2>
-        {description && <p>{description}</p>}
+        <p class="hv2-eyebrow" {...eyebrowBinding}>{eyebrow}</p>
+        <h2 id={`${id}-title`} {...titleBinding}>{title}</h2>
+        {description && <p {...descriptionBinding}>{description}</p>}
       </header>
       {presentation === 'panel' ? (
-        <ul class="direction-scope__list" data-v2-reveal>
+        <ul class="direction-scope__list" data-v2-reveal {...itemsBinding}>
           {items.map((item) => (
             <li><p>{item}</p></li>
           ))}
         </ul>
       ) : (
-        <ol class="direction-scope__open-list" data-v2-reveal>
+        <ol class="direction-scope__open-list" data-v2-reveal {...itemsBinding}>
           {items.map((item, index) => (
             <li>
               <span aria-hidden="true">{indexLabel(index)}</span>

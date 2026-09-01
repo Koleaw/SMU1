@@ -34,6 +34,8 @@ test('collection definitions expose write-relevant field policies', () => {
 
   const settings = requireCollectionDefinition('site-settings');
   assert.equal(settings.fixedSlug, 'global');
+  assert.ok(settings.urlFields.some((field) => field.path === 'notFoundPage.primaryHref' && field.context === 'internal'));
+  assert.ok(settings.urlFields.some((field) => field.path === 'notFoundPage.secondaryHref' && field.context === 'internal'));
   assert.throws(
     () => requireCollectionDefinition('not-a-collection'),
     (error) => error.code === 'CONTENT_COLLECTION_UNKNOWN'

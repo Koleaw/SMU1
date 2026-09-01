@@ -1,18 +1,29 @@
 ---
+import { adminBinding } from '../../../admin/bindings/adminBinding';
 interface Props {
   location?: string;
   year?: number;
   className?: string;
+  bindingOwner?: { collection: string; slug: string };
+  affectedRoutes?: string[];
 }
 
 const { location = '', year, className = '' } = Astro.props as Props;
 const hasMeta = Boolean(location || year);
+const owner = Astro.props.bindingOwner;
+const binding = (fieldPath: string, options: Record<string, unknown> = {}) => owner
+  ? adminBinding(Astro.url, {
+      renderer: { family: 'project-meta', variant: 'fact' }, owner, fieldPath,
+      stableItemId: `${owner.slug}-${fieldPath}`, scope: 'local', tool: 'short-text',
+      affectedRoutes: Astro.props.affectedRoutes ?? [Astro.url.pathname], ...options
+    })
+  : {};
 ---
 
 {hasMeta && (
   <p class:list={['v2-project-meta', className]} aria-label="Сведения об объекте">
-    {location && <span>{location}</span>}
+    {location && <span {...binding('city', { projection: { kind: 'derived', formula: 'city + region' } })}>{location}</span>}
     {location && year && <i aria-hidden="true"></i>}
-    {year && <time datetime={String(year)}>{year}</time>}
+    {year && <time datetime={String(year)} {...binding('year')}>{year}</time>}
   </p>
 )}

@@ -6,6 +6,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ADMIN_ENV_FILE, loadAdminConfig } from './config.mjs';
+import { resolveAstroCli } from './astro-cli.mjs';
 import {
   createAdminHealthIdentity,
   createAdminRepoIdentity,
@@ -17,6 +18,8 @@ import { redactText } from './security.mjs';
 
 const THIS_FILE = fileURLToPath(import.meta.url);
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(THIS_FILE), '..', '..');
+const SESSION_FILE_NAME = 'admin-launcher-session.json';
+const PORT_PREFERENCE_FILE_NAME = 'admin-launcher-ports.json';
 
 export class AdminLauncherError extends Error {
   constructor(message, { code = 'ADMIN_LAUNCHER_ERROR', details } = {}) {
@@ -24,6 +27,17 @@ export class AdminLauncherError extends Error {
     this.name = 'AdminLauncherError';
     this.code = code;
     if (details !== undefined) this.details = details;
+  }
+}
+
+export async function resolveLauncherAstroCli(repoRoot) {
+  try {
+    return await resolveAstroCli(repoRoot);
+  } catch (error) {
+    throw new AdminLauncherError(
+      'Зависимости не установлены или повреждены. Павлу нужно один раз выполнить npm ci.',
+      { code: 'DEPENDENCIES_MISSING', details: { reason: error?.code || 'ASTRO_CLI_UNAVAILABLE' } }
+    );
   }
 }
 
@@ -152,6 +166,141 @@ export async function checkPortAvailable(host, port) {
   });
 }
 
+export async function findAvailablePort(host, { exclude = new Set() } = {}) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const port = await new Promise((resolve, reject) => {
+      const server = net.createServer();
+      server.unref();
+      server.once('error', reject);
+      server.listen({ host, port: 0, exclusive: true }, () => {
+        const address = server.address();
+        const selected = address && typeof address === 'object' ? address.port : 0;
+        server.close((error) => error ? reject(error) : resolve(selected));
+      });
+    });
+    if (Number.isSafeInteger(port) && port >= 1024 && port <= 65535 && !exclude.has(port)) return port;
+  }
+  throw new AdminLauncherError('Не удалось безопасно выбрать свободный локальный порт.', { code: 'RANDOM_PORT_UNAVAILABLE' });
+}
+
+function isRuntimePort(value) {
+  return Number.isSafeInteger(value) && value >= 1024 && value <= 65535;
+}
+
+function normalizePortPreference(payload, { repoIdentity, apiHost, uiHost }) {
+  if (payload?.version !== 1
+    || payload?.repoIdentity !== repoIdentity
+    || payload?.apiHost !== apiHost
+    || payload?.uiHost !== uiHost
+    || !isRuntimePort(payload?.apiPort)
+    || !isRuntimePort(payload?.uiPort)
+    || payload.apiPort === payload.uiPort) return null;
+  return Object.freeze({ apiPort: payload.apiPort, uiPort: payload.uiPort });
+}
+
+function portPreferenceFilePath(repoRoot) {
+  return path.join(repoRoot, '.admin-runtime', PORT_PREFERENCE_FILE_NAME);
+}
+
+export async function readPreferredRuntimePorts(repoRoot, identity) {
+  try {
+    const payload = JSON.parse(await fs.readFile(portPreferenceFilePath(repoRoot), 'utf8'));
+    return normalizePortPreference(payload, identity);
+  } catch (error) {
+    if (error?.code === 'ENOENT' || error instanceof SyntaxError) return null;
+    throw error;
+  }
+}
+
+export async function writePreferredRuntimePorts(repoRoot, identity, ports) {
+  const normalized = normalizePortPreference({ version: 1, ...identity, ...ports }, identity);
+  if (!normalized) throw new TypeError('Preferred admin runtime ports are invalid.');
+  const runtimeDir = path.join(repoRoot, '.admin-runtime');
+  await fs.mkdir(runtimeDir, { recursive: true });
+  const filePath = portPreferenceFilePath(repoRoot);
+  const tempPath = path.join(runtimeDir, `.${PORT_PREFERENCE_FILE_NAME}.${process.pid}.${Date.now()}.tmp`);
+  const payload = {
+    version: 1,
+    repoIdentity: identity.repoIdentity,
+    apiHost: identity.apiHost,
+    uiHost: identity.uiHost,
+    apiPort: normalized.apiPort,
+    uiPort: normalized.uiPort,
+    updatedAt: new Date().toISOString()
+  };
+  try {
+    await fs.writeFile(tempPath, `${JSON.stringify(payload, null, 2)}\n`, {
+      encoding: 'utf8', flag: 'wx', mode: 0o600
+    });
+    await fs.rename(tempPath, filePath);
+  } catch (error) {
+    await fs.unlink(tempPath).catch((cleanupError) => {
+      if (cleanupError?.code !== 'ENOENT') throw cleanupError;
+    });
+    throw error;
+  }
+  return normalized;
+}
+
+export async function selectRuntimePorts(identity, options = {}) {
+  const preferred = normalizePortPreference({ version: 1, ...identity, ...options.preferred }, identity);
+  const checkAvailable = options.checkAvailable || checkPortAvailable;
+  const findPort = options.findPort || findAvailablePort;
+  const [preferredUiAvailable, preferredApiAvailable] = preferred
+    ? await Promise.all([
+        checkAvailable(identity.uiHost, preferred.uiPort),
+        checkAvailable(identity.apiHost, preferred.apiPort)
+      ])
+    : [false, false];
+
+  const uiExcluded = new Set(preferredApiAvailable ? [preferred.apiPort] : []);
+  const uiPort = preferredUiAvailable
+    ? preferred.uiPort
+    : await findPort(identity.uiHost, { exclude: uiExcluded });
+  const apiPort = preferredApiAvailable && preferred.apiPort !== uiPort
+    ? preferred.apiPort
+    : await findPort(identity.apiHost, { exclude: new Set([uiPort]) });
+  if (!isRuntimePort(apiPort) || !isRuntimePort(uiPort) || apiPort === uiPort) {
+    throw new AdminLauncherError('Не удалось безопасно выбрать разные локальные порты.', {
+      code: 'RANDOM_PORT_UNAVAILABLE'
+    });
+  }
+  return Object.freeze({ apiPort, uiPort });
+}
+
+function sessionFilePath(repoRoot) {
+  return path.join(repoRoot, '.admin-runtime', SESSION_FILE_NAME);
+}
+
+async function readRuntimeSession(repoRoot, repoIdentity) {
+  try {
+    const payload = JSON.parse(await fs.readFile(sessionFilePath(repoRoot), 'utf8'));
+    if (payload?.version !== 1 || payload?.repoIdentity !== repoIdentity
+      || !isRuntimePort(payload?.apiPort) || !isRuntimePort(payload?.uiPort)
+      || payload.apiPort === payload.uiPort) return null;
+    return payload;
+  } catch (error) {
+    if (error?.code === 'ENOENT' || error instanceof SyntaxError) return null;
+    throw error;
+  }
+}
+
+async function writeRuntimeSession(repoRoot, payload) {
+  const runtimeDir = path.join(repoRoot, '.admin-runtime');
+  await fs.mkdir(runtimeDir, { recursive: true });
+  const filePath = sessionFilePath(repoRoot);
+  const tempPath = path.join(runtimeDir, `.${SESSION_FILE_NAME}.${process.pid}.${Date.now()}.tmp`);
+  await fs.writeFile(tempPath, `${JSON.stringify(payload, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+  await fs.rename(tempPath, filePath);
+}
+
+async function removeRuntimeSession(repoRoot, repoIdentity) {
+  const filePath = sessionFilePath(repoRoot);
+  const current = await readRuntimeSession(repoRoot, repoIdentity).catch(() => null);
+  if (!current || current.repoIdentity !== repoIdentity) return;
+  await fs.unlink(filePath).catch((error) => { if (error?.code !== 'ENOENT') throw error; });
+}
+
 export async function probeHttp(url, options = {}) {
   const timeoutMs = options.timeoutMs ?? 1_000;
   const service = String(options.service || '').toLowerCase();
@@ -236,7 +385,7 @@ export async function probeHttp(url, options = {}) {
 }
 
 export async function waitForHttp(url, child, options = {}) {
-  const timeoutMs = options.timeoutMs ?? 45_000;
+  const timeoutMs = options.timeoutMs ?? 120_000;
   const intervalMs = options.intervalMs ?? 200;
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -276,6 +425,7 @@ export function createChildEnvironments(raw, config, options = {}) {
     ADMIN_API_PORT: String(config.ADMIN_API_PORT),
     ADMIN_UI_HOST: config.ADMIN_UI_HOST,
     ADMIN_UI_PORT: String(config.ADMIN_UI_PORT),
+    ADMIN_ALLOWED_ORIGINS: `http://${hostForUrl(config.ADMIN_UI_HOST)}:${config.ADMIN_UI_PORT}`,
     CONTENT_WRITE_MODE: 'local',
     PUBLIC_ADMIN_API_BASE: config.PUBLIC_ADMIN_API_BASE
   };
@@ -294,7 +444,13 @@ export function createChildEnvironments(raw, config, options = {}) {
     ADMIN_UI_PORT: String(config.ADMIN_UI_PORT),
     PUBLIC_ADMIN_API_BASE: config.PUBLIC_ADMIN_API_BASE,
     PUBLIC_ADMIN_HEALTH_MARKER: createAdminUiHealthMarker(repoIdentity),
+    SMU1_LOCAL_ADMIN: 'true',
     [UI_PARENT_IDENTITY_ENV]: repoIdentity,
+    // Astro 7 auto-daemonizes when it detects an agent environment. The
+    // editor owns this child and must observe/stop it directly, so force the
+    // foreground code path; --ignore-lock below keeps lifecycle ownership in
+    // this launcher instead of Astro's workspace-global lock file.
+    ASTRO_DEV_BACKGROUND: 'foreground-parent-bound',
     ASTRO_TELEMETRY_DISABLED: '1'
   };
   return Object.freeze({ api: Object.freeze(api), ui: Object.freeze(ui) });
@@ -308,6 +464,15 @@ function spawnService(command, args, options) {
     windowsHide: true,
     shell: false
   });
+}
+
+export function createAdminUiAstroArgs(astroCli, config) {
+  return createParentBoundNodeArgs(astroCli, [
+    'dev',
+    '--ignore-lock',
+    '--host', config.ADMIN_UI_HOST,
+    '--port', String(config.ADMIN_UI_PORT)
+  ]);
 }
 
 function childHasExited(child) {
@@ -401,11 +566,60 @@ export async function runAdminLauncher(options = {}) {
   const repoRoot = path.resolve(options.repoRoot ?? DEFAULT_REPO_ROOT);
   await assertFile(path.join(repoRoot, 'package.json'), 'CHECKOUT_INVALID', 'Не найден package.json настроенного checkout.');
   await assertFile(path.join(repoRoot, ADMIN_ENV_FILE), 'ADMIN_SETUP_REQUIRED', 'Не выполнен setup. Сначала запустите npm run admin:setup.');
-  await assertFile(path.join(repoRoot, 'node_modules', 'astro', 'astro.js'), 'DEPENDENCIES_MISSING', 'Зависимости не установлены. Павлу нужно один раз выполнить npm ci.');
+  const astroCli = await resolveLauncherAstroCli(repoRoot);
   const loaded = await loadAdminConfig({ repoRoot });
-  const { config, raw } = loaded;
-  assertBranch(repoRoot, config.ADMIN_EXPECTED_BRANCH);
+  const configured = loaded.config;
+  assertBranch(repoRoot, configured.ADMIN_EXPECTED_BRANCH);
   const repoIdentity = createAdminRepoIdentity(repoRoot);
+
+  const savedSession = await readRuntimeSession(repoRoot, repoIdentity);
+  if (savedSession) {
+    const savedAdminUrl = `http://${hostForUrl(configured.ADMIN_UI_HOST)}:${savedSession.uiPort}/admin/`;
+    const savedApiHealthUrl = `http://${hostForUrl(configured.ADMIN_API_HOST)}:${savedSession.apiPort}/api/admin/health`;
+    const [ui, api] = await Promise.all([
+      probeHttp(savedAdminUrl, { service: 'ui', repoIdentity }),
+      probeHttp(savedApiHealthUrl, { service: 'api', repoIdentity })
+    ]);
+    if (ui && api) {
+      if (options.open === true) openBrowser(savedAdminUrl);
+      process.stdout.write(`Админка уже запущена: ${savedAdminUrl}\n`);
+      return { existing: true, adminUrl: savedAdminUrl, stop: async () => {} };
+    }
+    if (ui || api) {
+      throw new AdminLauncherError('Найдена незавершённая локальная сессия. Закройте старое окно и повторите.', {
+        code: 'PARTIAL_SESSION_DETECTED'
+      });
+    }
+    await removeRuntimeSession(repoRoot, repoIdentity);
+  }
+
+  const fixedPorts = options.fixedPorts === true || loaded.raw.ADMIN_FIXED_PORTS === 'true';
+  const runtimeIdentity = Object.freeze({
+    repoIdentity,
+    apiHost: configured.ADMIN_API_HOST,
+    uiHost: configured.ADMIN_UI_HOST
+  });
+  const preferredPorts = fixedPorts
+    ? null
+    : await readPreferredRuntimePorts(repoRoot, runtimeIdentity)
+      || (savedSession ? { apiPort: savedSession.apiPort, uiPort: savedSession.uiPort } : null);
+  const runtimePorts = fixedPorts
+    ? { apiPort: configured.ADMIN_API_PORT, uiPort: configured.ADMIN_UI_PORT }
+    : await selectRuntimePorts(runtimeIdentity, { preferred: preferredPorts });
+  const config = Object.freeze({
+    ...configured,
+    ADMIN_API_PORT: runtimePorts.apiPort,
+    ADMIN_UI_PORT: runtimePorts.uiPort,
+    ADMIN_ALLOWED_ORIGINS: Object.freeze([
+      `http://${hostForUrl(configured.ADMIN_UI_HOST)}:${runtimePorts.uiPort}`.toLowerCase()
+    ])
+  });
+  const raw = {
+    ...loaded.raw,
+    ADMIN_API_PORT: String(runtimePorts.apiPort),
+    ADMIN_UI_PORT: String(runtimePorts.uiPort),
+    ADMIN_ALLOWED_ORIGINS: `http://${hostForUrl(configured.ADMIN_UI_HOST)}:${runtimePorts.uiPort}`
+  };
 
   const adminUrl = `http://${hostForUrl(config.ADMIN_UI_HOST)}:${config.ADMIN_UI_PORT}/admin/`;
   const apiHealthUrl = `http://${hostForUrl(config.ADMIN_API_HOST)}:${config.ADMIN_API_PORT}/api/admin/health`;
@@ -451,13 +665,11 @@ export async function runAdminLauncher(options = {}) {
     env: environments.api,
     ipc: true
   });
-  const ui = spawnService(process.execPath, createParentBoundNodeArgs(
-    path.join(repoRoot, 'node_modules', 'astro', 'astro.js'), [
-    'dev',
-    '--host', config.ADMIN_UI_HOST,
-    '--port', String(config.ADMIN_UI_PORT)
-    ]
-  ), { repoRoot, env: environments.ui, ipc: true });
+  const ui = spawnService(process.execPath, createAdminUiAstroArgs(astroCli, config), {
+    repoRoot,
+    env: environments.ui,
+    ipc: true
+  });
 
   let stopPromise = null;
   const stop = () => {
@@ -465,7 +677,7 @@ export async function runAdminLauncher(options = {}) {
     stopPromise = Promise.all([
       stopChild(api, { role: 'api', repoIdentity }),
       stopChild(ui, { role: 'ui', repoIdentity })
-    ]);
+    ]).finally(() => removeRuntimeSession(repoRoot, repoIdentity));
     return stopPromise;
   };
   const abortOnExit = (name, child) => child.once('exit', (code, signal) => {
@@ -481,6 +693,21 @@ export async function runAdminLauncher(options = {}) {
       waitForHttp(apiHealthUrl, api, { timeoutMs: options.timeoutMs, service: 'api', repoIdentity }),
       waitForHttp(adminUrl, ui, { timeoutMs: options.timeoutMs, service: 'ui', repoIdentity })
     ]);
+  } catch (error) {
+    await stop();
+    throw error;
+  }
+
+  try {
+    if (!fixedPorts) await writePreferredRuntimePorts(repoRoot, runtimeIdentity, runtimePorts);
+    await writeRuntimeSession(repoRoot, {
+      version: 1,
+      repoIdentity,
+      launcherPid: process.pid,
+      apiPort: config.ADMIN_API_PORT,
+      uiPort: config.ADMIN_UI_PORT,
+      startedAt: new Date().toISOString()
+    });
   } catch (error) {
     await stop();
     throw error;

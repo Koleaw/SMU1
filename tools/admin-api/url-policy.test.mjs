@@ -9,6 +9,7 @@ import {
 
 test('URL policy accepts normalized internal, hash and HTTPS links', () => {
   assert.deepEqual(validateUrl('/kontakty/'), { ok: true, value: '/kontakty/', kind: 'internal' });
+  assert.deepEqual(validateUrl('/#directions'), { ok: true, value: '/#directions', kind: 'internal' });
   assert.deepEqual(validateUrl('#contact'), { ok: true, value: '#contact', kind: 'hash' });
 
   const external = validateUrl('https://example.com/catalog?q=one%20two');

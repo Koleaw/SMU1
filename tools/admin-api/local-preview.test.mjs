@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { createLocalPreviewService } from './local-preview.mjs';
+import { createLocalPreviewService, runLocalPreviewAstroBuild } from './local-preview.mjs';
 
 async function fixture(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-local-preview-'));
@@ -18,6 +18,42 @@ async function fixture(t) {
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   return root;
 }
+
+test('local preview invokes the Astro CLI declared by the installed package and fails before spawn if missing', async (t) => {
+  const root = await fixture(t);
+  const packageRoot = path.join(root, 'node_modules', 'astro');
+  const cli = path.join(packageRoot, 'bin', 'astro.mjs');
+  await fs.mkdir(path.dirname(cli), { recursive: true });
+  await fs.writeFile(path.join(packageRoot, 'package.json'), JSON.stringify({ bin: { astro: './bin/astro.mjs' } }));
+  await fs.writeFile(cli, 'export {};\n');
+  const calls = [];
+  const result = await runLocalPreviewAstroBuild({
+    workspace: root,
+    repoRoot: root,
+    environment: { PATH: 'safe' },
+    execute: async (...args) => {
+      calls.push(args);
+      return { stdout: 'built', stderr: '' };
+    }
+  });
+  assert.deepEqual(result, { stdout: 'built', stderr: '' });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], process.execPath);
+  assert.deepEqual(calls[0][1], [await fs.realpath(cli), 'build']);
+  assert.equal(calls[0][2].cwd, root);
+
+  await fs.unlink(cli);
+  await assert.rejects(
+    () => runLocalPreviewAstroBuild({
+      workspace: root,
+      repoRoot: root,
+      environment: {},
+      execute: async () => { throw new Error('must not spawn'); }
+    }),
+    { code: 'ASTRO_CLI_MISSING' }
+  );
+  assert.equal(calls.length, 1);
+});
 
 test('isolated preview enables only the copied record and serves built/public bytes to its owner', async (t) => {
   const root = await fixture(t);

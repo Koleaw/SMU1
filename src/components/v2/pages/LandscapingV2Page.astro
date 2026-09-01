@@ -4,9 +4,14 @@ import ImmersiveDirectionHero from '../directions/ImmersiveDirectionHero.astro';
 import DirectionV2Related from '../directions/DirectionV2Related.astro';
 import { getDirectionCardItems, getDirectionListItems } from '../directions/directionV2Data';
 import {
-  approvedMediaUntilEdited,
-  approvedUntilEdited
+  approvedMediaUntilEdited
 } from '../directions/directionV2Presentation';
+import {
+  directionPresentationBinding,
+  directionRelatedItems,
+  directionSectionNavItems,
+  requireDirectionPresentation
+} from '../directions/directionPresentation';
 import {
   getV2ProjectPresentation,
   selectV2ProjectMedia,
@@ -24,10 +29,16 @@ import {
   selectProject
 } from '../project/projectDirectionV2Data';
 import V2SectionNav from '../V2SectionNav.astro';
+import { adminBinding } from '../../../admin/bindings/adminBinding';
 
 const currentPath = Astro.url.pathname;
 const data = await loadProjectDirectionV2Snapshot('blagoustroystvo-territoriy');
 const { service, projects, catalog, services } = data;
+const presentation = requireDirectionPresentation(service);
+const owner = { collection: 'services' as const, slug: service.slug };
+const route = `/${service.slug}/`;
+const presentationBinding = (fieldPath: string, tool = 'short-text') =>
+  directionPresentationBinding(Astro.url, owner, route, fieldPath, tool);
 const pageBlocks = getProjectDirectionBlocks(service);
 const blockSectionId = (block: unknown) => (block as { sectionId?: string } | undefined)?.sectionId;
 const blockIntro = (block: unknown) => (block as { intro?: string } | undefined)?.intro?.trim() || '';
@@ -55,78 +66,43 @@ const resolvedHeroMedia = approvedMediaUntilEdited(
   approvedHeroImage
 );
 const heroImage = resolvedHeroMedia.src;
-const directionTitle = approvedUntilEdited(service.title, 'Благоустройство', 'Благоустройство территорий');
-const heroKicker = approvedUntilEdited(service.heroKicker, undefined, 'Благоустройство под задачу');
-const heroTitle = approvedUntilEdited(
-  service.heroTitle,
-  'Благоустройство территорий',
-  'Благоустройство территорий'
-);
-const heroDescription = approvedUntilEdited(
-  service.heroDescription,
-  'Выполняем работы по благоустройству частных, коммерческих и общественных территорий: от отдельных элементов и МАФ до обустройства дворов, входных групп, зон отдыха и хозяйственных площадок.',
-  'Выполняем благоустройство общественных, коммерческих, производственных и частных территорий — от отдельных элементов и МАФ до комплекса работ на площадке.'
-);
-const contactTitle = approvedUntilEdited(
-  service.contactTitle,
-  'Нужно благоустроить территорию?',
-  'Рассчитаем благоустройство вашей территории'
-);
-const contactDescription = approvedUntilEdited(
-  service.contactDescription,
-  'Напишите нам, и мы сориентируем по составу работ, изделиям, материалам, монтажу и этапности. Можно отправить фото территории, ТЗ, чертеж, дизайн-проект или описание задачи.',
-  'Пришлите фотографии территории, размеры, план, эскиз, дизайн-проект, ТЗ или краткое описание задачи. Уточним состав работ, изделия и монтаж.'
-);
-const telegramLabel = approvedUntilEdited(service.contactTelegramLabel, 'Написать в Telegram', 'Получить расчёт');
-const phoneLabel = approvedUntilEdited(service.contactPhoneLabel, 'Позвонить', 'Позвонить');
-const emailLabel = approvedUntilEdited(service.contactEmailLabel, 'Написать на почту', 'Email');
+const directionTitle = service.title;
+const heroKicker = service.heroKicker || service.title;
+const heroTitle = service.heroTitle;
+const heroDescription = service.heroDescription;
+const contactTitle = service.contactTitle || '';
+const contactDescription = service.contactDescription || '';
+const telegramLabel = service.contactTelegramLabel || '';
+const phoneLabel = service.contactPhoneLabel || '';
+const emailLabel = service.contactEmailLabel || '';
 const telegramChannelLabel = ['Написать в Telegram', 'Получить расчёт'].includes(service.contactTelegramLabel || '')
   ? 'Telegram'
   : (service.contactTelegramLabel || 'Telegram');
 
-const streetFurniture = catalog.sections.find((item) => item.slug === 'ulichnaya-mebel');
-const fences = catalog.sections.find((item) => item.slug === 'ograzhdeniya-i-zabory');
-const canopies = catalog.sections.find((item) => item.slug === 'navesy-i-kozyrki');
-const construction = services.find((item) => item.slug === 'stroitelstvo-i-remonty');
-const related = [
-  streetFurniture ? {
-    eyebrow: 'Изделия для территории',
-    title: streetFurniture.title,
-    description: 'Лавочки, урны, вазоны, велопарковки и другие изделия для организации пространства.',
-    href: '/design-lab/v2/ulichnaya-mebel/'
-  } : null,
-  fences ? {
-    eyebrow: 'Границы и зонирование',
-    title: fences.title,
-    description: 'Отдельное направление для ограждений, заборов и элементов зонирования территории.',
-    href: '/design-lab/v2/ograzhdeniya-i-zabory/'
-  } : null,
-  canopies ? {
-    eyebrow: 'Защищённые пространства',
-    title: approvedUntilEdited(canopies.title, 'Навесы', 'Навесы и козырьки'),
-    description: 'Навесы и козырьки для входных, хозяйственных и других зон объекта.',
-    href: '/design-lab/v2/navesy-i-kozyrki/'
-  } : null,
-  construction ? {
-    eyebrow: 'Работы на объекте',
-    title: approvedUntilEdited(construction.title, 'Строительство', 'Строительство и ремонты'),
-    description: 'Более широкий комплекс строительных, ремонтных и монтажных работ на площадке.',
-    href: `/design-lab/v2/${construction.slug}/`
-  } : null
-].filter((item): item is NonNullable<typeof item> => Boolean(item));
+const related = directionRelatedItems(Astro.url, owner, route, presentation, catalog, services);
 
 const proofProjects = [embankment, squareRepair]
   .filter((project): project is NonNullable<typeof project> => Boolean(project))
   .map(getV2ProjectPresentation);
 const proofMediaBySlug = embankment ? { [embankment.slug]: proofMedia } : {};
 const landscapingFeatureIndex = proofMedia.findIndex((item) => item.src === approvedHeroImage);
-const sectionNavItems = [
-  ...(proofProjects.length > 0 ? [{ id: 'landscaping-proof', label: 'Реальный объект' }] : []),
-  ...(scopeItems.length > 0 ? [{ id: 'landscaping-scope', label: 'Что благоустраиваем' }] : []),
-  ...(contexts.length > 0 ? [{ id: 'landscaping-contexts', label: 'Для каких территорий' }] : []),
-  ...(briefInputs.length > 0 ? [{ id: 'landscaping-brief', label: 'С чем обратиться' }] : []),
-  { id: 'contact', label: 'Контакты' }
-];
+const sectionNavItems = directionSectionNavItems(Astro.url, owner, route, presentation, [
+  ...(proofProjects.length > 0 ? ['landscaping-proof'] : []),
+  ...(scopeItems.length > 0 ? ['landscaping-scope'] : []),
+  ...(contexts.length > 0 ? ['landscaping-contexts'] : []),
+  ...(briefInputs.length > 0 ? ['landscaping-brief'] : []),
+  'contact'
+]);
+const blockBinding = (block: unknown, field: 'title' | 'intro' | 'items', tool: string, itemKind?: 'string' | 'object') => {
+  const index = service.pageBlocks?.indexOf(block as never) ?? -1;
+  if (index < 0) return {};
+  const source = block as { sectionId?: string; type?: string; order?: number };
+  return adminBinding(Astro.url, {
+    renderer: { family: 'direction-block', variant: source.type }, owner: { collection: 'services', slug: service.slug },
+    fieldPath: `pageBlocks[${index}].${field}`, stableItemId: `${source.sectionId || `${source.type}-${source.order}`}-${field}`,
+    scope: 'local', tool, affectedRoutes: [`/${service.slug}/`], itemKind
+  });
+};
 ---
 
 <PlaceDirectionV2Layout
@@ -147,50 +123,82 @@ const sectionNavItems = [
     title={heroTitle}
     description={heroDescription}
     image={heroImage}
-    imageAlt={resolvedHeroMedia.usesApprovedBaseline
-      ? 'Готовая благоустроенная набережная с лестницей, лавочками и ограждениями'
-      : directionTitle}
+    imageAlt={resolvedHeroMedia.usesApprovedBaseline ? presentation.hero.imageAlt : directionTitle}
     imageView={resolvedHeroMedia.usesApprovedBaseline
       ? { fit: 'cover', positionX: 50, positionY: 52, scale: 1 }
       : service.imageView}
     titleId="place-direction-title"
-    primaryLabel="Получить расчёт"
+    primaryLabel={presentation.hero.primaryLabel}
     secondaryHref="#landscaping-proof"
-    secondaryLabel="Смотреть выполненный объект"
+    secondaryLabel={presentation.hero.secondaryLabel}
+    bindingOwner={{ collection: 'services', slug: service.slug }}
+    bindingFields={{ eyebrow: 'heroKicker', title: 'heroTitle', description: 'heroDescription', image: 'image', primaryLabel: 'directionPresentation.hero.primaryLabel', secondaryLabel: 'directionPresentation.hero.secondaryLabel' }}
+    affectedRoutes={[`/${service.slug}/`, '/']}
+    mediaBinding={resolvedHeroMedia.usesApprovedBaseline && embankment
+      ? { owner: { collection: 'projects', slug: embankment.slug }, fieldPath: 'presentation.detailHeroMedia', scope: 'shared', affectedRoutes: [`/${service.slug}/`, `/vypolnennye-obekty/${embankment.slug}/`, '/vypolnennye-obekty/'], projection: { kind: 'derived', formula: 'project presentation media roles: landscaping + finished-result + hero' } }
+      : undefined}
   />
 
-  <V2SectionNav items={sectionNavItems} label="Разделы направления" />
+  <V2SectionNav items={sectionNavItems} label={presentation.sectionNav.label} />
 
   <PlaceDirectionProjects
-    title="Благоустройство на реальном объекте"
+    eyebrow={presentation.proof?.eyebrow}
+    title={presentation.proof?.title || ''}
+    proofDescription={presentation.proof?.description}
+    linkLabel={presentation.proof?.linkLabel}
+    supportingLinkLabel={presentation.proof?.supportingLinkLabel}
     projects={proofProjects}
     mediaBySlug={proofMediaBySlug}
     featureIndex={landscapingFeatureIndex >= 0 ? landscapingFeatureIndex : 0}
+    eyebrowBinding={presentationBinding('proof.eyebrow')}
+    titleBinding={presentationBinding('proof.title', 'heading')}
+    proofDescriptionBinding={presentationBinding('proof.description', 'long-text')}
+    linkLabelBinding={presentationBinding('proof.linkLabel', 'link-label')}
+    supportingLinkLabelBinding={presentationBinding('proof.supportingLinkLabel', 'link-label')}
+    editorSource="src/components/v2/pages/LandscapingV2Page.astro#landscaping-proof"
   />
 
   <PlaceDirectionScope
-    title={scopeBlock?.title || 'Что благоустраиваем'}
-    description={blockIntro(scopeBlock) || 'От отдельных элементов до связанного пространства'}
+    eyebrow={presentation.types.eyebrow}
+    title={scopeBlock?.title || presentation.types.title || ''}
+    description={blockIntro(scopeBlock) || presentation.types.description || ''}
     items={scopeItems}
+    titleBinding={blockBinding(scopeBlock, 'title', 'heading')}
+    eyebrowBinding={presentationBinding('types.eyebrow')}
+    descriptionBinding={blockBinding(scopeBlock, 'intro', 'long-text')}
+    itemsBinding={blockBinding(scopeBlock, 'items', 'list', 'object')}
   />
 
   <PlaceDirectionContexts
-    title={contextsBlock?.title || 'Для каких территорий'}
-    description={blockIntro(contextsBlock) || 'Компактно показываем, где выполняется благоустройство и какой контекст территории учитываем.'}
+    eyebrow={presentation.scope.eyebrow}
+    title={contextsBlock?.title || presentation.scope.title || ''}
+    description={blockIntro(contextsBlock) || presentation.scope.description || ''}
     items={contexts}
+    titleBinding={blockBinding(contextsBlock, 'title', 'heading')}
+    eyebrowBinding={presentationBinding('scope.eyebrow')}
+    descriptionBinding={blockBinding(contextsBlock, 'intro', 'long-text')}
+    itemsBinding={blockBinding(contextsBlock, 'items', 'list', 'string')}
   />
 
   <PlaceDirectionBrief
-    title={briefBlock?.title || 'С чем можно обратиться'}
-    description={blockIntro(briefBlock) || 'Для первого обсуждения достаточно тех материалов, которые уже есть. По ним можно понять территорию, состав задачи и предметно обсудить дальнейшие работы.'}
+    eyebrow={presentation.brief.eyebrow}
+    title={briefBlock?.title || presentation.brief.title || ''}
+    description={blockIntro(briefBlock) || presentation.brief.description || ''}
     items={briefInputs}
+    titleBinding={blockBinding(briefBlock, 'title', 'heading')}
+    eyebrowBinding={presentationBinding('brief.eyebrow')}
+    descriptionBinding={blockBinding(briefBlock, 'intro', 'long-text')}
+    itemsBinding={blockBinding(briefBlock, 'items', 'list', 'string')}
   />
 
   <DirectionV2Related
-    title="Смежные направления"
+    eyebrow={presentation.related.eyebrow}
+    title={presentation.related.title}
     items={related}
     variant="compact"
     presentation="links"
+    eyebrowBinding={presentationBinding('related.eyebrow')}
+    titleBinding={presentationBinding('related.title', 'heading')}
   />
 
   <DirectionV2FinalCTA
@@ -199,7 +207,11 @@ const sectionNavItems = [
     primaryLabel={telegramLabel}
     secondaryLabel={phoneLabel}
     telegramChannelLabel={telegramChannelLabel}
-    phoneChannelLabel={approvedUntilEdited(service.contactPhoneLabel, 'Позвонить', 'Основной телефон')}
+    eyebrow={presentation.contactEyebrow}
+    phoneChannelLabel={presentation.contactPhoneChannelLabel}
     emailChannelLabel={emailLabel}
+    bindingOwner={{ collection: 'services', slug: service.slug }}
+    bindingFields={{ eyebrow: 'directionPresentation.contactEyebrow', title: 'contactTitle', description: 'contactDescription', primaryLabel: 'contactTelegramLabel', secondaryLabel: 'contactPhoneLabel', phoneChannelLabel: 'directionPresentation.contactPhoneChannelLabel' }}
+    affectedRoutes={[`/${service.slug}/`]}
   />
 </PlaceDirectionV2Layout>

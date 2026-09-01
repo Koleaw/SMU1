@@ -205,7 +205,7 @@ function validateInternal(value, inspectedValue) {
       'Internal routes must be root-relative paths or fragment identifiers.'
     );
   }
-  if (value.startsWith('/?') || value.startsWith('/#')) {
+  if (value.startsWith('/?')) {
     return invalid('URL_INTERNAL_PATH_INVALID', 'Укажите полный внутренний путь.', 'A root path followed only by query/hash is not accepted.');
   }
   return valid(value, 'internal');

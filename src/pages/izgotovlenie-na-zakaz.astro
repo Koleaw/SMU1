@@ -2,8 +2,15 @@
 import CatalogV2Layout from '../components/v2/CatalogV2Layout.astro';
 import CustomOrderV2Page from '../components/v2/custom-order/CustomOrderV2Page.astro';
 import { loadCustomOrderV2Data } from '../components/v2/custom-order/customOrderV2Data';
+import { adminBinding } from '../admin/bindings/adminBinding';
 
 const data = await loadCustomOrderV2Data();
+const shellCtaBinding = (occurrence: string) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'custom-order' },
+  owner: { collection: 'static-pages', slug: data.sourcePage.slug },
+  fieldPath: 'shellCtaLabel', stableItemId: `custom-order-shell-cta-${occurrence}`,
+  scope: 'local', tool: 'link-label', affectedRoutes: ['/izgotovlenie-na-zakaz/']
+});
 ---
 
 <CatalogV2Layout
@@ -13,8 +20,11 @@ const data = await loadCustomOrderV2Data();
   currentPath={Astro.url.pathname}
   ogImage={data.heroMedia[0]?.src}
   contactHref="#contact"
-  mobileCtaLabel="Обсудить задачу"
-  headerCtaLabel="Обсудить задачу"
+  mobileCtaLabel={data.sourcePage.shellCtaLabel}
+  headerCtaLabel={data.sourcePage.shellCtaLabel}
+  headerCtaBinding={shellCtaBinding('header-desktop')}
+  headerMobileCtaBinding={shellCtaBinding('header-mobile')}
+  mobileCtaBinding={shellCtaBinding('footer-mobile')}
   productFinalPrototype="custom"
 >
   <CustomOrderV2Page data={data} />

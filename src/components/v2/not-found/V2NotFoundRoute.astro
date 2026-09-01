@@ -1,0 +1,32 @@
+---
+import CatalogV2Layout from '../CatalogV2Layout.astro';
+import V2NotFoundPage from './V2NotFoundPage.astro';
+import settings from '../../../content/site-settings/global.json';
+import { adminBinding } from '../../../admin/bindings/adminBinding';
+
+Astro.response.status = 404;
+const copy = settings.notFoundPage;
+const pageBinding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'not-found', variant: '404' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `notFoundPage.${fieldPath}`, stableItemId: `not-found-${fieldPath}`, scope: 'shared', tool,
+  affectedRoutes: ['/404.html', '/__unknown__'], ...options
+});
+---
+
+<CatalogV2Layout
+  title={copy.seoTitle}
+  description={copy.seoDescription}
+  canonicalPath=""
+  currentPath={Astro.url.pathname}
+  pageKind="section"
+  contactHref="#contact"
+  mobileCtaLabel={copy.shellCtaLabel}
+  headerCtaLabel={copy.shellCtaLabel}
+  headerCtaBinding={pageBinding('shellCtaLabel', 'button-label', { stableItemId: 'not-found-header-cta' })}
+  headerMobileCtaBinding={pageBinding('shellCtaLabel', 'button-label', { stableItemId: 'not-found-header-mobile-cta' })}
+  mobileCtaBinding={pageBinding('shellCtaLabel', 'button-label', { stableItemId: 'not-found-footer-mobile-cta' })}
+  noCanonical
+  noindex
+>
+  <V2NotFoundPage />
+</CatalogV2Layout>

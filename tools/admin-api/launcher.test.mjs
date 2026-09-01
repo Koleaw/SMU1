@@ -10,12 +10,18 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  createAdminUiAstroArgs,
   createParentBoundNodeArgs,
   createChildEnvironments,
+  findAvailablePort,
   installLauncherSignalHandlers,
   probeHttp,
+  readPreferredRuntimePorts,
+  resolveLauncherAstroCli,
+  selectRuntimePorts,
   settleAdminSession,
-  stopChild
+  stopChild,
+  writePreferredRuntimePorts
 } from './launcher.mjs';
 import {
   createAdminHealthIdentity,
@@ -27,6 +33,79 @@ const REPO_IDENTITY = 'a'.repeat(64);
 const TEST_FILE = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(TEST_FILE), '..', '..');
 const SERVER_PATH = path.join(REPO_ROOT, 'tools', 'admin-api', 'server.mjs');
+
+test('launcher resolves the installed Astro 7 CLI and fails fast for an incomplete install', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-launcher-astro-cli-'));
+  const packageRoot = path.join(root, 'node_modules', 'astro');
+  const cli = path.join(packageRoot, 'bin', 'astro.mjs');
+  await fs.mkdir(path.dirname(cli), { recursive: true });
+  await fs.writeFile(path.join(packageRoot, 'package.json'), JSON.stringify({ bin: { astro: './bin/astro.mjs' } }));
+  await fs.writeFile(cli, 'export {};\n');
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+  assert.equal(await resolveLauncherAstroCli(root), await fs.realpath(cli));
+  await fs.unlink(cli);
+  await assert.rejects(
+    () => resolveLauncherAstroCli(root),
+    (error) => error?.code === 'DEPENDENCIES_MISSING' && error?.details?.reason === 'ASTRO_CLI_MISSING'
+  );
+});
+
+test('launcher selects distinct random loopback ports instead of requiring fixed defaults', async () => {
+  const apiPort = await findAvailablePort('127.0.0.1');
+  const uiPort = await findAvailablePort('127.0.0.1', { exclude: new Set([apiPort]) });
+  assert.match(String(apiPort), /^[1-9][0-9]{3,4}$/u);
+  assert.match(String(uiPort), /^[1-9][0-9]{3,4}$/u);
+  assert.notEqual(apiPort, uiPort);
+});
+
+test('launcher reuses persisted loopback ports and falls back only for a collided service', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-launcher-ports-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const identity = {
+    repoIdentity: REPO_IDENTITY,
+    apiHost: '127.0.0.1',
+    uiHost: '127.0.0.1'
+  };
+
+  const first = await selectRuntimePorts(identity);
+  assert.notEqual(first.apiPort, first.uiPort);
+  await writePreferredRuntimePorts(root, identity, first);
+  const persisted = await readPreferredRuntimePorts(root, identity);
+  assert.deepEqual(persisted, first);
+
+  const restart = await selectRuntimePorts(identity, { preferred: persisted });
+  assert.deepEqual(restart, first, 'a normal launcher restart must preserve the browser origin');
+  await writePreferredRuntimePorts(root, identity, restart);
+  assert.deepEqual(await readPreferredRuntimePorts(root, identity), first, 'a completed restart atomically refreshes the preference file');
+
+  const collision = net.createServer();
+  await new Promise((resolve, reject) => {
+    collision.once('error', reject);
+    collision.listen(first.apiPort, identity.apiHost, resolve);
+  });
+  t.after(() => new Promise((resolve) => collision.close(resolve)));
+
+  const fallback = await selectRuntimePorts(identity, { preferred: persisted });
+  assert.equal(fallback.uiPort, first.uiPort, 'an API collision must not discard the stable UI origin');
+  assert.notEqual(fallback.apiPort, first.apiPort);
+  assert.notEqual(fallback.apiPort, fallback.uiPort);
+});
+
+test('launcher ignores a port preference from another checkout or loopback host', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-launcher-ports-scope-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const identity = {
+    repoIdentity: REPO_IDENTITY,
+    apiHost: '127.0.0.1',
+    uiHost: '127.0.0.1'
+  };
+  const ports = await selectRuntimePorts(identity);
+  await writePreferredRuntimePorts(root, identity, ports);
+
+  assert.equal(await readPreferredRuntimePorts(root, { ...identity, repoIdentity: 'b'.repeat(64) }), null);
+  assert.equal(await readPreferredRuntimePorts(root, { ...identity, uiHost: '::1' }), null);
+});
 
 async function freePort() {
   const server = net.createServer();
@@ -235,9 +314,21 @@ test('Astro UI receives only a safe allowlist while API retains required secrets
   assert.equal(childEnvironments.ui.PATH, 'safe-path');
   assert.equal(childEnvironments.ui.PUBLIC_ADMIN_HEALTH_MARKER, createAdminUiHealthMarker(REPO_IDENTITY));
   assert.equal(childEnvironments.ui.SMU1_ADMIN_LAUNCHER_REPO_IDENTITY, REPO_IDENTITY);
+  assert.equal(childEnvironments.ui.ASTRO_DEV_BACKGROUND, 'foreground-parent-bound');
   for (const forbidden of ['ADMIN_PASSWORD_HASH', 'SESSION_SECRET', 'GITHUB_TOKEN', 'GITHUB_DEPLOY_TOKEN', 'GIT_CONFIG_COUNT', 'NODE_OPTIONS']) {
     assert.equal(Object.hasOwn(childEnvironments.ui, forbidden), false, `${forbidden} must not reach Astro UI`);
   }
+});
+
+test('Astro UI stays parent-bound and bypasses the workspace-global dev lock', () => {
+  const astroCli = path.join(REPO_ROOT, 'node_modules', 'astro', 'astro.js');
+  const args = createAdminUiAstroArgs(astroCli, {
+    ADMIN_UI_HOST: '127.0.0.1',
+    ADMIN_UI_PORT: 4321
+  });
+  assert.deepEqual(args.slice(-6), [
+    'dev', '--ignore-lock', '--host', '127.0.0.1', '--port', '4321'
+  ]);
 });
 
 test('SIGHUP uses the same idempotent graceful launcher stop contract and removes all signal listeners', async () => {

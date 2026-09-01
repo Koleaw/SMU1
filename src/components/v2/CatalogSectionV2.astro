@@ -7,6 +7,8 @@ import V2CatalogHero from './V2CatalogHero.astro';
 import V2HeroHandoff from './V2HeroHandoff.astro';
 import V2CategoryCard from './V2CategoryCard.astro';
 import V2DirectContact from './V2DirectContact.astro';
+import settings from '../../content/site-settings/global.json';
+import { adminBinding, adminDisposition } from '../../admin/bindings/adminBinding';
 import {
   catalogMediaPresentation,
   catalogV2CategoryHref,
@@ -34,9 +36,20 @@ const {
   productFinalPrototype
 } = Astro.props as Props;
 const productFinalEnabled = productFinalPrototype === 'hub';
+const catalogCopy = settings.catalogUi;
+const globalBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'catalog-ui', variant: 'hub' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `catalogUi.${fieldPath}`, scope: 'global', tool, affectedRoutes: ['*'], ...options
+});
+const sectionBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'catalog-hub', variant: section.slug }, owner: { collection: 'product-sections', slug: section.slug },
+  fieldPath, scope: 'local', tool, affectedRoutes: [currentPath], ...options
+});
+const homeBreadcrumbEditor = globalBinding('shared.homeBreadcrumbLabel', 'short-text', { role: 'hub-home-breadcrumb' });
+const sectionTitleEditor = sectionBinding('title', 'short-text', { role: 'hub-current-breadcrumb' });
 const productFinalBreadcrumbs = [
-  { title: 'Главная', href: '/design-lab/home-v2/' },
-  { title: section.title }
+  { title: catalogCopy.shared.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: homeBreadcrumbEditor },
+  { title: section.title, editor: sectionTitleEditor }
 ];
 const categoryHref = (category: ProductCategoryData) =>
   links.categoryHrefs[category.slug] || catalogV2CategoryHref(section.slug, category.slug);
@@ -49,12 +62,26 @@ const blocks = Array.isArray(section.pageBlocks)
       order?: number;
     }>
   : [];
-const customBlock = blocks
-  .filter((block) => block.isActive !== false && block.type === 'mediaText')
-  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))[0];
-const customTitle = publicCatalogCopy(customBlock?.title) || 'Типовое решение не закрывает задачу?';
+const customBlockEntry = blocks
+  .map((block, index) => ({ block, index }))
+  .filter(({ block }) => block.isActive !== false && block.type === 'mediaText')
+  .sort((a, b) => (a.block.order ?? 0) - (b.block.order ?? 0))[0];
+const customBlock = customBlockEntry?.block;
+const customTitleFromSection = publicCatalogCopy(customBlock?.title);
+const customTextFromSection = publicCatalogCopy(customBlock?.text);
+const customTitle = customTitleFromSection || catalogCopy.hub.customDefaultTitle;
 const customText = publicCatalogCopy(customBlock?.text)
-  || 'Передайте фотографию, размеры, эскиз, чертёж или техническое задание для обсуждения изделия под объект.';
+  || catalogCopy.hub.customDefaultDescription;
+const customFieldBinding = (field: 'title' | 'text', tool: string) => {
+  const hasValue = field === 'title' ? customTitleFromSection : customTextFromSection;
+  return hasValue && customBlockEntry
+    ? sectionBinding(`pageBlocks[${customBlockEntry.index}].${field}`, tool, {
+        stableItemId: `${customBlock?.type || 'mediaText'}-${customBlock?.order ?? customBlockEntry.index}-${field}`
+      })
+    : globalBinding(`hub.${field === 'title' ? 'customDefaultTitle' : 'customDefaultDescription'}`, tool, {
+        projection: { kind: 'fallback', fallback: `product-sections.${section.slug}.pageBlocks[mediaText].${field}` }
+      });
+};
 const heroDescription = publicCatalogCopy(section.heroDescription);
 const heroSupportingText = publicCatalogCopy(section.shortDescription);
 const displayCategories = categories.map((category) => ({
@@ -62,9 +89,17 @@ const displayCategories = categories.map((category) => ({
   heroDescription: publicCatalogCopy(category.heroDescription),
   shortDescription: publicCatalogCopy(category.shortDescription)
 }));
-const contactTitle = publicCatalogCopy(section.contactTitle) || 'Обсудим изделие и подготовим расчёт';
+const contactTitleFromSection = publicCatalogCopy(section.contactTitle);
+const contactDescriptionFromSection = publicCatalogCopy(section.contactDescription);
+const contactTitle = contactTitleFromSection || catalogCopy.hub.contactDefaultTitle;
 const contactDescription = publicCatalogCopy(section.contactDescription)
-  || 'Пришлите описание задачи, количество, размеры или материалы проекта удобным способом.';
+  || catalogCopy.hub.contactDefaultDescription;
+const contactTitleBinding = contactTitleFromSection
+  ? sectionBinding('contactTitle', 'heading')
+  : globalBinding('hub.contactDefaultTitle', 'heading', { projection: { kind: 'fallback', fallback: `product-sections.${section.slug}.contactTitle` } });
+const contactDescriptionBinding = contactDescriptionFromSection
+  ? sectionBinding('contactDescription', 'long-text')
+  : globalBinding('hub.contactDefaultDescription', 'long-text', { projection: { kind: 'fallback', fallback: `product-sections.${section.slug}.contactDescription` } });
 const fenceHubEnabled = productFinalEnabled && section.slug === 'ograzhdeniya-i-zabory';
 const heroMediaPresentation = fenceHubEnabled
   ? 'contextual'
@@ -86,15 +121,15 @@ const rootClass = fenceHubEnabled
   rootClass={rootClass}
 >
   {!productFinalEnabled && <V2Breadcrumbs items={[
-    { title: 'Главная', href: '/design-lab/home-v2/' },
-    { title: section.title }
+    { title: catalogCopy.shared.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: homeBreadcrumbEditor },
+    { title: section.title, editor: sectionTitleEditor }
   ]} />}
 
   <V2HeroHandoff enabled={productFinalEnabled}>
   <V2CatalogHero
     variant="section"
     productFinalHandoff={productFinalEnabled}
-    kicker="Каталог изделий"
+    kicker={catalogCopy.hub.heroKicker}
     title={section.heroTitle}
     description={heroDescription}
     supportingText={heroSupportingText}
@@ -102,11 +137,23 @@ const rootClass = fenceHubEnabled
     imageAlt={section.title}
     imageView={section.imageView}
     mediaPresentation={heroMediaPresentation}
-    countLabel={`${categories.length} категорий`}
+    countLabel={`${categories.length} ${catalogCopy.hub.categoryCountSuffix}`}
     primaryHref="#catalog-grid"
-    primaryLabel="Выбрать категорию"
+    primaryLabel={catalogCopy.hub.heroPrimaryLabel}
     secondaryHref="#contact"
-    secondaryLabel="Обсудить задачу"
+    secondaryLabel={catalogCopy.hub.heroSecondaryLabel}
+    bindingOwner={{ collection: 'product-sections', slug: section.slug }}
+    bindingFields={{ title: 'heroTitle', description: 'heroDescription', supportingText: 'shortDescription', image: 'image' }}
+    kickerBinding={globalBinding('hub.heroKicker')}
+    countLabelBinding={adminDisposition(Astro.url, {
+      kind: 'derived',
+      reason: 'Число вычисляется из опубликованных категорий, а подпись хранится в общих текстах каталога.',
+      source: 'categories.length + site-settings.catalogUi.hub.categoryCountSuffix',
+      tool: 'global-settings'
+    })}
+    primaryLabelBinding={globalBinding('hub.heroPrimaryLabel')}
+    secondaryLabelBinding={globalBinding('hub.heroSecondaryLabel')}
+    affectedRoutes={[currentPath, '/']}
   >
     {productFinalEnabled && <V2Breadcrumbs slot="breadcrumbs" items={productFinalBreadcrumbs} />}
   </V2CatalogHero>
@@ -116,10 +163,10 @@ const rootClass = fenceHubEnabled
     <div class="hv2-shell">
       <header class="v2-section-heading" data-v2-reveal>
         <div>
-          <p class="hv2-eyebrow">Полный ассортимент</p>
-          <h2 id="v2-category-grid-title">Выберите тип изделия</h2>
+          <p class="hv2-eyebrow" {...globalBinding('hub.gridEyebrow')}>{catalogCopy.hub.gridEyebrow}</p>
+          <h2 id="v2-category-grid-title" {...globalBinding('hub.gridTitle', 'heading')}>{catalogCopy.hub.gridTitle}</h2>
         </div>
-        <p>Категории собраны по типу изделия. Внутри — доступные модели или формат изготовления по задаче.</p>
+        <p {...globalBinding('hub.gridDescription', 'long-text')}>{catalogCopy.hub.gridDescription}</p>
       </header>
       {displayCategories.length > 0 ? (
         <div class="v2-category-grid" role="list">
@@ -137,8 +184,8 @@ const rootClass = fenceHubEnabled
         </div>
       ) : (
         <div class="v2-empty-state" role="status">
-          <h2>Категории пока не опубликованы</h2>
-          <p>Можно обсудить изделие по фотографии, размерам, эскизу, чертежу или техническому заданию.</p>
+          <h2 {...globalBinding('hub.emptyTitle', 'heading')}>{catalogCopy.hub.emptyTitle}</h2>
+          <p {...globalBinding('hub.emptyDescription', 'long-text')}>{catalogCopy.hub.emptyDescription}</p>
         </div>
       )}
     </div>
@@ -147,20 +194,32 @@ const rootClass = fenceHubEnabled
   <section class="v2-custom-cta" aria-labelledby="v2-section-custom-title">
     <div class="hv2-shell hv2-grid v2-custom-cta__grid" data-v2-reveal>
       <div>
-        <p class="hv2-eyebrow">Индивидуальная конструкция</p>
-        <h2 id="v2-section-custom-title">{customTitle}</h2>
+        <p class="hv2-eyebrow" {...globalBinding('hub.customEyebrow')}>{catalogCopy.hub.customEyebrow}</p>
+        <h2 id="v2-section-custom-title" {...customFieldBinding('title', 'heading')}>{customTitle}</h2>
       </div>
       <div>
-        <p>{customText}</p>
-        <a class="hv2-text-link" href={withBase('/design-lab/v2/izgotovlenie-na-zakaz/')}>Подробнее об индивидуальном изготовлении</a>
+        <p {...customFieldBinding('text', 'long-text')}>{customText}</p>
+        <a class="hv2-text-link" href={withBase('/design-lab/v2/izgotovlenie-na-zakaz/')} {...globalBinding('hub.customLinkLabel')}>{catalogCopy.hub.customLinkLabel}</a>
       </div>
     </div>
   </section>
 
   <V2DirectContact
+    eyebrow={catalogCopy.hub.contactEyebrow}
     title={contactTitle}
     description={contactDescription}
-    primaryLabel="Получить расчёт"
-    secondaryLabel="Обсудить задачу"
+    primaryLabel={catalogCopy.hub.contactPrimaryLabel}
+    secondaryLabel={catalogCopy.hub.contactSecondaryLabel}
+    phoneChannelLabel={catalogCopy.shared.phoneChannelLabel}
+    telegramChannelLabel={catalogCopy.shared.telegramChannelLabel}
+    emailChannelLabel={catalogCopy.shared.emailChannelLabel}
+    eyebrowBinding={globalBinding('hub.contactEyebrow')}
+    titleBinding={contactTitleBinding}
+    descriptionBinding={contactDescriptionBinding}
+    primaryLabelBinding={globalBinding('hub.contactPrimaryLabel')}
+    secondaryLabelBinding={globalBinding('hub.contactSecondaryLabel')}
+    phoneChannelLabelBinding={globalBinding('shared.phoneChannelLabel')}
+    telegramChannelLabelBinding={globalBinding('shared.telegramChannelLabel')}
+    emailChannelLabelBinding={globalBinding('shared.emailChannelLabel')}
   />
 </CatalogV2Layout>

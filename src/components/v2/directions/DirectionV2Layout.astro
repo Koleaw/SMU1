@@ -11,6 +11,11 @@ interface Props {
   ogImage?: string;
   variant?: 'engineering-visual' | 'visual' | 'engineering-commercial' | 'project-commercial' | 'place-commercial';
   productFinalHandoff?: boolean;
+  contactHref?: string;
+  ctaLabel?: string;
+  headerCtaBinding?: Record<string, string>;
+  headerMobileCtaBinding?: Record<string, string>;
+  mobileCtaBinding?: Record<string, string>;
 }
 
 const {
@@ -20,7 +25,9 @@ const {
   currentPath,
   ogImage = '',
   variant = 'engineering-visual',
-  productFinalHandoff = false
+  productFinalHandoff = false,
+  contactHref = '#contact',
+  ctaLabel
 } = Astro.props as Props;
 ---
 
@@ -31,6 +38,12 @@ const {
   currentPath={currentPath}
   ogImage={ogImage}
   pageKind="section"
+  contactHref={contactHref}
+  headerCtaLabel={ctaLabel}
+  mobileCtaLabel={ctaLabel}
+  headerCtaBinding={Astro.props.headerCtaBinding}
+  headerMobileCtaBinding={Astro.props.headerMobileCtaBinding}
+  mobileCtaBinding={Astro.props.mobileCtaBinding}
   headerMode="overlay"
   rootClass="catalog-v2--immersive"
   productFinalPrototype={productFinalHandoff ? 'direction' : undefined}

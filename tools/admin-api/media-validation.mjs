@@ -196,6 +196,72 @@ function sha256(buffer) {
   return createHash('sha256').update(buffer).digest('hex');
 }
 
+function inspectExifTags(input) {
+  const buffer = Buffer.isBuffer(input) ? input : Buffer.from(input || []);
+  if (buffer.length < 8) return new Set();
+  const base = buffer.subarray(0, 6).equals(Buffer.from('Exif\0\0', 'binary')) ? 6 : 0;
+  if (buffer.length < base + 8) return new Set();
+  const endian = buffer.toString('ascii', base, base + 2);
+  if (endian !== 'II' && endian !== 'MM') return new Set();
+  const little = endian === 'II';
+  const read16 = (offset) => offset >= 0 && offset + 2 <= buffer.length
+    ? (little ? buffer.readUInt16LE(offset) : buffer.readUInt16BE(offset))
+    : null;
+  const read32 = (offset) => offset >= 0 && offset + 4 <= buffer.length
+    ? (little ? buffer.readUInt32LE(offset) : buffer.readUInt32BE(offset))
+    : null;
+  if (read16(base + 2) !== 42) return new Set();
+  const tags = new Set();
+  const visited = new Set();
+  const walk = (relativeOffset, depth = 0) => {
+    if (!Number.isSafeInteger(relativeOffset) || relativeOffset < 0 || depth > 8 || visited.has(relativeOffset)) return;
+    visited.add(relativeOffset);
+    const offset = base + relativeOffset;
+    const count = read16(offset);
+    if (!Number.isSafeInteger(count) || count < 0 || count > 4096 || offset + 2 + count * 12 + 4 > buffer.length) return;
+    for (let index = 0; index < count; index += 1) {
+      const entry = offset + 2 + index * 12;
+      const tag = read16(entry);
+      const pointer = read32(entry + 8);
+      if (tag === null) continue;
+      tags.add(tag);
+      if ([0x8769, 0x8825, 0xa005].includes(tag) && pointer !== null) walk(pointer, depth + 1);
+    }
+    const next = read32(offset + 2 + count * 12);
+    if (next) walk(next, depth + 1);
+  };
+  const firstIfd = read32(base + 4);
+  if (firstIfd !== null) walk(firstIfd);
+  return tags;
+}
+
+function inspectPrivateMetadata(metadata = {}) {
+  const tags = inspectExifTags(metadata.exif);
+  const text = [metadata.xmp, metadata.iptc]
+    .filter(Boolean)
+    .map((value) => Buffer.from(value).subarray(0, 2 * MIB).toString('utf8'))
+    .join('\n');
+  const gps = tags.has(0x8825) || /(?:GPSLatitude|GPSLongitude|GPSAltitude|GPSPosition)/iu.test(text);
+  const serial = [0xa431, 0xa435, 0xc62f].some((tag) => tags.has(tag))
+    || /(?:SerialNumber|BodySerialNumber|LensSerialNumber)/iu.test(text);
+  const owner = tags.has(0xa430) || /(?:CameraOwnerName|OwnerName|Creator|Artist)/iu.test(text);
+  const device = [0x010f, 0x0110, 0xa433, 0xa434].some((tag) => tags.has(tag))
+    || /(?:tiff:Make|tiff:Model|LensMake|LensModel|DeviceManufacturer|DeviceModel)/iu.test(text);
+  const exif = Boolean(metadata.exif?.length);
+  const xmp = Boolean(metadata.xmp?.length);
+  const iptc = Boolean(metadata.iptc?.length);
+  return Object.freeze({
+    detected: gps || serial || owner || device || exif || xmp || iptc,
+    gps,
+    serial,
+    owner,
+    device,
+    exif,
+    xmp,
+    iptc
+  });
+}
+
 function rejectUnsupported(format) {
   const definition = UNSUPPORTED_CODES[format];
   if (definition) throw new MediaValidationError(definition[0], definition[1]);
@@ -292,6 +358,7 @@ export async function validateRasterMedia(options = {}) {
 
   const orientation = Number.isSafeInteger(metadata.orientation) ? metadata.orientation : null;
   const swapsAxes = orientation !== null && orientation >= 5 && orientation <= 8;
+  const privateMetadata = inspectPrivateMetadata(metadata);
   return Object.freeze({
     kind: 'raster',
     format,
@@ -310,8 +377,71 @@ export async function validateRasterMedia(options = {}) {
     orientation,
     hasAlpha: metadata.hasAlpha === true,
     channels: Number(metadata.channels || 0) || null,
-    colourspace: metadata.space || null
+    colourspace: metadata.space || null,
+    privateMetadata
   });
+}
+
+async function sanitizeRasterBuffer(buffer, validation, limits) {
+  let pipeline = sharp(buffer, {
+    animated: false,
+    failOn: 'error',
+    limitInputPixels: limits.maxPixels,
+    sequentialRead: true
+  }).rotate().toColourspace('srgb');
+  if (validation.format === 'jpeg') {
+    pipeline = pipeline.jpeg({ quality: 92, chromaSubsampling: '4:4:4', optimiseCoding: true });
+  } else if (validation.format === 'png') {
+    pipeline = pipeline.png({ compressionLevel: 9, adaptiveFiltering: true });
+  } else if (validation.format === 'webp') {
+    pipeline = pipeline.webp({ quality: 90, alphaQuality: 100, smartSubsample: true });
+  }
+  try {
+    return await pipeline.toBuffer();
+  } catch (error) {
+    throw decodeError(error);
+  }
+}
+
+/**
+ * Produces the only raster bytes allowed to enter public staging. Sharp applies
+ * EXIF orientation while decoding and strips EXIF/XMP/IPTC/ICC on output. The
+ * untouched upload is never returned to the caller and is never promoted.
+ */
+export async function preparePublicMediaUpload(options = {}) {
+  const sourceBuffer = asBuffer(options.buffer);
+  const format = detectMediaFormat(sourceBuffer);
+  if (MEDIA_FORMATS[format]?.kind === 'video') {
+    throw new MediaValidationError(
+      'MEDIA_UPLOAD_RASTER_ONLY',
+      'Новые видео пока нельзя загружать: безопасная полная проверка и очистка метаданных видео не подключены. Используйте уже сохранённое видео из медиатеки.',
+      { status: 415, details: { allowedFormats: ['jpeg', 'png', 'webp'] } }
+    );
+  }
+  if (MEDIA_FORMATS[format]?.kind !== 'raster') {
+    // Preserve the precise SVG/PDF/archive/corrupt-format diagnostic without
+    // ever returning non-raster bytes to staging.
+    await validateMediaUpload(options);
+    throw new MediaValidationError('MEDIA_UPLOAD_RASTER_ONLY', 'Для новой загрузки разрешены только JPEG, PNG и WebP.', {
+      status: 415,
+      details: { allowedFormats: ['jpeg', 'png', 'webp'] }
+    });
+  }
+  const limits = normalizedLimits(options.limits);
+  const source = await validateRasterMedia({ ...options, buffer: sourceBuffer, limits });
+  const publicBuffer = await sanitizeRasterBuffer(sourceBuffer, source, limits);
+  const sanitized = await validateRasterMedia({ ...options, buffer: publicBuffer, limits });
+  if (sanitized.privateMetadata.detected || sanitized.orientation !== null) {
+    throw new MediaValidationError('RASTER_METADATA_SANITIZE_FAILED', 'Не удалось гарантированно удалить приватные метаданные фотографии.');
+  }
+  const validation = Object.freeze({
+    ...sanitized,
+    sourceSha256: source.sha256,
+    sourceBytes: source.bytes,
+    metadataSanitized: true,
+    privateMetadata: source.privateMetadata
+  });
+  return Object.freeze({ buffer: publicBuffer, validation });
 }
 
 export async function validateVideoMedia(options = {}) {

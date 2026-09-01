@@ -77,7 +77,11 @@ export function createAdminApiClient({
         continue;
       }
       if (!response.ok) {
-        if (response.status === 401) onSessionExpired();
+        if (response.status === 401) {
+          csrfToken = '';
+          sessionFingerprint = '';
+          onSessionExpired();
+        }
         throw new AdminApiError(
           typeof payload?.error === 'string' ? payload.error : `Запрос завершился с ошибкой ${response.status}.`,
           { status: response.status, code: payload?.code || 'ADMIN_API_ERROR', payload }
@@ -91,12 +95,23 @@ export function createAdminApiClient({
     const headers = new Headers({ Accept: 'application/json' });
     headers.set('X-Admin-Recovery-Client-Id', recoveryClientId);
     if (sessionFingerprint) headers.set('X-Admin-Session-Fingerprint', sessionFingerprint);
-    const response = await fetchImpl(`${normalizedBase}${pathname}`, {
-      headers,
-      credentials: 'include', cache: 'no-store'
-    });
+    let response;
+    try {
+      response = await fetchImpl(`${normalizedBase}${pathname}`, {
+        headers,
+        credentials: 'include', cache: 'no-store'
+      });
+    } catch (cause) {
+      throw new AdminApiError('Локальная админка не отвечает. Экспорт не потерян: повторите после восстановления связи с локальной программой.', {
+        code: 'ADMIN_API_OFFLINE', cause
+      });
+    }
     if (!response.ok) {
-      if (response.status === 401) onSessionExpired();
+      if (response.status === 401) {
+        csrfToken = '';
+        sessionFingerprint = '';
+        onSessionExpired();
+      }
       const payload = await response.json().catch(() => null);
       throw new AdminApiError(
         typeof payload?.error === 'string' ? payload.error : `Не удалось скачать данные (${response.status}).`,
@@ -206,6 +221,17 @@ export function createAdminApiClient({
     retryPublishJob: (jobId) => request(`/publish/jobs/${encodeURIComponent(jobId)}/retry`, {
       method: 'POST', body: JSON.stringify({ target: 'preview', recoveryClientId })
     }),
-    publishReport: (jobId) => download(`/publish/jobs/${encodeURIComponent(jobId)}/report`)
+    publishReport: (jobId) => download(`/publish/jobs/${encodeURIComponent(jobId)}/report`),
+    backupStatus: () => request('/backups/status'),
+    backups: () => request('/backups'),
+    createBackupExport: () => request('/backups/export', { method: 'POST', body: '{}' }),
+    verifyBackup: (snapshotId) => request(`/backups/${encodeURIComponent(snapshotId)}/verify`, { method: 'POST', body: '{}' }),
+    exportBackup: (snapshotId) => request(`/backups/${encodeURIComponent(snapshotId)}/export`, { method: 'POST', body: '{}' }),
+    previewBackupRestore: (snapshotId) => request(`/backups/${encodeURIComponent(snapshotId)}/restore-preview`, {
+      method: 'POST', body: JSON.stringify({ recoveryClientId })
+    }),
+    applyBackupRestore: (restoreId, { idempotencyKey = crypto.randomUUID() } = {}) => request(`/backups/restore/${encodeURIComponent(restoreId)}/apply`, {
+      method: 'POST', body: JSON.stringify({ recoveryClientId, idempotencyKey })
+    })
   });
 }

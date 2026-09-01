@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy_target:
-        description: 'Куда публиковать сборку'
+        description: 'H6: test deploy; production request is check-only'
         required: true
         default: test
         type: choice
@@ -14,10 +14,7 @@ on:
           - test
           - production
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+permissions: {}
 
 concurrency:
   group: deploy-${{ github.ref_name }}
@@ -26,49 +23,36 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 330
+    permissions:
+      contents: read
     outputs:
       deploy_target: ${{ steps.deploy-meta.outputs.deploy_target }}
       deploy_kind: ${{ steps.deploy-meta.outputs.deploy_kind }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - id: deploy-meta
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
           DISPATCH_TARGET: ${{ github.event.inputs.deploy_target }}
-          PRODUCTION_DEPLOY_ENABLED_VAR: ${{ vars.PRODUCTION_DEPLOY_ENABLED }}
-          SITE_URL_VAR: ${{ vars.SITE_URL }}
           TEST_SITE_URL_VAR: ${{ vars.TEST_SITE_URL }}
-          BASE_PATH_VAR: ${{ vars.BASE_PATH }}
           TEST_BASE_PATH_VAR: ${{ vars.TEST_BASE_PATH }}
         run: |
           production_enabled="false"
-          if [ "$PRODUCTION_DEPLOY_ENABLED_VAR" = "true" ]; then
-            production_enabled="true"
-          fi
-
           site_url_configured="false"
-          if [ -n "$SITE_URL_VAR" ]; then
-            site_url_configured="true"
-          fi
 
           target="test"
           deploy_kind="check-only"
-          deploy_reason="Defaulting to test build without deployment."
+          deploy_reason="H6 defaults to a test build without deployment."
 
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             requested_target="${DISPATCH_TARGET:-test}"
             if [ "$requested_target" = "production" ]; then
-              if [ "$production_enabled" = "true" ]; then
-                target="production"
-                deploy_kind="production"
-                deploy_reason="workflow_dispatch requested production and PRODUCTION_DEPLOY_ENABLED=true."
-              else
-                target="test"
-                deploy_kind="check-only"
-                deploy_reason="workflow_dispatch requested production, but production deploy is disabled."
-              fi
+              target="test"
+              deploy_kind="check-only"
+              deploy_reason="H6 production deploy is hard-disabled; the production request is check-only."
             elif [ "${GITHUB_REF_NAME}" = "preview" ]; then
               target="test"
               deploy_kind="test"
@@ -87,15 +71,9 @@ jobs:
             deploy_kind="check-only"
             deploy_reason="develop is check-only; only preview may update GitHub Pages."
           elif [ "${GITHUB_REF_NAME}" = "main" ] || [ "${GITHUB_REF_NAME}" = "master" ]; then
-            if [ "$production_enabled" = "true" ]; then
-              target="production"
-              deploy_kind="production"
-              deploy_reason="main/master with PRODUCTION_DEPLOY_ENABLED=true."
-            else
-              target="test"
-              deploy_kind="check-only"
-              deploy_reason="main/master with production deploy disabled; running test build only."
-            fi
+            target="test"
+            deploy_kind="check-only"
+            deploy_reason="H6 main/master is check-only; production release is not implemented."
           else
             target="test"
             deploy_kind="check-only"
@@ -103,29 +81,21 @@ jobs:
           fi
 
           repo_name="${GITHUB_REPOSITORY#*/}"
-          if [ "$target" = "production" ]; then
-            base_path="${BASE_PATH_VAR:-/}"
-            test_site_url="${TEST_SITE_URL_VAR:-https://${GITHUB_REPOSITORY_OWNER}.github.io}"
-            effective_site_url="${SITE_URL_VAR}"
-            effective_site_url_source="SITE_URL"
-            production_check_ran="true"
+          if [ "$repo_name" = "${GITHUB_REPOSITORY_OWNER}.github.io" ]; then
+            fallback_base_path="/"
           else
-            if [ "$repo_name" = "${GITHUB_REPOSITORY_OWNER}.github.io" ]; then
-              fallback_base_path="/"
-            else
-              fallback_base_path="/${repo_name}"
-            fi
-            base_path="${TEST_BASE_PATH_VAR:-$fallback_base_path}"
-            if [ -n "$TEST_SITE_URL_VAR" ]; then
-              test_site_url="$TEST_SITE_URL_VAR"
-              effective_site_url_source="TEST_SITE_URL"
-            else
-              test_site_url="https://${GITHUB_REPOSITORY_OWNER}.github.io"
-              effective_site_url_source="GitHub Pages fallback"
-            fi
-            effective_site_url="${test_site_url}"
-            production_check_ran="false"
+            fallback_base_path="/${repo_name}"
           fi
+          base_path="${TEST_BASE_PATH_VAR:-$fallback_base_path}"
+          if [ -n "$TEST_SITE_URL_VAR" ]; then
+            test_site_url="$TEST_SITE_URL_VAR"
+            effective_site_url_source="TEST_SITE_URL"
+          else
+            test_site_url="https://${GITHUB_REPOSITORY_OWNER}.github.io"
+            effective_site_url_source="GitHub Pages fallback"
+          fi
+          effective_site_url="${test_site_url}"
+          production_check_ran="false"
 
           echo "deploy_target=${target}" >> "$GITHUB_OUTPUT"
           echo "deploy_kind=${deploy_kind}" >> "$GITHUB_OUTPUT"
@@ -147,9 +117,7 @@ jobs:
           echo "SITE_URL configured: ${site_url_configured}"
           echo "effective SITE_URL source: ${effective_site_url_source}"
           echo "Deploy decision: ${deploy_reason}"
-          if [ "$production_enabled" != "true" ]; then
-            echo "Production deploy is disabled. Set PRODUCTION_DEPLOY_ENABLED=true and SITE_URL to enable production deployment."
-          fi
+          echo "H6 production deploy is hard-disabled. Production requests run checks only."
           {
             echo "### Deploy metadata"
             echo "- Event: ${EVENT_NAME}"
@@ -164,38 +132,25 @@ jobs:
             echo "- Decision: ${deploy_reason}"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: 22.12.0
 
       - run: npm ci
 
       - name: Run H6 admin tests (non-browser)
         run: npm run test:admin-h6:ci
 
+      - name: Validate H6 browser evidence contracts
+        run: npm run test:h6-evidence-contracts
+
       - name: Restore responsive media build cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: public/_media/h5
-          key: ${{ runner.os }}-node20-h5-media-v2-${{ github.sha }}
+          key: ${{ runner.os }}-node22-h5-media-v2-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-node20-h5-media-v2-
-
-      - name: Check production settings
-        if: steps.deploy-meta.outputs.deploy_target == 'production'
-        shell: bash
-        env:
-          PRODUCTION_DEPLOY_ENABLED: ${{ steps.deploy-meta.outputs.production_enabled }}
-          SITE_URL: ${{ vars.SITE_URL }}
-        run: |
-          if [ "$PRODUCTION_DEPLOY_ENABLED" != "true" ]; then
-            echo "::error::Production deploy is disabled. Set PRODUCTION_DEPLOY_ENABLED=true and SITE_URL to enable production deployment."
-            exit 1
-          fi
-          if [ -z "$SITE_URL" ]; then
-            echo "::error::Production deploy requires SITE_URL. Set repository variable SITE_URL after the production domain and hosting are ready."
-            exit 1
-          fi
+            ${{ runner.os }}-node22-h5-media-v2-
 
       - run: npm run check
         env:
@@ -234,8 +189,42 @@ jobs:
         env:
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
 
-      - name: Assert test/production SEO and analytics isolation
+      - name: Run browser and motion gates
+        run: npm run qa:final:browser
+        env:
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
+      - name: Prove public artifact isolation
         run: npm run qa:deploy-isolation
+        env:
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
+      - name: Open and reconcile every production route in public and editor modes
+        run: npm run qa:h6:route-passport
+        env:
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
+      - name: Crawl every public action in four deterministic shards
+        run: npm run qa:h6:public-actions
+        env:
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
+      - name: Run isolated visual-editor actions, media promotion and recovery acceptance
+        run: npm run qa:h6:admin-actions
+
+      - name: Prove GPS metadata removal through canonical, H5 and deploy artifact
+        run: npm run qa:h6:media-privacy
+        env:
+          BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
+      - name: Prove checksummed backup and atomic restore in fresh exact-HEAD checkouts
+        run: npm run qa:h6:backup-restore
+
+      - name: Reconcile exact SHA, artifact and all browser evidence
+        run: npm run qa:h6:verify-evidence
+
+      - name: Write deterministic release artifact identity
+        run: node tools/release/artifact-identity.mjs --dist dist --tested-sha "${GITHUB_SHA}"
 
       - name: Verify exact candidate and preview ref pair
         if: steps.deploy-meta.outputs.deploy_kind == 'test'
@@ -253,7 +242,7 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         if: steps.deploy-meta.outputs.deploy_kind == 'test'
         with:
           path: dist
@@ -265,8 +254,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
@@ -287,4 +280,4 @@ jobs:
           fi
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

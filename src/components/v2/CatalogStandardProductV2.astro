@@ -9,6 +9,7 @@ import V2ProductCard from './V2ProductCard.astro';
 import V2DirectContact from './V2DirectContact.astro';
 import V2HeroHandoff from './V2HeroHandoff.astro';
 import V2SectionNav from './V2SectionNav.astro';
+import { adminBinding, isLocalAdminCanvas } from '../../admin/bindings/adminBinding';
 import {
   catalogV2CategoryHref,
   catalogV2ProductHref,
@@ -74,15 +75,40 @@ const deliveryText = publicCatalogCopy(product.deliveryText);
 const deliveryParagraphs = deliveryText.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
 const hasTechnicalPanels = hasSpecifications || materials.length > 0 || colors.length > 0 || customizationItems.length > 0;
 const finalContactTitle = product.showCustomProjectBlock !== false
-  ? publicCatalogCopy(product.customProjectTitle) || 'Индивидуальное исполнение'
-  : 'Рассчитать стоимость изделия';
+  ? publicCatalogCopy(product.customProjectTitle) || settings.productUi.standardDefaultCustomTitle
+  : settings.productUi.standardDefaultRegularTitle;
 const customProjectText = publicCatalogCopy(product.customProjectText);
 const finalContactDescription = product.showCustomProjectBlock !== false && customProjectText
   ? customProjectText
-  : 'Пришлите задачу, размеры, количество и место установки по телефону, в Telegram или по email.';
+  : settings.productUi.standardDefaultDescription;
 const relatedAreFromCategory = relatedProducts.every((item) => item.category.slug === category.slug);
-const relatedTitle = relatedAreFromCategory ? 'Другие изделия категории' : 'Другие изделия раздела';
 const relatedHref = links.categoryHrefs[category.slug] || catalogV2CategoryHref(section.slug, category.slug);
+const affectedRoutes = [route.href, relatedHref];
+const binding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'product-detail', variant: 'standard' }, owner: { collection: 'products', slug: product.slug },
+  fieldPath, stableItemId: product.slug, scope: 'local', tool, affectedRoutes, ...options
+});
+const productUiBinding = (fieldPath: string, tool = 'short-text', occurrence = 'content') => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'standard-product-ui' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `productUi.${fieldPath}`, stableItemId: `standard-product-${fieldPath}-${occurrence}`, scope: 'global', tool, affectedRoutes: ['*']
+});
+const catalogUiBinding = (fieldPath: string, occurrence: string) => adminBinding(Astro.url, {
+  renderer: { family: 'product-detail', variant: 'standard-breadcrumb' },
+  owner: { collection: 'site-settings', slug: 'global' }, fieldPath: `catalogUi.${fieldPath}`,
+  stableItemId: `${product.slug}-${occurrence}`, scope: 'global', tool: 'short-text', affectedRoutes: ['*']
+});
+const referenceBinding = (
+  collection: string,
+  slug: string,
+  fieldPath: string,
+  occurrence: string,
+  routes: string[] = affectedRoutes
+) => adminBinding(Astro.url, {
+  renderer: { family: 'product-detail', variant: 'standard-reference' }, owner: { collection, slug }, fieldPath,
+  stableItemId: `${product.slug}-${occurrence}`, scope: 'shared', tool: 'short-text', affectedRoutes: routes
+});
+const relatedTitleField = relatedAreFromCategory ? 'standardRelatedCategoryTitle' : 'standardRelatedSectionTitle';
+const relatedTitle = settings.productUi[relatedTitleField];
 const relatedProductHref = (item: CatalogProductRoute) => links.productHrefs[item.product.slug]
   || catalogV2ProductHref(item.section.slug, item.category.slug, item.product.slug);
 const displayRelatedProducts = relatedProducts.map((item) => ({
@@ -101,21 +127,25 @@ const rootClass = [
   images.length === 0 ? 'catalog-v2--standard-no-media' : ''
 ].filter(Boolean).join(' ');
 const productBreadcrumbs = [
-  { title: 'Главная', href: '/design-lab/home-v2/' },
-  { title: section.title, href: links.sectionHref },
-  { title: category.title, href: links.categoryHrefs[category.slug] || catalogV2CategoryHref(section.slug, category.slug) },
-  { title: product.title }
+  { title: settings.catalogUi.shared.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: catalogUiBinding('shared.homeBreadcrumbLabel', 'breadcrumb-home') },
+  { title: section.title, href: links.sectionHref, editor: referenceBinding('product-sections', section.slug, 'title', 'breadcrumb-section', [route.href, links.sectionHref, relatedHref]) },
+  { title: category.title, href: relatedHref, editor: referenceBinding('product-categories', category.slug, 'title', 'breadcrumb-category') },
+  { title: product.title, editor: binding('title', 'heading', { stableItemId: `${product.slug}-breadcrumb-product`, role: 'breadcrumb-product' }) }
 ];
 const sectionNavItems = [
-  { id: 'product-overview', label: 'Обзор' },
-  ...(descriptionParagraphs.length > 0 ? [{ id: 'product-description', label: 'Описание' }] : []),
-  ...(hasTechnicalPanels ? [{ id: 'product-specifications', label: 'Характеристики' }] : []),
+  { id: 'product-overview', label: settings.productUi.standardNavOverviewLabel, editor: productUiBinding('standardNavOverviewLabel', 'short-text', 'nav-overview') },
+  ...(descriptionParagraphs.length > 0 ? [{ id: 'product-description', label: settings.productUi.standardNavDescriptionLabel, editor: productUiBinding('standardNavDescriptionLabel', 'short-text', 'nav-description') }] : []),
+  ...(hasTechnicalPanels ? [{ id: 'product-specifications', label: settings.productUi.standardNavSpecificationsLabel, editor: productUiBinding('standardNavSpecificationsLabel', 'short-text', 'nav-specifications') }] : []),
   ...(product.showDeliveryBlock !== false && deliveryParagraphs.length > 0
-    ? [{ id: 'product-delivery', label: 'Доставка' }]
+    ? [{ id: 'product-delivery', label: settings.productUi.standardNavDeliveryLabel, editor: productUiBinding('standardNavDeliveryLabel', 'short-text', 'nav-delivery') }]
     : []),
-  ...(relatedProducts.length > 0 ? [{ id: 'related-products', label: 'Другие изделия' }] : []),
-  { id: 'contact', label: 'Получить расчёт' }
+  ...(relatedProducts.length > 0 ? [{ id: 'related-products', label: settings.productUi.standardNavRelatedLabel, editor: productUiBinding('standardNavRelatedLabel', 'short-text', 'nav-related') }] : []),
+  { id: 'contact', label: settings.productUi.standardNavContactLabel, editor: productUiBinding('standardNavContactLabel', 'short-text', 'nav-contact') }
 ];
+const headerCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-label', 'header-desktop');
+const headerMobileCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-label', 'header-mobile');
+const mobileCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-label', 'footer-mobile');
+const editorCanvas = isLocalAdminCanvas(Astro.url);
 ---
 
 <CatalogV2Layout
@@ -126,6 +156,11 @@ const sectionNavItems = [
   ogImage={images[0] || product.image}
   pageKind="product"
   rootClass={rootClass}
+  headerCtaLabel={settings.productUi.standardHeroPrimaryLabel}
+  mobileCtaLabel={settings.productUi.standardHeroPrimaryLabel}
+  headerCtaBinding={headerCtaBinding}
+  headerMobileCtaBinding={headerMobileCtaBinding}
+  mobileCtaBinding={mobileCtaBinding}
   productFinalPrototype="standard-product"
 >
   <div class="v2-standard-product-page" data-product-presentation="standard">
@@ -139,64 +174,78 @@ const sectionNavItems = [
     data-product-media-count={images.length}
     data-product-final-hero
     aria-labelledby="v2-product-title"
+    {...(images.length === 0 ? binding('gallery', 'gallery', { role: 'missing-product-media', multiple: true, coverPath: 'image' }) : {})}
   >
     <div class="hv2-shell hv2-grid v2-product-top__grid" data-product-final-track>
       <article class="v2-product-summary" data-v2-page-handoff="copy">
         <div class="v2-product-summary__breadcrumbs" data-v2-entrance-role="context">
           <V2Breadcrumbs items={productBreadcrumbs} />
         </div>
-        <p class="hv2-eyebrow" data-v2-reveal="entry-meta" data-v2-entrance-role="context">{category.title}</p>
-        <h1 id="v2-product-title" data-v2-reveal="entry-title" data-v2-entrance-role="title-primary">{product.title}</h1>
-        {productLead && <p class="v2-product-summary__lead" data-v2-reveal="entry-copy" data-v2-entrance-role="lead">{productLead}</p>}
+        <p class="hv2-eyebrow" data-v2-reveal="entry-meta" data-v2-entrance-role="context" {...referenceBinding('product-categories', category.slug, 'title', 'hero-category-eyebrow')}>{category.title}</p>
+        <h1 id="v2-product-title" data-v2-reveal="entry-title" data-v2-entrance-role="title-primary" {...binding('title', 'heading')}>{product.title}</h1>
+        {productLead && <p class="v2-product-summary__lead" data-v2-reveal="entry-copy" data-v2-entrance-role="lead" {...binding('leadText', 'long-text', { projection: { kind: 'fallback', fallback: 'shortDescription' } })}>{productLead}</p>}
 
         <dl class="v2-product-summary__meta" data-v2-reveal="entry-price" data-v2-entrance-role="actions-meta">
           <div>
-            <dt>Стоимость</dt>
-            <dd>{formatProductPrice(product)}</dd>
+            <dt {...productUiBinding('standardPriceLabel', 'short-text', 'hero-price-label')}>{settings.productUi.standardPriceLabel}</dt>
+            <dd {...binding('priceMode', 'price', { modePath: 'priceMode', valuePath: 'priceFrom', currencyPath: 'currency' })}>{formatProductPrice(product)}</dd>
           </div>
         </dl>
 
         {features.length > 0 && (
-          <ul class="v2-product-summary__features" data-v2-reveal="entry-features" data-v2-entrance-role="support">
+          <ul class="v2-product-summary__features" data-v2-reveal="entry-features" data-v2-entrance-role="support" {...binding('features', 'list', { itemKind: 'string' })}>
             {features.map((feature) => <li>{feature}</li>)}
           </ul>
         )}
 
         <div class="hv2-actions v2-product-summary__actions" data-v2-reveal="entry-actions" data-v2-entrance-role="actions-meta">
-          <a class="hv2-button hv2-button--primary" href="#contact">Запросить расчёт</a>
-          <a class="hv2-text-link" href={settings.telegram} target="_blank" rel="noopener noreferrer">
-            Написать в Telegram
+          <a class="hv2-button hv2-button--primary" href="#contact" {...productUiBinding('standardHeroPrimaryLabel', 'link-label')}>{settings.productUi.standardHeroPrimaryLabel}</a>
+          <a class="hv2-text-link" href={settings.telegram} target="_blank" rel="noopener noreferrer" {...productUiBinding('standardHeroSecondaryLabel', 'link-label')}>
+            {settings.productUi.standardHeroSecondaryLabel}
           </a>
         </div>
       </article>
 
-      {images.length > 0 && (
-        <div class="v2-product-top__gallery" data-v2-reveal="entry-media" data-v2-entrance-role="media">
-          <V2ProductGallery
+      {(images.length > 0 || editorCanvas) && (
+        <div
+          class="v2-product-top__gallery"
+          data-v2-reveal="entry-media"
+          data-v2-entrance-role="media"
+          {...(images.length === 0 ? binding('gallery', 'gallery', { role: 'missing-product-media', multiple: true, coverPath: 'image' }) : {})}
+        >
+          {images.length > 0 ? <V2ProductGallery
             images={images}
+            imageMetadata={product.gallery}
             title={product.title}
             imageView={product.imageView}
             caption={galleryCaption}
             pageCritical
             mediaSizes="(max-width: 760px) calc(100vw - 32px), (max-width: 1100px) calc(100vw - 32px), 44vw"
-          />
+            bindingOwner={{ collection: 'products', slug: product.slug }}
+            bindingField="gallery"
+            affectedRoutes={affectedRoutes}
+          /> : <div class="v2-media-empty" data-smu1-editor-affordance="missing-product-media"><p>Добавить фотографии</p></div>}
         </div>
       )}
     </div>
   </section>
   </V2HeroHandoff>
 
-  <V2SectionNav items={sectionNavItems} label="Разделы изделия" />
+  <V2SectionNav
+    items={sectionNavItems}
+    label={settings.productUi.standardSectionNavLabel}
+    editor={productUiBinding('standardSectionNavLabel', 'short-text', 'section-nav-label')}
+  />
 
   <section class="v2-product-details" aria-label="Описание и характеристики товара">
     <div class="hv2-shell">
       {descriptionParagraphs.length > 0 && (
         <article class="v2-product-description hv2-grid" id="product-description" data-v2-reveal>
           <header>
-            <p class="hv2-eyebrow">О модели</p>
-            <h2>Описание</h2>
+            <p class="hv2-eyebrow" {...productUiBinding('standardDescriptionEyebrow')}>{settings.productUi.standardDescriptionEyebrow}</p>
+            <h2 {...productUiBinding('standardDescriptionTitle', 'heading')}>{settings.productUi.standardDescriptionTitle}</h2>
           </header>
-          <div class="v2-product-description__text">
+          <div class="v2-product-description__text" {...binding('description', 'long-text')}>
             {descriptionParagraphs.map((paragraph) => <p>{paragraph}</p>)}
           </div>
         </article>
@@ -205,10 +254,10 @@ const sectionNavItems = [
       {hasTechnicalPanels && <div class="v2-technical-grid" id="product-specifications" data-v2-scroll-section>
         {hasSpecifications && <section class="v2-technical-panel v2-technical-panel--specs" aria-labelledby="v2-specs-title" data-v2-reveal data-v2-scroll-role="card">
           <header>
-            <p class="hv2-eyebrow">Технические данные</p>
-            <h2 id="v2-specs-title">Размеры и характеристики</h2>
+            <p class="hv2-eyebrow" {...productUiBinding('standardSpecificationsEyebrow')}>{settings.productUi.standardSpecificationsEyebrow}</p>
+            <h2 id="v2-specs-title" {...productUiBinding('standardSpecificationsTitle', 'heading')}>{settings.productUi.standardSpecificationsTitle}</h2>
           </header>
-          <div class="v2-spec-content">
+          <div class="v2-spec-content" {...binding('dimensions', 'list', { itemKind: 'object' })}>
             {pairedSpecs.length > 0 && (
               <dl class="v2-spec-definitions">
                 {pairedSpecs.map((item) => (
@@ -230,18 +279,18 @@ const sectionNavItems = [
         </section>}
 
         {materials.length > 0 && <section class="v2-technical-panel" aria-labelledby="v2-materials-title" data-v2-reveal data-v2-scroll-role="card">
-          <header><p class="hv2-eyebrow">Состав</p><h2 id="v2-materials-title">Материалы</h2></header>
-          <ul class="v2-data-list">{materials.map((item) => <li>{item}</li>)}</ul>
+          <header><p class="hv2-eyebrow" {...productUiBinding('standardMaterialsEyebrow')}>{settings.productUi.standardMaterialsEyebrow}</p><h2 id="v2-materials-title" {...productUiBinding('standardMaterialsTitle', 'heading')}>{settings.productUi.standardMaterialsTitle}</h2></header>
+          <ul class="v2-data-list" {...binding('materials', 'list', { itemKind: 'string' })}>{materials.map((item) => <li>{item}</li>)}</ul>
         </section>}
 
         {colors.length > 0 && <section class="v2-technical-panel" aria-labelledby="v2-colors-title" data-v2-reveal data-v2-scroll-role="card">
-          <header><p class="hv2-eyebrow">Варианты</p><h2 id="v2-colors-title">Цвета и покрытие</h2></header>
-          <ul class="v2-data-list">{colors.map((item) => <li>{item}</li>)}</ul>
+          <header><p class="hv2-eyebrow" {...productUiBinding('standardColorsEyebrow')}>{settings.productUi.standardColorsEyebrow}</p><h2 id="v2-colors-title" {...productUiBinding('standardColorsTitle', 'heading')}>{settings.productUi.standardColorsTitle}</h2></header>
+          <ul class="v2-data-list" {...binding('colors', 'list', { itemKind: 'string' })}>{colors.map((item) => <li>{item}</li>)}</ul>
         </section>}
 
         {customizationItems.length > 0 && <section class="v2-technical-panel v2-technical-panel--custom" aria-labelledby="v2-customization-title" data-v2-reveal data-v2-scroll-role="card">
-          <header><p class="hv2-eyebrow">Под задачу</p><h2 id="v2-customization-title">Что можно изменить</h2></header>
-          <ul class="v2-customization-list">
+          <header><p class="hv2-eyebrow" {...productUiBinding('standardCustomizationEyebrow')}>{settings.productUi.standardCustomizationEyebrow}</p><h2 id="v2-customization-title" {...productUiBinding('standardCustomizationTitle', 'heading')}>{settings.productUi.standardCustomizationTitle}</h2></header>
+          <ul class="v2-customization-list" {...binding('customizationItems', 'list', { itemKind: 'string' })}>
             {customizationItems.map((item) => <li><p>{item}</p></li>)}
           </ul>
         </section>}
@@ -250,12 +299,12 @@ const sectionNavItems = [
       {product.showDeliveryBlock !== false && deliveryParagraphs.length > 0 && (
         <section class="v2-delivery-block hv2-grid" id="product-delivery" aria-labelledby="v2-delivery-title" data-v2-reveal>
           <header>
-            <p class="hv2-eyebrow">Получение изделия</p>
-            <h2 id="v2-delivery-title">Доставка</h2>
+            <p class="hv2-eyebrow" {...productUiBinding('standardDeliveryEyebrow')}>{settings.productUi.standardDeliveryEyebrow}</p>
+            <h2 id="v2-delivery-title" {...productUiBinding('standardDeliveryTitle', 'heading')}>{settings.productUi.standardDeliveryTitle}</h2>
           </header>
-          <div>
+          <div {...binding('deliveryText', 'long-text')}>
             {deliveryParagraphs.map((paragraph) => <p>{paragraph}</p>)}
-            <a class="hv2-text-link" href="#contact">Уточнить условия</a>
+            <a class="hv2-text-link" href="#contact" {...productUiBinding('standardDeliveryLinkLabel', 'link-label')}>{settings.productUi.standardDeliveryLinkLabel}</a>
           </div>
         </section>
       )}
@@ -263,10 +312,10 @@ const sectionNavItems = [
       {relatedProducts.length > 0 && (
         <section class="v2-related-products" id="related-products" aria-labelledby="v2-related-title">
           <header class="v2-section-heading" data-v2-reveal>
-            <div><p class="hv2-eyebrow">Другие изделия</p><h2 id="v2-related-title">{relatedTitle}</h2></div>
-            <a class="hv2-text-link" href={withBase(relatedHref)}>Все товары категории</a>
+            <div><p class="hv2-eyebrow" {...productUiBinding('standardRelatedEyebrow')}>{settings.productUi.standardRelatedEyebrow}</p><h2 id="v2-related-title" {...productUiBinding(relatedTitleField, 'heading', 'related-title')}>{relatedTitle}</h2></div>
+            <a class="hv2-text-link" href={withBase(relatedHref)} {...productUiBinding('standardRelatedLinkLabel', 'link-label')}>{settings.productUi.standardRelatedLinkLabel}</a>
           </header>
-          <div class="v2-product-grid v2-product-grid--related" role="list">
+          <div class="v2-product-grid v2-product-grid--related" role="list" {...binding('relatedProductSlugs', 'list', { itemKind: 'string', projection: { kind: product.relatedProductSlugs?.length ? 'direct' : 'fallback', fallback: 'category order' } })}>
             {displayRelatedProducts.map((item) => (
               <div role="listitem"><V2ProductCard product={item.product} href={relatedProductHref(item)} related /></div>
             ))}
@@ -277,12 +326,17 @@ const sectionNavItems = [
   </section>
 
   <V2DirectContact
-    eyebrow="Индивидуальное изготовление"
+    eyebrow={settings.productUi.standardContactEyebrow}
     title={finalContactTitle}
     description={finalContactDescription}
-    primaryLabel="Запросить расчёт"
-    secondaryLabel="Обсудить задачу"
+    primaryLabel={settings.productUi.standardContactPrimaryLabel}
+    secondaryLabel={settings.productUi.standardContactSecondaryLabel}
     variant="product"
+    eyebrowBinding={productUiBinding('standardContactEyebrow', 'short-text')}
+    titleBinding={binding('customProjectTitle', 'heading', { projection: { kind: 'fallback', fallback: product.showCustomProjectBlock !== false ? 'site-settings.productUi.standardDefaultCustomTitle' : 'site-settings.productUi.standardDefaultRegularTitle' } })}
+    descriptionBinding={binding('customProjectText', 'long-text', { projection: { kind: 'fallback', fallback: 'site-settings.productUi.standardDefaultDescription' } })}
+    primaryLabelBinding={productUiBinding('standardContactPrimaryLabel', 'link-label')}
+    secondaryLabelBinding={productUiBinding('standardContactSecondaryLabel', 'link-label')}
   />
   </div>
 </CatalogV2Layout>

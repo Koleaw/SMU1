@@ -1,18 +1,29 @@
 ---
 import PracticalV2Layout from '../../../../components/v2/practical/PracticalV2Layout.astro';
 import V2PrivacyPolicy from '../../../../components/v2/practical/V2PrivacyPolicy.astro';
+import settings from '../../../../content/site-settings/global.json';
+import { adminBinding } from '../../../../admin/bindings/adminBinding';
 
 const currentPath = '/design-lab/v2/politika-konfidencialnosti/';
+const policy = settings.privacyPolicy;
+const shellCtaBinding = (occurrence: string) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'privacy' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: 'privacyPolicy.shellCtaLabel', stableItemId: `privacy-shell-cta-${occurrence}`, scope: 'legal',
+  tool: 'button-label', affectedRoutes: ['/politika-konfidencialnosti/']
+});
 ---
 
 <PracticalV2Layout
-  title="Политика конфиденциальности и обработки персональных данных — СМУ-1"
-  description="Политика конфиденциальности и обработки персональных данных ООО «СМУ 1»."
+  title={policy.seoTitle}
+  description={policy.seoDescription}
   canonicalPath="/politika-konfidencialnosti/"
   currentPath={currentPath}
   kind="legal"
   contactHref="/design-lab/v2/kontakty/"
-  ctaLabel="Связаться"
+  ctaLabel={policy.shellCtaLabel}
+  headerCtaBinding={shellCtaBinding('header-desktop')}
+  headerMobileCtaBinding={shellCtaBinding('header-mobile')}
+  mobileCtaBinding={shellCtaBinding('footer-mobile')}
 >
   <V2PrivacyPolicy />
 </PracticalV2Layout>

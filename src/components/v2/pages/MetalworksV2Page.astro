@@ -9,9 +9,14 @@ import {
   getDirectionStepItems
 } from '../directions/directionV2Data';
 import {
-  approvedMediaUntilEdited,
-  approvedUntilEdited
+  approvedMediaUntilEdited
 } from '../directions/directionV2Presentation';
+import {
+  directionPresentationBinding,
+  directionRelatedItems,
+  directionSectionNavItems,
+  requireDirectionPresentation
+} from '../directions/directionPresentation';
 import EngineeringDirectionBrief from '../engineering/EngineeringDirectionBrief.astro';
 import EngineeringDirectionProof from '../engineering/EngineeringDirectionProof.astro';
 import EngineeringDirectionScope from '../engineering/EngineeringDirectionScope.astro';
@@ -20,6 +25,7 @@ import EngineeringDirectionV2Layout from '../engineering/EngineeringDirectionV2L
 import { loadEngineeringDirectionV2Snapshot } from '../engineering/engineeringDirectionV2Data';
 import { selectV2ProjectMedia } from '../mediaRoleAdapter';
 import V2SectionNav from '../V2SectionNav.astro';
+import { adminBinding } from '../../../admin/bindings/adminBinding';
 
 const currentPath = Astro.url.pathname;
 const proofProjectSlug = 'kompleks-rabot-na-proizvodstvennoy-territorii';
@@ -28,6 +34,11 @@ const data = await loadEngineeringDirectionV2Snapshot({
   proofProjectSlug
 });
 const { section, catalog, services, proofProject } = data;
+const presentation = requireDirectionPresentation(section);
+const owner = { collection: 'product-sections' as const, slug: section.slug };
+const route = `/${section.slug}/`;
+const presentationBinding = (fieldPath: string, tool = 'short-text') =>
+  directionPresentationBinding(Astro.url, owner, route, fieldPath, tool);
 const typesBlock = getDirectionBlock(section, 'cardGrid');
 const scopeBlock = getDirectionBlock(section, 'listPanel');
 const inputBlock = getDirectionBlock(section, 'process');
@@ -53,62 +64,40 @@ const heroImage = heroMedia.src;
 const heroImageView = heroMedia.usesApprovedBaseline
   ? { fit: 'cover' as const, positionX: 50, positionY: 48, scale: 1 }
   : (section.imageView || { fit: 'cover' as const, positionX: 50, positionY: 50, scale: 1 });
-const directionTitle = approvedUntilEdited(section.title, 'Металлоконструкции', 'Металлоконструкции');
-const heroKicker = approvedUntilEdited(section.heroKicker, undefined, 'Изготовление и монтаж');
-const heroTitle = approvedUntilEdited(
-  section.heroTitle,
-  'Металлоконструкции под заказ',
-  'Металлоконструкции для цехов, складов и других объектов'
-);
-const heroDescription = approvedUntilEdited(
-  section.heroDescription,
-  'Проектируем, изготавливаем и монтируем металлоконструкции для хозяйственных, коммерческих, производственных и частных объектов: каркасы, рамы, площадки, лестницы, опорные элементы и конструкции по чертежам.',
-  'Изготавливаем и монтируем каркасы зданий, фермы, рамы, площадки обслуживания, лестницы, опоры, закладные и нестандартные конструкции по чертежам или исходным данным заказчика.'
-);
-const tasksDescription = getBlockIntro(typesBlock) || 'От металлокаркаса здания до отдельного узла';
-const scopeDescription = getBlockIntro(scopeBlock)
-  || 'Компактный перечень объектов, где нужна металлическая часть конструкции.';
-const briefDescription = getBlockIntro(inputBlock)
-  || 'Для первого обращения достаточно тех исходных данных, которые уже есть. Полный комплект документации на этом этапе не требуется.';
-const contactTitle = approvedUntilEdited(
-  section.contactTitle,
-  'Нужна металлоконструкция под задачу?',
-  'Рассчитаем металлоконструкцию для вашего объекта'
-);
-const contactDescription = approvedUntilEdited(
-  section.contactDescription,
-  'Напишите нам, и мы сориентируем по изготовлению, материалу, покрытию, монтажу и срокам. Можно отправить чертеж, эскиз, размеры или описание задачи.',
-  'Пришлите чертёж, КМ/КМД, эскиз, размеры, фотографии площадки или краткое описание задачи. Уточним состав конструкции, изготовление и монтаж.'
-);
-const telegramLabel = approvedUntilEdited(section.contactTelegramLabel, 'Написать в Telegram', 'Получить расчёт');
-const phoneLabel = approvedUntilEdited(section.contactPhoneLabel, 'Позвонить', 'Позвонить');
-const emailLabel = approvedUntilEdited(section.contactEmailLabel, 'Написать на почту', 'Email');
+const directionTitle = section.title;
+const heroKicker = section.heroKicker || section.title;
+const heroTitle = section.heroTitle;
+const heroDescription = section.heroDescription;
+const tasksDescription = getBlockIntro(typesBlock) || presentation.types.description || '';
+const scopeDescription = getBlockIntro(scopeBlock) || presentation.scope.description || '';
+const briefDescription = getBlockIntro(inputBlock) || presentation.brief.description || '';
+const contactTitle = section.contactTitle || '';
+const contactDescription = section.contactDescription || '';
+const telegramLabel = section.contactTelegramLabel || '';
+const phoneLabel = section.contactPhoneLabel || '';
+const emailLabel = section.contactEmailLabel || '';
+const proofDescriptionField = proofProject?.whatWasDone?.trim() ? 'whatWasDone' : 'shortDescription';
 const telegramChannelLabel = ['Написать в Telegram', 'Получить расчёт'].includes(section.contactTelegramLabel || '')
   ? 'Telegram'
   : (section.contactTelegramLabel || 'Telegram');
-const canopies = catalog.sections.find((item) => item.slug === 'navesy-i-kozyrki');
-const construction = services.find((item) => item.slug === 'stroitelstvo-i-remonty');
-const related = [
-  canopies ? {
-    eyebrow: 'Смежное направление',
-    title: 'Навесы и козырьки',
-    description: 'Отдельное направление для навесных конструкций и входных групп.',
-    href: '/design-lab/v2/navesy-i-kozyrki/'
-  } : null,
-  construction ? {
-    eyebrow: 'Нужен более широкий комплекс?',
-    title: 'Строительство и ремонты',
-    description: 'Если задача включает не только металлический каркас, но и подготовку площадки, основания, обшивку и другие работы до готового результата, смотрите направление «Строительство и ремонты».',
-    href: `/design-lab/v2/${construction.slug}/`
-  } : null
-].filter((item): item is NonNullable<typeof item> => Boolean(item));
-const sectionNavItems = [
-  ...(proofProject && proofImages.length > 0 ? [{ id: 'engineering-proof', label: 'Выполненный объект' }] : []),
-  ...(tasks.length > 0 ? [{ id: 'engineering-tasks', label: 'Что изготавливаем' }] : []),
-  ...(scope.length > 0 ? [{ id: 'engineering-scope', label: 'Для каких объектов' }] : []),
-  ...(briefInputs.length > 0 ? [{ id: 'engineering-brief', label: 'С чем обратиться' }] : []),
-  { id: 'contact', label: 'Получить расчёт' }
-];
+const related = directionRelatedItems(Astro.url, owner, route, presentation, catalog, services);
+const sectionNavItems = directionSectionNavItems(Astro.url, owner, route, presentation, [
+  ...(proofProject && proofImages.length > 0 ? ['engineering-proof'] : []),
+  ...(tasks.length > 0 ? ['engineering-tasks'] : []),
+  ...(scope.length > 0 ? ['engineering-scope'] : []),
+  ...(briefInputs.length > 0 ? ['engineering-brief'] : []),
+  'contact'
+]);
+const blockBinding = (block: unknown, field: 'title' | 'intro' | 'items' | 'steps', tool: string, itemKind?: 'string' | 'object') => {
+  const index = section.pageBlocks?.indexOf(block as never) ?? -1;
+  if (index < 0) return {};
+  const source = block as { sectionId?: string; type?: string; order?: number };
+  return adminBinding(Astro.url, {
+    renderer: { family: 'direction-block', variant: source.type }, owner: { collection: 'product-sections', slug: section.slug },
+    fieldPath: `pageBlocks[${index}].${field}`, stableItemId: `${source.sectionId || `${source.type}-${source.order}`}-${field}`,
+    scope: 'local', tool, affectedRoutes: [`/${section.slug}/`], itemKind
+  });
+};
 ---
 
 <EngineeringDirectionV2Layout
@@ -129,15 +118,26 @@ const sectionNavItems = [
     title={heroTitle}
     description={heroDescription}
     image={heroImage}
-    imageAlt={heroMedia.usesApprovedBaseline ? 'Металлический каркас на производственной территории' : directionTitle}
+    imageAlt={heroMedia.usesApprovedBaseline ? presentation.hero.imageAlt : directionTitle}
     imageView={heroImageView}
     titleId="engineering-direction-title"
-    primaryLabel="Получить расчёт"
+    primaryLabel={presentation.hero.primaryLabel}
     secondaryHref="#engineering-proof"
-    secondaryLabel="Смотреть выполненный объект"
+    secondaryLabel={presentation.hero.secondaryLabel}
+    bindingOwner={{ collection: 'product-sections', slug: section.slug }}
+    bindingFields={{ eyebrow: 'heroKicker', title: 'heroTitle', description: 'heroDescription', image: 'image', primaryLabel: 'directionPresentation.hero.primaryLabel', secondaryLabel: 'directionPresentation.hero.secondaryLabel' }}
+    affectedRoutes={[`/${section.slug}/`, '/']}
+    mediaBinding={heroMedia.usesApprovedBaseline && proofProject
+      ? { owner: { collection: 'projects', slug: proofProject.slug }, fieldPath: 'presentation.detailHeroMedia', scope: 'shared', affectedRoutes: [`/${section.slug}/`, `/vypolnennye-obekty/${proofProject.slug}/`, '/vypolnennye-obekty/'], projection: { kind: 'derived', formula: 'project presentation media roles: metalworks + hero' } }
+      : undefined}
+    editorSource="src/components/v2/pages/MetalworksV2Page.astro#hero"
   />
 
-  <V2SectionNav items={sectionNavItems} label="Разделы направления" />
+  <V2SectionNav
+    items={sectionNavItems}
+    label={presentation.sectionNav.label}
+    editorSource="src/components/v2/pages/MetalworksV2Page.astro#sectionNavItems"
+  />
 
   {proofProject && proofImages.length > 0 && (
     <EngineeringDirectionProof
@@ -148,32 +148,73 @@ const sectionNavItems = [
       href={`/design-lab/v2/vypolnennye-obekty/${proofProject.slug}/`}
       images={proofImages}
       featureIndex={1}
+      bindingOwner={{ collection: 'projects', slug: proofProject.slug }}
+      bindingFields={{
+        title: 'title',
+        city: 'city',
+        year: 'year',
+        description: proofDescriptionField,
+        images: 'presentation.mediaRoles'
+      }}
+      bindingScope="shared"
+      affectedRoutes={[
+        `/${section.slug}/`,
+        `/vypolnennye-obekty/${proofProject.slug}/`,
+        '/vypolnennye-obekty/'
+      ]}
+      editorSource="src/components/v2/pages/MetalworksV2Page.astro#proofProject"
+      eyebrow={presentation.proof?.eyebrow}
+      linkLabel={presentation.proof?.linkLabel}
+      eyebrowBinding={presentationBinding('proof.eyebrow')}
+      linkLabelBinding={presentationBinding('proof.linkLabel', 'link-label')}
     />
   )}
 
   <EngineeringDirectionTasks
-    title={typesBlock?.title || 'Что изготавливаем'}
+    eyebrow={presentation.types.eyebrow}
+    title={typesBlock?.title || presentation.types.title || ''}
     description={tasksDescription}
     items={tasks}
+    titleBinding={blockBinding(typesBlock, 'title', 'heading')}
+    eyebrowBinding={presentationBinding('types.eyebrow')}
+    descriptionBinding={blockBinding(typesBlock, 'intro', 'long-text')}
+    itemsBinding={blockBinding(typesBlock, 'items', 'list', 'object')}
+    editorSource="src/content/product-sections/metallokonstruktsii-dlya-biznesa.json#pageBlocks[cardGrid]"
   />
 
   <EngineeringDirectionScope
-    title={scopeBlock?.title || 'Для каких объектов'}
+    eyebrow={presentation.scope.eyebrow}
+    title={scopeBlock?.title || presentation.scope.title || ''}
     description={scopeDescription}
     items={scope}
+    titleBinding={blockBinding(scopeBlock, 'title', 'heading')}
+    eyebrowBinding={presentationBinding('scope.eyebrow')}
+    descriptionBinding={blockBinding(scopeBlock, 'intro', 'long-text')}
+    itemsBinding={blockBinding(scopeBlock, 'items', 'list', 'string')}
+    editorSource="src/content/product-sections/metallokonstruktsii-dlya-biznesa.json#pageBlocks[listPanel:first]"
   />
 
   <EngineeringDirectionBrief
-    title={inputBlock?.title || 'С чем можно обратиться'}
+    eyebrow={presentation.brief.eyebrow}
+    title={inputBlock?.title || presentation.brief.title || ''}
     description={briefDescription}
     items={briefInputs}
+    titleBinding={blockBinding(inputBlock, 'title', 'heading')}
+    eyebrowBinding={presentationBinding('brief.eyebrow')}
+    descriptionBinding={blockBinding(inputBlock, 'intro', 'long-text')}
+    itemsBinding={blockBinding(inputBlock, 'steps', 'list', 'object')}
+    editorSource="src/content/product-sections/metallokonstruktsii-dlya-biznesa.json#pageBlocks[process]"
   />
 
   <DirectionV2Related
-    title="Смежные направления"
+    eyebrow={presentation.related.eyebrow}
+    title={presentation.related.title}
     items={related}
     variant="compact"
     presentation="links"
+    editorSource="src/components/v2/pages/MetalworksV2Page.astro#related"
+    eyebrowBinding={presentationBinding('related.eyebrow')}
+    titleBinding={presentationBinding('related.title', 'heading')}
   />
 
   <DirectionV2FinalCTA
@@ -182,7 +223,12 @@ const sectionNavItems = [
     primaryLabel={telegramLabel}
     secondaryLabel={phoneLabel}
     telegramChannelLabel={telegramChannelLabel}
-    phoneChannelLabel={approvedUntilEdited(section.contactPhoneLabel, 'Позвонить', 'Основной телефон')}
+    eyebrow={presentation.contactEyebrow}
+    phoneChannelLabel={presentation.contactPhoneChannelLabel}
     emailChannelLabel={emailLabel}
+    bindingOwner={{ collection: 'product-sections', slug: section.slug }}
+    bindingFields={{ eyebrow: 'directionPresentation.contactEyebrow', title: 'contactTitle', description: 'contactDescription', primaryLabel: 'contactTelegramLabel', secondaryLabel: 'contactPhoneLabel', emailChannelLabel: 'contactEmailLabel', phoneChannelLabel: 'directionPresentation.contactPhoneChannelLabel' }}
+    affectedRoutes={[`/${section.slug}/`]}
+    editorSource="src/components/v2/pages/MetalworksV2Page.astro#finalCta"
   />
 </EngineeringDirectionV2Layout>

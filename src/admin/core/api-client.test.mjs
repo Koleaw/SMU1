@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createAdminApiClient } from './api-client.mjs';
+import { AdminApiError, createAdminApiClient } from './api-client.mjs';
 
 function jsonResponse(value, status = 200) {
   return new Response(JSON.stringify(value), {
@@ -79,5 +79,54 @@ test('staged media previews stay on the Astro origin even with an absolute API b
   assert.equal(
     client.stagedMediaPreviewUrl({ batchId: 'batch-001', leaseId: 'a'.repeat(64) }),
     `/api/admin/media/staging/batch-001/${'a'.repeat(64)}/preview`
+  );
+});
+
+test('a rejected session clears stale CSRF and fingerprint before a fresh login', async () => {
+  const calls = [];
+  let loginCount = 0;
+  let expiredCount = 0;
+  const client = createAdminApiClient({
+    baseUrl: '/api/admin',
+    storage: null,
+    onSessionExpired: () => { expiredCount += 1; },
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (String(url).endsWith('/login')) {
+        loginCount += 1;
+        return jsonResponse({
+          ok: true,
+          csrfToken: `csrf-${loginCount}`,
+          sessionFingerprint: `fingerprint-${loginCount}`
+        });
+      }
+      return jsonResponse({ code: 'SESSION_EXPIRED', error: 'Сессия завершена.' }, 401);
+    }
+  });
+
+  await client.login('owner', 'first-password');
+  await assert.rejects(client.list('products'), (error) => error.status === 401);
+  assert.equal(expiredCount, 1);
+  assert.equal(client.csrfToken, '');
+  await client.login('owner', 'second-password');
+
+  const reloginHeaders = new Headers(calls[2].options.headers);
+  assert.equal(reloginHeaders.has('X-Admin-CSRF'), false);
+  assert.equal(reloginHeaders.has('X-Admin-Session-Fingerprint'), false);
+  assert.equal(client.csrfToken, 'csrf-2');
+});
+
+test('offline exports use the same human-readable API error boundary as JSON requests', async () => {
+  const client = createAdminApiClient({
+    baseUrl: '/api/admin',
+    storage: null,
+    fetchImpl: async () => { throw new TypeError('synthetic network loss'); }
+  });
+
+  await assert.rejects(
+    client.exportFullSite(),
+    (error) => error instanceof AdminApiError
+      && error.code === 'ADMIN_API_OFFLINE'
+      && /админка|соединен|скачать/iu.test(error.message)
   );
 });

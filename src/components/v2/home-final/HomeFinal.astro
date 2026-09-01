@@ -4,6 +4,7 @@ import home from '../../../content/static-pages/home.json';
 import { v2Href } from '../../../utils/v2Routes';
 import { loadV2Directions } from '../../../utils/v2Directions';
 import { getV2Regions, getV2TelegramLabel } from '../../../utils/v2SiteSettings';
+import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
 import HomeV2Footer from '../home-v2/HomeV2Footer.astro';
 import HomeV2Header from '../home-v2/HomeV2Header.astro';
 import { getHomeV2Presentation } from '../home-v2/homeV2Presentation';
@@ -18,17 +19,46 @@ const telegramLabel = getV2TelegramLabel(settings);
 const directionBySlug = new Map(
   (await loadV2Directions()).filter((item) => item.showOnHome).map((item) => [item.slug, item])
 );
-const directionCards = [
-  { direction: directionBySlug.get('stroitelstvo-i-remonty'), className: 'construction', kicker: 'Объектные работы' },
-  { direction: directionBySlug.get('metallokonstruktsii-dlya-biznesa'), className: 'metals', kicker: 'Конструкции под объект' },
-  { direction: directionBySlug.get('ulichnaya-mebel'), className: 'furniture', kicker: 'Каталог и адаптация' },
-  { direction: directionBySlug.get('ograzhdeniya-i-zabory'), className: 'fences', kicker: 'Под конкретный объект' }
-];
-const railDirections = [
-  { direction: directionBySlug.get('navesy-i-kozyrki'), kicker: 'Конструкция под размеры' },
-  { direction: directionBySlug.get('topiarii'), kicker: 'Для территории' }
-];
-const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
+const homeDirectionCards = (home.homeDirectionCards ?? [])
+  .filter((item) => item.isActive !== false)
+  .slice()
+  .sort((a, b) => a.order - b.order)
+  .map((item) => ({ ...item, direction: directionBySlug.get(item.directionSlug as Parameters<typeof directionBySlug.get>[0]) }));
+const directionCards = homeDirectionCards.filter((item) => item.group === 'feature');
+const railDirections = homeDirectionCards.filter((item) => item.group === 'rail');
+const landscapingCard = homeDirectionCards.find((item) => item.group === 'wide');
+const intakeItems = (home.intakeItems ?? []).filter((item) => item.isActive !== false).slice().sort((a, b) => a.order - b.order);
+const homeRoute = ['/'];
+const homeBinding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'home', variant: 'final' }, owner: { collection: 'static-pages', slug: 'home' },
+  fieldPath, scope: 'local', tool, affectedRoutes: homeRoute, ...options
+});
+const directionBinding = (
+  direction: NonNullable<(typeof homeDirectionCards)[number]['direction']>,
+  fieldPath: string,
+  tool = 'long-text',
+  options: Record<string, unknown> = {}
+) => adminBinding(Astro.url, {
+  renderer: { family: 'home', variant: 'direction-card' },
+  owner: { collection: direction.ownerCollection, slug: direction.slug }, fieldPath,
+  stableItemId: direction.slug, scope: 'shared', tool,
+  affectedRoutes: ['/', direction.href], permissions: { edit: true, reorder: false, delete: false },
+  ...options
+});
+const homeDirectionCardBinding = (id: string, field: string, tool = 'short-text') => {
+  const index = (home.homeDirectionCards ?? []).findIndex((item) => item.id === id);
+  return index < 0 ? {} : homeBinding(`homeDirectionCards[${index}].${field}`, tool, {
+    stableItemId: id,
+    role: `home-direction-${field}`
+  });
+};
+const globalBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'contact' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath, scope: 'global', tool, affectedRoutes: ['*'], ...options
+});
+const globalHrefDisposition = (fieldPath: string, reason: string) => adminDisposition(Astro.url, {
+  kind: 'global', reason, source: `src/content/site-settings/global.json#${fieldPath}`, tool: 'global-settings'
+});
 ---
 
 <div class="home-v2 home-final" data-home-v2-root data-home-final-root>
@@ -48,7 +78,14 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
         style="--hv2-reveal-delay: 220ms"
       >
         <picture class="hf-hero__poster">
-          <source media="(max-width: 760px)" srcset={path(home.heroMediaPosterMobile)} />
+          <source
+            media="(max-width: 760px)"
+            srcset={path(home.heroMediaPosterMobile)}
+            {...homeBinding('heroMediaPosterMobile', 'media', {
+              role: 'home-hero-poster-mobile', stableItemId: 'home-hero-poster-mobile', multiple: false,
+              projection: { kind: 'responsive-role', target: 'source.srcset' }
+            })}
+          />
           <img
             src={path(home.heroMediaPoster)}
             alt=""
@@ -59,6 +96,10 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
             decoding="async"
             data-v2-critical-media
             data-v2-page-critical
+            {...homeBinding('heroMediaPoster', 'media', {
+              role: 'home-hero-poster-desktop', stableItemId: 'home-hero-poster-desktop', multiple: false,
+              projection: { kind: 'responsive-role', target: 'img.src', fallback: 'heroMediaPosterMobile at max-width 760px' }
+            })}
           />
         </picture>
         <video
@@ -73,6 +114,7 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
           data-hf-mobile-src={path(home.heroMediaVideoMobile)}
           data-v2-desktop-src={path(home.heroMediaVideo)}
           data-v2-mobile-src={path(home.heroMediaVideoMobile)}
+          {...homeBinding('heroMediaVideo', 'video', { role: 'home-hero-video', multiple: false })}
         ></video>
         <div class="hf-hero__veil"></div>
       </div>
@@ -91,12 +133,12 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
 
       <div class="hf-shell hf-shell--editorial hf-hero__content">
         <div class="hf-hero__copy" data-hf-hero-copy data-v2-hero-scroll-copy data-v2-page-handoff="copy">
-          <p class="hf-eyebrow hf-eyebrow--light" data-reveal data-v2-entry="meta" data-v2-entrance-role="context" style="--hv2-reveal-delay: 0ms">{copy.heroKicker}</p>
-          <h1 id="home-final-title" data-reveal data-v2-entry="title" data-v2-entrance-role="title-primary" style="--hv2-reveal-delay: 60ms">{copy.heroTitle}</h1>
-          <p class="hf-hero__lead" data-reveal data-v2-entry="lead" data-v2-entrance-role="lead" style="--hv2-reveal-delay: 120ms">{copy.heroDescription}</p>
+          <p class="hf-eyebrow hf-eyebrow--light" data-reveal data-v2-entry="meta" data-v2-entrance-role="context" style="--hv2-reveal-delay: 0ms" {...homeBinding('heroKicker', 'short-text')}>{copy.heroKicker}</p>
+          <h1 id="home-final-title" data-reveal data-v2-entry="title" data-v2-entrance-role="title-primary" style="--hv2-reveal-delay: 60ms" {...homeBinding('heroTitle', 'heading')}>{copy.heroTitle}</h1>
+          <p class="hf-hero__lead" data-reveal data-v2-entry="lead" data-v2-entrance-role="lead" style="--hv2-reveal-delay: 120ms" {...homeBinding('heroDescription', 'long-text')}>{copy.heroDescription}</p>
           <div class="hf-actions" data-reveal data-v2-entry="actions" data-v2-entrance-role="actions-meta" style="--hv2-reveal-delay: 180ms">
-            <a class="hf-button hf-button--primary" href="#contact">{copy.heroPrimaryLabel}</a>
-            <a class="hf-button hf-button--ghost" href={path('/design-lab/v2/vypolnennye-obekty/')} data-v2-transition-label="Выполненные объекты">
+            <a class="hf-button hf-button--primary" href={path(home.heroPrimaryHref)} {...homeBinding('heroPrimaryLabel', 'link', { hrefPath: 'heroPrimaryHref' })}>{copy.heroPrimaryLabel}</a>
+            <a class="hf-button hf-button--ghost" href={path(home.heroSecondaryHref)} data-v2-transition-label="Выполненные объекты" {...homeBinding('heroSecondaryLabel', 'link', { hrefPath: 'heroSecondaryHref' })}>
               {copy.heroSecondaryLabel}
             </a>
           </div>
@@ -108,18 +150,18 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
       <div class="hf-shell hf-shell--editorial">
         <header class="hf-section-head" data-reveal data-v2-reveal="title">
           <div>
-            <p class="hf-eyebrow">{copy.directionsEyebrow}</p>
-            <h2 id="home-final-directions-title">От предметного решения до строительного объекта</h2>
+            <p class="hf-eyebrow" {...homeBinding('directionsEyebrow', 'short-text')}>{copy.directionsEyebrow}</p>
+            <h2 id="home-final-directions-title" {...homeBinding('directionsTitle', 'heading')}>{home.directionsTitle}</h2>
           </div>
           <div class="hf-section-head__summary">
-            <p><strong>{copy.positioningTitle}</strong> {copy.positioningSummary}</p>
-            <p>{copy.directionsDescription}</p>
+            <p><strong {...homeBinding('pathwaysTitle', 'heading')}>{copy.positioningTitle}</strong> <span {...homeBinding('positioningSummary', 'long-text')}>{copy.positioningSummary}</span></p>
+            <p {...homeBinding('directionsDescription', 'long-text')}>{copy.directionsDescription}</p>
           </div>
         </header>
 
         <div class="hf-directions__layout">
-          {directionCards.map(({ direction, className, kicker }) => direction && (
-            <a class={`hf-direction hf-direction--${className}`} href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="media">
+          {directionCards.map(({ id, direction, className, kicker }) => direction && (
+            <a class={`hf-direction hf-direction--${className}`} href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="media" {...homeBinding('homeDirectionCards', 'reorder-item', { stableItemId: id, zoneId: 'home-directions', permissions: { edit: true, reorder: true, delete: false } })}>
               {direction.image && <V2ResponsiveImage
                 src={direction.image}
                 alt=""
@@ -128,49 +170,56 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
                 loading="lazy"
                 decoding="async"
                 style={`object-fit:${direction.imageFit};object-position:${direction.imagePosition};`}
+                {...directionBinding(direction, 'homeImage', 'media', {
+                  role: 'home-direction-image', multiple: false, affectedRoutes: ['/']
+                })}
               />}
               <span class="hf-direction__veil" aria-hidden="true"></span>
               <span class="hf-direction__body">
-                <span class="hf-direction__meta">{kicker}</span>
-                <strong>{direction.title}</strong>
-                <span class="hf-direction__description">{direction.description}</span>
+                <span class="hf-direction__meta" {...homeDirectionCardBinding(id, 'kicker')}>{kicker}</span>
+                <strong {...directionBinding(direction, 'title', 'heading')}>{direction.title}</strong>
+                <span class="hf-direction__description" {...directionBinding(direction, 'shortDescription', 'long-text')}>{direction.description}</span>
               </span>
             </a>
           ))}
 
           <div class="hf-direction-rail" aria-label="Специализированные направления">
-            {railDirections.map(({ direction, kicker }) => direction && (
-              <a class="hf-direction-rail__item" href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="group">
+            {railDirections.map(({ id, direction, kicker }) => direction && (
+              <a class="hf-direction-rail__item" href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="group" {...homeBinding('homeDirectionCards', 'reorder-item', { stableItemId: id, zoneId: 'home-directions', permissions: { edit: true, reorder: true, delete: false } })}>
                 <span class="hf-direction-rail__copy">
-                  <span class="hf-direction__meta">{kicker}</span>
-                  <strong>{direction.title}</strong>
-                  <span class="hf-direction__description">{direction.description}</span>
+                  <span class="hf-direction__meta" {...homeDirectionCardBinding(id, 'kicker')}>{kicker}</span>
+                  <strong {...directionBinding(direction, 'title', 'heading')}>{direction.title}</strong>
+                  <span class="hf-direction__description" {...directionBinding(direction, 'shortDescription', 'long-text')}>{direction.description}</span>
                 </span>
               </a>
             ))}
           </div>
 
-          {landscapingDirection && <a
+          {landscapingCard?.direction && <a
             class="hf-direction hf-direction--landscaping"
-            href={path(landscapingDirection.href)}
-            data-v2-transition-label={landscapingDirection.title}
+            href={path(landscapingCard.direction.href)}
+            data-v2-transition-label={landscapingCard.direction.title}
             data-reveal
             data-v2-reveal="media"
+            {...homeBinding('homeDirectionCards', 'reorder-item', { stableItemId: landscapingCard.id, zoneId: 'home-directions', permissions: { edit: true, reorder: true, delete: false } })}
           >
-            {landscapingDirection.image && <V2ResponsiveImage
-              src={landscapingDirection.image}
+            {landscapingCard.direction.image && <V2ResponsiveImage
+              src={landscapingCard.direction.image}
               alt=""
               role="card"
               sizes="(max-width: 760px) calc(100vw - 32px), 86vw"
               loading="lazy"
               decoding="async"
-              style={`object-fit:${landscapingDirection.imageFit};object-position:${landscapingDirection.imagePosition};`}
+              style={`object-fit:${landscapingCard.direction.imageFit};object-position:${landscapingCard.direction.imagePosition};`}
+              {...directionBinding(landscapingCard.direction, 'homeImage', 'media', {
+                role: 'home-direction-image', multiple: false, affectedRoutes: ['/']
+              })}
             />}
             <span class="hf-direction__veil" aria-hidden="true"></span>
             <span class="hf-direction__body">
-              <span class="hf-direction__meta">Комплекс территории</span>
-              <strong>{landscapingDirection.title}</strong>
-              <span class="hf-direction__description">{landscapingDirection.description}</span>
+              <span class="hf-direction__meta" {...homeDirectionCardBinding(landscapingCard.id, 'kicker')}>{landscapingCard.kicker}</span>
+              <strong {...directionBinding(landscapingCard.direction, 'title', 'heading')}>{landscapingCard.direction.title}</strong>
+              <span class="hf-direction__description" {...directionBinding(landscapingCard.direction, 'shortDescription', 'long-text')}>{landscapingCard.direction.description}</span>
             </span>
           </a>}
         </div>
@@ -182,30 +231,26 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
       sectionId="projects"
       title={copy.projectsEyebrow}
       description={copy.projectsDescription}
-      ctaLabel="Смотреть все объекты"
+      ctaLabel={home.projectsCtaLabel}
+      projectSlugs={home.gatewayProjectSlugs ?? []}
+      projectSelectionField="gatewayProjectSlugs"
+      bindingOwner={{ collection: 'static-pages', slug: 'home' }}
+      bindingFields={{ title: 'trustTitle', description: 'trustText', ctaLabel: 'projectsCtaLabel' }}
     />
 
     <section class="hf-intake" id="brief" aria-labelledby="home-final-intake-title">
       <div class="hf-shell hf-shell--editorial hf-intake__layout">
         <div class="hf-intake__intro" data-reveal data-v2-reveal="copy">
-          <p class="hf-eyebrow hf-eyebrow--light">Как начать работу</p>
-          <h2 id="home-final-intake-title">Пришлите то, что уже есть</h2>
-          <p>
-            Для первого разговора не нужен готовый комплект документов. Опишите задачу и приложите доступные вводные —
-            по ним можно уточнить формат решения и расчёта.
-          </p>
-          <a class="hf-intake__link" href={path('/design-lab/v2/izgotovlenie-na-zakaz/')} data-v2-transition-label="Изготовление на заказ">
-            <span>Изготовление на заказ</span>
+          <p class="hf-eyebrow hf-eyebrow--light" {...homeBinding('intakeEyebrow', 'short-text')}>{home.intakeEyebrow}</p>
+          <h2 id="home-final-intake-title" {...homeBinding('intakeTitle', 'heading')}>{home.intakeTitle}</h2>
+          <p {...homeBinding('intakeDescription', 'long-text')}>{home.intakeDescription}</p>
+          <a class="hf-intake__link" href={path(home.intakeLinkHref)} data-v2-transition-label="Изготовление на заказ" {...homeBinding('intakeLinkLabel', 'link', { hrefPath: 'intakeLinkHref' })}>
+            <span>{home.intakeLinkLabel}</span>
           </a>
         </div>
 
         <ol class="hf-intake__sequence" aria-label="Что можно прислать" data-reveal data-v2-reveal="group">
-          <li><strong>Описание задачи</strong><span class="hf-intake__format">Текст</span></li>
-          <li><strong>Фотографию</strong><span class="hf-intake__format">JPG / PNG</span></li>
-          <li><strong>Размеры</strong><span class="hf-intake__format">Габариты</span></li>
-          <li><strong>Эскиз</strong><span class="hf-intake__format">Идея</span></li>
-          <li><strong>Чертёж</strong><span class="hf-intake__format">Документ</span></li>
-          <li><strong>Техническое задание</strong><span class="hf-intake__format">ТЗ</span></li>
+          {intakeItems.map((item) => <li {...homeBinding('intakeItems', 'list', { stableItemId: item.id, itemKind: 'object' })}><strong>{item.label}</strong><span class="hf-intake__format">{item.format}</span></li>)}
         </ol>
       </div>
     </section>
@@ -213,35 +258,35 @@ const landscapingDirection = directionBySlug.get('blagoustroystvo-territoriy');
     <section class="hv2-contact" id="contact" aria-labelledby="home-final-contact-title">
       <div class="hv2-shell hv2-contact__grid hv2-grid">
         <div class="hv2-contact__intro" data-reveal data-v2-reveal="title">
-          <p class="hv2-eyebrow hv2-eyebrow--light">Прямая связь</p>
-          <h2 id="home-final-contact-title">{copy.contactTitle}</h2>
-          <p>{copy.contactDescription}</p>
+          <p class="hv2-eyebrow hv2-eyebrow--light" {...homeBinding('contactEyebrow', 'short-text')}>{home.contactEyebrow}</p>
+          <h2 id="home-final-contact-title" {...homeBinding('contactTitle', 'heading')}>{copy.contactTitle}</h2>
+          <p {...homeBinding('contactDescription', 'long-text')}>{copy.contactDescription}</p>
           <div class="hv2-actions">
-            <a class="hv2-button hv2-button--light" href={settings.telegram} target="_blank" rel="noopener noreferrer">
-              Написать в Telegram
+            <a class="hv2-button hv2-button--light" href={settings.telegram} target="_blank" rel="noopener noreferrer" {...globalHrefDisposition('telegram', 'Адрес основной контактной кнопки берётся из общей ссылки Telegram и изменяется в настройках компании.')}>
+              <span {...homeBinding('contactPrimaryLabel', 'button-label')}>{home.contactPrimaryLabel}</span>
             </a>
-            <a class="hv2-button hv2-button--contrast" href={path('/design-lab/v2/kontakty/')} data-v2-transition-label="Контакты">Все контакты</a>
+            <a class="hv2-button hv2-button--contrast" href={path(home.contactSecondaryHref)} data-v2-transition-label="Контакты" {...homeBinding('contactSecondaryLabel', 'link', { hrefPath: 'contactSecondaryHref' })}>{home.contactSecondaryLabel}</a>
           </div>
         </div>
 
         <div class="hv2-contact__channels" data-reveal data-v2-reveal="group">
-          <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
-            <span>Основной телефон</span><strong>{settings.phonePrimary}</strong>
+          <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`} {...globalHrefDisposition('phonePrimary', 'Телефонная ссылка вычисляется из общего основного телефона компании.')}>
+            <span {...homeBinding('contactPhonePrimaryLabel', 'short-text')}>{home.contactPhonePrimaryLabel}</span><strong {...globalBinding('phonePrimary')}>{settings.phonePrimary}</strong>
           </a>
-          <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`}>
-            <span>Дополнительный телефон</span><strong>{settings.phoneSecondary}</strong>
+          <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`} {...globalHrefDisposition('phoneSecondary', 'Телефонная ссылка вычисляется из общего дополнительного телефона компании.')}>
+            <span {...homeBinding('contactPhoneSecondaryLabel', 'short-text')}>{home.contactPhoneSecondaryLabel}</span><strong {...globalBinding('phoneSecondary')}>{settings.phoneSecondary}</strong>
           </a>
-          <a href={settings.telegram} target="_blank" rel="noopener noreferrer">
-            <span>Telegram</span><strong>{telegramLabel}</strong>
+          <a href={settings.telegram} target="_blank" rel="noopener noreferrer" {...globalHrefDisposition('telegram', 'Адрес канала берётся из общей ссылки Telegram компании.')}>
+            <span {...homeBinding('contactTelegramLabel', 'short-text')}>{home.contactTelegramLabel}</span><strong {...globalBinding('telegramLabel', 'short-text', { projection: { kind: 'fallback', fallback: 'telegram URL label' } })}>{telegramLabel}</strong>
           </a>
-          <a href={`mailto:${settings.email}`}>
-            <span>Электронная почта</span><strong>{settings.email}</strong>
+          <a href={`mailto:${settings.email}`} {...globalHrefDisposition('email', 'Почтовая ссылка вычисляется из общего адреса электронной почты компании.')}>
+            <span {...homeBinding('contactEmailLabel', 'short-text')}>{home.contactEmailLabel}</span><strong {...globalBinding('email')}>{settings.email}</strong>
           </a>
           <div>
-            <span>Адрес</span><strong>{settings.address}</strong>
+            <span {...homeBinding('contactAddressLabel', 'short-text')}>{home.contactAddressLabel}</span><strong {...globalBinding('address', 'long-text')}>{settings.address}</strong>
           </div>
           {regionLine && <div>
-            <span>География</span><strong>{regionLine}</strong>
+            <span {...homeBinding('contactRegionsLabel', 'short-text')}>{home.contactRegionsLabel}</span><strong {...globalBinding('regions', 'list')}>{regionLine}</strong>
           </div>}
         </div>
       </div>

@@ -1,7 +1,9 @@
 {
   "title": "Строительство и ремонты",
   "slug": "stroitelstvo-i-remonty",
-  "shortDescription": "Строительные и монтажные работы на объекте: основания, входные группы, хозяйственные зоны, монтаж конструкций и работы по ТЗ.",
+  "shortDescription": "Основания, монтаж и работы по ТЗ — до подтверждённой сборки зданий и производственных цехов.",
+  "homeOrder": 7,
+  "homeImage": "/uploads/img-20250724-134235-1783272745917.jpg",
   "heroKicker": "Строительство и ремонты",
   "heroTitle": "Строительство и ремонты для производственных, коммерческих и частных объектов",
   "heroDescription": "Выполняем подготовку площадок, основания и фундаменты, сборку и обшивку каркасных зданий, устройство входных и хозяйственных зон, монтаж и ремонтные работы по ТЗ.",
@@ -17,6 +19,44 @@
   "contactTelegramLabel": "Получить расчёт",
   "contactEmailLabel": "Email",
   "contactPhoneLabel": "Позвонить",
+  "directionPresentation": {
+    "hero": {
+      "primaryLabel": "Получить расчёт",
+      "secondaryLabel": "Смотреть выполненный объект",
+      "imageAlt": "Готовое обшитое здание на производственной территории"
+    },
+    "sectionNav": {
+      "label": "Разделы направления",
+      "items": [
+        { "id": "construction-proof", "label": "Реальный объект", "order": 10, "isActive": true },
+        { "id": "construction-scope", "label": "Что делаем", "order": 20, "isActive": true },
+        { "id": "construction-contexts", "label": "Для каких объектов", "order": 30, "isActive": true },
+        { "id": "construction-brief", "label": "С чем обратиться", "order": 40, "isActive": true },
+        { "id": "contact", "label": "Контакты", "order": 50, "isActive": true }
+      ]
+    },
+    "types": { "eyebrow": "Виды работ" },
+    "scope": { "eyebrow": "Контекст работ" },
+    "brief": { "eyebrow": "Для первого обсуждения" },
+    "proof": {
+      "eyebrow": "Выполненные работы",
+      "title": "Результат на реальных объектах",
+      "description": "Завершённые здания и точный состав выполненных работ на производственной территории.",
+      "linkLabel": "Смотреть полный объект",
+      "supportingLinkLabel": "Смотреть объект"
+    },
+    "related": {
+      "eyebrow": "Дальше по задаче",
+      "title": "Смежные направления",
+      "items": [
+        { "id": "metalworks", "targetCollection": "product-sections", "targetSlug": "metallokonstruktsii-dlya-biznesa", "eyebrow": "Металлическая часть объекта", "description": "Если задача ограничена металлическим каркасом, конструкцией или отдельным узлом, смотрите направление «Металлоконструкции».", "order": 10, "isActive": true },
+        { "id": "landscaping", "targetCollection": "services", "targetSlug": "blagoustroystvo-territoriy", "eyebrow": "Организация территории", "description": "Если главным результатом должна стать организованная территория с МАФ, ограждениями, входными, хозяйственными или зонами отдыха, смотрите направление «Благоустройство территорий».", "order": 20, "isActive": true },
+        { "id": "canopies", "targetCollection": "product-sections", "targetSlug": "navesy-i-kozyrki", "eyebrow": "Отдельная конструкция", "description": "Навесы и козырьки как самостоятельная задача для входной, хозяйственной или технической зоны.", "order": 30, "isActive": true }
+      ]
+    },
+    "contactEyebrow": "Обсудить проект",
+    "contactPhoneChannelLabel": "Основной телефон"
+  },
   "pageBlocks": [
     {
       "type": "cardGrid",

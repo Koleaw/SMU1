@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -14,11 +14,39 @@ import {
   createContentPublishGateRunner,
   createGitHubPublishProviders,
 } from './publish-runtime.mjs';
+import {
+  parseReleaseIdentityBytes,
+  readAndVerifyReleaseIdentity,
+  serializeReleaseIdentity,
+  writeReleaseIdentity,
+} from '../release/artifact-identity.mjs';
 
 const BASE_SHA = '1'.repeat(40);
 const TESTED_SHA = '2'.repeat(40);
 const PROTECTED_SHA = '3'.repeat(40);
 const NAVIGATION_PATH = 'src/data/navigation.json';
+
+function artifactIdentity(overrides = {}) {
+  const marker = {
+    version: 1,
+    kind: 'smu1-release-artifact-identity',
+    testedCommitSha: TESTED_SHA,
+    artifactManifestSha256: 'a'.repeat(64),
+    fileCount: 2,
+    totalBytes: 30,
+    largestFile: { path: 'index.html', bytes: 20, sha256: 'b'.repeat(64) },
+    ...overrides,
+  };
+  return parseReleaseIdentityBytes(serializeReleaseIdentity(marker));
+}
+
+function identityResponse(evidence = artifactIdentity()) {
+  const { markerSha256: _markerSha256, ...marker } = evidence;
+  return new Response(serializeReleaseIdentity(marker), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
 
 function publishPlan(bytes, overrides = {}) {
   const afterHash = hashPublishBytes(bytes);
@@ -92,9 +120,40 @@ function successfulCommandStub(calls, { output = '' } = {}) {
     if (command === 'git' && args[0] === 'diff-tree') {
       return { exitCode: 0, stdout: `${NAVIGATION_PATH}\0`, stderr: '' };
     }
+    if (args[0] === 'tools/release/artifact-identity.mjs') {
+      const distRoot = path.join(options.cwd, 'dist');
+      await mkdir(distRoot, { recursive: true });
+      await writeFile(path.join(distRoot, 'index.html'), '<!doctype html>\n');
+      await writeReleaseIdentity({ distRoot, testedCommitSha: TESTED_SHA });
+    }
     return { exitCode: 0, stdout: output, stderr: '' };
   };
 }
+
+test('release identity marker is deterministic, excludes itself, and detects later dist mutation', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'smu1-release-identity-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const distRoot = path.join(root, 'dist');
+  await mkdir(path.join(distRoot, 'assets'), { recursive: true });
+  await writeFile(path.join(distRoot, 'index.html'), '<!doctype html>\n');
+  await writeFile(path.join(distRoot, 'assets', 'app.js'), 'console.log(1);\n');
+
+  const first = await writeReleaseIdentity({ distRoot, testedCommitSha: TESTED_SHA });
+  const firstBytes = await readFile(path.join(distRoot, '_release', 'identity.json'));
+  const second = await writeReleaseIdentity({ distRoot, testedCommitSha: TESTED_SHA });
+  const secondBytes = await readFile(path.join(distRoot, '_release', 'identity.json'));
+  assert.deepEqual(second, first);
+  assert.deepEqual(secondBytes, firstBytes);
+  assert.equal(first.fileCount, 2);
+  assert.equal('generatedAt' in JSON.parse(firstBytes), false);
+  assert.deepEqual(await readAndVerifyReleaseIdentity({ distRoot, expectedTestedCommitSha: TESTED_SHA }), first);
+
+  await writeFile(path.join(distRoot, 'index.html'), '<!doctype html><title>changed</title>\n');
+  await assert.rejects(
+    readAndVerifyReleaseIdentity({ distRoot, expectedTestedCommitSha: TESTED_SHA }),
+    { code: 'RELEASE_IDENTITY_MANIFEST_MISMATCH' },
+  );
+});
 
 test('content gate runner proves exact checkout and returns evidence for every required gate', async (t) => {
   const fixture = await checkoutFixture();
@@ -124,21 +183,35 @@ test('content gate runner proves exact checkout and returns evidence for every r
 
   assert.equal(result.ok, true);
   assert.equal(result.testedSha, TESTED_SHA);
-  assert.deepEqual(Object.keys(result.results).sort(), [...CONTENT_ONLY_GATES].sort());
+  assert.deepEqual(
+    Object.keys(result.results).filter((key) => key !== 'artifact-byte-identity').sort(),
+    [...CONTENT_ONLY_GATES].sort(),
+  );
   for (const gate of CONTENT_ONLY_GATES) assert.equal(result.results[gate].ok, true);
-  assert.equal(calls.length, 11);
+  assert.equal(result.results['artifact-byte-identity'].ok, true);
+  assert.equal(result.artifactIdentity.testedCommitSha, TESTED_SHA);
+  assert.equal(calls.length, 18);
   assert.deepEqual(calls.slice(0, 3).map((call) => call.args[0]), ['rev-parse', 'status', 'diff-tree']);
-  assert.deepEqual(calls.slice(3).map((call) => call.args), [
+  assert.deepEqual(calls.slice(3, -1).map((call) => call.args), [
     ['ci', '--no-audit', '--no-fund'],
     ['run', 'test:admin-h6:ci'],
+    ['run', 'test:h6-evidence-contracts'],
     ['run', 'check'],
     ['run', 'build'],
     ['run', 'qa:performance'],
+    ['run', 'qa:final:static'],
     ['run', 'deploy:prepare'],
     ['run', 'qa:performance'],
-    ['run', 'qa:deploy-isolation'],
+    ['run', 'qa:final:browser'],
+    ['run', 'qa:h6:route-passport'],
+    ['run', 'qa:h6:public-actions'],
+    ['run', 'qa:h6:admin-actions'],
+    ['run', 'qa:h6:verify-evidence'],
   ]);
-  assert.ok(calls.slice(3).every((call) => /npm(?:\.cmd)?$/iu.test(call.command)));
+  assert.ok(calls.slice(3, -1).every((call) => /npm(?:\.cmd)?$/iu.test(call.command)));
+  assert.deepEqual(calls.at(-1).args, [
+    'tools/release/artifact-identity.mjs', '--dist', 'dist', '--tested-sha', TESTED_SHA,
+  ]);
   assert.equal(calls[0].options.env.GITHUB_TOKEN, undefined);
   assert.equal(calls[0].options.env.DEPLOY_TARGET, 'test');
   assert.equal(calls[0].options.env.PRODUCTION_DEPLOY_ENABLED, 'false');
@@ -484,6 +557,7 @@ test('smoke runner checks every route, follows only in-base redirects, and accep
     fetchImpl: async (url, options) => {
       fetched.push({ url: String(url), options });
       const pathname = new URL(url).pathname;
+      if (pathname === '/repo/_release/identity.json') return identityResponse();
       if (pathname === '/repo/old/') {
         return new Response(null, { status: 302, headers: { Location: '/repo/new/' } });
       }
@@ -503,9 +577,12 @@ test('smoke runner checks every route, follows only in-base redirects, and accep
       { route: '/old/', expected: 'html' },
     ],
     pages,
+    artifactIdentity: artifactIdentity(),
   });
 
   assert.equal(result.ok, true);
+  assert.equal(result.byteIdentityVerified, true);
+  assert.equal(result.identityVerified, true);
   assert.deepEqual(result.checkedRoutes, ['/', '/gone/', '/old/']);
   assert.deepEqual(result.checks.map((check) => check.outcome), ['html', 'intentional-not-found', 'html']);
   assert.deepEqual(result.routeExpectations, [
@@ -513,14 +590,49 @@ test('smoke runner checks every route, follows only in-base redirects, and accep
     { route: '/gone/', expected: 'not-found' },
     { route: '/old/', expected: 'html' },
   ]);
-  assert.equal(fetched.length, 4);
+  assert.equal(fetched.length, 5);
+  assert.equal(new URL(fetched[0].url).searchParams.get('release'), TESTED_SHA);
+  assert.equal(fetched[0].options.cache, 'no-store');
+  assert.equal(fetched[0].options.headers['Cache-Control'], 'no-cache');
   assert.deepEqual(fetched.map((item) => new URL(item.url).pathname), [
+    '/repo/_release/identity.json',
     '/repo/',
     '/repo/gone/',
     '/repo/old/',
     '/repo/new/',
   ]);
   assert.ok(fetched.every((item) => item.options.redirect === 'manual'));
+});
+
+test('smoke runner rejects a manifest mismatch and a stale release identity marker', async () => {
+  const localIdentity = artifactIdentity();
+  let remoteIdentity = artifactIdentity({ artifactManifestSha256: 'c'.repeat(64) });
+  const providers = createGitHubPublishProviders({
+    githubRequest: async () => assert.fail('GitHub request is not expected'),
+    testSiteBaseUrl: 'https://owner.github.io/repo/',
+    fetchImpl: async (url) => new URL(url).pathname === '/repo/_release/identity.json'
+      ? identityResponse(remoteIdentity)
+      : new Response('<html>ok</html>', { status: 200, headers: { 'Content-Type': 'text/html' } }),
+  });
+  const request = {
+    testedSha: TESTED_SHA,
+    affectedRoutes: ['/'],
+    routeExpectations: [{ route: '/', expected: 'html' }],
+    pages: { sha: TESTED_SHA, status: 'completed', conclusion: 'success' },
+    artifactIdentity: localIdentity,
+  };
+
+  const mismatch = await providers.smokeRunner(request);
+  assert.equal(mismatch.ok, false);
+  assert.equal(mismatch.byteIdentityVerified, false);
+  assert.equal(mismatch.identityVerified, false);
+  assert.equal(mismatch.failures[0].code, 'PUBLISH_SMOKE_IDENTITY_MANIFEST_MISMATCH');
+
+  remoteIdentity = artifactIdentity({ testedCommitSha: BASE_SHA });
+  const stale = await providers.smokeRunner(request);
+  assert.equal(stale.ok, false);
+  assert.equal(stale.byteIdentityVerified, false);
+  assert.equal(stale.failures[0].code, 'PUBLISH_SMOKE_IDENTITY_STALE');
 });
 
 test('smoke runner fails closed on 5xx, unsafe redirects, non-HTML, and network errors without short-circuiting', async () => {
@@ -531,6 +643,7 @@ test('smoke runner fails closed on 5xx, unsafe redirects, non-HTML, and network 
     fetchImpl: async (url) => {
       const pathname = new URL(url).pathname;
       attempted.push(pathname);
+      if (pathname === '/repo/_release/identity.json') return identityResponse();
       if (pathname.endsWith('/server/')) {
         return new Response('<html></html>', { status: 503, headers: { 'Content-Type': 'text/html' } });
       }
@@ -549,11 +662,12 @@ test('smoke runner fails closed on 5xx, unsafe redirects, non-HTML, and network 
     routeExpectations: ['/server/', '/outside/', '/binary/', '/network/']
       .map((route) => ({ route, expected: 'html' })),
     pages: { sha: TESTED_SHA, status: 'completed', conclusion: 'success' },
+    artifactIdentity: artifactIdentity(),
   });
 
   assert.equal(result.ok, false);
   assert.equal(result.failures.length, 4);
-  assert.deepEqual(attempted, ['/repo/binary/', '/repo/network/', '/repo/outside/', '/repo/server/']);
+  assert.deepEqual(attempted, ['/repo/_release/identity.json', '/repo/binary/', '/repo/network/', '/repo/outside/', '/repo/server/']);
   assert.deepEqual(result.failures.map((failure) => failure.code), [
     'PUBLISH_SMOKE_RESPONSE_INVALID',
     'PUBLISH_SMOKE_NETWORK_ERROR',
@@ -567,10 +681,13 @@ test('smoke runner rejects outcome/expectation mismatches and missing or conflic
   const providers = createGitHubPublishProviders({
     githubRequest: async () => assert.fail('GitHub request is not expected'),
     testSiteBaseUrl: 'https://owner.github.io/repo/',
-    fetchImpl: async (url) => new Response(
-      new URL(url).pathname.endsWith('/missing/') ? '<html>not found</html>' : '<html>active</html>',
-      { status: new URL(url).pathname.endsWith('/missing/') ? 404 : 200, headers: { 'Content-Type': 'text/html' } },
-    ),
+    fetchImpl: async (url) => {
+      if (new URL(url).pathname === '/repo/_release/identity.json') return identityResponse();
+      return new Response(
+        new URL(url).pathname.endsWith('/missing/') ? '<html>not found</html>' : '<html>active</html>',
+        { status: new URL(url).pathname.endsWith('/missing/') ? 404 : 200, headers: { 'Content-Type': 'text/html' } },
+      );
+    },
   });
   const pages = { sha: TESTED_SHA, status: 'completed', conclusion: 'success' };
   const result = await providers.smokeRunner({
@@ -581,6 +698,7 @@ test('smoke runner rejects outcome/expectation mismatches and missing or conflic
       { route: '/missing/', expected: 'html' },
     ],
     pages,
+    artifactIdentity: artifactIdentity(),
   });
   assert.equal(result.ok, false);
   assert.deepEqual(result.failures.map((item) => item.code), [

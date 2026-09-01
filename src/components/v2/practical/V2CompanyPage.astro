@@ -10,6 +10,7 @@ import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import V2DirectContact from '../V2DirectContact.astro';
 import V2SectionNav from '../V2SectionNav.astro';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import { adminBinding, adminDisposition, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   page: CollectionEntry<'static-pages'>['data'];
@@ -17,6 +18,7 @@ interface Props {
 }
 
 type AboutCard = {
+  id?: string;
   title?: string;
   text?: string;
   order?: number;
@@ -51,6 +53,7 @@ const contactDescription = contentValue(
   page.contactDescription,
   'Пришлите фотографию, размеры, эскиз, чертёж, ТЗ или краткое описание задачи. Уточним исходные данные и состав работ.'
 );
+const contactEyebrow = contentValue(page.contactEyebrow, 'Прямая связь');
 
 const pageBlocks = (page.pageBlocks ?? []) as AboutBlock[];
 const whoBlock = pageBlocks.find((block) => block.type === 'whoWeAre' && block.isActive !== false);
@@ -68,10 +71,11 @@ const regions = getV2Regions(settings);
 const coverageRegions = regions.filter((region) => region !== settings.city);
 
 const productionProject = projects.find(
-  (item) => item.project.slug === 'kompleks-rabot-na-proizvodstvennoy-territorii'
+  (item) => item.project.slug === page.companyHeroProjectSlug
 );
 const heroMedia = productionProject?.detailHeroMedia;
-const heroPosition = productionProject?.detailHeroPosition ?? '50% 48%';
+const heroPosition = page.companyHeroPosition ?? productionProject?.detailHeroPosition ?? '50% 50%';
+const isEditorCanvas = isLocalAdminCanvas(Astro.url);
 
 const sectionNavItems = [
   { id: 'company-overview', label: 'О компании' },
@@ -93,6 +97,28 @@ const detailsEyebrow = contentValue(detailsBlock?.intro, 'География и 
 const detailsTitle = contentValue(detailsBlock?.title, 'География и реквизиты');
 const contactPrimaryLabel = contentValue(contactBlock?.buttonLabel, 'Получить расчёт');
 const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, 'Позвонить');
+const pageRoute = '/o-nas/';
+const companyCopy = settings.companyPage;
+const pageBinding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'practical', variant: 'company' }, owner: { collection: 'static-pages', slug: page.slug },
+  fieldPath, scope: 'local', tool, affectedRoutes: [pageRoute], ...options
+});
+const globalBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'company' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath, scope: 'global', tool, affectedRoutes: ['*'], ...options
+});
+const companyPageBinding = (fieldPath: string, tool = 'short-text', occurrence = fieldPath) => adminBinding(Astro.url, {
+  renderer: { family: 'practical', variant: 'company-copy' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `companyPage.${fieldPath}`, stableItemId: `company-${occurrence}`, scope: 'local', tool,
+  affectedRoutes: [pageRoute]
+});
+const fixedPrefix = (source: string, reason: string) => adminDisposition(Astro.url, {
+  kind: 'template-fixed', reason, source: `src/components/v2/practical/V2CompanyPage.astro#${source}`
+});
+const blockPath = (block: AboutBlock | undefined, suffix: string) => {
+  const index = block ? pageBlocks.indexOf(block) : -1;
+  return index >= 0 ? `pageBlocks[${index}].${suffix}` : suffix;
+};
 ---
 
 <article class="practical-company">
@@ -106,7 +132,24 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
         class="practical-company__hero-image"
         data-v2-media
         data-v2-entrance-role="media"
+        {...pageBinding('companyHeroProjectSlug', 'relation-select', {
+          stableItemId: 'company-hero-source', role: 'company-hero-source',
+          projection: { kind: 'relation', formula: 'companyHeroProjectSlug → project.presentation.detailHeroMedia' }
+        })}
       >
+        {isEditorCanvas && productionProject && (
+          <>
+            <span hidden aria-hidden="true" {...adminBinding(Astro.url, {
+              renderer: { family: 'practical', variant: 'company-hero-media' }, owner: { collection: 'projects', slug: productionProject.project.slug },
+              fieldPath: 'presentation.detailHeroMedia', stableItemId: 'company-hero-project-media', scope: 'shared', tool: 'media',
+              affectedRoutes: [pageRoute, productionProject.productionRoute], role: 'detail-hero', multiple: false,
+              projection: { kind: 'shared-media', formula: 'project.presentation.detailHeroMedia → company hero' }
+            })}></span>
+            <span hidden aria-hidden="true" {...pageBinding('companyHeroPosition', 'focal-position', {
+              stableItemId: 'company-hero-position', role: 'desktop-crop'
+            })}></span>
+          </>
+        )}
         <V2ResponsiveImage
           src={heroMedia.src}
           alt={heroMedia.alt}
@@ -128,21 +171,21 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
         <V2Breadcrumbs
           variant="overlay"
           items={[
-            { title: 'Главная', href: '/design-lab/home-v2/' },
-            { title: 'О компании' }
+            { title: companyCopy.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: companyPageBinding('homeBreadcrumbLabel', 'short-text', 'home-breadcrumb') },
+            { title: companyCopy.breadcrumbLabel, editor: companyPageBinding('breadcrumbLabel', 'short-text', 'current-breadcrumb') }
           ]}
         />
       </div>
 
       <div class="practical-company__hero-copy" data-v2-page-handoff="copy">
-        <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-entrance-role="context">{heroKicker}</p>
-        <h1 data-v2-entrance-role="title-primary">{heroTitle}</h1>
-        <p class="practical-company__hero-lead" data-v2-entrance-role="lead">{heroDescription}</p>
+        <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-entrance-role="context" {...pageBinding('heroKicker', 'short-text')}>{heroKicker}</p>
+        <h1 data-v2-entrance-role="title-primary" {...pageBinding('heroTitle', 'heading')}>{heroTitle}</h1>
+        <p class="practical-company__hero-lead" data-v2-entrance-role="lead" {...pageBinding('heroDescription', 'long-text')}>{heroDescription}</p>
         <div class="hv2-actions practical-company__hero-actions" data-v2-entrance-role="actions-meta">
-          <a class="hv2-button hv2-button--light" href="#company-projects">
+          <a class="hv2-button hv2-button--light" href="#company-projects" {...pageBinding('heroPrimaryLabel', 'button-label')}>
             {heroPrimaryLabel}
           </a>
-          <a class="hv2-button hv2-button--ghost" href="#contact">
+          <a class="hv2-button hv2-button--ghost" href="#contact" {...pageBinding('heroSecondaryLabel', 'button-label')}>
             {heroSecondaryLabel}
           </a>
         </div>
@@ -150,15 +193,19 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
     </div>
   </header>
 
-  <V2SectionNav items={sectionNavItems} label="Навигация по странице о компании" />
+  <V2SectionNav
+    items={sectionNavItems}
+    label="Навигация по странице о компании"
+    editorSource="src/components/v2/practical/V2CompanyPage.astro#sectionNavItems"
+  />
 
   <section class="practical-company__overview" id="company-overview" aria-labelledby="company-overview-title">
     <div class="hv2-shell">
       <div class="practical-company__overview-intro">
-        <h2 id="company-overview-title">
+        <h2 id="company-overview-title" {...pageBinding(blockPath(whoBlock, 'title'), 'heading')}>
           {contentValue(whoBlock?.title, 'Работаем на стыке цеха и площадки')}
         </h2>
-        <p>{contentValue(
+        <p {...pageBinding(blockPath(whoBlock, 'text'), 'long-text')}>{contentValue(
           whoBlock?.text,
           'СМУ-1 работает на стыке производства, металлоконструкций, благоустройства и прикладных работ на объектах. Мы не ограничиваемся одной товарной линейкой: подбираем решение под назначение площадки, размеры, основание, внешний вид и условия эксплуатации.'
         )}</p>
@@ -166,27 +213,27 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
 
       <dl class="practical-company__fact-rail" aria-label="Проверенные сведения о компании">
         <div>
-          <dt>Компания</dt>
-          <dd>{settings.companyName}</dd>
+          <dt {...companyPageBinding('companyLabel', 'short-text', 'fact-company')}>{companyCopy.companyLabel}</dt>
+          <dd {...globalBinding('companyName', 'short-text', { stableItemId: 'company-fact-name' })}>{settings.companyName}</dd>
         </div>
         <div>
-          <dt>Город</dt>
-          <dd>{settings.city}</dd>
+          <dt {...companyPageBinding('cityLabel', 'short-text', 'fact-city')}>{companyCopy.cityLabel}</dt>
+          <dd {...globalBinding('city', 'short-text', { stableItemId: 'company-fact-city' })}>{settings.city}</dd>
         </div>
         <div>
-          <dt>Регистрация</dt>
-          <dd>Зарегистрировано {settings.registrationDate}</dd>
+          <dt {...companyPageBinding('registrationLabel', 'short-text', 'fact-registration')}>{companyCopy.registrationLabel}</dt>
+          <dd><span {...fixedPrefix('registered-prefix', 'Грамматический префикс даты регистрации фиксирован шаблоном; редактируется только значение даты.')}>Зарегистрировано </span><span {...globalBinding('registrationDate', 'short-text', { stableItemId: 'company-fact-registration-date' })}>{settings.registrationDate}</span></dd>
         </div>
         <div>
-          <dt>География</dt>
-          <dd>{coverageRegions.join(' · ')}</dd>
+          <dt {...companyPageBinding('regionsLabel', 'short-text', 'fact-regions')}>{companyCopy.regionsLabel}</dt>
+          <dd {...globalBinding('regions', 'list', { stableItemId: 'company-fact-regions' })}>{coverageRegions.join(' · ')}</dd>
         </div>
       </dl>
 
       {capabilities.length > 0 && (
         <div class="practical-company__capabilities" aria-label="Основные возможности компании">
-          {capabilities.map((item) => (
-            <article>
+          {capabilities.map((item, index) => (
+            <article {...pageBinding(blockPath(capabilitiesBlock, 'items'), 'list', { stableItemId: item.id ?? `capability-${index}`, itemKind: 'object' })}>
               <h3>{item.title}</h3>
               <p>{item.text}</p>
             </article>
@@ -202,22 +249,32 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
     title={projectsTitle}
     description={projectsDescription}
     ctaLabel={projectsArchiveLabel}
+    projectSlugs={page.gatewayProjectSlugs ?? []}
+    projectSelectionField="gatewayProjectSlugs"
     excludeSources={heroMedia ? [heroMedia.src] : []}
+    bindingOwner={{ collection: 'static-pages', slug: page.slug }}
+    bindingFields={{ title: blockPath(proofBlock, 'title'), description: blockPath(proofBlock, 'text'), ctaLabel: blockPath(proofBlock, 'buttonLabel') }}
   />
 
   <section class="practical-company__directions" id="company-directions" aria-labelledby="company-directions-title">
     <div class="hv2-shell">
       <header class="practical-company__section-heading">
-        <p class="hv2-eyebrow">{directionsEyebrow}</p>
-        <h2 id="company-directions-title">{directionsTitle}</h2>
+        <p class="hv2-eyebrow" {...pageBinding(blockPath(directionsBlock, 'intro'), 'short-text')}>{directionsEyebrow}</p>
+        <h2 id="company-directions-title" {...pageBinding(blockPath(directionsBlock, 'title'), 'heading')}>{directionsTitle}</h2>
       </header>
       <nav class="practical-company__direction-index" aria-label="Направления работы СМУ-1">
         <ul role="list">
           {directions.map((item, index) => (
             <li class:list={{ 'practical-company__direction-break': index === 5 }}>
               <a href={withBase(item.href)}>
-                <strong>{item.title}</strong>
-                <span>{item.description}</span>
+                <strong {...adminBinding(Astro.url, {
+                  renderer: { family: 'practical', variant: 'company-direction' }, owner: { collection: item.ownerCollection, slug: item.slug },
+                  fieldPath: 'title', stableItemId: item.slug, scope: 'shared', tool: 'heading', affectedRoutes: [pageRoute, item.href]
+                })}>{item.title}</strong>
+                <span {...adminBinding(Astro.url, {
+                  renderer: { family: 'practical', variant: 'company-direction' }, owner: { collection: item.ownerCollection, slug: item.slug },
+                  fieldPath: 'shortDescription', stableItemId: item.slug, scope: 'shared', tool: 'long-text', affectedRoutes: [pageRoute, item.href]
+                })}>{item.description}</span>
               </a>
             </li>
           ))}
@@ -229,38 +286,44 @@ const contactSecondaryLabel = contentValue(contactBlock?.secondaryButtonLabel, '
   <section class="practical-company__details" id="company-details" aria-labelledby="company-details-title">
     <div class="hv2-shell practical-company__details-grid">
       <div class="practical-company__details-intro">
-        <p class="hv2-eyebrow">{detailsEyebrow}</p>
-        <h2 id="company-details-title">{detailsTitle}</h2>
-        <p class="practical-company__details-company">{settings.companyName}</p>
-        <p>{settings.city}</p>
-        <address>{settings.address}</address>
-        <ul aria-label="Регионы работы">
+        <p class="hv2-eyebrow" {...pageBinding(blockPath(detailsBlock, 'intro'), 'short-text')}>{detailsEyebrow}</p>
+        <h2 id="company-details-title" {...pageBinding(blockPath(detailsBlock, 'title'), 'heading')}>{detailsTitle}</h2>
+        <p class="practical-company__details-company" {...globalBinding('companyName', 'short-text', { stableItemId: 'company-details-name' })}>{settings.companyName}</p>
+        <p {...globalBinding('city', 'short-text', { stableItemId: 'company-details-city' })}>{settings.city}</p>
+        <address {...globalBinding('address', 'long-text', { stableItemId: 'company-details-address' })}>{settings.address}</address>
+        <ul aria-label="Регионы работы" {...globalBinding('regions', 'list', { stableItemId: 'company-details-regions' })}>
           {coverageRegions.map((region) => <li>{region}</li>)}
         </ul>
         <div class="practical-company__details-links">
-          <a class="hv2-text-link" href={withBase('/kontakty/')}>Контакты</a>
-          <a class="hv2-text-link" href={withBase('/politika-konfidencialnosti/')}>Политика конфиденциальности</a>
+          <a class="hv2-text-link" href={withBase('/kontakty/')} {...companyPageBinding('contactsLabel', 'link-label', 'details-contacts')}>{companyCopy.contactsLabel}</a>
+          <a class="hv2-text-link" href={withBase('/politika-konfidencialnosti/')} {...companyPageBinding('privacyLabel', 'link-label', 'details-privacy')}>{companyCopy.privacyLabel}</a>
         </div>
       </div>
 
       <dl class="practical-company__requisites">
-        <div><dt>Компания</dt><dd>{settings.companyName}</dd></div>
-        <div><dt>ИНН</dt><dd>{settings.inn}</dd></div>
-        <div><dt>КПП</dt><dd>{settings.kpp}</dd></div>
-        <div><dt>ОГРН</dt><dd>{settings.ogrn}</dd></div>
-        <div><dt>Дата регистрации</dt><dd>{settings.registrationDate}</dd></div>
-        <div><dt>Юридический адрес</dt><dd>{settings.legalAddress}</dd></div>
-        <div><dt>Контактный адрес</dt><dd>{settings.address}</dd></div>
+        <div><dt {...companyPageBinding('companyLabel', 'short-text', 'requisite-company')}>{companyCopy.companyLabel}</dt><dd {...globalBinding('companyName', 'short-text', { stableItemId: 'company-requisite-name' })}>{settings.companyName}</dd></div>
+        <div><dt {...companyPageBinding('innLabel', 'short-text', 'requisite-inn')}>{companyCopy.innLabel}</dt><dd {...globalBinding('inn')}>{settings.inn}</dd></div>
+        <div><dt {...companyPageBinding('kppLabel', 'short-text', 'requisite-kpp')}>{companyCopy.kppLabel}</dt><dd {...globalBinding('kpp')}>{settings.kpp}</dd></div>
+        <div><dt {...companyPageBinding('ogrnLabel', 'short-text', 'requisite-ogrn')}>{companyCopy.ogrnLabel}</dt><dd {...globalBinding('ogrn')}>{settings.ogrn}</dd></div>
+        <div><dt {...companyPageBinding('registrationDateLabel', 'short-text', 'requisite-registration-date')}>{companyCopy.registrationDateLabel}</dt><dd {...globalBinding('registrationDate', 'short-text', { stableItemId: 'company-requisite-registration-date' })}>{settings.registrationDate}</dd></div>
+        <div><dt {...companyPageBinding('legalAddressLabel', 'short-text', 'requisite-legal-address')}>{companyCopy.legalAddressLabel}</dt><dd {...globalBinding('legalAddress', 'long-text')}>{settings.legalAddress}</dd></div>
+        <div><dt {...companyPageBinding('contactAddressLabel', 'short-text', 'requisite-contact-address')}>{companyCopy.contactAddressLabel}</dt><dd {...globalBinding('address', 'long-text', { stableItemId: 'company-requisite-contact-address' })}>{settings.address}</dd></div>
       </dl>
     </div>
   </section>
 
   <V2DirectContact
-    eyebrow="Прямая связь"
+    eyebrow={contactEyebrow}
     title={contactTitle}
     description={contactDescription}
     primaryLabel={contactPrimaryLabel}
     secondaryLabel={contactSecondaryLabel}
     secondaryHref={phoneHref}
+    eyebrowBinding={pageBinding('contactEyebrow', 'short-text')}
+    titleBinding={pageBinding('contactTitle', 'heading')}
+    descriptionBinding={pageBinding('contactDescription', 'long-text')}
+    primaryLabelBinding={pageBinding(blockPath(contactBlock, 'buttonLabel'), 'button-label')}
+    secondaryLabelBinding={pageBinding(blockPath(contactBlock, 'secondaryButtonLabel'), 'button-label')}
+    editorSource="src/components/v2/practical/V2CompanyPage.astro#contact"
   />
 </article>

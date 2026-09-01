@@ -1,5 +1,6 @@
 ---
 import { v2Href } from '../../utils/v2Routes';
+import { adminDisposition } from '../../admin/bindings/adminBinding';
 
 interface Props {
   title: string;
@@ -8,14 +9,26 @@ interface Props {
 
 const { title, target } = Astro.props as Props;
 const href = v2Href(target, 'production');
+const aliasSource = `compatibility-alias:${Astro.url.pathname}->${target}`;
+const fixedCopy = (occurrence: string) => adminDisposition(Astro.url, {
+  kind: 'template-fixed',
+  reason: `Системный текст совместимого адреса; каноническая страница — ${target}`,
+  source: `src/components/v2/LegacyV2Fallback.astro#${occurrence}`
+});
+const canonicalDisposition = adminDisposition(Astro.url, {
+  kind: 'contextual',
+  reason: `Это совместимый адрес без собственной записи. Изменения выполняются на канонической странице ${target} и затрагивают оба URL.`,
+  source: aliasSource,
+  tool: 'open-canonical-page'
+});
 ---
 
 <section class="v2-legacy-fallback" aria-labelledby="legacy-fallback-title">
   <div class="hv2-shell v2-legacy-fallback__inner">
-    <p class="hv2-eyebrow">Адрес страницы изменился</p>
-    <h1 id="legacy-fallback-title">{title}</h1>
-    <p>Содержимое доступно по основному адресу. Если переход не начался автоматически, используйте ссылку ниже.</p>
-    <a class="hv2-button hv2-button--primary" href={href}>Открыть основную страницу</a>
+    <p class="hv2-eyebrow" {...fixedCopy('eyebrow')}>Адрес страницы изменился</p>
+    <h1 id="legacy-fallback-title" {...canonicalDisposition}>{title}</h1>
+    <p {...fixedCopy('description')}>Содержимое доступно по основному адресу. Если переход не начался автоматически, используйте ссылку ниже.</p>
+    <a class="hv2-button hv2-button--primary" href={href} {...canonicalDisposition}>Открыть основную страницу</a>
   </div>
 </section>
 

@@ -21,6 +21,8 @@ const inferDeployTarget = () => {
 const DEPLOY_TARGET = String(inferDeployTarget()).toLowerCase();
 const IS_PRODUCTION_DEPLOY = DEPLOY_TARGET === 'production';
 const IS_TEST_DEPLOY = DEPLOY_TARGET === 'test';
+const IS_EXPLICIT_LOCAL_ADMIN = DEPLOY_TARGET === 'development'
+  && process.env.SMU1_LOCAL_ADMIN === 'true';
 const STRICT_SITE_URL_REQUIRED = IS_PRODUCTION_DEPLOY || process.env.REQUIRE_SITE_URL === 'true';
 const TEMPORARY_SITE_URL_PATTERNS = [/example\./i, /\.invalid(?::\d+)?\/?$/i, /localhost/i, /127\.0\.0\.1/i, /\.github\.io/i];
 
@@ -123,8 +125,15 @@ export default defineConfig({
       }
     },
     define: {
-      'import.meta.env.SMU1_DEPLOY_TARGET': JSON.stringify(DEPLOY_TARGET)
+      'import.meta.env.SMU1_DEPLOY_TARGET': JSON.stringify(DEPLOY_TARGET),
+      // Vite exposes only explicitly defined non-PUBLIC environment values to
+      // imported renderer helpers. Keep the editor switch compile-time false
+      // for every preview/production build and true only for the local launcher.
+      'import.meta.env.SMU1_LOCAL_ADMIN': JSON.stringify(IS_EXPLICIT_LOCAL_ADMIN ? 'true' : 'false')
     }
   },
-  output: 'static'
+  // The local editor needs request-scoped query/session data so bindings can
+  // be emitted by the production components. Public artifacts remain strict
+  // static SSG; only the explicit loopback editor runs Astro on demand.
+  output: IS_EXPLICIT_LOCAL_ADMIN ? 'server' : 'static'
 });

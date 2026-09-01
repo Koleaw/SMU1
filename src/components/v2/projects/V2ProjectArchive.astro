@@ -2,21 +2,28 @@
 import type { V2ProjectPresentation } from '../mediaRoleAdapter';
 import V2ProjectArchiveRow from './V2ProjectArchiveRow.astro';
 import '../../../styles/v2/projects-v2.css';
+import { adminBinding } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   projects: readonly V2ProjectPresentation[];
   title: string;
   description?: string;
+  bindingOwner?: { collection: string; slug: string };
 }
 
 const { projects, title, description = '' } = Astro.props as Props;
+const bindingOwner = Astro.props.bindingOwner;
+const binding = (fieldPath: string, tool: string) => bindingOwner ? adminBinding(Astro.url, {
+  renderer: { family: 'project-archive', variant: 'index' }, owner: bindingOwner, fieldPath,
+  stableItemId: `${bindingOwner.slug}-${fieldPath}`, scope: 'local', tool, affectedRoutes: ['/vypolnennye-obekty/']
+}) : {};
 ---
 
 <section class="v2-project-archive" aria-labelledby="v2-project-archive-title">
   <div class="hv2-shell">
     <header class="v2-project-archive__heading" data-v2-reveal>
-      <h2 id="v2-project-archive-title">{title}</h2>
-      {description && <p>{description}</p>}
+      <h2 id="v2-project-archive-title" {...binding('trustTitle', 'heading')}>{title}</h2>
+      {description && <p {...binding('trustText', 'long-text')}>{description}</p>}
     </header>
 
     <ol class="v2-project-archive__list" aria-label="Опубликованные выполненные объекты">

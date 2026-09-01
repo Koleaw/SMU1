@@ -1,0 +1,347 @@
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:http';
+import fs from 'node:fs';
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
+const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const ANALYTICS_OR_FORM_URL = /(?:mc\.yandex\.ru|metrika|webvisor|google-analytics\.com|googletagmanager\.com|formspree\.io|api\.web3forms\.com)/iu;
+const ADMIN_RELEASE_URL = /\/api\/admin\/(?:publish|release|rollback|production)(?=\/|-|$|\?)/iu;
+
+export function isAdminReleaseMutationRequest({ method = 'GET', url = '' } = {}) {
+  return !['GET', 'HEAD', 'OPTIONS'].includes(String(method).toUpperCase()) && ADMIN_RELEASE_URL.test(String(url));
+}
+
+const MIME_TYPES = {
+  '.avif': 'image/avif', '.css': 'text/css; charset=utf-8', '.gif': 'image/gif',
+  '.html': 'text/html; charset=utf-8', '.ico': 'image/x-icon', '.jpeg': 'image/jpeg',
+  '.jpg': 'image/jpeg', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8',
+  '.mp4': 'video/mp4', '.png': 'image/png', '.svg': 'image/svg+xml', '.webm': 'video/webm',
+  '.webp': 'image/webp', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf',
+  '.txt': 'text/plain; charset=utf-8', '.webmanifest': 'application/manifest+json', '.xml': 'application/xml; charset=utf-8'
+};
+
+const normalizeBase = (value) => {
+  const raw = String(value || '/').trim();
+  if (!raw || raw === '/') return '/';
+  const withLeading = raw.startsWith('/') ? raw : `/${raw}`;
+  return withLeading.endsWith('/') ? withLeading.slice(0, -1) : withLeading;
+};
+
+const playwrightChromiumCandidates = () => {
+  const directory = process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'ms-playwright') : '';
+  if (!directory || !fs.existsSync(directory)) return [];
+  return fs.readdirSync(directory)
+    .filter((name) => name.startsWith('chromium-'))
+    .sort().reverse()
+    .flatMap((name) => [
+      path.join(directory, name, 'chrome-win64', 'chrome.exe'),
+      path.join(directory, name, 'chrome-linux', 'chrome')
+    ])
+    .filter((filename) => fs.existsSync(filename));
+};
+
+const playwrightHeadlessShellCandidates = () => {
+  const directory = process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'ms-playwright') : '';
+  if (!directory || !fs.existsSync(directory)) return [];
+  return fs.readdirSync(directory)
+    .filter((name) => name.startsWith('chromium_headless_shell-'))
+    .sort().reverse()
+    .map((name) => path.join(directory, name, 'chrome-headless-shell-win64', 'chrome-headless-shell.exe'))
+    .filter((filename) => fs.existsSync(filename));
+};
+
+const chromeCandidates = ({ headful = false } = {}) => process.platform === 'win32'
+  ? [
+      process.env.CHROME_PATH,
+      ...(headful ? [] : playwrightHeadlessShellCandidates()),
+      ...playwrightChromiumCandidates(),
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+    ]
+  : [process.env.CHROME_PATH, 'google-chrome', 'chromium', 'chromium-browser'];
+
+export const preferredChromePath = (settings = {}) => chromeCandidates(settings).find((candidate) => candidate && (path.isAbsolute(candidate) ? fs.existsSync(candidate) : true));
+
+export async function createDistServer({ distRoot, basePath = '/' }) {
+  const normalizedBase = normalizeBase(basePath);
+  const requests = [];
+  let origin = '';
+  const server = createServer(async (request, response) => {
+    try {
+      const incoming = new URL(request.url || '/', origin || 'http://127.0.0.1/');
+      const originalPathname = decodeURIComponent(incoming.pathname);
+      if (!['GET', 'HEAD'].includes(request.method || 'GET')) {
+        requests.push({ method: request.method, pathname: originalPathname, status: 405, localPathname: '' });
+        response.writeHead(405, { allow: 'GET, HEAD', 'cache-control': 'no-store' }).end();
+        return;
+      }
+      const insideConfiguredBase = normalizedBase === '/'
+        || originalPathname === normalizedBase
+        || originalPathname.startsWith(`${normalizedBase}/`);
+      if (!insideConfiguredBase) {
+        requests.push({ method: request.method, pathname: originalPathname, status: 404, localPathname: '' });
+        response.writeHead(404, { 'cache-control': 'no-store', 'content-type': 'text/plain; charset=utf-8' })
+          .end(request.method === 'HEAD' ? undefined : 'Outside configured BASE_PATH');
+        return;
+      }
+      const pathname = normalizedBase !== '/' && (originalPathname === normalizedBase || originalPathname.startsWith(`${normalizedBase}/`))
+        ? originalPathname.slice(normalizedBase.length) || '/'
+        : originalPathname;
+      let filename = pathname === '/404.html'
+        ? path.join(distRoot, '404.html')
+        : path.resolve(distRoot, `.${pathname}`);
+      if (filename !== distRoot && !filename.startsWith(`${distRoot}${path.sep}`)) {
+        requests.push({ method: request.method, pathname: originalPathname, status: 403, localPathname: pathname });
+        response.writeHead(403).end();
+        return;
+      }
+      let info = await stat(filename).catch(() => null);
+      if (info?.isDirectory()) {
+        filename = path.join(filename, 'index.html');
+        info = await stat(filename).catch(() => null);
+      }
+      if (!info?.isFile()) {
+        const fallback = await readFile(path.join(distRoot, '404.html'));
+        requests.push({ method: request.method, pathname: originalPathname, status: 404, localPathname: pathname });
+        response.writeHead(404, {
+          'cache-control': 'no-store',
+          'content-length': String(fallback.length),
+          'content-type': 'text/html; charset=utf-8',
+          'x-h6-route-passport': 'unknown-route'
+        }).end(request.method === 'HEAD' ? undefined : fallback);
+        return;
+      }
+      requests.push({ method: request.method, pathname: originalPathname, status: 200, localPathname: pathname });
+      response.writeHead(200, {
+        'cache-control': 'no-store',
+        'content-length': String(info.size),
+        'content-type': MIME_TYPES[path.extname(filename).toLowerCase()] || 'application/octet-stream'
+      });
+      response.end(request.method === 'HEAD' ? undefined : await readFile(filename));
+    } catch (error) {
+      requests.push({ method: request.method, pathname: request.url || '', status: 500, error: String(error) });
+      response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' }).end(String(error));
+    }
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      origin = `http://127.0.0.1:${address.port}`;
+      resolve();
+    });
+  });
+  return {
+    origin,
+    requests,
+    close: () => new Promise((resolve) => server.close(resolve))
+  };
+}
+
+export class CdpBrowser {
+  constructor({ chromePath, headful = false, safetyMode = 'public-read-only' } = {}) {
+    this.chromePath = chromePath || preferredChromePath({ headful });
+    this.headful = headful;
+    this.safetyMode = safetyMode;
+    this.safetyIntercepts = [];
+    this.child = null;
+    this.profileDir = '';
+    this.socket = null;
+    this.id = 0;
+    this.pending = new Map();
+    this.listeners = new Map();
+  }
+
+  async start() {
+    if (!this.chromePath) throw new Error('Chrome was not found. Set CHROME_PATH to a Chromium-compatible browser.');
+    this.profileDir = await mkdtemp(path.join(os.tmpdir(), 'smu1-h6-cdp-'));
+    const debugPort = 10_500 + Math.floor(Math.random() * 2_000);
+    this.child = spawn(this.chromePath, [
+      ...(this.headful ? [] : [this.chromePath.includes('headless-shell') ? '--headless' : '--headless=new']),
+      '--disable-extensions', '--disable-component-extensions-with-background-pages', '--no-first-run',
+      '--no-default-browser-check', '--remote-allow-origins=*', '--autoplay-policy=no-user-gesture-required',
+      `--remote-debugging-port=${debugPort}`, `--user-data-dir=${this.profileDir}`, '--window-size=1440,900', 'about:blank'
+    ], { stdio: 'ignore', windowsHide: true });
+    const deadline = Date.now() + 30_000;
+    let debuggerUrl = '';
+    while (Date.now() < deadline && !debuggerUrl) {
+      if (this.child.exitCode !== null) throw new Error(`Chrome exited before DevTools was ready (${this.child.exitCode}).`);
+      try {
+        const response = await fetch(`http://127.0.0.1:${debugPort}/json/list`);
+        const pages = response.ok ? await response.json() : [];
+        debuggerUrl = pages.find((item) => item.type === 'page')?.webSocketDebuggerUrl || '';
+      } catch {}
+      if (!debuggerUrl) await delay(100);
+    }
+    if (!debuggerUrl) throw new Error('Chrome DevTools endpoint did not become ready.');
+    this.socket = new WebSocket(debuggerUrl);
+    await new Promise((resolve, reject) => {
+      this.socket.addEventListener('open', resolve, { once: true });
+      this.socket.addEventListener('error', reject, { once: true });
+    });
+    this.socket.addEventListener('message', (event) => {
+      const message = JSON.parse(String(event.data));
+      if (message.id) {
+        const pending = this.pending.get(message.id);
+        if (!pending) return;
+        this.pending.delete(message.id);
+        if (message.error) pending.reject(new Error(message.error.message));
+        else pending.resolve(message.result || {});
+        return;
+      }
+      for (const listener of this.listeners.get(message.method) || []) listener(message.params || {});
+    });
+    await Promise.all([
+      this.send('Page.enable'), this.send('Runtime.enable'), this.send('Network.enable'), this.send('Log.enable')
+    ]);
+    await this.send('Network.setBlockedURLs', { urls: [
+      '*mc.yandex.ru*', '*google-analytics.com*', '*googletagmanager.com*', '*formspree.io*', '*api.web3forms.com*'
+    ] });
+    await this.send('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] });
+    this.on('Fetch.requestPaused', ({ requestId, request }) => {
+      const method = String(request?.method || 'GET').toUpperCase();
+      const url = String(request?.url || '');
+      const analyticsOrForm = ANALYTICS_OR_FORM_URL.test(url);
+      const stateChanging = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+      const adminRelease = isAdminReleaseMutationRequest({ method, url });
+      const block = this.safetyMode === 'public-read-only'
+        ? analyticsOrForm || stateChanging
+        : this.safetyMode === 'admin-no-release'
+          ? analyticsOrForm || adminRelease
+          : analyticsOrForm;
+      if (block) {
+        this.safetyIntercepts.push({ method, url, reason: analyticsOrForm ? 'analytics-or-form' : adminRelease ? 'admin-release' : 'state-changing-request' });
+        this.send('Fetch.failRequest', { requestId, errorReason: 'BlockedByClient' }).catch(() => {});
+      } else {
+        this.send('Fetch.continueRequest', { requestId }).catch(() => {});
+      }
+    });
+    await this.send('Page.addScriptToEvaluateOnNewDocument', {
+      source: `(() => {
+        const originalBeacon = navigator.sendBeacon?.bind(navigator);
+        if (originalBeacon) Object.defineProperty(navigator, 'sendBeacon', {
+          configurable: true,
+          value(url, data) {
+            const target = String(url || '');
+            if (/analytics|metrika|mc\\.yandex|webvisor/iu.test(target)) return true;
+            return originalBeacon(url, data);
+          }
+        });
+      })();`
+    });
+    return this;
+  }
+
+  on(method, listener) {
+    this.listeners.set(method, [...(this.listeners.get(method) || []), listener]);
+    return () => this.listeners.set(method, (this.listeners.get(method) || []).filter((item) => item !== listener));
+  }
+
+  safetyEvidence() {
+    return {
+      mode: this.safetyMode,
+      analyticsAndFormPattern: ANALYTICS_OR_FORM_URL.source,
+      adminReleasePattern: ADMIN_RELEASE_URL.source,
+      intercepted: this.safetyIntercepts.slice()
+    };
+  }
+
+  send(method, params = {}) {
+    const id = ++this.id;
+    return new Promise((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      this.socket.send(JSON.stringify({ id, method, params }));
+    });
+  }
+
+  once(method, timeoutMs = 20_000) {
+    return new Promise((resolve, reject) => {
+      const remove = this.on(method, (params) => {
+        clearTimeout(timeout);
+        remove();
+        resolve(params);
+      });
+      const timeout = setTimeout(() => {
+        remove();
+        reject(new Error(`Timed out waiting for ${method}.`));
+      }, timeoutMs);
+    });
+  }
+
+  async evaluate(expression, { awaitPromise = true } = {}) {
+    const response = await this.send('Runtime.evaluate', { expression, awaitPromise, returnByValue: true, userGesture: true });
+    if (response.exceptionDetails) {
+      throw new Error(response.exceptionDetails.exception?.description || response.exceptionDetails.text || 'Runtime evaluation failed.');
+    }
+    return response.result?.value;
+  }
+
+  async setViewport({ width, height, mobile = false }) {
+    await this.send('Emulation.setDeviceMetricsOverride', {
+      width, height, deviceScaleFactor: 1, mobile, screenWidth: width, screenHeight: height,
+      positionX: 0, positionY: 0, dontSetVisibleSize: false
+    });
+    await this.send('Emulation.setTouchEmulationEnabled', { enabled: mobile, maxTouchPoints: mobile ? 5 : 1 });
+  }
+
+  async emulateMedia({ reducedMotion = false, colorScheme = 'light' } = {}) {
+    await this.send('Emulation.setEmulatedMedia', { features: [
+      { name: 'prefers-reduced-motion', value: reducedMotion ? 'reduce' : 'no-preference' },
+      { name: 'prefers-color-scheme', value: colorScheme }
+    ] });
+  }
+
+  async navigate(url, { waitAfterMs = 40, scriptExecutionDisabled = false, waitForFonts = true } = {}) {
+    const ready = this.once('Page.domContentEventFired', 20_000).catch(() => null);
+    const navigation = await this.send('Page.navigate', { url });
+    if (navigation.errorText) throw new Error(`Navigation failed for ${url}: ${navigation.errorText}`);
+    await ready;
+    const deadline = Date.now() + 5_000;
+    while (Date.now() < deadline) {
+      if (await this.evaluate("document.readyState !== 'loading'", { awaitPromise: !scriptExecutionDisabled }).catch(() => false)) break;
+      await delay(40);
+    }
+    if (!scriptExecutionDisabled) {
+      await this.evaluate(`(async () => {
+        if (${waitForFonts ? 'true' : 'false'} && document.fonts?.ready) await Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 900))]);
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return true;
+      })()`);
+    }
+    if (waitAfterMs) await delay(waitAfterMs);
+    return navigation;
+  }
+
+  async dispatchKey(key, { code = key, modifiers = 0 } = {}) {
+    const keyCode = ({ Enter: 13, Escape: 27, ' ': 32, ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40, Home: 36, End: 35 })[key] || 0;
+    const payload = { key, code, modifiers, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode };
+    const textValue = key === 'Enter' ? '\r' : key === ' ' ? ' ' : '';
+    await this.send('Input.dispatchKeyEvent', {
+      type: 'keyDown',
+      ...payload,
+      ...(textValue ? { text: textValue, unmodifiedText: textValue } : {})
+    });
+    await this.send('Input.dispatchKeyEvent', { type: 'keyUp', ...payload });
+  }
+
+  async dispatchClick({ x, y, button = 'left' }) {
+    await this.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'none' });
+    await this.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button, clickCount: 1 });
+    await this.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button, clickCount: 1 });
+  }
+
+  async close() {
+    try { if (this.socket?.readyState < WebSocket.CLOSING) this.socket.close(); } catch {}
+    if (this.child?.exitCode === null) {
+      if (process.platform === 'win32') {
+        const { execFile } = await import('node:child_process');
+        await new Promise((resolve) => execFile('taskkill', ['/pid', String(this.child.pid), '/T', '/F'], { windowsHide: true }, resolve));
+      } else {
+        this.child.kill('SIGTERM');
+      }
+    }
+    if (this.profileDir) await rm(this.profileDir, { recursive: true, force: true }).catch(() => {});
+  }
+}

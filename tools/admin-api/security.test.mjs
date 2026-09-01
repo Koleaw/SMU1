@@ -69,6 +69,10 @@ test('session store enforces idle and absolute TTL, rotation, CSRF and logout', 
   assert.equal(store.get(rotated.token).ok, true);
   assert.equal(store.logout(rotated.token), true);
   assert.equal(store.get(rotated.token).code, 'SESSION_INVALID');
+
+  const forcedExpired = store.issue('owner');
+  assert.equal(store.expire(forcedExpired.token), true);
+  assert.equal(store.get(forcedExpired.token).code, 'SESSION_EXPIRED');
 });
 
 test('login limiter applies bounded exponential backoff and resets on success', () => {
@@ -123,6 +127,12 @@ test('local request policy requires exact loopback Host and Origin', () => {
   assert.equal(policy.evaluate({
     method: 'POST', headers: { host: '127.0.0.1:8787', origin: 'https://example.github.io' }
   }).code, 'ORIGIN_NOT_LOOPBACK');
+  assert.equal(policy.evaluate({
+    method: 'GET', headers: { host: '127.0.0.1:8787', forwarded: 'host=127.0.0.1:8787' }
+  }).code, 'FORWARDED_HOST_REJECTED');
+  assert.equal(policy.evaluate({
+    method: 'POST', headers: { host: '127.0.0.1:8787', origin: 'http://127.0.0.1:4321', 'x-forwarded-host': '127.0.0.1:8787' }
+  }).code, 'FORWARDED_HOST_REJECTED');
   assert.equal(policy.evaluate({
     method: 'GET', headers: { host: '127.0.0.1:8787' }
   }).ok, true);

@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import fs from 'node:fs';
 
 import { assessCompleteness } from '../editors/record-editor.mjs';
-import { createDraftDefaults, isOrdinaryPublicRouteAvailable, isVisibleRecord } from './editor-fields.mjs';
+import { contentSchemas } from '../../content-schemas.mjs';
+import { createDraftDefaults, groupsForCollection, isOrdinaryPublicRouteAvailable, isVisibleRecord } from './editor-fields.mjs';
 
 test('direct route visibility is independent from catalog and home placement flags', () => {
   for (const [collection, placementField] of [
@@ -52,4 +54,19 @@ test('ordinary catalog preview requires the full active route chain', () => {
   assert.equal(isOrdinaryPublicRouteAvailable('product-categories', { isActive: true, parentSectionSlug: 'hidden-section' }, { summaries }), false);
   assert.equal(isOrdinaryPublicRouteAvailable('product-categories', { isActive: true, parentSectionSlug: 'active-section' }, { summaries }), true);
   assert.equal(isOrdinaryPublicRouteAvailable('products', { isActive: true, productCategorySlug: 'missing' }, { summaries }), false);
+});
+
+test('typed exact product prices are exposed by the editor and require a numeric amount', () => {
+  const priceGroup = groupsForCollection('products').find((group) => group.id === 'price');
+  const modeField = priceGroup.fields.find((field) => field.path === 'priceMode');
+  assert.deepEqual(modeField.options.find(([value]) => value === 'exact'), ['exact', 'Точная цена']);
+  assert.equal(priceGroup.fields.find((field) => field.path === 'priceFrom').label, 'Значение цены');
+
+  const fixture = JSON.parse(fs.readFileSync(new URL('../../content/products/besedka-kofe.json', import.meta.url), 'utf8'));
+  const exact = contentSchemas.products.safeParse({ ...fixture, priceMode: 'exact', priceFrom: 125000 });
+  assert.equal(exact.success, true);
+
+  const missingAmount = contentSchemas.products.safeParse({ ...fixture, priceMode: 'exact', priceFrom: null });
+  assert.equal(missingAmount.success, false);
+  assert.ok(missingAmount.error.issues.some((issue) => issue.path.join('.') === 'priceFrom'));
 });

@@ -22,11 +22,10 @@ export async function getStaticPaths() {
   }));
 }
 
-const { sectionSlug, categorySlug, productSlug } = Astro.props as {
-  sectionSlug: string;
-  categorySlug: string;
-  productSlug: string;
-};
+const props = Astro.props as { sectionSlug?: string; categorySlug?: string; productSlug?: string };
+const sectionSlug = props.sectionSlug || String(Astro.params.section || '');
+const categorySlug = props.categorySlug || String(Astro.params.category || '');
+const productSlug = props.productSlug || String(Astro.params.product || '');
 const snapshot = await loadCatalogV2Snapshot();
 const route = snapshot.productRoutes.find((item) => (
   item.section.slug === sectionSlug

@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { resolveAstroCli } from './astro-cli.mjs';
 import { createSafeNodeChildEnvironment } from './runtime-identity.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -64,9 +65,9 @@ async function writeJson(filePath, value) {
   await fs.writeFile(filePath, jsonBytes(value), { encoding: 'utf8', flag: 'w' });
 }
 
-async function defaultBuildRunner({ workspace, repoRoot, environment }) {
-  const astroCli = path.join(repoRoot, 'node_modules', 'astro', 'astro.js');
-  const result = await execFileAsync(process.execPath, [astroCli, 'build'], {
+export async function runLocalPreviewAstroBuild({ workspace, repoRoot, environment, execute = execFileAsync }) {
+  const astroCli = await resolveAstroCli(repoRoot);
+  const result = await execute(process.execPath, [astroCli, 'build'], {
     cwd: workspace,
     env: environment,
     windowsHide: true,
@@ -74,6 +75,10 @@ async function defaultBuildRunner({ workspace, repoRoot, environment }) {
     maxBuffer: 20 * 1024 * 1024
   });
   return { stdout: result.stdout, stderr: result.stderr };
+}
+
+async function defaultBuildRunner(options) {
+  return runLocalPreviewAstroBuild(options);
 }
 
 export function createLocalPreviewService(options = {}) {

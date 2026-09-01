@@ -3,6 +3,7 @@ import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import settings from '../../content/site-settings/global.json';
 import { getV2TelegramLabel } from '../../utils/v2SiteSettings';
+import { adminBinding, adminDisposition } from '../../admin/bindings/adminBinding';
 
 interface Props {
   eyebrow?: string;
@@ -16,6 +17,15 @@ interface Props {
   telegramChannelLabel?: string;
   emailChannelLabel?: string;
   variant?: 'default' | 'product';
+  titleBinding?: Record<string, string>;
+  eyebrowBinding?: Record<string, string>;
+  descriptionBinding?: Record<string, string>;
+  primaryLabelBinding?: Record<string, string>;
+  secondaryLabelBinding?: Record<string, string>;
+  phoneChannelLabelBinding?: Record<string, string>;
+  telegramChannelLabelBinding?: Record<string, string>;
+  emailChannelLabelBinding?: Record<string, string>;
+  editorSource?: string;
 }
 
 const {
@@ -34,20 +44,49 @@ const {
 const resolveHref = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : withBase(value);
 const isExternal = (value: string) => /^https?:/i.test(value);
 const telegramLabel = getV2TelegramLabel(settings);
+const globalBinding = (fieldPath: string, tool = 'short-text', stableItemId = `contact-${fieldPath}`) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'direct-contact' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath, stableItemId, scope: 'global', tool, affectedRoutes: ['*']
+});
+const titleBinding = Astro.props.titleBinding ?? {};
+const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
+const descriptionBinding = Astro.props.descriptionBinding ?? {};
+const primaryLabelBinding = Astro.props.primaryLabelBinding ?? {};
+const secondaryLabelBinding = Astro.props.secondaryLabelBinding ?? {};
+const phoneChannelLabelBinding = Astro.props.phoneChannelLabelBinding ?? {};
+const telegramChannelLabelBinding = Astro.props.telegramChannelLabelBinding ?? {};
+const emailChannelLabelBinding = Astro.props.emailChannelLabelBinding ?? {};
+const editorSource = Astro.props.editorSource ?? 'src/components/v2/V2DirectContact.astro#Astro.props';
+const directOrDeclared = (
+  attributes: Record<string, string>,
+  kind: 'contextual' | 'derived' | 'template-fixed',
+  fragment: string,
+  reason: string,
+  tool = 'page-settings'
+) => Object.keys(attributes).length > 0
+  ? attributes
+  : adminDisposition(Astro.url, { kind, reason, source: `${editorSource}#${fragment}`, tool });
+const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
+  kind: 'global',
+  reason: 'Адрес канала вычисляется из глобального контактного значения; редактируйте его в настройках компании.',
+  source: `src/content/site-settings/global.json#${fieldPath}`,
+  tool: 'global-settings'
+});
 ---
 
 <section class:list={['v2-direct-contact', { 'v2-direct-contact--product': variant === 'product' }]} id="contact" aria-labelledby="v2-contact-title">
   <div class="hv2-shell hv2-grid v2-direct-contact__grid">
     <div class="v2-direct-contact__intro" data-v2-reveal>
-      <p class="hv2-eyebrow hv2-eyebrow--light">{eyebrow}</p>
-      <h2 id="v2-contact-title">{title}</h2>
-      <p>{description}</p>
+      <p class="hv2-eyebrow hv2-eyebrow--light" {...directOrDeclared(eyebrowBinding, 'template-fixed', 'eyebrow', 'Структурная метка принадлежит contact renderer и не является локальным полем страницы.')}>{eyebrow}</p>
+      <h2 id="v2-contact-title" {...directOrDeclared(titleBinding, 'contextual', 'title', 'Заголовок передан renderer-владельцем без schema binding.')}>{title}</h2>
+      <p {...directOrDeclared(descriptionBinding, 'contextual', 'description', 'Описание передано renderer-владельцем без schema binding.')}>{description}</p>
       <div class="hv2-actions">
         <a
           class="hv2-button hv2-button--light"
           href={resolveHref(primaryHref)}
           target={isExternal(primaryHref) ? '_blank' : undefined}
           rel={isExternal(primaryHref) ? 'noopener noreferrer' : undefined}
+          {...directOrDeclared(primaryLabelBinding, 'contextual', 'primaryLabel', 'Подпись главного действия передана renderer-владельцем без schema binding.')}
         >
           {primaryLabel}
         </a>
@@ -57,6 +96,7 @@ const telegramLabel = getV2TelegramLabel(settings);
             href={resolveHref(secondaryHref)}
             target={isExternal(secondaryHref) ? '_blank' : undefined}
             rel={isExternal(secondaryHref) ? 'noopener noreferrer' : undefined}
+            {...directOrDeclared(secondaryLabelBinding, 'contextual', 'secondaryLabel', 'Подпись дополнительного действия передана renderer-владельцем без schema binding.')}
           >
             {secondaryLabel}
           </a>
@@ -64,17 +104,26 @@ const telegramLabel = getV2TelegramLabel(settings);
       </div>
     </div>
     <div class="v2-direct-contact__channels" data-v2-reveal>
-      <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
-        <span>{phoneChannelLabel}</span><strong>{settings.phonePrimary}</strong>
+      <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`} {...globalHref('phonePrimary')}>
+        <span {...directOrDeclared(phoneChannelLabelBinding, 'template-fixed', 'phoneChannelLabel', 'Подпись различает тип контактного канала; номер редактируется отдельно.')}>{phoneChannelLabel}</span><strong {...globalBinding('phonePrimary')}>{settings.phonePrimary}</strong>
       </a>
-      <a href={settings.telegram} target="_blank" rel="noopener noreferrer">
-        <span>{telegramChannelLabel}</span><strong>{telegramLabel}</strong>
+      <a href={settings.telegram} target="_blank" rel="noopener noreferrer" {...globalHref('telegram')}>
+        <span {...directOrDeclared(telegramChannelLabelBinding, 'derived', 'telegramChannelLabel', 'Подпись канала вычисляется из CTA-контекста; адрес и видимое имя Telegram редактируются отдельно.')}>{telegramChannelLabel}</span><strong {...globalBinding('telegramLabel', 'link', 'contact-telegram')}>{telegramLabel}</strong>
       </a>
-      <a href={`mailto:${settings.email}`}>
-        <span>{emailChannelLabel}</span><strong>{settings.email}</strong>
+      <a href={`mailto:${settings.email}`} {...globalHref('email')}>
+        <span {...directOrDeclared(emailChannelLabelBinding, 'template-fixed', 'emailChannelLabel', 'Подпись различает тип контактного канала; адрес редактируется отдельно.')}>{emailChannelLabel}</span><strong {...globalBinding('email')}>{settings.email}</strong>
       </a>
-      <a href={withBase('/design-lab/v2/kontakty/')} data-v2-transition-label="Контакты">
-        <span>Все контакты</span><strong>{settings.address}</strong>
+      <a href={withBase('/design-lab/v2/kontakty/')} data-v2-transition-label="Контакты" {...adminDisposition(Astro.url, {
+        kind: 'derived',
+        reason: 'Ссылка всегда ведёт на канонический route контактов; адрес компании редактируется отдельно.',
+        source: 'src/components/v2/V2DirectContact.astro#contacts-route',
+        tool: 'global-settings'
+      })}>
+        <span {...adminDisposition(Astro.url, {
+          kind: 'template-fixed',
+          reason: 'Системная подпись отличает переход к полной странице контактов от прямых каналов.',
+          source: 'src/components/v2/V2DirectContact.astro#all-contacts-label'
+        })}>Все контакты</span><strong {...globalBinding('address', 'long-text')}>{settings.address}</strong>
       </a>
     </div>
   </div>

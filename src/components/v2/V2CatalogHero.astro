@@ -3,6 +3,7 @@ import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import V2Breadcrumbs from './V2Breadcrumbs.astro';
 import V2ResponsiveImage from './V2ResponsiveImage.astro';
+import { adminBinding } from '../../admin/bindings/adminBinding';
 import {
   catalogMediaPresentation,
   imageViewStyle,
@@ -26,6 +27,13 @@ interface Props {
   secondaryLabel?: string;
   productFinalHandoff?: boolean;
   breadcrumbs?: Array<{ title: string; href?: string }>;
+  bindingOwner?: { collection: string; slug: string };
+  bindingFields?: { kicker?: string; title?: string; description?: string; supportingText?: string; image?: string };
+  kickerBinding?: Record<string, string>;
+  countLabelBinding?: Record<string, string>;
+  primaryLabelBinding?: Record<string, string>;
+  secondaryLabelBinding?: Record<string, string>;
+  affectedRoutes?: string[];
 }
 
 const {
@@ -49,6 +57,19 @@ const href = (value: string) => value.startsWith('#') ? value : withBase(value);
 const hasMedia = Boolean(image);
 const productFinalHandoff = Astro.props.productFinalHandoff ?? false;
 const breadcrumbs = Astro.props.breadcrumbs ?? [];
+const bindingOwner = Astro.props.bindingOwner;
+const bindingFields = Astro.props.bindingFields ?? {};
+const affectedRoutes = Astro.props.affectedRoutes ?? [Astro.url.pathname];
+const binding = (fieldPath: string | undefined, tool: string, options: Record<string, unknown> = {}) => fieldPath && bindingOwner
+  ? adminBinding(Astro.url, {
+      renderer: { family: 'catalog-hero', variant }, owner: bindingOwner, fieldPath,
+      scope: 'local', tool, affectedRoutes, ...options
+    })
+  : {};
+const kickerBinding = Astro.props.kickerBinding ?? binding(bindingFields.kicker, 'short-text');
+const countLabelBinding = Astro.props.countLabelBinding ?? {};
+const primaryLabelBinding = Astro.props.primaryLabelBinding ?? {};
+const secondaryLabelBinding = Astro.props.secondaryLabelBinding ?? {};
 const hasBreadcrumbs = breadcrumbs.length > 0 || Astro.slots.has('breadcrumbs');
 const imagePresentationStyle = [
   imageViewStyle(imageView),
@@ -88,16 +109,16 @@ const imagePresentationStyle = [
         </div>
       )}
       <div class="v2-catalog-hero__topline" data-v2-reveal="entry-meta">
-        <p class="hv2-eyebrow">{kicker}</p>
-        {countLabel && <span>{countLabel}</span>}
+        <p class="hv2-eyebrow" {...kickerBinding}>{kicker}</p>
+        {countLabel && <span {...countLabelBinding}>{countLabel}</span>}
       </div>
       </div>
-      <h1 id="v2-catalog-title" data-v2-reveal="entry-title" data-v2-entrance-role="title-primary">{title}</h1>
-      {description && <p class="v2-catalog-hero__lead" data-v2-reveal="entry-copy" data-v2-entrance-role="lead">{description}</p>}
-      {supportingText && <p class="v2-catalog-hero__support" data-v2-reveal="entry-support" data-v2-entrance-role="support">{supportingText}</p>}
+      <h1 id="v2-catalog-title" data-v2-reveal="entry-title" data-v2-entrance-role="title-primary" {...binding(bindingFields.title, 'heading')}>{title}</h1>
+      {description && <p class="v2-catalog-hero__lead" data-v2-reveal="entry-copy" data-v2-entrance-role="lead" {...binding(bindingFields.description, 'long-text')}>{description}</p>}
+      {supportingText && <p class="v2-catalog-hero__support" data-v2-reveal="entry-support" data-v2-entrance-role="support" {...binding(bindingFields.supportingText, 'long-text')}>{supportingText}</p>}
       <div class="hv2-actions v2-catalog-hero__actions" data-v2-reveal="entry-actions" data-v2-entrance-role="actions-meta">
-        <a class="hv2-button hv2-button--primary" href={href(primaryHref)}>{primaryLabel}</a>
-        {secondaryLabel && <a class="hv2-text-link" href={href(secondaryHref)}>{secondaryLabel}</a>}
+        <a class="hv2-button hv2-button--primary" href={href(primaryHref)} {...primaryLabelBinding}>{primaryLabel}</a>
+        {secondaryLabel && <a class="hv2-text-link" href={href(secondaryHref)} {...secondaryLabelBinding}>{secondaryLabel}</a>}
       </div>
     </div>
 
@@ -108,6 +129,7 @@ const imagePresentationStyle = [
         data-v2-hero-scroll-media={!productFinalHandoff ? '' : undefined}
         data-v2-reveal="entry-media"
         data-v2-entrance-role="media"
+        {...binding(bindingFields.image, 'media', { role: 'hero-media', multiple: false })}
       >
         <V2ResponsiveImage
           src={image}

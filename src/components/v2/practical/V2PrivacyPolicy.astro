@@ -1,33 +1,86 @@
 ---
-import productionPolicySource from '../../../pages/politika-konfidencialnosti/index.astro?raw';
+import settings from '../../../content/site-settings/global.json';
+import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 
-const normalizedSource = productionPolicySource.replace(/\r\n/g, '\n');
-const startMarker = '<div class="container policy-page__container">';
-const endMarker = '\n    </div>\n  </section>';
-const contentStart = normalizedSource.indexOf(startMarker);
-const contentEnd = normalizedSource.lastIndexOf(endMarker);
-
-if (contentStart < 0 || contentEnd < 0 || contentEnd <= contentStart) {
-  throw new Error('Не удалось извлечь исходный текст политики конфиденциальности.');
-}
-
-const policyMarkup = normalizedSource
-  .slice(contentStart + startMarker.length, contentEnd)
-  .trim();
+const policy = settings.privacyPolicy;
+const sections = policy.sections
+  .filter((section) => section.isActive !== false)
+  .slice()
+  .sort((a, b) => a.order - b.order);
+const legalBinding = (fieldPath: string, tool = 'legal', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'practical', variant: 'privacy-policy' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `privacyPolicy.${fieldPath}`, stableItemId: String(options.stableItemId ?? fieldPath),
+  scope: 'legal', tool, affectedRoutes: ['/politika-konfidencialnosti/'],
+  validation: { legalConfirmationRequired: true, preserveHeadingListIntegrity: true }, ...options
+});
+const globalBinding = (fieldPath: string, tool = 'short-text', occurrence = 'legal-operator') => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'legal-operator' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath, stableItemId: `${occurrence}-${fieldPath}`, scope: 'global', tool, affectedRoutes: ['*']
+});
+const fixedPrefix = (source: string, reason: string) => adminDisposition(Astro.url, {
+  kind: 'template-fixed', reason, source: `src/components/v2/practical/V2PrivacyPolicy.astro#${source}`
+});
 ---
 
 <V2Breadcrumbs items={[
-  { title: 'Главная', href: '/design-lab/home-v2/' },
-  { title: 'Политика конфиденциальности и обработки персональных данных' }
+  { title: policy.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: legalBinding('homeBreadcrumbLabel', 'short-text', { stableItemId: 'privacy-home-breadcrumb' }) },
+  { title: policy.title, editor: legalBinding('title', 'heading', { stableItemId: 'privacy-current-breadcrumb' }) }
 ]} />
 
 <article class="practical-legal">
   <div class="hv2-shell practical-legal__layout">
     <aside class="practical-legal__aside" aria-label="О документе" data-v2-reveal>
-      <p class="hv2-eyebrow">Юридический документ</p>
-      <p>Политика конфиденциальности и обработки персональных данных ООО «СМУ 1».</p>
+      <p class="hv2-eyebrow" {...legalBinding('documentLabel', 'short-text')}>{policy.documentLabel}</p>
+      <p {...legalBinding('documentDescription', 'long-text')}>{policy.documentDescription}</p>
     </aside>
-    <section class="practical-legal__document" set:html={policyMarkup} data-v2-reveal />
+    <section class="practical-legal__document" data-v2-reveal>
+      <div class="container policy-page__container">
+        <h1 data-v2-entrance-role="title-primary" {...legalBinding('title', 'heading')}>{policy.title}</h1>
+        <p class="policy-page__updated" data-v2-entrance-role="lead">
+          <strong {...fixedPrefix('revision-date-prefix', 'Юридическая подпись даты фиксирована шаблоном; редактируется только значение даты.')}>Дата редакции:</strong> <span {...legalBinding('revisionDate', 'short-text')}>{policy.revisionDate}</span>
+        </p>
+
+        <div class="policy-block" {...legalBinding('confirmedAgainstGlobalAt', 'legal-confirmation', { stableItemId: 'operator-confirmation', projection: { kind: 'derived', formula: 'operator block compared with current global requisites' } })}>
+          <p><strong {...legalBinding('operatorHeading', 'short-text')}>{policy.operatorHeading}</strong></p>
+          <p {...legalBinding('operatorFullName', 'short-text')}>{policy.operatorFullName}</p>
+          <p {...globalBinding('companyName', 'short-text', 'legal-operator-short-name')}>{settings.companyName}</p>
+          <p><span {...fixedPrefix('operator-inn-prefix', 'Обозначение реквизита фиксировано юридическим шаблоном.')}>ИНН </span><span {...globalBinding('inn')}>{settings.inn}</span></p>
+          <p><span {...fixedPrefix('operator-kpp-prefix', 'Обозначение реквизита фиксировано юридическим шаблоном.')}>КПП </span><span {...globalBinding('kpp')}>{settings.kpp}</span></p>
+          <p><span {...fixedPrefix('operator-ogrn-prefix', 'Обозначение реквизита фиксировано юридическим шаблоном.')}>ОГРН </span><span {...globalBinding('ogrn')}>{settings.ogrn}</span></p>
+          <p><span {...fixedPrefix('operator-legal-address-prefix', 'Юридическая подпись адреса фиксирована шаблоном.')}>Юридический адрес: </span><span {...globalBinding('legalAddress', 'long-text')}>{settings.legalAddress}</span></p>
+          <p><span {...fixedPrefix('operator-phone-prefix', 'Подпись юридического контактного канала фиксирована шаблоном.')}>Телефон: </span><span {...globalBinding('phonePrimary')}>{settings.phonePrimary}</span></p>
+          <p><span {...fixedPrefix('operator-email-prefix', 'Подпись юридического контактного канала фиксирована шаблоном.')}>Email: </span><span {...globalBinding('email')}>{settings.email}</span></p>
+          <p><span {...fixedPrefix('operator-telegram-prefix', 'Подпись юридического контактного канала фиксирована шаблоном.')}>Telegram: </span><span {...globalBinding('telegramLabel')}>{settings.telegramLabel}</span></p>
+        </div>
+
+        {sections.map((section) => {
+          const sectionIndex = policy.sections.findIndex((item) => item.id === section.id);
+          const blocks = section.blocks.slice().sort((a, b) => a.order - b.order);
+          return <div class="policy-block" {...legalBinding(`sections[${sectionIndex}]`, 'legal-section', { stableItemId: section.id })}>
+            <h2 {...legalBinding(`sections[${sectionIndex}].heading`, 'heading', { stableItemId: `${section.id}-heading` })}>{section.heading}</h2>
+            {blocks.map((block) => {
+              const blockIndex = section.blocks.findIndex((item) => item.id === block.id);
+              const blockPath = `sections[${sectionIndex}].blocks[${blockIndex}]`;
+              if (block.type === 'paragraph') {
+                return <p {...legalBinding(`${blockPath}.text`, 'long-text', { stableItemId: block.id })}>{block.text}</p>;
+              }
+              const items = (block.items ?? [])
+                .slice()
+                .sort((a, b) => a.order - b.order);
+              return <ul {...legalBinding(`${blockPath}.items`, 'list', { stableItemId: block.id, itemKind: 'object' })}>
+                {items.map((item) => <li>{item.label}</li>)}
+              </ul>;
+            })}
+            {section.id === 'contacts' && <>
+              <p {...globalBinding('companyName', 'short-text', 'legal-contact')}>{settings.companyName}</p>
+              <p><span {...fixedPrefix('contact-phone-prefix', 'Подпись юридического контактного канала фиксирована шаблоном.')}>Телефон: </span><span {...globalBinding('phonePrimary', 'short-text', 'legal-contact')}>{settings.phonePrimary}</span></p>
+              <p><span {...fixedPrefix('contact-email-prefix', 'Подпись юридического контактного канала фиксирована шаблоном.')}>Email: </span><span {...globalBinding('email', 'short-text', 'legal-contact')}>{settings.email}</span></p>
+              <p><span {...fixedPrefix('contact-telegram-prefix', 'Подпись юридического контактного канала фиксирована шаблоном.')}>Telegram: </span><span {...globalBinding('telegramLabel', 'short-text', 'legal-contact')}>{settings.telegramLabel}</span></p>
+            </>}
+          </div>;
+        })}
+      </div>
+    </section>
   </div>
 </article>

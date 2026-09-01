@@ -5,12 +5,21 @@ interface ScopeItem {
 }
 
 interface Props {
+  eyebrow?: string;
   title: string;
   description?: string;
   items: ScopeItem[];
+  titleBinding?: Record<string, string>;
+  descriptionBinding?: Record<string, string>;
+  itemsBinding?: Record<string, string>;
+  eyebrowBinding?: Record<string, string>;
 }
 
-const { title, description = '', items } = Astro.props as Props;
+const { eyebrow = 'Состав благоустройства', title, description = '', items } = Astro.props as Props;
+const titleBinding = Astro.props.titleBinding ?? {};
+const descriptionBinding = Astro.props.descriptionBinding ?? {};
+const itemsBinding = Astro.props.itemsBinding ?? {};
+const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
 ---
 
 {items.length > 0 && (
@@ -18,12 +27,12 @@ const { title, description = '', items } = Astro.props as Props;
     <div class="hv2-shell">
       <header class="place-section-heading hv2-grid" data-v2-reveal>
         <div>
-          <p class="hv2-eyebrow">Состав благоустройства</p>
-          <h2 id="place-scope-title">{title}</h2>
+          <p class="hv2-eyebrow" {...eyebrowBinding}>{eyebrow}</p>
+          <h2 id="place-scope-title" {...titleBinding}>{title}</h2>
         </div>
-        {description && <p>{description}</p>}
+        {description && <p {...descriptionBinding}>{description}</p>}
       </header>
-      <ul class="place-scope__list">
+      <ul class="place-scope__list" {...itemsBinding}>
         {items.map((item) => (
           <li data-v2-reveal>
             <h3>{item.title}</h3>

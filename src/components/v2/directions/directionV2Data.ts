@@ -117,18 +117,9 @@ export const getDirectionGalleryImages = (products: ProductData[], includePrimar
     ...(includePrimary && product.image ? [product.image] : []),
     ...(Array.isArray(product.gallery) ? product.gallery : [])
   ]);
-  return Array.from(new Set(images.map((item) => item?.trim()).filter((item): item is string => Boolean(item))));
-};
-
-export const extractConfirmedBriefInputs = (sources: Array<string | undefined>) => {
-  const copy = sources.filter(Boolean).join(' ');
-  const rules = [
-    { test: /фото(?:граф)?/iu, label: 'Фотография' },
-    { test: /размер|габарит/iu, label: 'Размеры' },
-    { test: /эскиз/iu, label: 'Эскиз' },
-    { test: /черт[её]ж/iu, label: 'Чертёж' },
-    { test: /техническ\p{L}*\s+задан|(?:^|[\s,.;:()])тз(?:$|[\s,.;:()])/iu, label: 'ТЗ' },
-    { test: /описан\p{L}*\s+задач/iu, label: 'Описание задачи' }
-  ];
-  return rules.filter(({ test }) => test.test(copy)).map(({ label }) => label);
+  return Array.from(new Set(images.map((item) => typeof item === 'string'
+    ? item.trim()
+    : item && typeof item === 'object' && 'src' in item && typeof item.src === 'string'
+      ? item.src.trim()
+      : '').filter((item): item is string => Boolean(item))));
 };

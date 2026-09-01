@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { access, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,6 +15,7 @@ import {
   runGitProcess,
 } from './publish-planner.mjs';
 import { createPublishRunner, PublishRunError } from './publish-runner.mjs';
+import { serializeReleaseIdentity } from '../release/artifact-identity.mjs';
 
 const execFileAsync = promisify(execFile);
 const BASE_SHA_FOR_EMPTY = '1'.repeat(40);
@@ -104,6 +106,23 @@ async function remoteRefs(repo) {
     }));
 }
 
+function artifactIdentity(testedCommitSha, overrides = {}) {
+  const marker = {
+    version: 1,
+    kind: 'smu1-release-artifact-identity',
+    testedCommitSha,
+    artifactManifestSha256: 'a'.repeat(64),
+    fileCount: 1,
+    totalBytes: 1,
+    largestFile: { path: 'index.html', bytes: 1, sha256: 'b'.repeat(64) },
+    ...overrides,
+  };
+  return {
+    ...marker,
+    markerSha256: createHash('sha256').update(serializeReleaseIdentity(marker)).digest('hex'),
+  };
+}
+
 function successfulGate(assertion = async () => {}) {
   return async ({ checkoutDir, testedSha, gates, profile }) => {
     assert.equal(profile, 'content-only');
@@ -120,7 +139,12 @@ function successfulGate(assertion = async () => {}) {
     assert.equal(await git(checkoutDir, 'rev-parse', 'HEAD'), testedSha);
     assert.equal(await git(checkoutDir, 'status', '--porcelain', '--untracked-files=no'), '');
     await assertion(checkoutDir, testedSha);
-    return { ok: true, testedSha, results: Object.fromEntries(gates.map((gate) => [gate, 'passed'])) };
+    return {
+      ok: true,
+      testedSha,
+      artifactIdentity: artifactIdentity(testedSha),
+      results: Object.fromEntries(gates.map((gate) => [gate, 'passed'])),
+    };
   };
 }
 
@@ -417,6 +441,31 @@ test('missing exact gate evidence fails closed before local commit or remote upd
   });
   assert.equal(await git(repo.seed, 'rev-parse', 'HEAD'), repo.base);
   assert.equal(await git(repo.seed, 'diff', '--cached', '--name-only'), '');
+  const refs = await remoteRefs(repo);
+  assert.equal(refs['refs/heads/v4-product-final-candidate'], repo.base);
+  assert.equal(refs['refs/heads/preview'], repo.base);
+  assert.equal(refs['refs/heads/main'], repo.base);
+});
+
+test('runner rejects passed gates without an exact deterministic artifact identity', async (t) => {
+  const repo = await fixture(t);
+  const plan = await createPlan(repo, { 'src/content/products/item.json': '{"title":"identity-missing"}\n' });
+  const runner = createPublishRunner({
+    repoRoot: repo.seed,
+    tempRoot: path.join(repo.sandbox, 'controlled-temp'),
+    gateRunner: async ({ testedSha, gates }) => ({
+      ok: true,
+      testedSha,
+      results: Object.fromEntries(gates.map((gate) => [gate, 'passed'])),
+    }),
+  });
+
+  await assert.rejects(
+    () => runner.prepare(plan),
+    (error) => error instanceof PublishRunError
+      && error.code === 'PUBLISH_GATE_ARTIFACT_IDENTITY_INVALID',
+  );
+  assert.equal(await git(repo.seed, 'rev-parse', 'HEAD'), repo.base);
   const refs = await remoteRefs(repo);
   assert.equal(refs['refs/heads/v4-product-final-candidate'], repo.base);
   assert.equal(refs['refs/heads/preview'], repo.base);

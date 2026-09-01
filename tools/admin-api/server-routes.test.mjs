@@ -201,6 +201,39 @@ test('publish namespace is advertised but fails closed before Git/network side e
   );
 });
 
+test('H6 validation, backup and production-disabled release routes are authenticated and fail closed', async (t) => {
+  const contentRoot = await createContentRoot(t);
+  const { base } = await startServer(t, { contentRoot });
+  const { payload: session, cookie } = await login(base);
+  assert.equal(session.capabilities.exactValidation, 1);
+  assert.equal(session.capabilities.backups, 1);
+  assert.equal(session.capabilities.releaseControl, 1);
+
+  const backupStatus = await fetch(`${base}/backups/status`, { headers: { cookie } });
+  assert.equal(backupStatus.status, 200);
+  assert.equal((await backupStatus.json()).configured, false, 'test runtime never writes an external backup');
+
+  const production = await fetch(`${base}/release/production`, {
+    method: 'POST',
+    headers: {
+      cookie,
+      origin: TEST_ORIGIN,
+      'content-type': 'application/json',
+      'x-admin-csrf': session.csrfToken,
+      'x-admin-recovery-client-id': 'route-test-browser'
+    },
+    body: '{}'
+  });
+  assert.equal(production.status, 403);
+  assert.equal((await production.json()).code, 'H6_PRODUCTION_DISABLED');
+
+  const missingRun = await fetch(`${base}/validation/runs/exact-${'a'.repeat(32)}`, {
+    headers: { cookie, 'x-admin-recovery-client-id': 'route-test-browser' }
+  });
+  assert.equal(missingRun.status, 404);
+  assert.equal((await missingRun.json()).code, 'EXACT_RUN_NOT_FOUND');
+});
+
 test('registered JSON routes export home and preview the same file without changes', async (t) => {
   const contentRoot = await createContentRoot(t, { full: true });
   const { base } = await startServer(t, { contentRoot });
@@ -435,33 +468,28 @@ test('product writes validate presentation data and catalog export round-trips t
 
 });
 
-test('legacy admin routes stay thin adapters to the shared AdminShell', async () => {
+test('admin routes stay thin local-only adapters and public builds select the inert shell', async () => {
   const adapters = [
-    { file: ['src', 'pages', 'admin', 'index.astro'], view: 'overview', legacy: false },
-    { file: ['src', 'pages', 'admin', 'catalog.astro'], view: 'catalog', legacy: true },
-    { file: ['src', 'pages', 'admin', 'visual.astro'], view: 'pages', legacy: true },
-    { file: ['src', 'pages', 'admin', 'technical.astro'], view: 'settings', legacy: true },
+    { file: ['src', 'pages', 'admin', 'index.astro'], shell: 'VisualAdminShell', initial: 'initialRoute="/"' },
+    { file: ['src', 'pages', 'admin', 'catalog.astro'], shell: 'AdminShell', initial: 'initialView="catalog"' },
+    { file: ['src', 'pages', 'admin', 'visual.astro'], shell: 'VisualAdminShell', initial: 'initialRoute="/"' },
+    { file: ['src', 'pages', 'admin', 'technical.astro'], shell: 'AdminShell', initial: 'initialView="settings"' },
     {
       file: ['src', 'pages', 'admin', 'pages', 'navesy.astro'],
-      view: 'catalog',
-      legacy: true,
-      collection: 'product-sections',
-      slug: 'navesy-i-kozyrki'
+      shell: 'VisualAdminShell',
+      initial: 'initialRoute="/navesy-i-kozyrki/"'
     }
   ];
 
   for (const adapter of adapters) {
     const source = await fs.readFile(path.join(process.cwd(), ...adapter.file), 'utf8');
     const label = adapter.file.join('/');
-    assert.match(source, /import AdminShell from ['"][^'"]*admin\/shell\/AdminShell\.astro['"];/u, label);
-    assert.equal(source.match(/<AdminShell\b/gu)?.length, 1, `${label} must render exactly one shared shell`);
-    assert.match(source, new RegExp(`initialView=["']${adapter.view}["']`, 'u'), label);
+    assert.match(source, /import\.meta\.env\.DEV\s*&&\s*process\.env\.SMU1_LOCAL_ADMIN\s*===\s*['"]true['"]/u, label);
+    assert.match(source, new RegExp(`import\\(['"][^'"]*admin/shell/${adapter.shell}\\.astro['"]\\)`, 'u'), label);
+    assert.match(source, /import\(['"][^'"]*admin\/shell\/AdminUnavailable\.astro['"]\)/u, label);
+    assert.equal(source.match(/<Shell\b/gu)?.length, 1, `${label} must render exactly one selected shell`);
+    assert.ok(source.includes(adapter.initial), `${label} must preserve its initial editor destination`);
     assert.doesNotMatch(source, /<(?:script|style|form|button|dialog|section)\b/iu, `${label} must not restore a route-local editor`);
-
-    if (adapter.legacy) assert.match(source, /legacyNotice=["'][^"']+["']/u, `${label} must explain the legacy redirect`);
-    else assert.doesNotMatch(source, /legacyNotice=/u, `${label} is the canonical entry route`);
-    if (adapter.collection) assert.match(source, new RegExp(`initialCollection=["']${adapter.collection}["']`, 'u'), label);
-    if (adapter.slug) assert.match(source, new RegExp(`initialSlug=["']${adapter.slug}["']`, 'u'), label);
   }
 });
 
@@ -510,6 +538,13 @@ test('publish server wiring fixes ref ownership and exposes only the exact-SHA n
   assert.match(source, /pathname === ['"]\/api\/admin\/publish\/status['"]/u);
   assert.match(source, /publish\/jobs/u);
   assert.match(source, /previewUrl:\s*configuredPublishSite\(\)\.previewUrl/u);
+  assert.match(source, /previewUrlKind:\s*['"]mutable-github-pages['"]/u);
+  assert.match(source, /previewUrlIsImmutable:\s*false/u);
+  assert.match(source, /requireVerifiedArtifact:\s*true/u);
+  assert.match(source, /releaseControl\.preparePreview\(/u);
+  assert.match(source, /publishService\.getPlan\(/u);
+  assert.match(source, /releaseControl\.requestPreview\([\s\S]{0,300}transactionIds:\s*ownedPlan\.selectedTransactionIds/u);
+  assert.match(source, /sourceRevision:\s*ownedPlan\.verification\?\.sourceRevision/u);
   assert.match(source, /routeExpectations:\s*\[\{\s*route:\s*['"]\/['"],\s*expected:\s*['"]html['"]\s*\}\]/u);
   assert.match(source, /routeExpectations:[\s\S]{0,160}\bpages\b/u);
   assert.match(source, /retryProvider:\s*providers\.retryProvider/u);
@@ -531,4 +566,18 @@ test('Pages workflow deploys only an exact candidate-preview pair from preview',
   assert.equal((source.match(/"\$candidate_sha" != "\$preview_sha"/gu) || []).length, 2);
   assert.equal((source.match(/"\$preview_sha" != "\$GITHUB_SHA"/gu) || []).length, 2);
   assert.match(source, /deploy-test:\s*\n\s*if: needs\.build\.outputs\.deploy_kind == 'test'/u);
+  assert.match(source, /permissions:\s*\{\}/u);
+  assert.match(source, /build:[\s\S]{0,100}permissions:\s*\n\s*contents:\s*read/u);
+  assert.match(source, /deploy-test:[\s\S]{0,240}permissions:\s*\n\s*contents:\s*read\s*\n\s*pages:\s*write\s*\n\s*id-token:\s*write/u);
+  assert.match(source, /H6 production deploy is hard-disabled; the production request is check-only/u);
+  assert.doesNotMatch(source, /PRODUCTION_DEPLOY_ENABLED_VAR|target="production"|deploy_kind="production"/u);
+  const isolationIndex = source.indexOf('npm run qa:deploy-isolation');
+  const identityIndex = source.indexOf('node tools/release/artifact-identity.mjs --dist dist --tested-sha "${GITHUB_SHA}"');
+  const uploadIndex = source.indexOf('actions/upload-pages-artifact@');
+  assert.ok(isolationIndex >= 0 && identityIndex > isolationIndex, 'artifact identity must follow every dist mutation/gate');
+  assert.ok(uploadIndex > identityIndex, 'artifact identity must be written before Pages upload');
+
+  const actionUses = [...source.matchAll(/^\s+(?:-\s+)?uses:\s*([^\s#]+)/gmu)].map((match) => match[1]);
+  assert.equal(actionUses.length, 6);
+  for (const action of actionUses) assert.match(action, /^[^@\s]+@[a-f0-9]{40}$/u, action);
 });

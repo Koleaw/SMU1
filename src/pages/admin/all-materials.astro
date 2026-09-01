@@ -1,0 +1,8 @@
+---
+const localAdminEnabled = import.meta.env.DEV && process.env.SMU1_LOCAL_ADMIN === 'true';
+const Shell = localAdminEnabled
+  ? (await import('../../admin/shell/AdminShell.astro')).default
+  : (await import('../../admin/shell/AdminUnavailable.astro')).default;
+---
+
+<Shell initialView="pages" />

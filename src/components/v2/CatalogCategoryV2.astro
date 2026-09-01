@@ -10,6 +10,8 @@ import V2ProductGallery from './V2ProductGallery.astro';
 import V2DirectContact from './V2DirectContact.astro';
 import V2CatalogSparseState from './V2CatalogSparseState.astro';
 import V2SectionNav from './V2SectionNav.astro';
+import settings from '../../content/site-settings/global.json';
+import { adminBinding, adminDisposition } from '../../admin/bindings/adminBinding';
 import {
   catalogMediaPresentation,
   catalogV2ProductHref,
@@ -40,10 +42,26 @@ const {
   productFinalPrototype
 } = Astro.props as Props;
 const productFinalEnabled = productFinalPrototype === 'category';
+const catalogCopy = settings.catalogUi;
+const globalBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'catalog-ui', variant: 'category' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `catalogUi.${fieldPath}`, scope: 'global', tool, affectedRoutes: ['*'], ...options
+});
+const categoryBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'catalog-category', variant: category.mode }, owner: { collection: 'product-categories', slug: category.slug },
+  fieldPath, scope: 'local', tool, affectedRoutes: [currentPath, links.sectionHref], ...options
+});
+const sectionBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'catalog-category', variant: 'parent-reference' }, owner: { collection: 'product-sections', slug: section.slug },
+  fieldPath, scope: 'shared', tool, affectedRoutes: [currentPath, links.sectionHref], ...options
+});
+const homeBreadcrumbEditor = globalBinding('shared.homeBreadcrumbLabel', 'short-text', { role: 'category-home-breadcrumb' });
+const sectionBreadcrumbEditor = sectionBinding('title', 'short-text', { role: 'category-parent-breadcrumb' });
+const categoryBreadcrumbEditor = categoryBinding('title', 'short-text', { role: 'category-current-breadcrumb' });
 const productFinalBreadcrumbs = [
-  { title: 'Главная', href: '/design-lab/home-v2/' },
-  { title: section.title, href: links.sectionHref },
-  { title: category.title }
+  { title: catalogCopy.shared.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: homeBreadcrumbEditor },
+  { title: section.title, href: links.sectionHref, editor: sectionBreadcrumbEditor },
+  { title: category.title, editor: categoryBreadcrumbEditor }
 ];
 const productHref = (product: ProductData) =>
   links.productHrefs[product.slug] || catalogV2ProductHref(section.slug, category.slug, product.slug);
@@ -61,6 +79,11 @@ const supportingText = heroSupportingText !== heroDescription ? heroSupportingTe
 const galleryIntro = publicCatalogCopy(category.galleryIntro)
   || heroSupportingText
   || heroDescription;
+const galleryIntroBinding = publicCatalogCopy(category.galleryIntro)
+  ? categoryBinding('galleryIntro', 'long-text')
+  : heroSupportingText
+    ? categoryBinding('shortDescription', 'long-text', { projection: { kind: 'fallback', fallback: 'galleryIntro' } })
+    : categoryBinding('heroDescription', 'long-text', { projection: { kind: 'fallback', fallback: 'galleryIntro || shortDescription' } });
 /* Fence directions use their imageView as presentation metadata. Other
  * accepted category routes retain the existing isolated-cover contract. */
 const mediaPresentation = fenceDirectionEnabled
@@ -80,17 +103,24 @@ const displayProducts = products.map((product) => ({
 }));
 const contactDescription = heroDescription
   || heroSupportingText
-  || 'Для расчёта пришлите размеры, количество и условия установки.';
+  || catalogCopy.category.contactDefaultDescription;
+const contactDescriptionBinding = heroDescription
+  ? categoryBinding('heroDescription', 'long-text', { projection: { kind: 'shared-occurrence', target: 'contact description' } })
+  : heroSupportingText
+    ? categoryBinding('shortDescription', 'long-text', { projection: { kind: 'fallback', fallback: 'heroDescription' } })
+    : globalBinding('category.contactDefaultDescription', 'long-text', {
+        projection: { kind: 'fallback', fallback: `product-categories.${category.slug}.heroDescription || shortDescription` }
+      });
 const productNoun = products.length % 10 === 1 && products.length % 100 !== 11
-  ? 'изделие'
+  ? catalogCopy.category.productCountOne
   : [2, 3, 4].includes(products.length % 10) && ![12, 13, 14].includes(products.length % 100)
-    ? 'изделия'
-    : 'изделий';
+    ? catalogCopy.category.productCountFew
+    : catalogCopy.category.productCountMany;
 const sectionNavItems = [
-  { id: 'product-grid', label: 'Изделия' },
-  ...(categoryGalleryMedia.length > 0 ? [{ id: 'category-examples', label: 'Примеры' }] : []),
-  { id: 'category-custom', label: 'По вашей задаче' },
-  { id: 'contact', label: 'Получить расчёт' }
+  { id: 'product-grid', label: catalogCopy.category.navProductsLabel, editor: globalBinding('category.navProductsLabel') },
+  ...(categoryGalleryMedia.length > 0 ? [{ id: 'category-examples', label: catalogCopy.category.navExamplesLabel, editor: globalBinding('category.navExamplesLabel') }] : []),
+  { id: 'category-custom', label: catalogCopy.category.navCustomLabel, editor: globalBinding('category.navCustomLabel') },
+  { id: 'contact', label: catalogCopy.category.navContactLabel, editor: globalBinding('category.navContactLabel') }
 ];
 ---
 
@@ -105,9 +135,9 @@ const sectionNavItems = [
   rootClass={rootClass}
 >
   {!productFinalEnabled && <V2Breadcrumbs items={[
-    { title: 'Главная', href: '/design-lab/home-v2/' },
-    { title: section.title, href: links.sectionHref },
-    { title: category.title }
+    { title: catalogCopy.shared.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: homeBreadcrumbEditor },
+    { title: section.title, href: links.sectionHref, editor: sectionBreadcrumbEditor },
+    { title: category.title, editor: categoryBreadcrumbEditor }
   ]} />}
 
   <V2HeroHandoff enabled={productFinalEnabled}>
@@ -115,7 +145,7 @@ const sectionNavItems = [
     variant="category"
     productFinalHandoff={productFinalEnabled}
     breadcrumbs={productFinalEnabled ? productFinalBreadcrumbs : undefined}
-    kicker="Категория изделий"
+    kicker={catalogCopy.category.heroKicker}
     title={category.heroTitle}
     description={heroDescription}
     supportingText={supportingText}
@@ -123,16 +153,35 @@ const sectionNavItems = [
     imageAlt={category.title}
     imageView={category.imageView}
     mediaPresentation={mediaPresentation}
-    countLabel={hasProducts ? `${products.length} ${productNoun}` : 'Изготовление по задаче'}
+    countLabel={hasProducts ? `${products.length} ${productNoun}` : catalogCopy.category.sparseCountLabel}
     primaryHref={hasProducts ? '#product-grid' : '#contact'}
-    primaryLabel={hasProducts ? 'Смотреть изделия' : 'Обсудить задачу'}
+    primaryLabel={hasProducts ? catalogCopy.category.heroProductsPrimaryLabel : catalogCopy.category.heroSparsePrimaryLabel}
     secondaryHref={hasProducts ? '#contact' : links.sectionHref}
-    secondaryLabel={hasProducts ? 'Получить расчёт' : `Все ${section.title.toLocaleLowerCase('ru-RU')}`}
+    secondaryLabel={hasProducts
+      ? catalogCopy.category.heroProductsSecondaryLabel
+      : `${catalogCopy.category.heroSparseSecondaryPrefix}${section.title.toLocaleLowerCase('ru-RU')}`}
+    bindingOwner={{ collection: 'product-categories', slug: category.slug }}
+    bindingFields={{ title: 'heroTitle', description: 'heroDescription', supportingText: 'shortDescription', image: rawCategoryImage ? 'image' : 'gallery' }}
+    kickerBinding={globalBinding('category.heroKicker')}
+    countLabelBinding={hasProducts
+      ? adminDisposition(Astro.url, {
+          kind: 'derived', reason: 'Число и форма существительного вычисляются из опубликованных товаров; формы хранятся в общих текстах каталога.',
+          source: 'products.length + site-settings.catalogUi.category.productCountOne/Few/Many', tool: 'global-settings'
+        })
+      : globalBinding('category.sparseCountLabel')}
+    primaryLabelBinding={globalBinding(hasProducts ? 'category.heroProductsPrimaryLabel' : 'category.heroSparsePrimaryLabel')}
+    secondaryLabelBinding={hasProducts
+      ? globalBinding('category.heroProductsSecondaryLabel')
+      : adminDisposition(Astro.url, {
+          kind: 'derived', reason: 'Подпись складывается из редактируемого префикса и названия родительского раздела.',
+          source: 'site-settings.catalogUi.category.heroSparseSecondaryPrefix + product-sections.title', tool: 'global-settings'
+        })}
+    affectedRoutes={[currentPath, links.sectionHref]}
   />
 
   </V2HeroHandoff>
 
-  {hasProducts && <V2SectionNav items={sectionNavItems} label="Разделы категории" />}
+  {hasProducts && <V2SectionNav items={sectionNavItems} label={catalogCopy.category.sectionNavLabel} editorSource="src/content/site-settings/global.json#catalogUi.category" />}
 
   {hasProducts ? (
     <>
@@ -140,10 +189,10 @@ const sectionNavItems = [
         <div class="hv2-shell">
           <header class="v2-section-heading v2-section-heading--catalog" data-v2-reveal>
             <div>
-              <p class="hv2-eyebrow">Каталог категории</p>
-              <h2 id="v2-product-grid-title">Все опубликованные изделия</h2>
+              <p class="hv2-eyebrow" {...globalBinding('category.listEyebrow')}>{catalogCopy.category.listEyebrow}</p>
+              <h2 id="v2-product-grid-title" {...globalBinding('category.listTitle', 'heading')}>{catalogCopy.category.listTitle}</h2>
             </div>
-            <p>Выберите модель, чтобы посмотреть фотографии, характеристики и запросить расчёт.</p>
+            <p {...globalBinding('category.listDescription', 'long-text')}>{catalogCopy.category.listDescription}</p>
           </header>
 
         <div class="v2-product-grid" role="list" aria-label={`Товары категории ${category.title}`}>
@@ -165,18 +214,22 @@ const sectionNavItems = [
           <div class="hv2-shell">
             <header class="v2-section-heading" data-v2-reveal>
               <div>
-                <p class="hv2-eyebrow">Материалы категории</p>
-                <h2 id="v2-category-examples-title">Примеры решений</h2>
+                <p class="hv2-eyebrow" {...globalBinding('category.galleryEyebrow')}>{catalogCopy.category.galleryEyebrow}</p>
+                <h2 id="v2-category-examples-title" {...globalBinding('category.galleryTitle', 'heading')}>{catalogCopy.category.galleryTitle}</h2>
               </div>
-              {galleryIntro && <p>{galleryIntro}</p>}
+              {galleryIntro && <p {...galleryIntroBinding}>{galleryIntro}</p>}
             </header>
             <div class="v2-category-examples__gallery" data-v2-reveal>
               <V2ProductGallery
                 images={categoryGalleryMedia}
+                imageMetadata={category.gallery}
                 title={category.title}
                 imageView={category.imageView}
                 entityLabel="категории"
                 mediaSizes="(max-width: 760px) calc(100vw - 32px), min(1120px, calc(100vw - 64px))"
+                bindingOwner={{ collection: 'product-categories', slug: category.slug }}
+                bindingField="gallery"
+                affectedRoutes={[currentPath, links.sectionHref]}
               />
             </div>
           </div>
@@ -186,21 +239,33 @@ const sectionNavItems = [
       <section class="v2-custom-cta" id="category-custom" aria-labelledby="v2-category-custom-title">
         <div class="hv2-shell hv2-grid v2-custom-cta__grid" data-v2-reveal>
           <div>
-            <p class="hv2-eyebrow">Вне типовой линейки</p>
-            <h2 id="v2-category-custom-title">Решение под конкретный объект</h2>
+            <p class="hv2-eyebrow" {...globalBinding('category.customEyebrow')}>{catalogCopy.category.customEyebrow}</p>
+            <h2 id="v2-category-custom-title" {...globalBinding('category.customTitle', 'heading')}>{catalogCopy.category.customTitle}</h2>
           </div>
           <div>
-            <p>Для обсуждения можно прислать фотографию, размеры, эскиз, чертёж или техническое задание.</p>
-            <a class="hv2-text-link" href={withBase('/design-lab/v2/izgotovlenie-na-zakaz/')}>Подробнее об индивидуальном изготовлении</a>
+            <p {...globalBinding('category.customDescription', 'long-text')}>{catalogCopy.category.customDescription}</p>
+            <a class="hv2-text-link" href={withBase('/design-lab/v2/izgotovlenie-na-zakaz/')} {...globalBinding('category.customLinkLabel')}>{catalogCopy.category.customLinkLabel}</a>
           </div>
         </div>
       </section>
 
       <V2DirectContact
-        title="Подберём изделие или обсудим конструкцию по задаче"
+        eyebrow={catalogCopy.category.contactEyebrow}
+        title={catalogCopy.category.contactTitle}
         description={contactDescription}
-        primaryLabel="Получить расчёт"
-        secondaryLabel="Обсудить задачу"
+        primaryLabel={catalogCopy.category.contactPrimaryLabel}
+        secondaryLabel={catalogCopy.category.contactSecondaryLabel}
+        phoneChannelLabel={catalogCopy.shared.phoneChannelLabel}
+        telegramChannelLabel={catalogCopy.shared.telegramChannelLabel}
+        emailChannelLabel={catalogCopy.shared.emailChannelLabel}
+        eyebrowBinding={globalBinding('category.contactEyebrow')}
+        titleBinding={globalBinding('category.contactTitle', 'heading')}
+        descriptionBinding={contactDescriptionBinding}
+        primaryLabelBinding={globalBinding('category.contactPrimaryLabel')}
+        secondaryLabelBinding={globalBinding('category.contactSecondaryLabel')}
+        phoneChannelLabelBinding={globalBinding('shared.phoneChannelLabel')}
+        telegramChannelLabelBinding={globalBinding('shared.telegramChannelLabel')}
+        emailChannelLabelBinding={globalBinding('shared.emailChannelLabel')}
       />
     </>
   ) : (

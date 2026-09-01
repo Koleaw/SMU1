@@ -1,5 +1,11 @@
 ---
 import V2ProductGallery from '../V2ProductGallery.astro';
+import { adminDisposition } from '../../../admin/bindings/adminBinding';
+
+interface MediaSource {
+  owner: { collection: string; slug: string };
+  fieldPath: string;
+}
 
 interface Props {
   eyebrow?: string;
@@ -9,6 +15,13 @@ interface Props {
   galleryTitle: string;
   caption?: string;
   presentation?: 'default' | 'media-led';
+  mediaSources?: MediaSource[];
+  editorSource?: string;
+  eyebrowBinding?: Record<string, string>;
+  titleBinding?: Record<string, string>;
+  descriptionBinding?: Record<string, string>;
+  galleryTitleBinding?: Record<string, string>;
+  captionBinding?: Record<string, string>;
 }
 
 const {
@@ -18,8 +31,26 @@ const {
   images,
   galleryTitle,
   caption = '',
-  presentation = 'default'
+  presentation = 'default',
+  mediaSources = [],
+  editorSource = 'src/components/v2/directions/DirectionV2Gallery.astro#Astro.props'
 } = Astro.props as Props;
+const exactMediaSources = mediaSources.map(({ owner, fieldPath }) =>
+  `src/content/${owner.collection}/${owner.slug}.json#${fieldPath}`
+);
+const mediaDisposition = adminDisposition(Astro.url, {
+  kind: 'contextual',
+  reason: exactMediaSources.length > 1
+    ? 'Галерея объединяет списки нескольких товаров, а переключаемый viewer имеет разных владельцев; один binding не может честно представить multi-owner occurrence. Редактируйте gallery товаров через «Все материалы».'
+    : 'Галерея передана как вычисленная выборка без безопасного single-owner binding. Редактируйте исходный media list через «Все материалы».',
+  source: exactMediaSources.join('; ') || `${editorSource}#images`,
+  tool: 'all-materials'
+});
+const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
+const titleBinding = Astro.props.titleBinding ?? {};
+const descriptionBinding = Astro.props.descriptionBinding ?? {};
+const galleryTitleBinding = Astro.props.galleryTitleBinding ?? {};
+const captionBinding = Astro.props.captionBinding ?? {};
 ---
 
 {images.length > 0 && (
@@ -33,19 +64,22 @@ const {
     <div class="hv2-shell">
       <header class="direction-section-heading direction-section-heading--light" data-v2-reveal>
         <div>
-          <p class="hv2-eyebrow hv2-eyebrow--light">{eyebrow}</p>
-          <h2 id="direction-gallery-title">{title}</h2>
+          <p class="hv2-eyebrow hv2-eyebrow--light" {...eyebrowBinding}>{eyebrow}</p>
+          <h2 id="direction-gallery-title" {...titleBinding}>{title}</h2>
         </div>
-        {description && <p>{description}</p>}
+        {description && <p {...descriptionBinding}>{description}</p>}
       </header>
       <div class="direction-gallery__viewer" data-v2-reveal>
         <V2ProductGallery
           images={images}
           title={galleryTitle}
+          titleBinding={galleryTitleBinding}
           imageView={{ fit: 'contain', positionX: 50, positionY: 50, scale: 1 }}
           caption={caption}
+          captionBinding={captionBinding}
           mediaSizes="(max-width: 760px) calc(100vw - 32px), 62vw"
           entityLabel="направления"
+          mediaDisposition={mediaDisposition}
         />
       </div>
     </div>

@@ -16,7 +16,8 @@ export async function getStaticPaths() {
     }));
 }
 
-const { sectionSlug, categorySlug } = Astro.props as { sectionSlug: string; categorySlug: string };
+const sectionSlug = (Astro.props as { sectionSlug?: string }).sectionSlug || String(Astro.params.section || '');
+const categorySlug = (Astro.props as { categorySlug?: string }).categorySlug || String(Astro.params.slug || '');
 const snapshot = await loadCatalogV2Snapshot();
 const section = snapshot.sections.find((item) => item.slug === sectionSlug);
 const category = snapshot.categories.find((item) => (

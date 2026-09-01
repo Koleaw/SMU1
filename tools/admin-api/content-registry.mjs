@@ -68,7 +68,9 @@ const URL_FIELDS_BY_COLLECTION = Object.freeze({
   projects: Object.freeze([]),
   jobs: Object.freeze([]),
   'site-settings': Object.freeze([
-    Object.freeze({ path: 'telegram', context: 'https', allowEmpty: true, allowedHosts: Object.freeze(['t.me', 'telegram.me']) })
+    Object.freeze({ path: 'telegram', context: 'https', allowEmpty: true, allowedHosts: Object.freeze(['t.me', 'telegram.me']) }),
+    Object.freeze({ path: 'notFoundPage.primaryHref', context: 'internal' }),
+    Object.freeze({ path: 'notFoundPage.secondaryHref', context: 'internal' })
   ]),
   'static-pages': Object.freeze([
     Object.freeze({ path: 'pathwayCards[].buttonHref', context: 'link' }),

@@ -394,6 +394,70 @@ test('session is authenticated until CSRF-protected logout invalidates it', asyn
   assert.equal(after.json.authenticated, false);
 });
 
+test('isolated browser fault controls require explicit opt-in, auth and CSRF and can expire only the current test session', async (t) => {
+  const ordinary = await startServer(t);
+  const ordinaryLogin = await login(ordinary);
+  const ordinaryCookie = firstSetCookie(ordinaryLogin).split(';')[0];
+  const hidden = await request({
+    port: ordinary.port,
+    method: 'POST',
+    pathname: '/api/admin/__test__/faults',
+    origin: ordinary.origin,
+    cookie: ordinaryCookie,
+    csrf: ordinaryLogin.json.csrfToken,
+    body: { expireSession: true }
+  });
+  assert.equal(hidden.status, 404);
+
+  const isolated = await startServer(t, { overrides: {
+    ADMIN_TEST_FAULTS_ENABLED: 'true',
+    ADMIN_TEST_EXACT_MODE: 'deterministic'
+  } });
+  const session = await login(isolated);
+  const cookie = firstSetCookie(session).split(';')[0];
+  const missingCsrf = await request({
+    port: isolated.port,
+    method: 'POST',
+    pathname: '/api/admin/__test__/faults',
+    origin: isolated.origin,
+    cookie,
+    body: { nextExactFailure: true }
+  });
+  assert.equal(missingCsrf.status, 403);
+  assert.equal(missingCsrf.json.code, 'CSRF_INVALID');
+
+  const armed = await request({
+    port: isolated.port,
+    method: 'POST',
+    pathname: '/api/admin/__test__/faults',
+    origin: isolated.origin,
+    cookie,
+    csrf: session.json.csrfToken,
+    body: { nextExactFailure: true, nextBackupFailure: true }
+  });
+  assert.equal(armed.status, 200);
+  assert.equal(armed.json.syntheticTestMode, true);
+  assert.deepEqual(armed.json.armed, { nextExactFailure: true, nextBackupFailure: true });
+
+  const expired = await request({
+    port: isolated.port,
+    method: 'POST',
+    pathname: '/api/admin/__test__/faults',
+    origin: isolated.origin,
+    cookie,
+    csrf: session.json.csrfToken,
+    body: { expireSession: true }
+  });
+  assert.equal(expired.status, 200);
+  assert.equal(expired.json.sessionExpired, true);
+  const protectedAfterExpiry = await request({
+    port: isolated.port,
+    pathname: '/api/admin/history',
+    cookie
+  });
+  assert.equal(protectedAfterExpiry.status, 401);
+});
+
 test('repeated failed login receives bounded rate-limit response', async (t) => {
   const server = await startServer(t);
   for (let attempt = 0; attempt < 3; attempt += 1) {

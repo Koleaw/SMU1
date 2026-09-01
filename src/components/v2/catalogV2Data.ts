@@ -156,9 +156,10 @@ export const selectRelatedProductRoutes = (
 };
 
 export const formatProductPrice = (product: Pick<ProductData, 'priceMode' | 'priceFrom' | 'currency'>) => {
-  if (product.priceMode === 'from' && typeof product.priceFrom === 'number') {
+  if ((product.priceMode === 'from' || product.priceMode === 'exact') && typeof product.priceFrom === 'number') {
     const currency = product.currency === 'RUB' ? '₽' : product.currency;
-    return `от ${product.priceFrom.toLocaleString('ru-RU')} ${currency}`;
+    const formatted = `${product.priceFrom.toLocaleString('ru-RU')} ${currency}`;
+    return product.priceMode === 'from' ? `от ${formatted}` : formatted;
   }
   if (product.priceMode === 'on_request') return 'Цена по запросу';
   return 'Цена не указана';
@@ -218,9 +219,15 @@ export const catalogMediaPresentation = (
 export const isPlaceholderCatalogMedia = (value: string) =>
   /\/assets\/images\/placeholders\//i.test(value);
 
+const catalogGalleryPath = (item: unknown) => typeof item === 'string'
+  ? item.trim()
+  : item && typeof item === 'object' && 'src' in item && typeof item.src === 'string'
+    ? item.src.trim()
+    : '';
+
 export const productGalleryImages = (product: ProductData) =>
   Array.from(new Set([product.image, ...(Array.isArray(product.gallery) ? product.gallery : [])]
-    .map((item) => item?.trim())
+    .map(catalogGalleryPath)
     .filter((item): item is string => Boolean(item) && !isPlaceholderCatalogMedia(item))));
 
 export const categoryGalleryImages = (category: ProductCategoryData) => {

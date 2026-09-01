@@ -1,4 +1,6 @@
 const DEFAULT_CAPACITY = 200;
+const FORBIDDEN_PATH_PARTS = new Set(['__proto__', 'prototype', 'constructor']);
+const MAX_ARRAY_INDEX = 4_294_967_294;
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
@@ -16,6 +18,66 @@ function isDeepEqual(left, right) {
   const rightKeys = Object.keys(right);
   if (leftKeys.length !== rightKeys.length) return false;
   return leftKeys.every((key) => Object.hasOwn(right, key) && isDeepEqual(left[key], right[key]));
+}
+
+function assertSafePathPart(part) {
+  if (typeof part === 'number') {
+    if (!Number.isSafeInteger(part) || part < 0 || part > MAX_ARRAY_INDEX) {
+      throw new TypeError('Path contains an invalid array index.');
+    }
+    return part;
+  }
+  const normalized = String(part);
+  if (!normalized || FORBIDDEN_PATH_PARTS.has(normalized)) {
+    throw new TypeError('Path contains an empty or unsafe property.');
+  }
+  return normalized;
+}
+
+function tokenizePath(path) {
+  if (Array.isArray(path)) return path.map(assertSafePathPart);
+  const source = String(path ?? '');
+  if (!source) return [];
+
+  const parts = [];
+  let cursor = 0;
+  let expectsPart = true;
+  while (cursor < source.length) {
+    const character = source[cursor];
+    if (character === '.') {
+      if (expectsPart) throw new TypeError('Path contains an empty property.');
+      expectsPart = true;
+      cursor += 1;
+      continue;
+    }
+    if (character === '[') {
+      if (expectsPart && parts.length > 0) throw new TypeError('Path contains an invalid bracket index.');
+      const closingBracket = source.indexOf(']', cursor + 1);
+      if (closingBracket < 0) throw new TypeError('Path contains an unclosed bracket index.');
+      const rawIndex = source.slice(cursor + 1, closingBracket);
+      if (!/^(?:0|[1-9]\d*)$/u.test(rawIndex)) throw new TypeError('Path bracket indexes must be non-negative integers.');
+      parts.push(assertSafePathPart(Number(rawIndex)));
+      cursor = closingBracket + 1;
+      expectsPart = false;
+      if (cursor < source.length && source[cursor] !== '.' && source[cursor] !== '[') {
+        throw new TypeError('Path is malformed after a bracket index.');
+      }
+      continue;
+    }
+    if (!expectsPart) throw new TypeError('Path properties must be separated by a dot or bracket index.');
+    const start = cursor;
+    while (cursor < source.length && source[cursor] !== '.' && source[cursor] !== '[' && source[cursor] !== ']') cursor += 1;
+    if (cursor === start || source[cursor] === ']') throw new TypeError('Path contains an unexpected closing bracket.');
+    parts.push(assertSafePathPart(source.slice(start, cursor)));
+    expectsPart = false;
+  }
+  if (expectsPart) throw new TypeError('Path cannot end with a separator.');
+  return parts;
+}
+
+function isArrayIndex(part) {
+  if (typeof part === 'number') return Number.isSafeInteger(part) && part >= 0 && part <= MAX_ARRAY_INDEX;
+  return /^(?:0|[1-9]\d*)$/u.test(part) && Number(part) <= MAX_ARRAY_INDEX;
 }
 
 export function createHistoryStore(initialValue, {
@@ -94,6 +156,15 @@ export function createHistoryStore(initialValue, {
     return snapshot();
   }
 
+  // A save may finish while the user is already typing the next change. In that
+  // case the committed value becomes the new boundary, but the newer browser
+  // draft and its undo stack must remain intact.
+  function setBoundary(value) {
+    boundary = freezeSnapshot(value);
+    emit('saved-boundary');
+    return snapshot();
+  }
+
   function resetToBoundary() {
     current = boundary;
     past = [];
@@ -102,16 +173,16 @@ export function createHistoryStore(initialValue, {
     return snapshot();
   }
 
-  return Object.freeze({ snapshot, commit, undo, redo, markBoundary, resetToBoundary });
+  return Object.freeze({ snapshot, commit, undo, redo, markBoundary, setBoundary, resetToBoundary });
 }
 
 export function getAtPath(value, path) {
-  const parts = Array.isArray(path) ? path : String(path).split('.').filter(Boolean);
+  const parts = tokenizePath(path);
   return parts.reduce((current, part) => current?.[part], value);
 }
 
 export function setAtPath(value, path, nextValue) {
-  const parts = Array.isArray(path) ? path : String(path).split('.').filter(Boolean);
+  const parts = tokenizePath(path);
   if (!parts.length) return clone(nextValue);
   const root = clone(value ?? {});
   let cursor = root;
@@ -119,7 +190,7 @@ export function setAtPath(value, path, nextValue) {
     const key = parts[index];
     const nextKey = parts[index + 1];
     if (cursor[key] === null || typeof cursor[key] !== 'object') {
-      cursor[key] = Number.isInteger(Number(nextKey)) ? [] : {};
+      cursor[key] = isArrayIndex(nextKey) ? [] : {};
     }
     cursor = cursor[key];
   }
@@ -128,15 +199,16 @@ export function setAtPath(value, path, nextValue) {
 }
 
 export function deleteAtPath(value, path) {
-  const parts = Array.isArray(path) ? path : String(path).split('.').filter(Boolean);
+  const parts = tokenizePath(path);
   if (!parts.length) return undefined;
   const root = clone(value);
+  if (root === null || typeof root !== 'object') return root;
   let cursor = root;
   for (const key of parts.slice(0, -1)) {
     cursor = cursor?.[key];
     if (!cursor || typeof cursor !== 'object') return root;
   }
-  if (Array.isArray(cursor)) cursor.splice(Number(parts.at(-1)), 1);
+  if (Array.isArray(cursor) && isArrayIndex(parts.at(-1))) cursor.splice(Number(parts.at(-1)), 1);
   else delete cursor[parts.at(-1)];
   return root;
 }

@@ -16,9 +16,12 @@ import {
   createPublishStatusTracker,
   transitionPublishStatus,
 } from './publish-status.mjs';
+import { normalizeReleaseIdentityEvidence } from '../release/artifact-identity.mjs';
 
 const STATE_VERSION = 1;
 const SHA_RE = /^[a-f0-9]{40}$/u;
+const SHA256_RE = /^[a-f0-9]{64}$/u;
+const EXACT_RUN_ID_RE = /^exact-[a-f0-9]{32}$/u;
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{2,255}$/u;
 const TRANSACTION_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{2,127}$/u;
 const TERMINAL_STATUSES = new Set([PUBLISH_STATUSES.DEPLOY_SUCCESS, PUBLISH_STATUSES.FAILURE, 'empty']);
@@ -105,6 +108,82 @@ function normalizeTransactionIds(values) {
   return [...new Set(ids)].sort();
 }
 
+function sameStrings(left, right) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function requiredSha256(value, field) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!SHA256_RE.test(normalized)) {
+    throw new PublishServiceError('PUBLISH_EXACT_EVIDENCE_INVALID', `Exact evidence содержит некорректный ${field}.`, {
+      status: 409,
+      details: { field },
+    });
+  }
+  return normalized;
+}
+
+function normalizeVerifiedArtifact(value, expectedTransactionIds, { required = false } = {}) {
+  if (value === undefined || value === null) {
+    if (required) {
+      throw new PublishServiceError(
+        'PUBLISH_EXACT_EVIDENCE_REQUIRED',
+        'План и запуск тестовой публикации требуют текущую exact-проверку.',
+        { status: 409 },
+      );
+    }
+    return null;
+  }
+  if (typeof value !== 'object' || Array.isArray(value)
+    || value.version !== 1 || value.kind !== 'smu1-verified-local-revision') {
+    throw new PublishServiceError('PUBLISH_EXACT_EVIDENCE_INVALID', 'Exact evidence имеет неверный формат.', { status: 409 });
+  }
+  const exactRunId = String(value.exactRunId || '').toLowerCase();
+  if (!EXACT_RUN_ID_RE.test(exactRunId)) {
+    throw new PublishServiceError('PUBLISH_EXACT_EVIDENCE_INVALID', 'Exact evidence содержит некорректный run id.', { status: 409 });
+  }
+  const transactionIds = normalizeTransactionIds(value.transactionIds);
+  const expected = normalizeTransactionIds(expectedTransactionIds);
+  if (!sameStrings(transactionIds, expected)) {
+    throw new PublishServiceError(
+      'PUBLISH_EXACT_SELECTION_MISMATCH',
+      'Exact evidence относится к другому набору сохранений.',
+      { status: 409, details: { expected, actual: transactionIds } },
+    );
+  }
+  const sourceTransactionId = String(value.sourceTransactionId || '').trim();
+  if (!TRANSACTION_ID_RE.test(sourceTransactionId) || !transactionIds.includes(sourceTransactionId)) {
+    throw new PublishServiceError('PUBLISH_EXACT_EVIDENCE_INVALID', 'Exact source transaction не связана с выбранной редакцией.', { status: 409 });
+  }
+  const fileCount = Number(value.fileCount);
+  const totalBytes = Number(value.totalBytes);
+  if (!Number.isSafeInteger(fileCount) || fileCount < 0 || !Number.isSafeInteger(totalBytes) || totalBytes < 0) {
+    throw new PublishServiceError('PUBLISH_EXACT_EVIDENCE_INVALID', 'Exact artifact size evidence некорректно.', { status: 409 });
+  }
+  const normalized = {
+    version: 1,
+    kind: 'smu1-verified-local-revision',
+    exactRunId,
+    sourceTransactionId,
+    sourceRevision: requiredSha256(value.sourceRevision, 'sourceRevision'),
+    sourceBaseSha: requiredSha(value.sourceBaseSha, 'sourceBaseSha'),
+    transactionIds,
+    contentSchemaHash: requiredSha256(value.contentSchemaHash, 'contentSchemaHash'),
+    bindingRegistryHash: requiredSha256(value.bindingRegistryHash, 'bindingRegistryHash'),
+    h5PipelineHash: requiredSha256(value.h5PipelineHash, 'h5PipelineHash'),
+    snapshotSha256: requiredSha256(value.snapshotSha256, 'snapshotSha256'),
+    artifactManifestSha256: requiredSha256(value.artifactManifestSha256, 'artifactManifestSha256'),
+    fileCount,
+    totalBytes,
+    largestFile: clone(value.largestFile || null),
+  };
+  return normalized;
+}
+
+function verifiedArtifactFingerprint(value) {
+  return value ? digest({ kind: 'smu1-exact-plan-binding', value }) : null;
+}
+
 function ownership(request) {
   const owner = requiredId(request?.owner, 'owner');
   const sessionFingerprint = requiredId(request?.sessionFingerprint, 'sessionFingerprint');
@@ -185,7 +264,19 @@ function cleanGateEvidence(gates, testedSha) {
   for (const [name, evidence] of Object.entries(gates?.results ?? {})) {
     results[name] = evidence === 'passed' || evidence?.ok === true ? { ok: true } : { ok: false };
   }
-  return { ok: gates?.ok === true, testedSha, results };
+  let artifactIdentity;
+  try {
+    artifactIdentity = normalizeReleaseIdentityEvidence(gates?.artifactIdentity, {
+      expectedTestedCommitSha: testedSha,
+    });
+  } catch (error) {
+    throw new PublishServiceError(
+      'PUBLISH_GATE_ARTIFACT_IDENTITY_INVALID',
+      'Local gate receipt does not contain the exact deterministic dist identity.',
+      { status: 500, details: { code: error?.code || null } },
+    );
+  }
+  return { ok: gates?.ok === true, testedSha, artifactIdentity, results };
 }
 
 function cleanReceipt(receipt) {
@@ -353,6 +444,7 @@ function publicJob(job) {
     && job.pushResult?.testedSha === testedSha
     && job.pushResult?.refs?.candidate === testedSha
     && job.pushResult?.refs?.preview === testedSha;
+  const deploymentEvidence = job.statusRecord?.evidence ?? job.evidence ?? {};
   return clone({
     jobId: job.jobId,
     planId: job.planId,
@@ -370,7 +462,11 @@ function publicJob(job) {
     retryResult: job.retryResult ?? null,
     attempts: job.attempts,
     timeline: job.statusRecord?.timeline ?? [],
-    evidence: job.statusRecord?.evidence ?? job.evidence ?? {},
+    verification: job.verifiedArtifact ?? null,
+    evidence: {
+      ...deploymentEvidence,
+      ...(job.verifiedArtifact ? { sourceVerification: job.verifiedArtifact } : {}),
+    },
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   });
@@ -404,6 +500,7 @@ export function createPublishService(options = {}) {
   const maxPollAttempts = options.maxPollAttempts ?? 240;
   const maxAutomaticPushRetries = options.maxAutomaticPushRetries ?? 3;
   const maxJobs = options.maxJobs ?? 100;
+  const requireVerifiedArtifact = options.requireVerifiedArtifact === true;
   const autoRun = options.autoRun !== false;
   const transactionService = options.transactionService;
   if (!transactionService || typeof transactionService.listHistory !== 'function'
@@ -698,7 +795,12 @@ export function createPublishService(options = {}) {
     const principal = ownership(request);
     const recovery = recoveryOwnership(request, principal);
     const selectedTransactionIds = normalizeTransactionIds(request.transactionIds ?? request.selectedTransactionIds ?? []);
+    const requestedVerification = normalizeVerifiedArtifact(request.verifiedArtifact, selectedTransactionIds, {
+      required: requireVerifiedArtifact,
+    });
     const plan = cleanPlan(await buildPlan(principal, selectedTransactionIds));
+    const verifiedArtifact = requestedVerification;
+    const verificationFingerprint = verifiedArtifactFingerprint(verifiedArtifact);
     const planId = `plan-${randomUUID()}`;
     const createdAt = nowIso();
     const expiresAt = new Date(Date.parse(createdAt) + planTtlMs).toISOString();
@@ -710,13 +812,32 @@ export function createPublishService(options = {}) {
         recoveryKey: recovery.recoveryKey,
         selectedTransactionIds,
         planFingerprint: plan.fingerprint ?? plan.planFingerprint,
+        verifiedArtifact,
+        verificationFingerprint,
         plan,
         createdAt,
         expiresAt,
         consumedByJobId: null,
       };
     });
-    return clone({ planId, expiresAt, ...plan });
+    return clone({ planId, expiresAt, ...plan, verification: verifiedArtifact });
+  }
+
+  async function getPlan(request = {}) {
+    await ensureInitialized();
+    const principal = ownership(request);
+    const recovery = recoveryOwnership(request, principal);
+    await adoptSession(principal, recovery);
+    const planId = requiredId(request.planId, 'planId');
+    const record = assertOwned(state.plans[planId], principal, 'plan', recovery);
+    return clone({
+      planId: record.planId,
+      expiresAt: record.expiresAt,
+      consumedByJobId: record.consumedByJobId,
+      selectedTransactionIds: record.selectedTransactionIds,
+      planFingerprint: record.planFingerprint,
+      verification: record.verifiedArtifact ?? null,
+    });
   }
 
   function statusSummary(principal = null, recovery = null) {
@@ -769,11 +890,23 @@ export function createPublishService(options = {}) {
     if (!planRecord.consumedByJobId && Date.parse(planRecord.expiresAt) <= Date.parse(nowIso())) {
       throw new PublishServiceError('PUBLISH_PLAN_EXPIRED', 'План устарел; подготовьте его заново.', { status: 410 });
     }
+    const verifiedArtifact = normalizeVerifiedArtifact(request.verifiedArtifact, planRecord.selectedTransactionIds, {
+      required: requireVerifiedArtifact || Boolean(planRecord.verifiedArtifact),
+    });
+    const verificationFingerprint = verifiedArtifactFingerprint(verifiedArtifact);
+    if (verificationFingerprint !== (planRecord.verificationFingerprint ?? null)) {
+      throw new PublishServiceError(
+        'PUBLISH_EXACT_EVIDENCE_STALE',
+        'Текущая exact-проверка не совпадает с revision и snapshot, к которым привязан план.',
+        { status: 409, details: { planId } },
+      );
+    }
     const payloadHash = digest({
       target: 'preview',
       planId,
       planFingerprint: planRecord.planFingerprint,
       selectedTransactionIds: planRecord.selectedTransactionIds,
+      verificationFingerprint,
     });
     const idempotencyId = digest({
       ownerKey: principal.ownerKey,
@@ -841,6 +974,8 @@ export function createPublishService(options = {}) {
         target: 'preview',
         selectedTransactionIds: [...recomputed.selectedTransactionIds],
         planFingerprint: recomputed.fingerprint ?? recomputed.planFingerprint,
+        verifiedArtifact,
+        verificationFingerprint,
         plan: recomputed,
         commitMessage: `content(preview): ${recomputed.selectedTransactionIds.join(', ')}`,
         status: empty ? 'empty' : PUBLISH_STATUSES.PREPARING,
@@ -1229,6 +1364,7 @@ export function createPublishService(options = {}) {
   return Object.freeze({
     initialize,
     preview,
+    getPlan,
     start,
     overview,
     getStatus,

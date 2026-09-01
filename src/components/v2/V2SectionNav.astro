@@ -1,28 +1,41 @@
 ---
+import { adminDisposition } from '../../admin/bindings/adminBinding';
+
 export interface V2SectionNavItem {
   id: string;
   label: string;
+  editor?: Record<string, string>;
+  reorderEditor?: Record<string, string>;
 }
 
 interface Props {
   items: V2SectionNavItem[];
   label?: string;
+  editor?: Record<string, string>;
+  editorSource?: string;
 }
 
 const {
   items,
-  label = 'Навигация по странице'
+  label = 'Навигация по странице',
+  editorSource = 'src/components/v2/V2SectionNav.astro#Astro.props.items[].label'
 } = Astro.props as Props;
+const editor = Astro.props.editor ?? {};
 const visibleItems = items.filter((item) => item.id.trim() && item.label.trim());
+const itemDisposition = (item: V2SectionNavItem) => adminDisposition(Astro.url, {
+  kind: 'template-fixed',
+  reason: 'Подпись якоря задана renderer-владельцем как короткая структурная метка секции; это не копия редактируемого заголовка.',
+  source: `${editorSource}#${item.id}`
+});
 ---
 
 {visibleItems.length > 1 && (
-  <nav class="v2-section-nav" aria-label={label} data-v2-section-nav>
+  <nav class="v2-section-nav" aria-label={label} data-v2-section-nav {...editor}>
     <div class="hv2-shell v2-section-nav__inner">
       <ul class="v2-section-nav__list" role="list">
         {visibleItems.map((item) => (
-          <li class="v2-section-nav__item">
-            <a class="v2-section-nav__link" href={`#${item.id}`} data-v2-section-nav-link>
+          <li class="v2-section-nav__item" {...item.reorderEditor}>
+            <a class="v2-section-nav__link" href={`#${item.id}`} data-v2-section-nav-link {...(item.editor && Object.keys(item.editor).length > 0 ? item.editor : itemDisposition(item))}>
               {item.label}
             </a>
           </li>

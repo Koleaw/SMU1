@@ -2,8 +2,10 @@
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
 
 interface Props {
+  eyebrow?: string;
   title: string;
   city?: string;
   year?: number;
@@ -11,22 +13,75 @@ interface Props {
   href: string;
   images: string[];
   featureIndex?: number;
+  bindingOwner?: { collection: string; slug: string };
+  bindingFields?: { title?: string; city?: string; year?: string; description?: string; images?: string };
+  bindingScope?: 'local' | 'shared' | 'global' | 'legal' | 'derived';
+  affectedRoutes?: string[];
+  editorSource?: string;
+  eyebrowBinding?: Record<string, string>;
+  linkLabel?: string;
+  linkLabelBinding?: Record<string, string>;
 }
 
 const {
+  eyebrow = 'Выполненный объект',
   title,
   city = '',
   year,
   description,
   href,
   images,
-  featureIndex = 0
+  featureIndex = 0,
+  linkLabel = 'Смотреть объект полностью'
 } = Astro.props as Props;
-const facts = [city, year ? String(year) : ''].filter(Boolean).join(' · ');
 const safeFeatureIndex = featureIndex >= 0 && featureIndex < images.length ? featureIndex : 0;
 const featureImage = images[safeFeatureIndex];
 const sequenceImages = images
   .filter((_, index) => index !== safeFeatureIndex);
+const bindingOwner = Astro.props.bindingOwner;
+const bindingFields = Astro.props.bindingFields ?? {};
+const affectedRoutes = Astro.props.affectedRoutes ?? [Astro.url.pathname];
+const editorSource = Astro.props.editorSource ?? 'src/components/v2/engineering/EngineeringDirectionProof.astro#Astro.props';
+const binding = (fieldPath: string | undefined, tool: string, options: Record<string, unknown> = {}) =>
+  fieldPath && bindingOwner
+    ? adminBinding(Astro.url, {
+        renderer: { family: 'direction-proof', variant: 'engineering' },
+        owner: bindingOwner,
+        fieldPath,
+        stableItemId: `${bindingOwner.slug}-engineering-proof-${fieldPath}`,
+        scope: Astro.props.bindingScope ?? 'shared',
+        tool,
+        affectedRoutes,
+        ...options
+      })
+    : {};
+const directOrDeclared = (fieldPath: string | undefined, tool: string, fragment: string, reason: string) =>
+  fieldPath && bindingOwner
+    ? binding(fieldPath, tool)
+    : adminDisposition(Astro.url, {
+        kind: 'contextual', reason, source: `${editorSource}#${fragment}`, tool: 'page-settings'
+      });
+const fixed = (fragment: string, reason: string) => adminDisposition(Astro.url, {
+  kind: 'template-fixed', reason, source: `src/components/v2/engineering/EngineeringDirectionProof.astro#${fragment}`
+});
+const mediaAttributes = bindingFields.images && bindingOwner
+  ? binding(bindingFields.images, 'gallery', {
+      role: 'proof-gallery', multiple: true,
+      projection: {
+        kind: 'derived',
+        formula: 'project.gallery entries whose presentation.mediaRoles contain both metalworks and proof'
+      }
+    })
+  : adminDisposition(Astro.url, {
+      kind: 'derived',
+      reason: 'Кадры отобраны владельцем страницы по media-role формуле; откройте media presentation проекта.',
+      source: `${editorSource}#images`,
+      tool: 'media'
+    });
+const localOrDeclared = (attributes: Record<string, string> | undefined, fragment: string, reason: string, tool = 'page-settings') =>
+  attributes && Object.keys(attributes).length > 0
+    ? attributes
+    : adminDisposition(Astro.url, { kind: 'contextual', reason, source: `${editorSource}#${fragment}`, tool });
 ---
 
 {images.length > 0 && (
@@ -34,16 +89,22 @@ const sequenceImages = images
     <div class="hv2-shell">
       <header class="engineering-proof__heading hv2-grid" data-v2-reveal>
         <div>
-          <p class="hv2-eyebrow hv2-eyebrow--light">Выполненный объект</p>
-          <h2 id="engineering-proof-title">{title}</h2>
+          <p class="hv2-eyebrow hv2-eyebrow--light" {...localOrDeclared(Astro.props.eyebrowBinding, 'eyebrow', 'Надзаголовок proof-секции передан без schema binding.')}>{eyebrow}</p>
+          <h2 id="engineering-proof-title" {...directOrDeclared(bindingFields.title, 'heading', 'title', 'Название proof-проекта передано renderer-владельцем без schema binding.')}>{title}</h2>
         </div>
         <div class="engineering-proof__summary">
-          {facts && <p class="engineering-proof__facts">{facts}</p>}
-          <p>{description}</p>
-          <a href={withBase(href)}>Смотреть объект полностью</a>
+          {(city || year) && (
+            <p class="engineering-proof__facts">
+              {city && <span {...directOrDeclared(bindingFields.city, 'short-text', 'city', 'Город proof-проекта передан renderer-владельцем без schema binding.')}>{city}</span>}
+              {city && year && <span {...fixed('facts-separator', 'Типографический разделитель объединяет два самостоятельных реквизита проекта.')}> · </span>}
+              {year && <span {...directOrDeclared(bindingFields.year, 'number', 'year', 'Год proof-проекта передан renderer-владельцем без schema binding.')}>{year}</span>}
+            </p>
+          )}
+          <p {...directOrDeclared(bindingFields.description, 'long-text', 'description', 'Описание proof-проекта передано renderer-владельцем без schema binding.')}>{description}</p>
+          <a href={withBase(href)}><span {...localOrDeclared(Astro.props.linkLabelBinding, 'linkLabel', 'Подпись ссылки proof-секции передана без schema binding.', 'link-label')}>{linkLabel}</span></a>
         </div>
       </header>
-      <div class="engineering-proof__media" data-v2-reveal>
+      <div class="engineering-proof__media" data-v2-reveal {...mediaAttributes}>
         <figure class="engineering-proof__feature">
           <V2ResponsiveImage
             src={featureImage}

@@ -1,14 +1,19 @@
 ---
 import { withBase } from '../utils/withBase';
+import settings from '../content/site-settings/global.json';
+import { adminBinding } from '../admin/bindings/adminBinding';
+const cookie = settings.cookieNotice;
+const binding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'cookie-notice' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `cookieNotice.${fieldPath}`, stableItemId: `cookie-notice-${fieldPath}`, scope: 'global', tool,
+  affectedRoutes: ['*'], ...options
+});
 ---
 <div class="cookie-banner" data-cookie-banner hidden>
-  <p>
-    Мы используем cookies и сервисы аналитики для улучшения работы сайта.
-    Продолжая пользоваться сайтом, вы соглашаетесь с политикой конфиденциальности.
-  </p>
+  <p {...binding('message', 'long-text')}>{cookie.message}</p>
   <div class="cookie-banner__actions">
-    <a href={withBase('/politika-konfidencialnosti/')} class="cookie-banner__more">Политика конфиденциальности</a>
-    <button type="button" class="btn btn-primary" data-cookie-notice-close>Понятно</button>
+    <a href={withBase(cookie.privacyHref)} class="cookie-banner__more" {...binding('privacyLabel', 'link', { hrefPath: 'cookieNotice.privacyHref' })}>{cookie.privacyLabel}</a>
+    <button type="button" class="btn btn-primary" data-cookie-notice-close {...binding('acceptLabel')}>{cookie.acceptLabel}</button>
   </div>
 </div>
 

@@ -1,38 +1,71 @@
 ---
 import settings from '../content/site-settings/global.json';
 import { withBase } from '../utils/withBase';
+import { adminBinding, adminDisposition } from '../admin/bindings/adminBinding';
+
+const globalBinding = (
+  fieldPath: string,
+  tool = 'short-text',
+  options: Record<string, unknown> = {}
+) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'footer' },
+  owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath,
+  stableItemId: `footer-${fieldPath}`,
+  scope: 'global',
+  tool,
+  affectedRoutes: ['*'],
+  ...options
+});
+const declared = (
+  kind: 'contextual' | 'legal' | 'template-fixed',
+  reason: string,
+  source: string,
+  tool = 'global-settings'
+) => adminDisposition(Astro.url, { kind, reason, source, tool });
 ---
 <footer class="footer">
   <div class="container footer-grid">
     <div class="footer-brand">
       <a href={withBase('/')} class="logo-link footer-logo-link" aria-label="СМУ-1 на главную">
-        <img class="logo footer-logo" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
+        <img
+          class="logo footer-logo"
+          src={withBase('/assets/brand/logo-full.svg')}
+          alt="СМУ-1"
+          {...declared(
+            'template-fixed',
+            'Утверждённый логотип оболочки не является фотографией страницы; замена выполняется в настройках бренда после согласования ассета.',
+            'public/assets/brand/logo-full.svg'
+          )}
+        />
       </a>
-      <p>{settings.companyName}</p>
-      <p>ИНН {settings.inn} · КПП {settings.kpp}</p>
-      <p>ОГРН {settings.ogrn}</p>
-      <p>Дата регистрации: {settings.registrationDate}</p>
+      <p {...globalBinding('companyName')}>{settings.companyName}</p>
+      <p>
+        <span {...declared('template-fixed', 'Юридическая аббревиатура фиксирует тип реквизита; само значение редактируется отдельно.', 'src/components/Footer.astro#legal-prefix-inn')}>ИНН </span><span {...globalBinding('inn')}>{settings.inn}</span><span {...declared('template-fixed', 'Разделитель и юридическая аббревиатура фиксируют структуру реквизитов; само значение редактируется отдельно.', 'src/components/Footer.astro#legal-prefix-kpp')}> · КПП </span><span {...globalBinding('kpp')}>{settings.kpp}</span>
+      </p>
+      <p><span {...declared('template-fixed', 'Юридическая аббревиатура фиксирует тип реквизита; само значение редактируется отдельно.', 'src/components/Footer.astro#legal-prefix-ogrn')}>ОГРН </span><span {...globalBinding('ogrn')}>{settings.ogrn}</span></p>
+      <p><span {...declared('template-fixed', 'Системная подпись поясняет юридическую дату; само значение редактируется отдельно.', 'src/components/Footer.astro#registration-date-label')}>Дата регистрации: </span><span {...globalBinding('registrationDate')}>{settings.registrationDate}</span></p>
     </div>
 
     <div class="footer-company-links">
-      <p><strong>Компания:</strong></p>
-      <a href={withBase('/vypolnennye-obekty/')}>Выполненные объекты</a>
-      <a href={withBase('/kontakty/')}>Контакты</a>
-      <a href={withBase('/vakansii/')}>Вакансии</a>
+      <p {...declared('template-fixed', 'Заголовок группы является частью информационной архитектуры Footer.', 'src/components/Footer.astro#company-links-heading')}><strong>Компания:</strong></p>
+      <a href={withBase('/vypolnennye-obekty/')} {...declared('contextual', 'Подпись ведёт на фиксированный раздел Footer; отдельная схема footer-navigation пока не материализована.', 'src/components/Footer.astro#company-links[projects]')}>Выполненные объекты</a>
+      <a href={withBase('/kontakty/')} {...declared('contextual', 'Подпись ведёт на фиксированный раздел Footer; отдельная схема footer-navigation пока не материализована.', 'src/components/Footer.astro#company-links[contacts]')}>Контакты</a>
+      <a href={withBase('/vakansii/')} {...declared('contextual', 'Подпись ведёт на фиксированный раздел Footer; отдельная схема footer-navigation пока не материализована.', 'src/components/Footer.astro#company-links[vacancies]')}>Вакансии</a>
     </div>
 
     <div class="footer-contacts">
-      <p><strong>Контакты:</strong></p>
-      <p><a href={`tel:${settings.phonePrimary}`}>{settings.phonePrimary}</a></p>
-      <p><a href={`mailto:${settings.email}`}>{settings.email}</a></p>
-      <p><a href={settings.telegram} target="_blank" rel="noopener noreferrer">@smu1build</a></p>
+      <p {...declared('template-fixed', 'Заголовок группы является частью информационной архитектуры Footer.', 'src/components/Footer.astro#contacts-heading')}><strong>Контакты:</strong></p>
+      <p><a href={`tel:${settings.phonePrimary}`} {...globalBinding('phonePrimary')}>{settings.phonePrimary}</a></p>
+      <p><a href={`mailto:${settings.email}`} {...globalBinding('email')}>{settings.email}</a></p>
+      <p><a href={settings.telegram} target="_blank" rel="noopener noreferrer" {...globalBinding('telegramLabel', 'link', { hrefPath: 'telegram' })}>{settings.telegramLabel}</a></p>
     </div>
   </div>
 
   <div class="container footer-legal-row">
-    <small>© ООО «СМУ 1», 2026</small>
-    <small>Информация на сайте носит ознакомительный характер и не является публичной офертой.</small>
-    <a href={withBase('/politika-konfidencialnosti/')} class="footer-legal-link">Политика конфиденциальности</a>
-    <button type="button" class="footer-legal-link footer-legal-button" data-open-cookie-settings>Настройки cookies</button>
+    <small {...globalBinding('copyrightLabel')}>{settings.copyrightLabel}</small>
+    <small {...globalBinding('footerDisclaimer', 'long-text')}>{settings.footerDisclaimer}</small>
+    <a href={withBase('/politika-konfidencialnosti/')} class="footer-legal-link" {...declared('legal', 'Название юридического документа синхронизировано с каноническим legal route и не редактируется как локальный текст Footer.', 'src/content/site-settings/global.json#privacyPolicy.title', 'legal-editor')}>Политика конфиденциальности</a>
+    <button type="button" class="footer-legal-link footer-legal-button" data-open-cookie-settings {...declared('template-fixed', 'Кнопка открывает системный диалог согласий; её подпись принадлежит control contract, а не странице.', 'src/components/Footer.astro#cookie-settings-control')}>Настройки cookies</button>
   </div>
 </footer>

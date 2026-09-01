@@ -44,6 +44,53 @@
   "order": 3,
   "isActive": true,
   "year": 2025,
+  "presentation": {
+    "archiveCoverMedia": "/uploads/img-20250724-134235-1783272745917.jpg",
+    "detailHeroMedia": "/uploads/img-20250724-134235-1783272745917.jpg",
+    "publicGallery": [
+      "/uploads/img-20250724-134235-1783272745917.jpg",
+      "/uploads/img-20231005-180628-1783272745470.jpg",
+      "/uploads/img-20231011-134317-1783272745498.jpg",
+      "/uploads/img-20230928-115904-1783272745333.jpg",
+      "/uploads/img-20231026-161150-1783272745570.jpg",
+      "/uploads/img-20231102-142552-1783272745634.jpg",
+      "/uploads/img-20231103-164313-1783272745668.jpg",
+      "/uploads/img-20231126-132505-1783272745788.jpg",
+      "/uploads/img-20231223-222338-1783272745821.jpg",
+      "/uploads/img-20250724-133811-1783272616313.jpg"
+    ],
+    "archiveCoverPosition": "50% 48%",
+    "archiveCoverOrientation": "landscape",
+    "detailHeroPosition": "50% 48%",
+    "relatedDirections": [
+      { "id": "construction", "label": "Строительство и ремонты", "href": "/stroitelstvo-i-remonty/", "context": "Строительные и ремонтные работы на объекте.", "order": 10 },
+      { "id": "metalworks", "label": "Металлоконструкции", "href": "/metallokonstruktsii-dlya-biznesa/", "context": "Металлическая часть объекта по исходным данным заказчика.", "order": 20 }
+    ],
+    "altOverrides": {
+      "/uploads/img-20250724-133811-1783272616313.jpg": "Готовое здание на производственной территории",
+      "/uploads/img-20250724-134010-1783272745899.jpg": "Металлический каркас здания на производственной территории",
+      "/uploads/img-20250724-134235-1783272745917.jpg": "Готовое здание на производственной территории, общий вид",
+      "/uploads/img-20250724-134355-1783272745972.jpg": "Готовые здания на производственной территории"
+    },
+    "mediaRoles": {
+      "/uploads/img-20250724-133811-1783272616313.jpg": ["construction", "construction-building", "finished-result", "proof"],
+      "/uploads/img-20230913-110408-1783272745279.jpg": ["construction", "process"],
+      "/uploads/img-20230913-110538-1783272745310.jpg": ["construction", "process"],
+      "/uploads/img-20230928-115904-1783272745333.jpg": ["metalworks", "process"],
+      "/uploads/img-20230928-143443-1783272745354.jpg": ["metalworks", "process"],
+      "/uploads/img-20230928-151513-1783272745377.jpg": ["metalworks", "process"],
+      "/uploads/img-20231013-135454-1783272745548.jpg": ["metalworks", "proof"],
+      "/uploads/img-20231102-142552-1783272745634.jpg": ["metalworks", "proof"],
+      "/uploads/img-20231223-222338-1783272745821.jpg": ["metalworks", "proof"],
+      "/uploads/img-20231227-171915-1783272745842.jpg": ["metalworks", "proof"],
+      "/uploads/img-20250724-134010-1783272745899.jpg": ["metalworks", "hero"],
+      "/uploads/img-20250724-134235-1783272745917.jpg": ["construction", "construction-building", "finished-result", "hero", "proof"],
+      "/uploads/img-20250724-134252-1783272745934.jpg": ["excluded"],
+      "/uploads/img-20250724-134312-1783272745953.jpg": ["excluded"],
+      "/uploads/img-20250724-134355-1783272745972.jpg": ["construction", "construction-building", "finished-result", "proof"],
+      "/uploads/img-20250724-134415-1783272745988.jpg": ["excluded"]
+    }
+  },
   "seoTitle": "Комплекс работ на производственной территории — СМУ-1",
   "seoDescription": "Кейс СМУ-1: подготовка участка, геодезические работы, фундаменты, сборка производственных цехов и укрепление существующего фундамента."
 }

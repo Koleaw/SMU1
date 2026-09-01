@@ -8,7 +8,6 @@ import DirectionV2Related from '../directions/DirectionV2Related.astro';
 import DirectionV2Scope from '../directions/DirectionV2Scope.astro';
 import DirectionV2Types from '../directions/DirectionV2Types.astro';
 import {
-  extractConfirmedBriefInputs,
   getDirectionBlock,
   getDirectionCardItems,
   getDirectionGalleryImages,
@@ -16,11 +15,17 @@ import {
   loadDirectionV2Snapshot
 } from '../directions/directionV2Data';
 import {
-  approvedMediaUntilEdited,
-  approvedUntilEdited
+  approvedMediaUntilEdited
 } from '../directions/directionV2Presentation';
+import {
+  directionPresentationBinding,
+  directionRelatedItems,
+  directionSectionNavItems,
+  requireDirectionPresentation
+} from '../directions/directionPresentation';
 import V2HeroHandoff from '../V2HeroHandoff.astro';
 import V2SectionNav from '../V2SectionNav.astro';
+import { adminBinding } from '../../../admin/bindings/adminBinding';
 
 const currentPath = Astro.url.pathname;
 const data = await loadDirectionV2Snapshot({
@@ -28,12 +33,24 @@ const data = await loadDirectionV2Snapshot({
   catalogCategorySlug: 'navesy'
 });
 const { section, catalogCategory, catalogProducts, catalog, services } = data;
+const presentation = requireDirectionPresentation(section);
+const owner = { collection: 'product-sections' as const, slug: section.slug };
+const route = `/${section.slug}/`;
+const presentationBinding = (fieldPath: string, tool = 'short-text') =>
+  directionPresentationBinding(Astro.url, owner, route, fieldPath, tool);
 const typesBlock = getDirectionBlock(section, 'cardGrid');
 const scopeBlock = getDirectionBlock(section, 'listPanel');
 const types = getDirectionCardItems(typesBlock);
 const scope = getDirectionListItems(scopeBlock);
 const galleryImages = getDirectionGalleryImages(catalogProducts);
-const briefInputs = extractConfirmedBriefInputs(catalogProducts.map((product) => product.customProjectText));
+const galleryMediaSources = catalogProducts
+  .filter((product) => Array.isArray(product.gallery) && product.gallery.length > 0)
+  .map((product) => ({ owner: { collection: 'products', slug: product.slug }, fieldPath: 'gallery' }));
+const briefInputs = (presentation.brief.items ?? [])
+  .filter((item) => item.isActive !== false)
+  .slice()
+  .sort((left, right) => left.order - right.order)
+  .map((item) => item.label);
 const approvedHeroImage = catalogCategory?.image?.trim() || galleryImages[0] || '';
 const heroMedia = approvedMediaUntilEdited(
   section.image,
@@ -46,59 +63,34 @@ const heroImageView = heroMedia.usesApprovedBaseline
     ? { ...catalogCategory.imageView, fit: 'contain' as const }
     : { fit: 'contain' as const, positionX: 50, positionY: 50, scale: 1 })
   : (section.imageView || { fit: 'cover' as const, positionX: 50, positionY: 50, scale: 1 });
-const directionTitle = approvedUntilEdited(section.title, 'Навесы', 'Навесы и козырьки');
-const heroKicker = approvedUntilEdited(section.heroKicker, undefined, 'Навесы и козырьки');
-const heroTitle = approvedUntilEdited(section.heroTitle, 'Навесы под объект', 'Навесы и козырьки под объект');
-const heroDescription = approvedUntilEdited(
-  section.heroDescription,
-  'Проектируем и изготавливаем навесы для входных групп, зон ожидания, велопарковок, контейнерных площадок, хозяйственных зон и общественных пространств под размеры объекта и условия эксплуатации.',
-  'Проектируем и изготавливаем навесы и козырьки для входных групп, зон ожидания, велопарковок, контейнерных площадок, хозяйственных зон и общественных пространств под размеры и условия объекта.'
-);
-const contactTitle = approvedUntilEdited(
-  section.contactTitle,
-  undefined,
-  'Обсудим навес или козырёк для вашего объекта'
-);
-const contactDescription = approvedUntilEdited(
-  section.contactDescription,
-  undefined,
-  'Опишите задачу и приложите имеющиеся исходные материалы — обсудим решение и подготовим расчёт.'
-);
-const telegramLabel = approvedUntilEdited(
-  section.contactTelegramLabel,
-  '@smu1build · Написать в Telegram',
-  'Получить расчёт'
-);
-const phoneLabel = approvedUntilEdited(section.contactPhoneLabel, undefined, 'Обсудить задачу');
-const emailLabel = approvedUntilEdited(section.contactEmailLabel, undefined, 'Email');
-const fences = catalog.sections.find((item) => item.slug === 'ograzhdeniya-i-zabory');
-const landscaping = services.find((item) => item.slug === 'blagoustroystvo-territoriy');
-const related = [
-  catalogCategory ? {
-    eyebrow: 'Каталог изделий',
-    title: `${catalogCategory.title} в каталоге`,
-    href: '/design-lab/v2/ulichnaya-mebel/navesy/'
-  } : null,
-  fences ? {
-    eyebrow: 'Конструкции для территории',
-    title: fences.title,
-    description: fences.shortDescription,
-    href: '/design-lab/v2/ograzhdeniya-i-zabory/'
-  } : null,
-  landscaping ? {
-    eyebrow: 'Комплексная задача',
-    title: landscaping.title,
-    description: landscaping.shortDescription,
-    href: `/design-lab/v2/${landscaping.slug}/`
-  } : null
-].filter((item): item is NonNullable<typeof item> => Boolean(item));
-const sectionNavItems = [
-  ...(galleryImages.length > 0 ? [{ id: 'direction-gallery', label: 'Примеры' }] : []),
-  ...(types.length > 0 ? [{ id: 'direction-types', label: 'Что изготавливаем' }] : []),
-  ...(scope.length > 0 ? [{ id: 'direction-scope', label: 'Для каких объектов' }] : []),
-  ...(briefInputs.length > 0 ? [{ id: 'direction-brief', label: 'Исходные данные' }] : []),
-  { id: 'contact', label: 'Обсудить задачу' }
+const directionTitle = section.title;
+const heroKicker = section.heroKicker || section.title;
+const heroTitle = section.heroTitle;
+const heroDescription = section.heroDescription;
+const contactTitle = section.contactTitle || '';
+const contactDescription = section.contactDescription || '';
+const telegramLabel = section.contactTelegramLabel || '';
+const phoneLabel = section.contactPhoneLabel || '';
+const emailLabel = section.contactEmailLabel || '';
+const related = directionRelatedItems(Astro.url, owner, route, presentation, catalog, services);
+const availableSectionIds = [
+  ...(galleryImages.length > 0 ? ['direction-gallery'] : []),
+  ...(types.length > 0 ? ['direction-types'] : []),
+  ...(scope.length > 0 ? ['direction-scope'] : []),
+  ...(briefInputs.length > 0 ? ['direction-brief'] : []),
+  'contact'
 ];
+const sectionNavItems = directionSectionNavItems(Astro.url, owner, route, presentation, availableSectionIds);
+const blockBinding = (block: unknown, field: 'title' | 'intro' | 'items', tool: string, itemKind?: 'string' | 'object') => {
+  const index = section.pageBlocks?.indexOf(block as never) ?? -1;
+  if (index < 0) return {};
+  const source = block as { sectionId?: string; type?: string; order?: number };
+  return adminBinding(Astro.url, {
+    renderer: { family: 'direction-block', variant: source.type }, owner: { collection: 'product-sections', slug: section.slug },
+    fieldPath: `pageBlocks[${index}].${field}`, stableItemId: `${source.sectionId || `${source.type}-${source.order}`}-${field}`,
+    scope: 'local', tool, affectedRoutes: [`/${section.slug}/`], itemKind
+  });
+};
 ---
 
 <DirectionV2Layout
@@ -121,60 +113,96 @@ const sectionNavItems = [
       title={heroTitle}
       description={heroDescription}
       image={heroImage}
-      imageAlt={directionTitle}
+      imageAlt={presentation.hero.imageAlt}
       imageView={heroImageView}
       titleId="direction-v2-title"
-      primaryLabel="Получить расчёт"
+      primaryLabel={presentation.hero.primaryLabel}
       secondaryHref="#direction-brief"
-      secondaryLabel="Обсудить задачу"
+      secondaryLabel={presentation.hero.secondaryLabel}
       productFinalHandoff
+      bindingOwner={{ collection: 'product-sections', slug: section.slug }}
+      bindingFields={{ eyebrow: 'heroKicker', title: 'heroTitle', description: 'heroDescription', image: 'image', primaryLabel: 'directionPresentation.hero.primaryLabel', secondaryLabel: 'directionPresentation.hero.secondaryLabel' }}
+      affectedRoutes={[`/${section.slug}/`, '/']}
+      mediaBinding={heroMedia.usesApprovedBaseline && catalogCategory
+        ? { owner: { collection: 'product-categories', slug: catalogCategory.slug }, fieldPath: 'image', scope: 'shared', affectedRoutes: [`/${section.slug}/`, `/ulichnaya-mebel/${catalogCategory.slug}/`] }
+        : undefined}
     />
   </V2HeroHandoff>
 
-  <V2SectionNav items={sectionNavItems} label="Разделы направления" />
+  <V2SectionNav items={sectionNavItems} label={presentation.sectionNav.label} />
 
   <DirectionV2Gallery
-    title="Примеры навесов и козырьков"
-    description="Визуальные примеры из связанных карточек навесов."
+    eyebrow={presentation.gallery?.eyebrow}
+    title={presentation.gallery?.title || ''}
+    description={presentation.gallery?.description || ''}
     images={galleryImages}
-    galleryTitle="Навесы и козырьки — примеры"
-    caption="Изображения сохранены в исходном порядке опубликованных галерей."
+    galleryTitle={presentation.gallery?.galleryTitle || ''}
+    caption={presentation.gallery?.caption || ''}
     presentation="media-led"
+    mediaSources={galleryMediaSources}
+    editorSource="src/components/v2/pages/CanopiesV2Page.astro#direction-gallery"
+    eyebrowBinding={presentationBinding('gallery.eyebrow')}
+    titleBinding={presentationBinding('gallery.title', 'heading')}
+    descriptionBinding={presentationBinding('gallery.description', 'long-text')}
+    galleryTitleBinding={presentationBinding('gallery.galleryTitle')}
+    captionBinding={presentationBinding('gallery.caption', 'long-text')}
   />
 
   <DirectionV2Types
-    eyebrow="Структура направления"
-    title="Какие навесы и козырьки делаем"
+    eyebrow={presentation.types.eyebrow}
+    title={presentation.types.title || typesBlock?.title || ''}
     items={types}
     variant="engineering"
     presentation="open"
+    eyebrowBinding={presentationBinding('types.eyebrow')}
+    titleBinding={presentation.types.title ? presentationBinding('types.title', 'heading') : blockBinding(typesBlock, 'title', 'heading')}
+    itemsBinding={blockBinding(typesBlock, 'items', 'list', 'object')}
   />
 
   <DirectionV2Scope
-    eyebrow="Контекст объекта"
+    eyebrow={presentation.scope.eyebrow}
     title={scopeBlock?.title || 'Для каких объектов'}
     items={scope}
     variant="engineering"
     presentation="open"
+    titleBinding={blockBinding(scopeBlock, 'title', 'heading')}
+    eyebrowBinding={presentationBinding('scope.eyebrow')}
+    itemsBinding={blockBinding(scopeBlock, 'items', 'list', 'string')}
   />
 
-  <DirectionV2Related items={related} presentation="links" />
+  <DirectionV2Related
+    eyebrow={presentation.related.eyebrow}
+    title={presentation.related.title}
+    items={related}
+    presentation="links"
+    eyebrowBinding={presentationBinding('related.eyebrow')}
+    titleBinding={presentationBinding('related.title', 'heading')}
+  />
 
   <DirectionV2Brief
-    title="Что можно прислать"
-    description="Для первоначального обсуждения отправьте те исходные материалы, которые уже есть."
+    eyebrow={presentation.brief.eyebrow}
+    title={presentation.brief.title || ''}
+    description={presentation.brief.description || ''}
     items={briefInputs}
     variant="engineering"
     integrated
+    eyebrowBinding={presentationBinding('brief.eyebrow')}
+    titleBinding={presentationBinding('brief.title', 'heading')}
+    descriptionBinding={presentationBinding('brief.description', 'long-text')}
+    itemsBinding={presentationBinding('brief.items', 'ordered-label-list')}
   >
     <DirectionV2FinalCTA
       title={contactTitle}
       description={contactDescription}
       primaryLabel={telegramLabel}
       secondaryLabel={phoneLabel}
-      telegramChannelLabel={approvedUntilEdited(section.contactTelegramLabel, '@smu1build · Написать в Telegram', 'Telegram')}
-      phoneChannelLabel={approvedUntilEdited(section.contactPhoneLabel, undefined, 'Основной телефон')}
+      telegramChannelLabel="Telegram"
+      eyebrow={presentation.contactEyebrow}
+      phoneChannelLabel={presentation.contactPhoneChannelLabel}
       emailChannelLabel={emailLabel}
+      bindingOwner={{ collection: 'product-sections', slug: section.slug }}
+      bindingFields={{ eyebrow: 'directionPresentation.contactEyebrow', title: 'contactTitle', description: 'contactDescription', primaryLabel: 'contactTelegramLabel', secondaryLabel: 'contactPhoneLabel', phoneChannelLabel: 'directionPresentation.contactPhoneChannelLabel' }}
+      affectedRoutes={[`/${section.slug}/`]}
     />
   </DirectionV2Brief>
 </DirectionV2Layout>

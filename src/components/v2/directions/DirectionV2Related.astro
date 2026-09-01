@@ -1,28 +1,54 @@
 ---
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
+import { adminDisposition } from '../../../admin/bindings/adminBinding';
 
 interface RelatedItem {
   eyebrow?: string;
   title: string;
   description?: string;
   href: string;
+  reorderEditor?: Record<string, string>;
+  editor?: {
+    eyebrow?: Record<string, string>;
+    title?: Record<string, string>;
+    description?: Record<string, string>;
+    href?: Record<string, string>;
+  };
 }
 
 interface Props {
+  eyebrow?: string;
   title?: string;
   items: RelatedItem[];
   variant?: 'default' | 'compact';
   presentation?: 'cards' | 'links';
+  titleBinding?: Record<string, string>;
+  eyebrowBinding?: Record<string, string>;
+  editorSource?: string;
 }
 
 const {
+  eyebrow = 'Дальше по задаче',
   title = 'Связанные направления',
   items,
   variant = 'default',
   presentation = 'cards'
 } = Astro.props as Props;
 const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? value : withBase(value);
+const editorSource = Astro.props.editorSource ?? 'src/components/v2/directions/DirectionV2Related.astro#Astro.props';
+const declared = (
+  kind: 'contextual' | 'derived' | 'template-fixed',
+  fragment: string,
+  reason: string,
+  tool = 'page-settings'
+) => adminDisposition(Astro.url, { kind, reason, source: `${editorSource}#${fragment}`, tool });
+const directOrDeclared = (
+  attributes: Record<string, string> | undefined,
+  kind: 'contextual' | 'derived' | 'template-fixed',
+  fragment: string,
+  reason: string
+) => attributes && Object.keys(attributes).length > 0 ? attributes : declared(kind, fragment, reason);
 ---
 
 {items.length > 0 && (
@@ -38,29 +64,29 @@ const href = (value: string) => /^(?:#|https?:|mailto:|tel:)/i.test(value) ? val
     <div class="hv2-shell">
       <header class="direction-section-heading direction-section-heading--compact" data-v2-reveal>
         <div>
-          <p class="hv2-eyebrow">Дальше по задаче</p>
-          <h2 id="direction-related-title">{title}</h2>
+          <p class="hv2-eyebrow" {...directOrDeclared(Astro.props.eyebrowBinding, 'contextual', 'eyebrow', 'Надзаголовок related-блока передан renderer-владельцем без schema binding.')}>{eyebrow}</p>
+          <h2 id="direction-related-title" {...directOrDeclared(Astro.props.titleBinding, 'contextual', 'title', 'Заголовок related-блока задан renderer-композицией; отдельного поля текущей записи нет.')}>{title}</h2>
         </div>
       </header>
       {presentation === 'cards' ? (
         <div class="direction-related__grid" role="list">
-          {items.map((item) => (
-            <a class="direction-related__card" href={href(item.href)} role="listitem" data-v2-transition-label={item.title} data-v2-reveal>
-              <span>{item.eyebrow || 'Направление'}</span>
-              <h3>{item.title}</h3>
-              {item.description && <p>{item.description}</p>}
+          {items.map((item, index) => (
+            <a class="direction-related__card" href={href(item.href)} role="listitem" data-v2-transition-label={item.title} data-v2-reveal {...item.reorderEditor} {...directOrDeclared(item.editor?.href, 'derived', `items[${index}].href`, 'Адрес перехода вычислен из slug связанной записи и route policy; меняется через настройки связанной страницы.')}>
+              <span {...directOrDeclared(item.editor?.eyebrow, 'contextual', `items[${index}].eyebrow`, 'Контекстная метка связи задана renderer-композицией, а не локальным полем карточки.')}>{item.eyebrow || 'Направление'}</span>
+              <h3 {...directOrDeclared(item.editor?.title, 'contextual', `items[${index}].title`, 'Название связанной записи передано renderer-владельцем без schema binding.')}>{item.title}</h3>
+              {item.description && <p {...directOrDeclared(item.editor?.description, 'contextual', `items[${index}].description`, 'Пояснение связи задано renderer-композицией; отдельная related-description schema пока отсутствует.')}>{item.description}</p>}
             </a>
           ))}
         </div>
       ) : (
         <ul class="direction-related__links" data-v2-reveal>
-          {items.map((item) => (
-            <li>
-              <a class="direction-related__link" href={href(item.href)} data-v2-transition-label={item.title}>
-                <span class="direction-related__link-eyebrow">{item.eyebrow || 'Направление'}</span>
+          {items.map((item, index) => (
+            <li {...item.reorderEditor}>
+              <a class="direction-related__link" href={href(item.href)} data-v2-transition-label={item.title} {...directOrDeclared(item.editor?.href, 'derived', `items[${index}].href`, 'Адрес перехода вычислен из slug связанной записи и route policy; меняется через настройки связанной страницы.')}>
+                <span class="direction-related__link-eyebrow" {...directOrDeclared(item.editor?.eyebrow, 'contextual', `items[${index}].eyebrow`, 'Контекстная метка связи задана renderer-композицией, а не локальным полем карточки.')}>{item.eyebrow || 'Направление'}</span>
                 <span class="direction-related__link-copy">
-                  <strong>{item.title}</strong>
-                  {item.description && <span>{item.description}</span>}
+                  <strong {...directOrDeclared(item.editor?.title, 'contextual', `items[${index}].title`, 'Название связанной записи передано renderer-владельцем без schema binding.')}>{item.title}</strong>
+                  {item.description && <span {...directOrDeclared(item.editor?.description, 'contextual', `items[${index}].description`, 'Пояснение связи задано renderer-композицией; отдельная related-description schema пока отсутствует.')}>{item.description}</span>}
                 </span>
                 <svg viewBox="0 0 16 16" aria-hidden="true">
                   <path d="M4 12 12 4M6 4h6v6"></path>

@@ -1,10 +1,10 @@
 import path from 'node:path';
-import os from 'node:os';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises';
+import { resolveAstroCli } from '../admin-api/astro-cli.mjs';
 
 const root = process.cwd();
-const astroCli = path.join(root, 'node_modules', 'astro', 'astro.js');
+const astroCli = await resolveAstroCli(root);
 const COUNTER_ID = '108664754';
 const TEST_SITE_URL = 'https://preview.smu1-qa.invalid';
 const PRODUCTION_SITE_URL = 'https://production.smu1-qa.invalid';
@@ -203,7 +203,19 @@ const assertProductionArtifact = (artifact) => {
   });
 };
 
-const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'smu1-h3-deploy-qa-'));
+// Astro 7 promotes prerendered assets with rename(), so the output directory
+// must live on the same filesystem as the checkout's .astro working directory.
+const tempBase = path.resolve(
+  process.env.SMU1_DEPLOY_QA_TEMP_ROOT || path.join(root, '.admin-runtime', 'deploy-isolation')
+);
+await mkdir(tempBase, { recursive: true });
+const [repoDevice, tempDevice] = await Promise.all([stat(root), stat(tempBase)]);
+if (repoDevice.dev !== tempDevice.dev) {
+  throw new Error(
+    `SMU1_DEPLOY_QA_TEMP_ROOT must use the checkout filesystem to support Astro asset promotion: ${tempBase}`
+  );
+}
+const tempRoot = await mkdtemp(path.join(tempBase, 'run-'));
 const testRoot = path.join(tempRoot, 'test');
 const productionRoot = path.join(tempRoot, 'production');
 

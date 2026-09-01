@@ -1,7 +1,9 @@
 {
   "title": "Металлоконструкции",
   "slug": "metallokonstruktsii-dlya-biznesa",
-  "shortDescription": "Металлоконструкции под задачу: каркасы, рамы, площадки, лестницы, опорные элементы и нестандартные конструкции.",
+  "shortDescription": "Каркасы, рамы, площадки, лестницы, опорные элементы и конструкции по чертежам.",
+  "homeOrder": 4,
+  "homeImage": "/uploads/img-20250724-134010-1783272745899.jpg",
   "heroKicker": "Изготовление и монтаж",
   "heroTitle": "Металлоконструкции для цехов, складов и других объектов",
   "heroDescription": "Изготавливаем и монтируем каркасы зданий, фермы, рамы, площадки обслуживания, лестницы, опоры, закладные и нестандартные конструкции по чертежам или исходным данным заказчика.",
@@ -16,8 +18,39 @@
   "contactTitle": "Рассчитаем металлоконструкцию для вашего объекта",
   "contactDescription": "Пришлите чертёж, КМ/КМД, эскиз, размеры, фотографии площадки или краткое описание задачи. Уточним состав конструкции, изготовление и монтаж.",
   "contactTelegramLabel": "Получить расчёт",
-  "contactEmailLabel": "Написать на почту",
+  "contactEmailLabel": "Email",
   "contactPhoneLabel": "Позвонить",
+  "directionPresentation": {
+    "hero": {
+      "primaryLabel": "Получить расчёт",
+      "secondaryLabel": "Смотреть выполненный объект",
+      "imageAlt": "Металлический каркас на производственной территории"
+    },
+    "sectionNav": {
+      "label": "Разделы направления",
+      "items": [
+        { "id": "engineering-proof", "label": "Выполненный объект", "order": 10, "isActive": true },
+        { "id": "engineering-tasks", "label": "Что изготавливаем", "order": 20, "isActive": true },
+        { "id": "engineering-scope", "label": "Для каких объектов", "order": 30, "isActive": true },
+        { "id": "engineering-brief", "label": "С чем обратиться", "order": 40, "isActive": true },
+        { "id": "contact", "label": "Получить расчёт", "order": 50, "isActive": true }
+      ]
+    },
+    "types": { "eyebrow": "Виды задач" },
+    "scope": { "eyebrow": "Контекст задачи" },
+    "brief": { "eyebrow": "Для первого обсуждения" },
+    "proof": { "eyebrow": "Выполненный объект", "linkLabel": "Смотреть объект полностью" },
+    "related": {
+      "eyebrow": "Дальше по задаче",
+      "title": "Смежные направления",
+      "items": [
+        { "id": "canopies", "targetCollection": "product-sections", "targetSlug": "navesy-i-kozyrki", "eyebrow": "Смежное направление", "description": "Отдельное направление для навесных конструкций и входных групп.", "order": 10, "isActive": true },
+        { "id": "construction", "targetCollection": "services", "targetSlug": "stroitelstvo-i-remonty", "eyebrow": "Нужен более широкий комплекс?", "description": "Если задача включает не только металлический каркас, но и подготовку площадки, основания, обшивку и другие работы до готового результата, смотрите направление «Строительство и ремонты».", "order": 20, "isActive": true }
+      ]
+    },
+    "contactEyebrow": "Обсудить проект",
+    "contactPhoneChannelLabel": "Основной телефон"
+  },
   "pageBlocks": [
     {
       "type": "cardGrid",

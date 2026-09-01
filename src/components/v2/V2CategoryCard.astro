@@ -2,12 +2,13 @@
 import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import {
-  categoryGalleryImages,
   imageViewStyle,
   isPlaceholderCatalogMedia,
   type ProductCategoryData
 } from './catalogV2Data';
 import V2ResponsiveImage from './V2ResponsiveImage.astro';
+import { adminBinding } from '../../admin/bindings/adminBinding';
+import settings from '../../content/site-settings/global.json';
 
 interface Props {
   category: ProductCategoryData;
@@ -19,15 +20,24 @@ interface Props {
 
 const { category, href, productCount = 0, featured = false, loading = 'lazy' } = Astro.props as Props;
 const rawCategoryImage = category.image?.trim() || '';
-const cardImage = rawCategoryImage && !isPlaceholderCatalogMedia(rawCategoryImage)
-  ? rawCategoryImage
-  : categoryGalleryImages(category)[0] || '';
+const cardImageUsesPrimary = Boolean(rawCategoryImage && !isPlaceholderCatalogMedia(rawCategoryImage));
+const categoryGallery = Array.isArray(category.gallery) ? category.gallery : [];
+const galleryFallbackIndex = categoryGallery.findIndex((item) => {
+  const source = typeof item === 'string' ? item.trim() : item?.src?.trim() || '';
+  return Boolean(source) && !isPlaceholderCatalogMedia(source);
+});
+const galleryFallback = galleryFallbackIndex >= 0 ? categoryGallery[galleryFallbackIndex] : undefined;
+const galleryFallbackSource = typeof galleryFallback === 'string'
+  ? galleryFallback.trim()
+  : galleryFallback?.src?.trim() || '';
+const cardImage = cardImageUsesPrimary ? rawCategoryImage : galleryFallbackSource;
 const hasMedia = Boolean(cardImage);
+const cardCopy = settings.catalogUi.card;
 const productNoun = productCount % 10 === 1 && productCount % 100 !== 11
-  ? 'опубликованное изделие'
+  ? cardCopy.productCountOne
   : [2, 3, 4].includes(productCount % 10) && ![12, 13, 14].includes(productCount % 100)
-    ? 'опубликованных изделия'
-    : 'опубликованных изделий';
+    ? cardCopy.productCountFew
+    : cardCopy.productCountMany;
 const state = productCount > 0 ? 'products' : hasMedia ? 'sparse' : 'minimal';
 const mediaSizes = featured
   ? '(max-width: 560px) calc(100vw - 32px), (max-width: 768px) calc(100vw - 40px), (max-width: 1240px) 66vw, 50vw'
@@ -35,8 +45,42 @@ const mediaSizes = featured
 const stateLabel = productCount > 0
   ? `${productCount} ${productNoun}`
   : hasMedia
-    ? 'Изготовление по задаче'
-    : 'Описание без фотоматериалов';
+    ? cardCopy.sparseLabel
+    : cardCopy.minimalLabel;
+const affectedRoutes = [Astro.url.pathname, href];
+const binding = (fieldPath: string, tool: string, options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'catalog-card', variant: 'category' },
+  owner: { collection: 'product-categories', slug: category.slug }, fieldPath,
+  stableItemId: category.slug, scope: 'shared', tool, affectedRoutes, ...options
+});
+const catalogUiBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'catalog-card', variant: 'category-ui' },
+  owner: { collection: 'site-settings', slug: 'global' }, fieldPath: `catalogUi.card.${fieldPath}`,
+  stableItemId: `${category.slug}-category-card-${fieldPath}`, scope: 'global', tool,
+  affectedRoutes: ['*'], ...options
+});
+const productCountField = productCount % 10 === 1 && productCount % 100 !== 11
+  ? 'productCountOne'
+  : [2, 3, 4].includes(productCount % 10) && ![12, 13, 14].includes(productCount % 100)
+    ? 'productCountFew'
+    : 'productCountMany';
+const stateLabelBinding = productCount > 0
+  ? catalogUiBinding(productCountField, 'short-text', {
+      projection: { kind: 'derived', formula: `productCount (${productCount}) + catalogUi.card.${productCountField}` }
+    })
+  : catalogUiBinding(hasMedia ? 'sparseLabel' : 'minimalLabel');
+const mediaBinding = cardImageUsesPrimary
+  ? binding('image', 'media', { role: 'category-card-media', multiple: false })
+  : galleryFallbackIndex >= 0
+    ? binding(`gallery[${galleryFallbackIndex}]`, 'media', {
+        role: 'category-card-media', multiple: false,
+        projection: {
+          kind: 'fallback',
+          formula: 'category.image when non-placeholder, otherwise first non-placeholder category.gallery item',
+          fallback: 'image'
+        }
+      })
+    : binding('image', 'media', { role: 'missing-category-card-media', multiple: false });
 ---
 
 <a
@@ -46,7 +90,7 @@ const stateLabel = productCount > 0
   data-v2-category-state={state}
   data-v2-reveal
 >
-  <div class="v2-category-card__media" data-v2-media>
+  <div class="v2-category-card__media" data-v2-media {...mediaBinding}>
     {cardImage ? (
       <V2ResponsiveImage
         src={cardImage}
@@ -60,13 +104,13 @@ const stateLabel = productCount > 0
       />
     ) : null}
     <div class="v2-media-empty" aria-hidden={hasMedia}>
-      <p>Фотоматериалы не указаны</p>
+      <p {...catalogUiBinding('emptyMediaLabel')}>{cardCopy.emptyMediaLabel}</p>
     </div>
   </div>
   <div class="v2-category-card__body">
-    <p>{stateLabel}</p>
-    <h3>{category.title}</h3>
-    <span class="v2-category-card__description">{category.shortDescription}</span>
-    <span class="v2-card-link">Открыть категорию</span>
+    <p {...stateLabelBinding}>{stateLabel}</p>
+    <h3 {...binding('title', 'heading')}>{category.title}</h3>
+    <span class="v2-category-card__description" {...binding('shortDescription', 'long-text')}>{category.shortDescription}</span>
+    <span class="v2-card-link" {...catalogUiBinding('ctaLabel', 'link-label')}>{cardCopy.ctaLabel}</span>
   </div>
 </a>

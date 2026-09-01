@@ -1,4 +1,6 @@
 ---
+import { adminDisposition } from '../../../admin/bindings/adminBinding';
+
 interface TaskItem {
   title: string;
   text?: string;
@@ -9,9 +11,25 @@ interface Props {
   title: string;
   description: string;
   items: TaskItem[];
+  titleBinding?: Record<string, string>;
+  descriptionBinding?: Record<string, string>;
+  itemsBinding?: Record<string, string>;
+  eyebrowBinding?: Record<string, string>;
+  editorSource?: string;
 }
 
 const { eyebrow = 'Виды задач', title, description, items } = Astro.props as Props;
+const titleBinding = Astro.props.titleBinding ?? {};
+const descriptionBinding = Astro.props.descriptionBinding ?? {};
+const itemsBinding = Astro.props.itemsBinding ?? {};
+const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
+const editorSource = Astro.props.editorSource ?? 'src/components/v2/engineering/EngineeringDirectionTasks.astro#Astro.props';
+const directOrDeclared = (attributes: Record<string, string>, fragment: string, reason: string) =>
+  Object.keys(attributes).length > 0
+    ? attributes
+    : adminDisposition(Astro.url, {
+        kind: 'contextual', reason, source: `${editorSource}#${fragment}`, tool: 'page-settings'
+      });
 ---
 
 {items.length > 0 && (
@@ -19,12 +37,12 @@ const { eyebrow = 'Виды задач', title, description, items } = Astro.pro
     <div class="hv2-shell">
       <header class="engineering-tasks__heading hv2-grid" data-v2-reveal>
         <div>
-          <p class="hv2-eyebrow">{eyebrow}</p>
-          <h2 id="engineering-tasks-title">{title}</h2>
+          <p class="hv2-eyebrow" {...directOrDeclared(eyebrowBinding, 'eyebrow', 'Надзаголовок является структурной меткой renderer-секции; отдельного бизнес-поля у текущего блока нет.')}>{eyebrow}</p>
+          <h2 id="engineering-tasks-title" {...directOrDeclared(titleBinding, 'title', 'Заголовок передан renderer-владельцем без schema binding; измените конфигурацию исходного блока.')}>{title}</h2>
         </div>
-        <p>{description}</p>
+        <p {...directOrDeclared(descriptionBinding, 'description', 'Описание передано renderer-владельцем без schema binding; измените конфигурацию исходного блока.')}>{description}</p>
       </header>
-      <ul class="engineering-tasks__list">
+      <ul class="engineering-tasks__list" {...directOrDeclared(itemsBinding, 'items', 'Карточки переданы renderer-владельцем без schema binding; измените список исходного блока.')}>
         {items.map((item) => (
           <li data-v2-reveal>
             <div>

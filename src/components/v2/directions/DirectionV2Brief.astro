@@ -6,6 +6,10 @@ interface Props {
   items: string[];
   variant?: 'engineering' | 'visual';
   integrated?: boolean;
+  titleBinding?: Record<string, string>;
+  descriptionBinding?: Record<string, string>;
+  itemsBinding?: Record<string, string>;
+  eyebrowBinding?: Record<string, string>;
 }
 
 const {
@@ -16,6 +20,10 @@ const {
   variant = 'engineering',
   integrated = false
 } = Astro.props as Props;
+const titleBinding = Astro.props.titleBinding ?? {};
+const descriptionBinding = Astro.props.descriptionBinding ?? {};
+const itemsBinding = Astro.props.itemsBinding ?? {};
+const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
 ---
 
 {items.length > 0 && (
@@ -31,11 +39,11 @@ const {
   >
     <div class="hv2-shell hv2-grid direction-brief__grid">
       <header class="direction-brief__heading" data-v2-reveal>
-        <p class="hv2-eyebrow">{eyebrow}</p>
-        <h2 id="direction-brief-title">{title}</h2>
-        <p>{description}</p>
+        <p class="hv2-eyebrow" {...eyebrowBinding}>{eyebrow}</p>
+        <h2 id="direction-brief-title" {...titleBinding}>{title}</h2>
+        <p {...descriptionBinding}>{description}</p>
       </header>
-      <ul class="direction-brief__items" data-v2-reveal>
+      <ul class="direction-brief__items" data-v2-reveal {...itemsBinding}>
         {items.map((item) => (
           <li><strong>{item}</strong></li>
         ))}

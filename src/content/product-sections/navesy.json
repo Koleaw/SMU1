@@ -1,9 +1,12 @@
 {
-  "title": "Навесы",
+  "title": "Навесы и козырьки",
   "slug": "navesy-i-kozyrki",
-  "shortDescription": "Навесы для входных групп, зон ожидания, велопарковок, контейнерных площадок и благоустройства территорий.",
-  "heroTitle": "Навесы под объект",
-  "heroDescription": "Проектируем и изготавливаем навесы для входных групп, зон ожидания, велопарковок, контейнерных площадок, хозяйственных зон и общественных пространств под размеры объекта и условия эксплуатации.",
+  "shortDescription": "Для входных групп, зон ожидания, велопарковок и хозяйственных площадок.",
+  "homeOrder": 3,
+  "homeImage": "",
+  "heroKicker": "Навесы и козырьки",
+  "heroTitle": "Навесы и козырьки под объект",
+  "heroDescription": "Проектируем и изготавливаем навесы и козырьки для входных групп, зон ожидания, велопарковок, контейнерных площадок, хозяйственных зон и общественных пространств под размеры и условия объекта.",
   "order": 3,
   "showOnHome": true,
   "isActive": true,
@@ -12,6 +15,59 @@
   "placeholderLabel": "Рендеры навесов будут добавлены позже",
   "seoTitle": "Навесы под заказ для объектов и благоустройства",
   "seoDescription": "Навесы для входных групп, зон ожидания, велопарковок, контейнерных площадок и общественных пространств под размеры объекта.",
+  "contactTitle": "Обсудим навес или козырёк для вашего объекта",
+  "contactDescription": "Опишите задачу и приложите имеющиеся исходные материалы — обсудим решение и подготовим расчёт.",
+  "contactTelegramLabel": "Получить расчёт",
+  "contactEmailLabel": "Email",
+  "contactPhoneLabel": "Обсудить задачу",
+  "directionPresentation": {
+    "hero": {
+      "primaryLabel": "Получить расчёт",
+      "secondaryLabel": "Обсудить задачу",
+      "imageAlt": "Навесы и козырьки"
+    },
+    "sectionNav": {
+      "label": "Разделы направления",
+      "items": [
+        { "id": "direction-gallery", "label": "Примеры", "order": 10, "isActive": true },
+        { "id": "direction-types", "label": "Что изготавливаем", "order": 20, "isActive": true },
+        { "id": "direction-scope", "label": "Для каких объектов", "order": 30, "isActive": true },
+        { "id": "direction-brief", "label": "Исходные данные", "order": 40, "isActive": true },
+        { "id": "contact", "label": "Обсудить задачу", "order": 50, "isActive": true }
+      ]
+    },
+    "gallery": {
+      "eyebrow": "Визуальные примеры",
+      "title": "Примеры навесов и козырьков",
+      "description": "Визуальные примеры из связанных карточек навесов.",
+      "galleryTitle": "Навесы и козырьки — примеры",
+      "caption": "Изображения сохранены в исходном порядке опубликованных галерей."
+    },
+    "types": { "eyebrow": "Структура направления", "title": "Какие навесы и козырьки делаем" },
+    "scope": { "eyebrow": "Контекст объекта" },
+    "brief": {
+      "eyebrow": "Для первого обсуждения",
+      "title": "Что можно прислать",
+      "description": "Для первоначального обсуждения отправьте те исходные материалы, которые уже есть.",
+      "items": [
+        { "id": "photo", "label": "Фотография", "order": 10, "isActive": true },
+        { "id": "dimensions", "label": "Размеры", "order": 20, "isActive": true },
+        { "id": "sketch", "label": "Эскиз", "order": 30, "isActive": true },
+        { "id": "brief", "label": "ТЗ", "order": 40, "isActive": true }
+      ]
+    },
+    "related": {
+      "eyebrow": "Дальше по задаче",
+      "title": "Связанные направления",
+      "items": [
+        { "id": "catalog-navesy", "targetCollection": "product-categories", "targetSlug": "navesy", "eyebrow": "Каталог изделий", "title": "Навесы в каталоге", "order": 10, "isActive": true },
+        { "id": "fences", "targetCollection": "product-sections", "targetSlug": "ograzhdeniya-i-zabory", "eyebrow": "Конструкции для территории", "order": 20, "isActive": true },
+        { "id": "landscaping", "targetCollection": "services", "targetSlug": "blagoustroystvo-territoriy", "eyebrow": "Комплексная задача", "order": 30, "isActive": true }
+      ]
+    },
+    "contactEyebrow": "Обсудить проект",
+    "contactPhoneChannelLabel": "Основной телефон"
+  },
   "pageBlocks": [
     {
       "type": "cardGrid",

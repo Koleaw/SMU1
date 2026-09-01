@@ -68,10 +68,10 @@ const options = {
   manifestPath: resolve(argumentValue('--manifest') || DEFAULT_MANIFEST_PATH),
   basePath: argumentValue('--base') || process.env.BASE_PATH || '',
   reportPath: argumentValue('--report') ? resolve(argumentValue('--report')) : '',
-  expectedHtml: Number.parseInt(argumentValue('--expected-html') || '228', 10),
+  expectedHtml: Number.parseInt(argumentValue('--expected-html') || '229', 10),
   expectedProduction: Number.parseInt(argumentValue('--expected-production') || '111', 10),
   expectedDesignLab: Number.parseInt(argumentValue('--expected-design-lab') || '112', 10),
-  expectedAdmin: Number.parseInt(argumentValue('--expected-admin') || '5', 10),
+  expectedAdmin: Number.parseInt(argumentValue('--expected-admin') || '6', 10),
   json: hasFlag('--json')
 };
 
@@ -83,10 +83,10 @@ if (options.help) {
   process.stdout.write(`  --public=<path>               Canonical public tree (default: ./public)\n`);
   process.stdout.write(`  --manifest=<path>             Production media manifest\n`);
   process.stdout.write(`  --base=/SMU1/                 Optional explicit Pages BASE_PATH\n`);
-  process.stdout.write(`  --expected-html=228           Total emitted HTML\n`);
+  process.stdout.write(`  --expected-html=229           Total emitted HTML\n`);
   process.stdout.write(`  --expected-production=111     Public/production HTML\n`);
   process.stdout.write(`  --expected-design-lab=112     Design Lab HTML\n`);
-  process.stdout.write(`  --expected-admin=5            Admin HTML\n`);
+  process.stdout.write(`  --expected-admin=6            Inert admin compatibility HTML\n`);
   process.stdout.write(`  --report=<path>               Optional full JSON report\n`);
   process.stdout.write(`  --json                        Print full JSON instead of the concise summary\n\n`);
   process.stdout.write(`This command is read-only. Artifact pruning is a separate, explicitly applied step.\n`);

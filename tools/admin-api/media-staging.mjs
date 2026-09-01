@@ -5,20 +5,23 @@ import path from 'node:path';
 import {
   canonicalMediaFilename,
   canonicalPublicMediaPath,
+  preparePublicMediaUpload,
   validateMediaUpload
 } from './media-validation.mjs';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MIB = 1024 * 1024;
+const STAGING_RASTER_FORMATS = new Set(['jpeg', 'png', 'webp']);
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{2,127}$/u;
 const LEASE_ID_RE = /^[a-f0-9]{64}$/u;
-const BLOB_FILE_RE = /^([a-f0-9]{64})(\.(?:jpg|png|webp|mp4|webm))$/u;
+const BLOB_FILE_RE = /^([a-f0-9]{64})(\.(?:jpg|png|webp))$/u;
 const TEMP_FILE_RE = /^\.smu1-[1-9][0-9]*-[a-f0-9]{24}\.tmp$/u;
 
 export const DEFAULT_STAGING_TTL_MS = 7 * DAY_MS;
 export const DEFAULT_PROMOTED_RETENTION_MS = DAY_MS;
 export const DEFAULT_MAX_STAGED_BYTES = 256 * MIB;
 export const DEFAULT_MAX_BATCH_ITEMS = 100;
+export const DEFAULT_MAX_CONCURRENT_PREPARES = 2;
 export const DEFAULT_TEMP_RETENTION_MS = 15 * 60 * 1000;
 
 export class MediaStagingError extends Error {
@@ -29,6 +32,15 @@ export class MediaStagingError extends Error {
     this.status = options.status ?? 400;
     if (options.details !== undefined) this.details = options.details;
   }
+}
+
+function assertStagingRaster(validation) {
+  if (validation?.kind === 'raster' && STAGING_RASTER_FORMATS.has(validation?.format)) return validation;
+  throw new MediaStagingError(
+    'MEDIA_UPLOAD_RASTER_ONLY',
+    'Новые видео и другие файлы нельзя помещать в staging. Для новой загрузки разрешены только JPEG, PNG и WebP.',
+    { status: 415, details: { allowedFormats: [...STAGING_RASTER_FORMATS] } }
+  );
 }
 
 export function assertMediaStagingId(value, label = 'id') {
@@ -271,17 +283,40 @@ export function createMediaStagingService(options = {}) {
   const promotedRetentionMs = safePositiveInteger(options.promotedRetentionMs ?? DEFAULT_PROMOTED_RETENTION_MS, 'promotedRetentionMs', 30 * DAY_MS);
   const maxTotalBytes = safePositiveInteger(options.maxTotalBytes ?? DEFAULT_MAX_STAGED_BYTES, 'maxTotalBytes');
   const maxBatchItems = safePositiveInteger(options.maxBatchItems ?? DEFAULT_MAX_BATCH_ITEMS, 'maxBatchItems', 10_000);
+  const maxConcurrentPrepares = safePositiveInteger(
+    options.maxConcurrentPrepares ?? DEFAULT_MAX_CONCURRENT_PREPARES,
+    'maxConcurrentPrepares',
+    16
+  );
   const tempRetentionMs = safePositiveInteger(options.tempRetentionMs ?? DEFAULT_TEMP_RETENTION_MS, 'tempRetentionMs', DAY_MS);
   const now = options.now ?? Date.now;
   const randomBytes = options.randomBytes ?? nodeRandomBytes;
   const validator = options.validator ?? validateMediaUpload;
+  const preparer = options.preparer ?? (options.validator ? null : preparePublicMediaUpload);
   let initialized = false;
   let operationTail = Promise.resolve();
+  let activePrepares = 0;
+  const prepareWaiters = [];
 
   const exclusive = (work) => {
     const result = operationTail.then(work, work);
     operationTail = result.catch(() => {});
     return result;
+  };
+
+  const boundedPrepare = async (work) => {
+    if (activePrepares >= maxConcurrentPrepares) {
+      await new Promise((resolve) => prepareWaiters.push(resolve));
+    } else {
+      activePrepares += 1;
+    }
+    try {
+      return await work();
+    } finally {
+      const next = prepareWaiters.shift();
+      if (next) next();
+      else activePrepares -= 1;
+    }
   };
 
   async function init() {
@@ -554,13 +589,28 @@ export function createMediaStagingService(options = {}) {
     if (!Number.isSafeInteger(originalIndex) || originalIndex < 0 || originalIndex > 1_000_000) {
       throw new MediaStagingError('ORIGINAL_INDEX_INVALID', 'Некорректный originalIndex.');
     }
-    const buffer = Buffer.isBuffer(input.buffer) ? input.buffer : Buffer.from(input.buffer ?? []);
-    const validation = await validator({
-      buffer,
-      filename: input.filename,
-      declaredMime: input.declaredMime,
-      limits: input.limits ?? options.limits
+    const preparedMedia = await boundedPrepare(async () => {
+      let buffer = Buffer.isBuffer(input.buffer) ? input.buffer : Buffer.from(input.buffer ?? []);
+      const mediaOptions = {
+        buffer,
+        filename: input.filename,
+        declaredMime: input.declaredMime,
+        limits: input.limits ?? options.limits
+      };
+      let validation;
+      if (preparer) {
+        const prepared = await preparer(mediaOptions);
+        buffer = Buffer.isBuffer(prepared?.buffer) ? prepared.buffer : Buffer.from(prepared?.buffer ?? []);
+        validation = prepared?.validation;
+        if (!validation || !buffer.length) {
+          throw new MediaStagingError('STAGING_PREPARATION_INVALID', 'Подготовка публичного медиа вернула некорректный результат.');
+        }
+      } else {
+        validation = await validator(mediaOptions);
+      }
+      return { buffer, validation: assertStagingRaster(validation) };
     });
+    const { buffer, validation } = preparedMedia;
 
     return exclusive(async () => {
       await init();

@@ -13,6 +13,7 @@
   "email": "smu1.kurgan@yandex.ru",
   "city": "Курган",
   "address": "ул. Промышленная, 17, Курган",
+  "brandLogo": "/assets/brand/logo_scan_cropped.svg",
   "regions": [
     "Курган",
     "Курганская область",
@@ -20,5 +21,493 @@
     "по согласованию — соседние регионы"
   ],
   "vacanciesEmptyTitle": "Сейчас активных вакансий нет",
-  "vacanciesEmptyText": "Следите за обновлениями: как только откроем набор, разместим вакансии на этой странице."
+  "vacanciesEmptyText": "Следите за обновлениями: как только откроем набор, разместим вакансии на этой странице.",
+  "footerDisclaimer": "Информация на сайте носит ознакомительный характер и не является публичной офертой.",
+  "copyrightLabel": "© ООО «СМУ 1», 2026",
+  "shellLabels": {
+    "productsGroup": "Продукция",
+    "productsMenuEyebrow": "Продукция и конструкции",
+    "companyMenu": "Компания",
+    "workAndCompanyGroup": "Работа и компания",
+    "directionsGroup": "Направления",
+    "directContactGroup": "Прямая связь",
+    "secondaryPhoneSuffix": "дополнительный телефон",
+    "telegramSuffix": "Telegram",
+    "defaultCtaLabel": "Получить расчёт",
+    "catalogRequestCtaLabel": "Запросить расчёт"
+  },
+  "cookieNotice": {
+    "message": "Мы используем cookies и сервисы аналитики для улучшения работы сайта. Продолжая пользоваться сайтом, вы соглашаетесь с политикой конфиденциальности.",
+    "privacyLabel": "Политика конфиденциальности",
+    "privacyHref": "/politika-konfidencialnosti/",
+    "acceptLabel": "Понятно",
+    "settingsLabel": "Настройки cookies",
+    "dialogTitle": "Настройки cookies",
+    "dialogDescription": "Аналитические cookies на этой странице не используются.",
+    "closeLabel": "Закрыть"
+  },
+  "productUi": {
+    "cardPremiumLabel": "Решение для объекта",
+    "cardMaterialsMissingLabel": "Материалы не указаны",
+    "cardCtaLabel": "Подробнее",
+    "standardHeroPrimaryLabel": "Запросить расчёт",
+    "standardHeroSecondaryLabel": "Написать в Telegram",
+    "standardContactEyebrow": "Индивидуальное изготовление",
+    "standardContactPrimaryLabel": "Запросить расчёт",
+    "standardContactSecondaryLabel": "Обсудить задачу",
+    "standardDefaultCustomTitle": "Индивидуальное исполнение",
+    "standardDefaultRegularTitle": "Рассчитать стоимость изделия",
+    "standardDefaultDescription": "Пришлите задачу, размеры, количество и место установки по телефону, в Telegram или по email.",
+    "standardPriceLabel": "Стоимость",
+    "standardSectionNavLabel": "Разделы изделия",
+    "standardNavOverviewLabel": "Обзор",
+    "standardNavDescriptionLabel": "Описание",
+    "standardNavSpecificationsLabel": "Характеристики",
+    "standardNavDeliveryLabel": "Доставка",
+    "standardNavRelatedLabel": "Другие изделия",
+    "standardNavContactLabel": "Получить расчёт",
+    "standardDescriptionEyebrow": "О модели",
+    "standardDescriptionTitle": "Описание",
+    "standardSpecificationsEyebrow": "Технические данные",
+    "standardSpecificationsTitle": "Размеры и характеристики",
+    "standardMaterialsEyebrow": "Состав",
+    "standardMaterialsTitle": "Материалы",
+    "standardColorsEyebrow": "Варианты",
+    "standardColorsTitle": "Цвета и покрытие",
+    "standardCustomizationEyebrow": "Под задачу",
+    "standardCustomizationTitle": "Что можно изменить",
+    "standardDeliveryEyebrow": "Получение изделия",
+    "standardDeliveryTitle": "Доставка",
+    "standardDeliveryLinkLabel": "Уточнить условия",
+    "standardRelatedEyebrow": "Другие изделия",
+    "standardRelatedCategoryTitle": "Другие изделия категории",
+    "standardRelatedSectionTitle": "Другие изделия раздела",
+    "standardRelatedLinkLabel": "Все товары категории",
+    "premiumHeroPrimaryLabel": "Обсудить решение",
+    "premiumHeroSecondaryLabel": "Написать в Telegram",
+    "premiumContactEyebrow": "Решение для объекта",
+    "premiumContactPrimaryLabel": "Обсудить решение",
+    "premiumContactSecondaryLabel": "Отправить исходные данные",
+    "premiumDefaultTitle": "Обсудить решение для объекта",
+    "premiumDefaultDescription": "Пришлите размеры площадки, задачу и имеющиеся исходные материалы — уточним исполнение и подготовим расчёт.",
+    "premiumDefaultSolutionKicker": "Инженерное решение",
+    "premiumPriceLabel": "Формат расчёта",
+    "premiumSectionNavLabel": "Разделы инженерного решения",
+    "premiumNavSolutionLabel": "Решение",
+    "premiumNavApplicationsLabel": "Применение",
+    "premiumNavGalleryLabel": "Галерея",
+    "premiumNavAdaptationLabel": "Адаптация",
+    "premiumNavVariantsLabel": "Варианты",
+    "premiumNavTechnicalLabel": "Конструктив",
+    "premiumNavDeliveryLabel": "Доставка",
+    "premiumNavRelatedLabel": "Другие решения",
+    "premiumNavContactLabel": "Обсудить проект",
+    "premiumSolutionEyebrow": "Что это за решение",
+    "premiumApplicationsEyebrow": "Сценарии",
+    "premiumApplicationsTitle": "Где применяется",
+    "premiumGalleryEyebrow": "Масштаб и детали",
+    "premiumGalleryTitle": "Галерея решения",
+    "premiumAdaptationEyebrow": "Под конкретный объект",
+    "premiumAdaptationTitle": "Что можно адаптировать",
+    "premiumVariantsEyebrow": "Комплектация",
+    "premiumVariantsTitle": "Варианты исполнения",
+    "premiumTechnicalEyebrow": "Инженерная основа",
+    "premiumTechnicalTitle": "Материалы и конструктив",
+    "premiumSpecificationsTitle": "Размеры и характеристики",
+    "premiumMaterialsTitle": "Материалы",
+    "premiumColorsTitle": "Покрытие и цвет",
+    "premiumDeliveryEyebrow": "Реализация",
+    "premiumDeliveryTitle": "Доставка и монтаж",
+    "premiumRelatedEyebrow": "Продолжить подбор",
+    "premiumRelatedTitle": "Другие изделия и решения",
+    "premiumRelatedLinkLabel": "Все товары категории"
+  },
+  "catalogUi": {
+    "shared": {
+      "homeBreadcrumbLabel": "Главная",
+      "phoneChannelLabel": "Основной телефон",
+      "telegramChannelLabel": "Telegram",
+      "emailChannelLabel": "Email"
+    },
+    "card": {
+      "productCountOne": "опубликованное изделие",
+      "productCountFew": "опубликованных изделия",
+      "productCountMany": "опубликованных изделий",
+      "sparseLabel": "Изготовление по задаче",
+      "minimalLabel": "Описание без фотоматериалов",
+      "emptyMediaLabel": "Фотоматериалы не указаны",
+      "ctaLabel": "Открыть категорию"
+    },
+    "hub": {
+      "heroKicker": "Каталог изделий",
+      "heroPrimaryLabel": "Выбрать категорию",
+      "heroSecondaryLabel": "Обсудить задачу",
+      "categoryCountSuffix": "категорий",
+      "gridEyebrow": "Полный ассортимент",
+      "gridTitle": "Выберите тип изделия",
+      "gridDescription": "Категории собраны по типу изделия. Внутри — доступные модели или формат изготовления по задаче.",
+      "emptyTitle": "Категории пока не опубликованы",
+      "emptyDescription": "Можно обсудить изделие по фотографии, размерам, эскизу, чертежу или техническому заданию.",
+      "customEyebrow": "Индивидуальная конструкция",
+      "customDefaultTitle": "Типовое решение не закрывает задачу?",
+      "customDefaultDescription": "Передайте фотографию, размеры, эскиз, чертёж или техническое задание для обсуждения изделия под объект.",
+      "customLinkLabel": "Подробнее об индивидуальном изготовлении",
+      "contactEyebrow": "Прямая связь",
+      "contactDefaultTitle": "Обсудим изделие и подготовим расчёт",
+      "contactDefaultDescription": "Пришлите описание задачи, количество, размеры или материалы проекта удобным способом.",
+      "contactPrimaryLabel": "Получить расчёт",
+      "contactSecondaryLabel": "Обсудить задачу"
+    },
+    "category": {
+      "heroKicker": "Категория изделий",
+      "productCountOne": "изделие",
+      "productCountFew": "изделия",
+      "productCountMany": "изделий",
+      "sparseCountLabel": "Изготовление по задаче",
+      "heroProductsPrimaryLabel": "Смотреть изделия",
+      "heroSparsePrimaryLabel": "Обсудить задачу",
+      "heroProductsSecondaryLabel": "Получить расчёт",
+      "heroSparseSecondaryPrefix": "Все ",
+      "sectionNavLabel": "Разделы категории",
+      "navProductsLabel": "Изделия",
+      "navExamplesLabel": "Примеры",
+      "navCustomLabel": "По вашей задаче",
+      "navContactLabel": "Получить расчёт",
+      "listEyebrow": "Каталог категории",
+      "listTitle": "Все опубликованные изделия",
+      "listDescription": "Выберите модель, чтобы посмотреть фотографии, характеристики и запросить расчёт.",
+      "galleryEyebrow": "Материалы категории",
+      "galleryTitle": "Примеры решений",
+      "customEyebrow": "Вне типовой линейки",
+      "customTitle": "Решение под конкретный объект",
+      "customDescription": "Для обсуждения можно прислать фотографию, размеры, эскиз, чертёж или техническое задание.",
+      "customLinkLabel": "Подробнее об индивидуальном изготовлении",
+      "contactEyebrow": "Прямая связь",
+      "contactTitle": "Подберём изделие или обсудим конструкцию по задаче",
+      "contactDefaultDescription": "Для расчёта пришлите размеры, количество и условия установки.",
+      "contactPrimaryLabel": "Получить расчёт",
+      "contactSecondaryLabel": "Обсудить задачу"
+    },
+    "sparse": {
+      "galleryTitle": "Примеры решений",
+      "eyebrow": "Изготовление по задаче",
+      "title": "Что можно прислать для расчёта",
+      "summary": "Конструкцию можно рассчитать по вашим вводным.",
+      "materialsLabel": "Материалы для расчёта",
+      "materials": [
+        { "id": "dimensions", "label": "размеры и необходимое количество;", "order": 10, "isActive": true },
+        { "id": "place-photo", "label": "фотографию места установки;", "order": 20, "isActive": true },
+        { "id": "drawing", "label": "эскиз, чертёж или техническое задание.", "order": 30, "isActive": true }
+      ],
+      "sectionLinkPrefix": "Все направления:",
+      "contactEyebrow": "Прямая связь",
+      "contactTitle": "Обсудим конструкцию по вашим вводным",
+      "contactDefaultDescription": "Пришлите размеры, количество, фотографию места установки, эскиз или техническое задание.",
+      "contactPrimaryLabel": "Обсудить задачу",
+      "contactSecondaryLabel": ""
+    }
+  },
+  "projectUi": {
+    "homeBreadcrumbLabel": "Главная",
+    "archiveBreadcrumbLabel": "Выполненные объекты",
+    "archiveCardCtaLabel": "Смотреть объект",
+    "detailDefaultEyebrow": "Выполненный объект",
+    "detailArchiveBackLabel": "Все объекты",
+    "detailSectionNavLabel": "Разделы объекта",
+    "detailNavOverviewLabel": "Обзор",
+    "detailNavWorkLabel": "Что выполнено",
+    "detailNavFactsLabel": "Сведения",
+    "detailNavGalleryLabel": "Фотографии",
+    "detailNavDirectionsLabel": "Направления",
+    "detailNavContactLabel": "Обсудить задачу",
+    "detailWorkTitle": "Что было выполнено",
+    "detailFactsEyebrow": "Сведения об объекте",
+    "detailFactsTitle": "По опубликованным данным",
+    "detailFactSummaryLabel": "Об объекте",
+    "detailFactTaskLabel": "Задача",
+    "detailFactWorkTypesLabel": "Виды работ",
+    "detailFactScopeLabel": "Объём работ",
+    "detailFactMaterialsLabel": "Материалы",
+    "detailFactFeaturesLabel": "Особенности объекта",
+    "detailGalleryEyebrow": "Фотографии объекта",
+    "detailGalleryTitle": "Объект в кадрах",
+    "detailDirectionsEyebrow": "Связанные направления",
+    "detailDirectionsTitle": "Продолжить по задаче",
+    "detailPreviousLabel": "Предыдущий объект",
+    "detailNextLabel": "Следующий объект",
+    "detailContactEyebrow": "Прямая связь",
+    "detailContactTitle": "Обсудим похожую задачу",
+    "detailContactDescription": "Кратко опишите объект и имеющиеся исходные материалы — обсудим задачу и подготовим расчёт.",
+    "detailContactPrimaryLabel": "Написать в Telegram",
+    "detailContactSecondaryLabel": "Все выполненные объекты"
+  },
+  "contactsPage": {
+    "homeBreadcrumbLabel": "Главная",
+    "breadcrumbLabel": "Контакты",
+    "eyebrow": "Связь",
+    "title": "Контакты",
+    "description": "Позвоните или напишите в Telegram либо на электронную почту, чтобы обсудить изделие, конструкцию или работы на объекте.",
+    "seoTitle": "Контакты — СМУ-1",
+    "seoDescription": "Контакты СМУ-1: телефоны, Telegram, электронная почта и адрес.",
+    "shellCtaLabel": "Связаться",
+    "briefEyebrow": "Начать обсуждение",
+    "briefTitle": "Что можно прислать",
+    "briefDescription": "Достаточно доступных материалов: недостающие вводные можно уточнить в разговоре.",
+    "ctaEyebrow": "Обсудить задачу",
+    "ctaTitle": "Свяжемся и уточним исходные данные",
+    "primaryLabel": "Написать в Telegram",
+    "secondaryLabel": "Позвонить",
+    "primaryPhoneLabel": "Основной телефон",
+    "secondaryPhoneLabel": "Дополнительный телефон",
+    "telegramCardLabel": "Telegram",
+    "emailCardLabel": "Электронная почта",
+    "addressEyebrow": "Адрес",
+    "addressDescription": "Объект СМУ-1 отмечен на действующей карте.",
+    "regionsLabel": "География:",
+    "ratingTitle": "Рейтинг СМУ-1 в Яндекс Бизнес",
+    "mapLinkLabel": "Открыть в Яндекс Картах",
+    "requisitesEyebrow": "Реквизиты",
+    "innLabel": "ИНН",
+    "kppLabel": "КПП",
+    "ogrnLabel": "ОГРН",
+    "aboutLabel": "О компании",
+    "vacanciesLabel": "Вакансии"
+  },
+  "vacanciesPage": {
+    "homeBreadcrumbLabel": "Главная",
+    "breadcrumbLabel": "Вакансии",
+    "eyebrow": "Работа в СМУ-1",
+    "title": "Вакансии",
+    "description": "Здесь размещаются актуальные вакансии СМУ-1. В списке показаны только открытые позиции.",
+    "seoTitle": "Вакансии — СМУ-1",
+    "seoDescription": "Актуальные вакансии СМУ-1.",
+    "shellCtaLabel": "Связаться",
+    "primaryLabel": "Подробнее",
+    "cityLabel": "Город",
+    "employmentTypeLabel": "Занятость",
+    "salaryLabel": "Оплата",
+    "openPositionLabel": "Открытая позиция",
+    "emptyEyebrow": "Вакансии",
+    "relatedEyebrow": "Узнать больше о СМУ-1",
+    "relatedCompanyLabel": "О компании",
+    "relatedContactsLabel": "Контакты"
+  },
+  "vacancyDetailPage": {
+    "homeBreadcrumbLabel": "Главная",
+    "archiveBreadcrumbLabel": "Вакансии",
+    "eyebrow": "Вакансия",
+    "title": "Вакансия",
+    "description": "Условия и требования открытой позиции.",
+    "shellCtaLabel": "Откликнуться",
+    "ctaEyebrow": "Откликнуться",
+    "ctaTitle": "Свяжитесь удобным способом",
+    "primaryLabel": "Все вакансии",
+    "responsibilitiesLabel": "Обязанности",
+    "requirementsLabel": "Требования",
+    "conditionsLabel": "Условия",
+    "cityLabel": "Город",
+    "employmentTypeLabel": "Занятость",
+    "salaryLabel": "Оплата",
+    "emailChannelLabel": "Email",
+    "phoneChannelLabel": "Телефон",
+    "telegramChannelLabel": "Telegram",
+    "relatedEyebrow": "Узнать больше о СМУ-1",
+    "relatedCompanyLabel": "О компании",
+    "relatedContactsLabel": "Контакты"
+  },
+  "companyPage": {
+    "homeBreadcrumbLabel": "Главная",
+    "breadcrumbLabel": "О компании",
+    "companyLabel": "Компания",
+    "cityLabel": "Город",
+    "registrationLabel": "Регистрация",
+    "regionsLabel": "География",
+    "contactsLabel": "Контакты",
+    "privacyLabel": "Политика конфиденциальности",
+    "innLabel": "ИНН",
+    "kppLabel": "КПП",
+    "ogrnLabel": "ОГРН",
+    "registrationDateLabel": "Дата регистрации",
+    "legalAddressLabel": "Юридический адрес",
+    "contactAddressLabel": "Контактный адрес"
+  },
+  "notFoundPage": {
+    "eyebrow": "Навигация",
+    "title": "Страница не найдена",
+    "description": "Возможно, адрес изменился или в ссылке есть ошибка. Вернитесь на главную либо откройте список направлений.",
+    "ctaEyebrow": "Нужна помощь?",
+    "ctaTitle": "Свяжитесь с СМУ-1",
+    "primaryLabel": "На главную",
+    "secondaryLabel": "Посмотреть направления",
+    "seoTitle": "Страница не найдена — СМУ-1",
+    "seoDescription": "Запрошенная страница не найдена. Перейдите на главную, к направлениям или свяжитесь с СМУ-1.",
+    "shellCtaLabel": "Связаться",
+    "primaryHref": "/",
+    "secondaryHref": "/#directions",
+    "phoneLabel": "Телефон",
+    "telegramLabel": "Telegram",
+    "emailLabel": "Email"
+  },
+  "privacyPolicy": {
+    "homeBreadcrumbLabel": "Главная",
+    "shellCtaLabel": "Связаться",
+    "title": "Политика конфиденциальности и обработки персональных данных",
+    "seoTitle": "Политика конфиденциальности и обработки персональных данных — СМУ-1",
+    "seoDescription": "Политика конфиденциальности и обработки персональных данных ООО «СМУ 1».",
+    "documentLabel": "Юридический документ",
+    "documentDescription": "Политика конфиденциальности и обработки персональных данных ООО «СМУ 1».",
+    "revisionDate": "25.04.2026",
+    "confirmedAgainstGlobalAt": "2026-04-25",
+    "operatorHeading": "Оператор:",
+    "operatorFullName": "Общество с ограниченной ответственностью «СМУ 1»",
+    "sections": [
+      {
+        "id": "general", "heading": "1. Общие положения", "order": 10, "isActive": true,
+        "blocks": [
+          { "id": "purpose", "type": "paragraph", "text": "Настоящая Политика конфиденциальности и обработки персональных данных определяет порядок обработки и защиты персональных данных, получаемых Обществом с ограниченной ответственностью «СМУ 1» при использовании посетителями сайта Оператора.", "order": 10 },
+          { "id": "site-purpose", "type": "paragraph", "text": "Сайт носит информационный характер и предназначен для представления сведений о компании, ее деятельности, продукции, услугах, выполненных объектах, вакансиях и контактной информации.", "order": 20 },
+          { "id": "site-features", "type": "paragraph", "text": "На сайте отсутствуют личный кабинет, регистрация пользователей, корзина, онлайн-оплата и формы отправки заявок, если иное прямо не указано на соответствующей странице сайта.", "order": 30 }
+        ]
+      },
+      {
+        "id": "purposes", "heading": "2. Цели обработки персональных данных", "order": 20, "isActive": true,
+        "blocks": [
+          { "id": "intro", "type": "paragraph", "text": "Оператор может обрабатывать персональные данные в следующих целях:", "order": 10 },
+          { "id": "items", "type": "list", "order": 20, "items": [
+            { "id": "operation", "label": "обеспечение работы сайта и его безопасности;", "order": 10 },
+            { "id": "statistics", "label": "получение статистики посещаемости и улучшение сайта;", "order": 20 },
+            { "id": "analytics", "label": "анализ пользовательского поведения с помощью сервисов веб-аналитики;", "order": 30 },
+            { "id": "requests", "label": "рассмотрение обращений пользователей, которые самостоятельно связываются с Оператором по телефону, email или через Telegram;", "order": 40 },
+            { "id": "responses", "label": "подготовка ответов, предложений и дальнейшее взаимодействие по обращению;", "order": 50 },
+            { "id": "recruiting", "label": "подбор персонала, если пользователь самостоятельно обращается по вакансии через указанные контакты;", "order": 60 },
+            { "id": "law", "label": "исполнение требований законодательства Российской Федерации.", "order": 70 }
+          ] }
+        ]
+      },
+      {
+        "id": "subjects", "heading": "3. Категории субъектов персональных данных", "order": 30, "isActive": true,
+        "blocks": [
+          { "id": "intro", "type": "paragraph", "text": "Оператор может обрабатывать данные следующих категорий субъектов:", "order": 10 },
+          { "id": "items", "type": "list", "order": 20, "items": [
+            { "id": "visitors", "label": "посетители сайта;", "order": 10 },
+            { "id": "contacts", "label": "лица, самостоятельно обратившиеся к Оператору по телефону, email, Telegram или иным прямым каналам связи;", "order": 20 },
+            { "id": "candidates", "label": "кандидаты, самостоятельно направившие обращение по вакансии;", "order": 30 },
+            { "id": "others", "label": "иные лица, добровольно передавшие данные Оператору в рамках обращения.", "order": 40 }
+          ] }
+        ]
+      },
+      {
+        "id": "data", "heading": "4. Категории и перечень обрабатываемых данных", "order": 40, "isActive": true,
+        "blocks": [
+          { "id": "site-intro", "type": "paragraph", "text": "При использовании сайта могут обрабатываться:", "order": 10 },
+          { "id": "site-items", "type": "list", "order": 20, "items": [
+            { "id": "cookies", "label": "cookie-файлы;", "order": 10 }, { "id": "ip", "label": "IP-адрес;", "order": 20 },
+            { "id": "device", "label": "сведения об устройстве и браузере;", "order": 30 },
+            { "id": "os", "label": "сведения об операционной системе, языке интерфейса, разрешении экрана;", "order": 40 },
+            { "id": "time", "label": "дата и время посещения сайта;", "order": 50 },
+            { "id": "pages", "label": "сведения о просмотренных страницах;", "order": 60 },
+            { "id": "referrer", "label": "сведения об источнике перехода на сайт;", "order": 70 },
+            { "id": "actions", "label": "сведения о действиях пользователя на сайте;", "order": 80 },
+            { "id": "ids", "label": "технические идентификаторы аналитических сервисов.", "order": 90 }
+          ] },
+          { "id": "contact-intro", "type": "paragraph", "text": "При обращении по телефону, email, Telegram или иным прямым каналам связи могут обрабатываться:", "order": 30 },
+          { "id": "contact-items", "type": "list", "order": 40, "items": [
+            { "id": "name", "label": "имя и иные данные, которые пользователь сообщил сам;", "order": 10 },
+            { "id": "phone", "label": "номер телефона;", "order": 20 }, { "id": "email", "label": "адрес электронной почты;", "order": 30 },
+            { "id": "messenger", "label": "username или иной идентификатор в мессенджере;", "order": 40 },
+            { "id": "request", "label": "содержание обращения;", "order": 50 },
+            { "id": "voluntary", "label": "иные данные, добровольно сообщенные пользователем.", "order": 60 }
+          ] },
+          { "id": "excluded", "type": "paragraph", "text": "Оператор не собирает через сайт специальные категории персональных данных, биометрические данные, паспортные данные, банковские данные, данные платежных карт и файлы через формы сайта.", "order": 50 }
+        ]
+      },
+      {
+        "id": "grounds", "heading": "5. Правовые основания обработки", "order": 50, "isActive": true,
+        "blocks": [
+          { "id": "intro", "type": "paragraph", "text": "Правовыми основаниями обработки являются:", "order": 10 },
+          { "id": "items", "type": "list", "order": 20, "items": [
+            { "id": "law152", "label": "Федеральный закон № 152-ФЗ «О персональных данных»;", "order": 10 },
+            { "id": "other-law", "label": "иные нормы законодательства Российской Федерации;", "order": 20 },
+            { "id": "request", "label": "добровольное обращение пользователя к Оператору;", "order": 30 },
+            { "id": "contract", "label": "действия пользователя, направленные на получение информации, переговоры, заключение или исполнение договора;", "order": 40 },
+            { "id": "consent", "label": "согласие пользователя, если такое согласие требуется;", "order": 50 },
+            { "id": "interest", "label": "законные интересы Оператора по обеспечению работы сайта, его безопасности и аналитики.", "order": 60 }
+          ] }
+        ]
+      },
+      {
+        "id": "cookies", "heading": "6. Cookies и веб-аналитика", "order": 60, "isActive": true,
+        "blocks": [
+          { "id": "technologies", "type": "paragraph", "text": "На сайте могут использоваться cookie-файлы, localStorage и иные аналогичные технологии.", "order": 10 },
+          { "id": "metrika", "type": "paragraph", "text": "Оператор использует сервис Яндекс Метрика для анализа посещаемости сайта, пользовательских действий, источников переходов и технических параметров посещения.", "order": 20 },
+          { "id": "identifiers", "type": "paragraph", "text": "Яндекс Метрика может использовать cookie-файлы, localStorage и технические идентификаторы браузера.", "order": 30 },
+          { "id": "no-identifiers", "type": "paragraph", "text": "Оператор не использует Яндекс Метрику для сознательной передачи телефонов, email, адресов и иных идентифицирующих данных пользователей.", "order": 40 },
+          { "id": "consent", "type": "paragraph", "text": "Сайт использует Яндекс Метрику и аналитические cookies только после согласия пользователя. Пользователь может выбрать «Принять» или «Только необходимые», а также изменить выбор через «Настройки cookies» в footer.", "order": 50 },
+          { "id": "browser", "type": "paragraph", "text": "Пользователь также может ограничить или отключить использование cookies в настройках браузера. Отключение cookies может повлиять на работу отдельных элементов сайта и аналитики.", "order": 60 }
+        ]
+      },
+      {
+        "id": "third-party", "heading": "7. Встраиваемые сторонние сервисы", "order": 70, "isActive": true,
+        "blocks": [
+          { "id": "services", "type": "paragraph", "text": "На сайте могут использоваться сервисы Яндекса, включая Яндекс Карты, Яндекс Метрику, рейтинг или иные виджеты.", "order": 10 },
+          { "id": "processing", "type": "paragraph", "text": "При взаимодействии с такими сервисами третьи лица могут обрабатывать технические данные пользователя в соответствии со своими правилами и политиками.", "order": 20 }
+        ]
+      },
+      {
+        "id": "channels", "heading": "8. Каналы связи без форм на сайте", "order": 80, "isActive": true,
+        "blocks": [
+          { "id": "no-forms", "type": "paragraph", "text": "Сайт не предусматривает формы заявок, формы обратной связи, загрузку файлов, регистрацию или личный кабинет.", "order": 10 },
+          { "id": "direct", "type": "paragraph", "text": "Если пользователь самостоятельно обращается по телефону, email или через Telegram, Оператор обрабатывает полученные данные только в объеме, необходимом для рассмотрения обращения, ответа пользователю и дальнейшего взаимодействия.", "order": 20 },
+          { "id": "initiative", "type": "paragraph", "text": "Переход в Telegram, email-клиент или телефонный звонок осуществляется по инициативе пользователя.", "order": 30 }
+        ]
+      },
+      {
+        "id": "methods", "heading": "9. Способы обработки персональных данных", "order": 90, "isActive": true,
+        "blocks": [{ "id": "actions", "type": "paragraph", "text": "Оператор может осуществлять следующие действия с персональными данными: сбор, запись, систематизацию, накопление, хранение, уточнение, использование, передачу в случаях, предусмотренных законом или необходимостью работы сервисов, обезличивание, блокирование, удаление и уничтожение.", "order": 10 }]
+      },
+      {
+        "id": "transfers", "heading": "10. Передача персональных данных третьим лицам", "order": 100, "isActive": true,
+        "blocks": [
+          { "id": "intro", "type": "paragraph", "text": "Оператор может передавать данные:", "order": 10 },
+          { "id": "items", "type": "list", "order": 20, "items": [
+            { "id": "contractors", "label": "техническим подрядчикам, обеспечивающим работу сайта;", "order": 10 },
+            { "id": "services", "label": "сервисам веб-аналитики и встраиваемым сервисам;", "order": 20 },
+            { "id": "authorities", "label": "государственным органам в случаях, предусмотренных законодательством Российской Федерации.", "order": 30 }
+          ] }
+        ]
+      },
+      {
+        "id": "retention", "heading": "11. Сроки обработки и хранения", "order": 110, "isActive": true,
+        "blocks": [
+          { "id": "period", "type": "paragraph", "text": "Данные обрабатываются не дольше, чем это необходимо для целей обработки или сроков, установленных законодательством Российской Федерации.", "order": 10 },
+          { "id": "cookies", "type": "paragraph", "text": "Срок хранения cookie и технических идентификаторов может зависеть от настроек браузера пользователя и правил используемых сервисов.", "order": 20 }
+        ]
+      },
+      {
+        "id": "rights", "heading": "12. Права субъекта персональных данных", "order": 120, "isActive": true,
+        "blocks": [
+          { "id": "intro", "type": "paragraph", "text": "Пользователь вправе:", "order": 10 },
+          { "id": "items", "type": "list", "order": 20, "items": [
+            { "id": "information", "label": "получать информацию об обработке своих персональных данных;", "order": 10 },
+            { "id": "correction", "label": "требовать уточнения, блокирования или удаления данных в случаях, предусмотренных законом;", "order": 20 },
+            { "id": "withdraw", "label": "отзывать согласие в случаях, когда обработка основана на согласии;", "order": 30 },
+            { "id": "cookies", "label": "ограничивать использование cookies через настройки браузера;", "order": 40 },
+            { "id": "contact", "label": "обращаться к Оператору по вопросам обработки персональных данных.", "order": 50 }
+          ] }
+        ]
+      },
+      {
+        "id": "security", "heading": "13. Меры защиты", "order": 130, "isActive": true,
+        "blocks": [{ "id": "measures", "type": "paragraph", "text": "Оператор принимает необходимые организационные и технические меры для защиты персональных данных от неправомерного доступа, уничтожения, изменения, блокирования, копирования, предоставления, распространения и иных неправомерных действий.", "order": 10 }]
+      },
+      {
+        "id": "changes", "heading": "14. Изменение политики", "order": 140, "isActive": true,
+        "blocks": [{ "id": "publication", "type": "paragraph", "text": "Оператор вправе изменять настоящую Политику. Актуальная редакция размещается на сайте и вступает в силу с момента публикации, если иное не указано в новой редакции.", "order": 10 }]
+      },
+      {
+        "id": "contacts", "heading": "15. Контакты по вопросам обработки персональных данных", "order": 150, "isActive": true,
+        "blocks": []
+      }
+    ]
+  }
 }

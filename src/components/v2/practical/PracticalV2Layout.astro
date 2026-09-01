@@ -11,6 +11,9 @@ interface Props {
   kind: 'company' | 'contacts' | 'vacancies' | 'vacancy' | 'legal';
   contactHref?: string;
   ctaLabel?: string;
+  headerCtaBinding?: Record<string, string>;
+  headerMobileCtaBinding?: Record<string, string>;
+  mobileCtaBinding?: Record<string, string>;
   headerMode?: 'overlay' | 'light';
   catalogRootClass?: string;
 }
@@ -23,7 +26,7 @@ const {
   ogImage = '',
   kind,
   contactHref = '/design-lab/v2/kontakty/',
-  ctaLabel = 'Связаться',
+  ctaLabel,
   headerMode = 'light',
   catalogRootClass = ''
 } = Astro.props as Props;
@@ -39,6 +42,9 @@ const {
   contactHref={contactHref}
   mobileCtaLabel={ctaLabel}
   headerCtaLabel={ctaLabel}
+  headerCtaBinding={Astro.props.headerCtaBinding}
+  headerMobileCtaBinding={Astro.props.headerMobileCtaBinding}
+  mobileCtaBinding={Astro.props.mobileCtaBinding}
   headerMode={headerMode}
   rootClass={catalogRootClass}
 >

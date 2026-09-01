@@ -64,26 +64,27 @@ Content-only allowlist:
 
 Empty plan ничего не коммитит и не пушит. Повтор с тем же idempotency key возвращает то же задание; неизвестный сетевой результат сначала reconciles remote refs и не создаёт новый commit.
 
-## GitHub Actions: non-browser CI
+## GitHub Actions: полный H6 CI
 
 Workflow `.github/workflows/deploy.yml` запускается для `preview`, `develop`, `main`, `master` и вручную, но GitHub Pages может обновить только run точной ветки `preview`. `develop`, `main`, `master` и ручной test run с любой другой ветки выполняют только проверки. Перед загрузкой artifact и ещё раз непосредственно перед deploy workflow требует `origin/v4-product-final-candidate == origin/preview == GITHUB_SHA`; поэтому прямой или ошибочный push только одной ветки не может обойти owner publish.
 
 Build job выполняет:
 
 1. checkout и вычисление deploy metadata;
-2. Node.js 20 и `npm ci`;
+2. закреплённый Node.js 22.12.0 и `npm ci`;
 3. `npm run test:admin-h6:ci` — весь H6 Node-test DAG без браузера;
-4. проверку production settings, если workflow действительно выбран как production;
-5. `npm run check`;
-6. `npm run build` (включая media preparation);
-7. performance budgets;
-8. `npm run qa:final:static` для source и собранного `dist`;
-9. подготовку reachable Pages artifact и повторную проверку budgets;
-10. test/production SEO и analytics isolation;
-11. двойную сверку exact candidate/preview ref pair;
-12. upload/deploy GitHub Pages только для доказанного `preview` SHA при `deploy_kind=test`.
+4. контракты H6 evidence и `astro check`;
+5. `npm run build` (включая media preparation) и performance budgets;
+6. static QA, подготовку reachable Pages artifact и повторную проверку budgets;
+7. browser/motion QA и доказательство изоляции public artifact;
+8. фактическое открытие каждого route в public/editor desktop/mobile режимах;
+9. полный public action crawl, isolated admin action crawl и recovery scenarios;
+10. media privacy chain с GPS fixture и checksummed backup/restore drill;
+11. reconciliation exact SHA со всеми evidence-файлами и запись `dist/_release/identity.json`;
+12. двойную сверку exact candidate/preview ref pair;
+13. upload/deploy GitHub Pages только для доказанного `preview` SHA при `deploy_kind=test`.
 
-Browser roundtrips намеренно не входят в CI subset. Полный локальный release gate — `npm run qa:final` в отдельном clone.
+Полный локальный release gate — те же leaf suites в отдельном exact-SHA clone. Если команды запускаются вручную, каждый leaf нужно выполнять один раз: агрегат `npm run qa:final` уже содержит вложенные browser/action/media/restore проверки.
 
 ### Переменные preview workflow
 
@@ -96,7 +97,7 @@ TEST_BASE_PATH=/<repo>
 
 Если они не заданы, workflow выводит GitHub Pages fallback из repository owner/name.
 
-`PRODUCTION_DEPLOY_ENABLED` в H6 должен оставаться `false`, а production `workflow_dispatch` использовать нельзя. Наличие legacy/future production-ветки в workflow не отменяет запрет production publish в локальной админке.
+`PRODUCTION_DEPLOY_ENABLED` в H6 всегда остаётся `false`. Запрос production через `workflow_dispatch` принудительно переводится в test/check-only и ничего не публикует. Наличие future production UI не отменяет запрет production publish в локальной админке.
 
 Для расширенного чтения статусов локальная админка может использовать `GITHUB_REPOSITORY=owner/repo` и read-capable `GITHUB_DEPLOY_TOKEN`/`GITHUB_TOKEN`. Без token exact-SHA status тоже работает для public repository, но server опрашивает GitHub реже, чтобы не исчерпать anonymous API limit. Git push использует настроенную Git-аутентификацию remote; секреты никогда не должны попадать в UI, отчёт, commit или tracked env-файл.
 
@@ -117,7 +118,7 @@ $mainBeforeLine = git ls-remote origin refs/heads/main
 if (-not $mainBeforeLine) { throw "Protected main ref is missing" }
 $mainBefore = (($mainBeforeLine -split "\s+")[0]).Trim()
 $releaseBranch = (git branch --show-current).Trim()
-if ($releaseBranch -ne "v4-product-final-candidate") { throw "Release must start on the candidate branch" }
+if (-not $releaseBranch) { throw "Release must start from a named task-owned branch" }
 ```
 
 Проверьте, что `$releaseSha` — именно reviewed commit, а `git diff --cached --name-only` пуст. Не удаляйте и не «исправляйте» существующие `.astro`, generated или пользовательские изменения ради чистого статуса; они должны остаться ровно теми же.
@@ -178,7 +179,9 @@ if ((git rev-parse HEAD).Trim() -ne $liveHeadBefore) { throw "Live HEAD changed"
 if (((git status --porcelain=v1 -uall) -join "`n") -cne $liveStatusBefore) { throw "Live worktree changed" }
 ```
 
-В GitHub Actions откройте run ветки `preview` и убедитесь, что его head SHA равен `$releaseSha`, job успешен, Pages deployment завершён и затронутые URL проходят smoke. Совпадение внешнего вида без доказательства SHA не считается успешным release.
+Найдите run ветки `preview` через GitHub UI либо public Actions REST API и потребуйте `head_sha == $releaseSha`, `status=completed`, `conclusion=success`. Затем проверьте exact-SHA Pages deployment и его latest status `success`.
+
+Скачайте `https://koleaw.github.io/SMU1/_release/identity.json`: marker обязан вернуть HTTP 200, содержать `testedCommitSha == $releaseSha` и побайтово совпасть с marker из локального exact-SHA clone. После этого выполните live smoke главной, representative routes, alias, `/404.html`, неизвестного URL и H5 media. Preview URL изменяемый, публичный и не защищён паролем; `noindex` не является access protection. Совпадение внешнего вида без доказательства SHA и artifact identity не считается успешным release.
 
 ## Ошибки и безопасное восстановление
 

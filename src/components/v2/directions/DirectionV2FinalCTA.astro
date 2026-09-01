@@ -1,8 +1,10 @@
 ---
 import settings from '../../../content/site-settings/global.json';
 import V2DirectContact from '../V2DirectContact.astro';
+import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
 
 interface Props {
+  eyebrow?: string;
   title: string;
   description: string;
   primaryLabel?: string;
@@ -10,9 +12,14 @@ interface Props {
   phoneChannelLabel?: string;
   telegramChannelLabel?: string;
   emailChannelLabel?: string;
+  bindingOwner?: { collection: string; slug: string };
+  bindingFields?: { eyebrow?: string; title?: string; description?: string; primaryLabel?: string; secondaryLabel?: string; emailChannelLabel?: string; phoneChannelLabel?: string };
+  affectedRoutes?: string[];
+  editorSource?: string;
 }
 
 const {
+  eyebrow = 'Обсудить проект',
   title,
   description,
   primaryLabel = 'Получить расчёт',
@@ -22,10 +29,33 @@ const {
   emailChannelLabel = 'Email'
 } = Astro.props as Props;
 const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
+const bindingOwner = Astro.props.bindingOwner;
+const bindingFields = Astro.props.bindingFields ?? {};
+const editorSource = Astro.props.editorSource ?? 'src/components/v2/directions/DirectionV2FinalCTA.astro#Astro.props';
+const binding = (fieldPath: string | undefined, tool: string) => fieldPath && bindingOwner
+  ? adminBinding(Astro.url, {
+      renderer: { family: 'direction-contact', variant: 'final-cta' }, owner: bindingOwner,
+      fieldPath, stableItemId: `${bindingOwner.slug}-contact-${fieldPath}`, scope: 'local', tool,
+      affectedRoutes: Astro.props.affectedRoutes ?? [Astro.url.pathname]
+    })
+  : {};
+const fixed = (fragment: string, reason: string) => adminDisposition(Astro.url, {
+  kind: 'template-fixed', reason, source: `${editorSource}#${fragment}`, tool: 'page-settings'
+});
+const telegramChannelBinding = bindingFields.primaryLabel && bindingOwner
+  ? (telegramChannelLabel === primaryLabel
+      ? binding(bindingFields.primaryLabel, 'short-text')
+      : adminDisposition(Astro.url, {
+          kind: 'derived',
+          reason: 'Короткая подпись канала нормализуется из CTA label, чтобы карточка канала не повторяла призыв к действию.',
+          source: `${bindingOwner.collection}:${bindingOwner.slug}.${bindingFields.primaryLabel} -> Telegram`,
+          tool: 'page-settings'
+        }))
+  : fixed('telegramChannelLabel', 'Подпись типа канала передана renderer-владельцем без отдельного schema field.');
 ---
 
 <V2DirectContact
-  eyebrow="Обсудить проект"
+  eyebrow={eyebrow}
   title={title}
   description={description}
   primaryLabel={primaryLabel}
@@ -35,4 +65,13 @@ const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
   phoneChannelLabel={phoneChannelLabel}
   telegramChannelLabel={telegramChannelLabel}
   emailChannelLabel={emailChannelLabel}
+  editorSource={editorSource}
+  eyebrowBinding={binding(bindingFields.eyebrow, 'short-text')}
+  titleBinding={binding(bindingFields.title, 'heading')}
+  descriptionBinding={binding(bindingFields.description, 'long-text')}
+  primaryLabelBinding={binding(bindingFields.primaryLabel, 'link-label')}
+  secondaryLabelBinding={binding(bindingFields.secondaryLabel, 'link-label')}
+  phoneChannelLabelBinding={binding(bindingFields.phoneChannelLabel, 'short-text')}
+  telegramChannelLabelBinding={telegramChannelBinding}
+  emailChannelLabelBinding={binding(bindingFields.emailChannelLabel, 'short-text')}
 />

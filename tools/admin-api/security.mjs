@@ -329,6 +329,17 @@ export class SessionStore {
     return this.sessions.delete(fingerprint);
   }
 
+  expire(token) {
+    if (!token) return false;
+    const fingerprint = this.fingerprint(token);
+    const existed = this.sessions.delete(fingerprint);
+    if (existed) {
+      const now = this.now();
+      this.expiredTokens.set(fingerprint, now + Math.min(this.idleTtlMs, 60_000));
+    }
+    return existed;
+  }
+
   invalidateUser(username) {
     let removed = 0;
     for (const [fingerprint, record] of this.sessions) {
@@ -481,6 +492,9 @@ export function createLocalRequestPolicy(options = {}) {
 
   function evaluate(request) {
     const method = String(request?.method ?? 'GET').toUpperCase();
+    if (getHeader(request?.headers, 'forwarded') || getHeader(request?.headers, 'x-forwarded-host')) {
+      return { ok: false, code: 'FORWARDED_HOST_REJECTED', status: 403 };
+    }
     let host;
     try {
       host = canonicalHost(getHeader(request?.headers, 'host'), loopbackOptions);

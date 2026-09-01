@@ -30,7 +30,7 @@ const RECORD_OPERATION_TYPES = new Set([
   'delete-record'
 ]);
 const SERVICE_METADATA_VERSION = 2;
-const STAGED_MEDIA_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg', '.mp4', '.webm']);
+const STAGED_MEDIA_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
@@ -833,6 +833,31 @@ export function createContentTransactionService({
         operation: previous ? 'update' : trustedExact ? 'validate' : 'create'
       });
       validationIssues.push(...checked.issues);
+    }
+    if (!trustedExact) {
+      const beforeGlobal = initial.entries.get(recordKey('site-settings', 'global'))?.content;
+      const afterGlobal = projected.entries.get(recordKey('site-settings', 'global'))?.content;
+      if (beforeGlobal && afterGlobal?.privacyPolicy) {
+        const legalFields = ['companyName', 'inn', 'kpp', 'ogrn', 'legalAddress', 'email'];
+        const withoutConfirmation = (value) => ({
+          requisites: Object.fromEntries(legalFields.map((field) => [field, value?.[field] ?? ''])),
+          privacyPolicy: { ...(value?.privacyPolicy || {}), confirmedAgainstGlobalAt: '' }
+        });
+        const legalContentChanged = !isDeepStrictEqual(withoutConfirmation(beforeGlobal), withoutConfirmation(afterGlobal));
+        const previousConfirmation = String(beforeGlobal.privacyPolicy?.confirmedAgainstGlobalAt || '');
+        const nextConfirmation = String(afterGlobal.privacyPolicy?.confirmedAgainstGlobalAt || '');
+        if (legalContentChanged && (!nextConfirmation || nextConfirmation === previousConfirmation)) {
+          validationIssues.push(createValidationIssue({
+            code: 'LEGAL_CONFIRMATION_REQUIRED',
+            collection: 'site-settings',
+            slug: 'global',
+            path: 'privacyPolicy.confirmedAgainstGlobalAt',
+            severity: 'error',
+            userMessage: 'Юридический текст или реквизиты изменены. Сверьте их и явно подтвердите новую редакцию в настройках страницы.',
+            technicalDetail: 'Legal content changed without advancing confirmedAgainstGlobalAt.'
+          }));
+        }
+      }
     }
     for (const name of SINGLETON_KEYS) {
       const entry = projected.singletons[name];

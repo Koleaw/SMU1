@@ -5,6 +5,7 @@ import {
   canonicalMediaFilename,
   canonicalPublicMediaPath,
   detectMediaFormat,
+  preparePublicMediaUpload,
   validateMediaUpload,
   validateRasterMedia,
   validateVideoMedia
@@ -78,6 +79,27 @@ test('EXIF orientation is retained and display dimensions are correctly oriented
   assert.equal(result.orientation, 6);
   assert.deepEqual([result.storedWidth, result.storedHeight], [7, 3]);
   assert.deepEqual([result.width, result.height], [3, 7]);
+});
+
+test('public raster preparation applies orientation, detects private metadata and strips it from canonical bytes', async () => {
+  const privateXmp = '<x:xmpmeta xmlns:x="adobe:ns:meta/" xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:tiff="http://ns.adobe.com/tiff/1.0/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description exif:GPSLatitude="55,45.1N" exif:GPSLongitude="037,37.2E" tiff:Make="Private Camera" tiff:Model="Serial Device"/></rdf:RDF></x:xmpmeta>';
+  const source = await created(7, 3, { r: 12, g: 44, b: 88, alpha: 1 })
+    .jpeg()
+    .withMetadata({ orientation: 6 })
+    .withXmp(privateXmp)
+    .toBuffer();
+  const prepared = await preparePublicMediaUpload({ buffer: source, filename: 'gps-photo.jpg', declaredMime: 'image/jpeg' });
+  assert.equal(prepared.validation.metadataSanitized, true);
+  assert.equal(prepared.validation.privateMetadata.gps, true);
+  assert.equal(prepared.validation.privateMetadata.device, true);
+  assert.equal(prepared.validation.orientation, null);
+  assert.deepEqual([prepared.validation.width, prepared.validation.height], [3, 7]);
+  assert.notEqual(prepared.validation.sha256, prepared.validation.sourceSha256);
+  const publicMetadata = await sharp(prepared.buffer).metadata();
+  assert.equal(publicMetadata.exif, undefined);
+  assert.equal(publicMetadata.xmp, undefined);
+  assert.equal(publicMetadata.orientation, undefined);
+  assert.equal(prepared.validation.sha256, canonicalMediaFilename(prepared.validation).slice(0, 64));
 });
 
 test('extension and MIME must match decoded magic bytes', async () => {
@@ -161,13 +183,21 @@ test('decoded pixel, edge, byte and frame limits are configurable and fail close
   );
 });
 
-test('video policy accepts conservative MP4/WebM magic and rejects mismatches', async () => {
+test('existing video bytes remain inspectable but public upload preparation rejects MP4/WebM', async () => {
   const mp4 = minimalMp4();
   const webm = minimalWebm();
   assert.equal(detectMediaFormat(mp4), 'mp4');
   assert.equal(detectMediaFormat(webm), 'webm');
   assert.equal((await validateVideoMedia({ buffer: mp4, filename: 'hero.mp4', declaredMime: 'video/mp4' })).format, 'mp4');
   assert.equal((await validateMediaUpload({ buffer: webm, filename: 'hero.webm', declaredMime: 'video/webm' })).format, 'webm');
+  await rejectsCode(
+    preparePublicMediaUpload({ buffer: mp4, filename: 'hero.mp4', declaredMime: 'video/mp4' }),
+    'MEDIA_UPLOAD_RASTER_ONLY'
+  );
+  await rejectsCode(
+    preparePublicMediaUpload({ buffer: webm, filename: 'hero.webm', declaredMime: 'video/webm' }),
+    'MEDIA_UPLOAD_RASTER_ONLY'
+  );
   await rejectsCode(
     validateVideoMedia({ buffer: minimalMp4().subarray(0, 24), filename: 'header-only.mp4', declaredMime: 'video/mp4' }),
     'VIDEO_CONTAINER_INVALID'

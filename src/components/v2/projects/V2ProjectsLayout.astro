@@ -9,6 +9,11 @@ interface Props {
   currentPath: string;
   ogImage?: string;
   variant?: 'default' | 'archive';
+  contactHref?: string;
+  ctaLabel?: string;
+  headerCtaBinding?: Record<string, string>;
+  headerMobileCtaBinding?: Record<string, string>;
+  mobileCtaBinding?: Record<string, string>;
 }
 
 const {
@@ -17,7 +22,9 @@ const {
   canonicalPath,
   currentPath,
   ogImage = '',
-  variant = 'default'
+  variant = 'default',
+  contactHref = '#contact',
+  ctaLabel
 } = Astro.props as Props;
 ---
 
@@ -28,6 +35,12 @@ const {
   currentPath={currentPath}
   ogImage={ogImage}
   pageKind="section"
+  contactHref={contactHref}
+  headerCtaLabel={ctaLabel}
+  mobileCtaLabel={ctaLabel}
+  headerCtaBinding={Astro.props.headerCtaBinding}
+  headerMobileCtaBinding={Astro.props.headerMobileCtaBinding}
+  mobileCtaBinding={Astro.props.mobileCtaBinding}
 >
   <div
     class:list={['projects-v2', { 'projects-v2--archive': variant === 'archive' }]}

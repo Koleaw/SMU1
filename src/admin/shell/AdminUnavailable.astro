@@ -1,0 +1,37 @@
+---
+import { withBase } from '../../utils/withBase';
+
+const brandIcon = withBase('/assets/brand/favicon.svg');
+---
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive" />
+    <link rel="icon" href={brandIcon} />
+    <title>Редактор сайта работает только на компьютере · СМУ-1</title>
+    <style>
+      :root { color-scheme: light; font-family: Manrope, Inter, system-ui, sans-serif; color: #12211c; background: #edf2ef; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+      main { width: min(640px, 100%); padding: clamp(28px, 6vw, 56px); border: 1px solid #d6dfda; border-radius: 24px; background: #fff; box-shadow: 0 24px 70px rgb(20 54 42 / .12); }
+      img { width: 54px; height: 54px; }
+      h1 { margin: 28px 0 14px; font-size: clamp(28px, 5vw, 46px); line-height: 1.06; letter-spacing: -.035em; }
+      p { margin: 0; color: #53635d; font-size: 17px; line-height: 1.65; }
+      p + p { margin-top: 14px; }
+      a { color: #086b4d; text-underline-offset: 3px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src={brandIcon} alt="" />
+      <h1>Редактор доступен только на рабочем компьютере</h1>
+      <p>Это публичная совместимая страница без входа, редактора и доступа к файлам сайта.</p>
+      <p>Чтобы изменить сайт, запустите ярлык «Редактор сайта СМУ-1» на настроенном компьютере. Откроется локальная защищённая программа.</p>
+      <p><a href={withBase('/')}>Вернуться на сайт</a></p>
+    </main>
+  </body>
+</html>

@@ -13,6 +13,7 @@
   "heroDescription": "СМУ-1 изготавливает изделия и металлоконструкции, выполняет благоустройство, строительные и монтажные работы для коммерческих, общественных и производственных объектов.",
   "heroPrimaryLabel": "Смотреть выполненные объекты",
   "heroSecondaryLabel": "Обсудить задачу",
+  "shellCtaLabel": "Получить расчёт",
   "image": "/assets/images/placeholders/metal-business.svg",
   "heroMediaPoster": "/assets/images/placeholders/metal-business.svg",
   "heroMediaVideo": "",
@@ -20,6 +21,19 @@
   "heroOverlayOpacity": 62,
   "contactTitle": "Обсудим задачу для вашего объекта",
   "contactDescription": "Пришлите фотографию, размеры, эскиз, чертёж, ТЗ или краткое описание задачи. Уточним исходные данные и состав работ.",
+  "contactEyebrow": "Прямая связь",
+  "relatedProjectSlugs": [
+    "kompleks-rabot-na-proizvodstvennoy-territorii",
+    "blagoustroystvo-naberezhnoy-reki-tobol"
+  ],
+  "gatewayProjectSlugs": [
+    "blagoustroystvo-naberezhnoy-reki-tobol",
+    "remont-skvera-na-ulitse-gogolya",
+    "kompleks-rabot-na-proizvodstvennoy-territorii",
+    "gorodskie-kacheli-dlya-obshchestvennyh-territoriy"
+  ],
+  "companyHeroProjectSlug": "kompleks-rabot-na-proizvodstvennoy-territorii",
+  "companyHeroPosition": "50% 48%",
   "pageBlocks": [
     {
       "type": "whoWeAre",
@@ -45,6 +59,7 @@
       "order": 20,
       "items": [
         {
+          "id": "manufacturing",
           "title": "Изготовление",
           "text": "Изделия и элементы благоустройства по типовым решениям и под исходные данные конкретного объекта.",
           "image": "/assets/images/placeholders/street-furniture.svg",
@@ -54,6 +69,7 @@
           "isActive": true
         },
         {
+          "id": "structures",
           "title": "Конструкции",
           "text": "Металлические каркасы, рамы, ограждения, навесы и отдельные узлы — в согласованном составе.",
           "image": "/assets/images/placeholders/metal-business.svg",
@@ -63,6 +79,7 @@
           "isActive": true
         },
         {
+          "id": "site-work",
           "title": "Работы на площадке",
           "text": "Благоустройство, монтаж, строительные и ремонтные работы в рамках конкретной задачи.",
           "image": "/assets/images/placeholders/landscaping.svg",

@@ -388,6 +388,9 @@ export async function setupAdmin(options = {}) {
     ADMIN_ALLOWED_ORIGINS: existing.ADMIN_ALLOWED_ORIGINS || 'http://127.0.0.1:4321',
     PUBLIC_ADMIN_API_BASE: existing.PUBLIC_ADMIN_API_BASE || '/api/admin',
     CONTENT_WRITE_MODE: 'local',
+    ADMIN_BACKUP_DIR: existing.ADMIN_BACKUP_DIR || path.join(path.dirname(repoRoot), `${path.basename(repoRoot)}-backups`),
+    ADMIN_BACKUP_RETENTION: existing.ADMIN_BACKUP_RETENTION || '20',
+    ADMIN_BACKUP_MAX_BYTES: existing.ADMIN_BACKUP_MAX_BYTES || String(20 * 1024 * 1024 * 1024),
     ...(branch ? { ADMIN_EXPECTED_BRANCH: branch } : {}),
     ADMIN_GIT_REMOTE: remote,
     ...(existing.GITHUB_REPOSITORY || inferredGitHub?.repository

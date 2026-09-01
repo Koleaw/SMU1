@@ -15,6 +15,36 @@
   "order": 4,
   "isActive": true,
   "year": 2024,
+  "presentation": {
+    "archiveCoverMedia": "/uploads/project-05c77513c1a391e5a71a7dee.jpg",
+    "detailHeroMedia": "/uploads/project-05c77513c1a391e5a71a7dee.jpg",
+    "publicGallery": [
+      "/uploads/project-05c77513c1a391e5a71a7dee.jpg",
+      "/uploads/project-05e1cb18f1d596a46bdacc90.jpg",
+      "/uploads/project-684ea95d87f32fae2eea2987.jpg",
+      "/uploads/project-24b71828f5efa9730bdde4ae.jpg"
+    ],
+    "archiveCoverPosition": "50% 67%",
+    "archiveCoverOrientation": "portrait",
+    "detailHeroPosition": "50% 64%",
+    "relatedDirections": [
+      { "id": "street-furniture", "label": "Уличная мебель", "href": "/ulichnaya-mebel/", "context": "Изделия для общественных и частных территорий.", "order": 10 }
+    ],
+    "altOverrides": {
+      "/uploads/project-05e1cb18f1d596a46bdacc90.jpg": "Установка городских качелей на общественной территории",
+      "/uploads/project-684ea95d87f32fae2eea2987.jpg": "Сборка городских качелей на территории объекта",
+      "/uploads/project-05c77513c1a391e5a71a7dee.jpg": "Городские качели после установки на общественной территории",
+      "/uploads/project-24b71828f5efa9730bdde4ae.jpg": "Работы по установке городских качелей на территории объекта"
+    },
+    "mediaRoles": {
+      "/uploads/project-05e1cb18f1d596a46bdacc90.jpg": ["process"],
+      "/uploads/project-c9865e6f9d5ef6d37fbd9895.jpg": ["excluded"],
+      "/uploads/project-93a94bd9fbec9f730574cfee.jpg": ["excluded"],
+      "/uploads/project-684ea95d87f32fae2eea2987.jpg": ["process"],
+      "/uploads/project-05c77513c1a391e5a71a7dee.jpg": ["finished-result", "hero", "proof"],
+      "/uploads/project-24b71828f5efa9730bdde4ae.jpg": ["process"]
+    }
+  },
   "seoTitle": "Городские качели для общественных территорий — СМУ-1",
   "seoDescription": "Кейс СМУ-1: проектирование, изготовление, сборка и установка двух городских качелей из металла и дерева в Кургане."
 }

@@ -1,7 +1,10 @@
 {
   "title": "Топиарии",
   "slug": "topiarii",
-  "shortDescription": "Декоративные топиарии, зеленые фигуры, композиции и арт-объекты под задачу территории.",
+  "shortDescription": "Декоративные фигуры, зелёные композиции и арт-объекты под задачу пространства.",
+  "homeOrder": 5,
+  "homeImage": "",
+  "heroKicker": "Топиарии",
   "heroTitle": "Топиарии под заказ",
   "heroDescription": "Изготавливаем декоративные топиарные фигуры и зеленые композиции для парков, входных групп, общественных пространств, коммерческих территорий и частных объектов.",
   "order": 5,
@@ -13,10 +16,48 @@
   "seoTitle": "Топиарии под заказ для благоустройства и декора",
   "seoDescription": "Топиарии, декоративные зеленые фигуры и композиции под заказ для парков, входных групп, общественных пространств и коммерческих территорий.",
   "contactTitle": "Нужен топиарий под конкретный объект?",
-  "contactDescription": "Напишите нам, и мы подберем форму, размер, материал покрытия и способ установки под вашу территорию, мероприятие или входную зону.",
-  "contactTelegramLabel": "Написать в Telegram",
-  "contactEmailLabel": "Написать на почту",
-  "contactPhoneLabel": "Позвонить",
+  "contactDescription": "Пришлите идею или имеющиеся исходные материалы — обсудим форму и подготовим расчёт.",
+  "contactTelegramLabel": "Получить расчёт",
+  "contactEmailLabel": "Email",
+  "contactPhoneLabel": "Обсудить задачу",
+  "directionPresentation": {
+    "hero": {
+      "primaryLabel": "Получить расчёт",
+      "secondaryLabel": "Обсудить задачу",
+      "imageAlt": "Топиарии"
+    },
+    "sectionNav": {
+      "label": "Разделы направления",
+      "items": [
+        { "id": "direction-types", "label": "Что изготавливаем", "order": 10, "isActive": true },
+        { "id": "direction-scope", "label": "Где используют", "order": 20, "isActive": true },
+        { "id": "direction-brief", "label": "Исходные данные", "order": 30, "isActive": true },
+        { "id": "contact", "label": "Обсудить задачу", "order": 40, "isActive": true }
+      ]
+    },
+    "types": { "eyebrow": "Формы и композиции" },
+    "scope": { "eyebrow": "Сценарии применения" },
+    "brief": {
+      "eyebrow": "Собственная идея",
+      "title": "Покажите желаемый образ",
+      "description": "Для первоначального обсуждения можно передать идею и те исходные материалы, которые уже есть.",
+      "items": [
+        { "id": "photo", "label": "Фотография", "order": 10, "isActive": true },
+        { "id": "sketch", "label": "Эскиз", "order": 20, "isActive": true },
+        { "id": "brief", "label": "ТЗ", "order": 30, "isActive": true },
+        { "id": "description", "label": "Описание задачи", "order": 40, "isActive": true }
+      ]
+    },
+    "related": {
+      "eyebrow": "Дальше по задаче",
+      "title": "Топиарии в благоустройстве",
+      "items": [
+        { "id": "landscaping", "targetCollection": "services", "targetSlug": "blagoustroystvo-territoriy", "eyebrow": "Связанное направление", "order": 10, "isActive": true }
+      ]
+    },
+    "contactEyebrow": "Обсудить проект",
+    "contactPhoneChannelLabel": "Основной телефон"
+  },
   "pageBlocks": [
     {
       "type": "cardGrid",

@@ -3,6 +3,8 @@ import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import { formatProductPrice, imageViewStyle, productGalleryImages, type ProductData } from './catalogV2Data';
 import V2ResponsiveImage from './V2ResponsiveImage.astro';
+import { adminBinding, adminDisposition, isLocalAdminCanvas } from '../../admin/bindings/adminBinding';
+import settings from '../../content/site-settings/global.json';
 
 interface Props {
   product: ProductData;
@@ -16,7 +18,23 @@ const primaryMaterial = Array.isArray(product.materials)
   ? product.materials.find((item) => typeof item === 'string' && item.trim())?.trim()
   : '';
 const cardImage = productGalleryImages(product)[0] || '';
+const editorCanvas = isLocalAdminCanvas(Astro.url);
 const isPremium = product.presentationType === 'premium';
+const affectedRoutes = [Astro.url.pathname, href];
+const binding = (fieldPath: string, tool: string, options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'catalog-card', variant: isPremium ? 'premium-product' : 'standard-product' },
+  owner: { collection: 'products', slug: product.slug }, fieldPath,
+  stableItemId: product.slug, scope: 'shared', tool, affectedRoutes, ...options
+});
+const productUiBinding = (fieldPath: string, tool = 'short-text') => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'catalog-card-ui' },
+  owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `productUi.${fieldPath}`,
+  stableItemId: `catalog-card-${product.slug}-${fieldPath}`,
+  scope: 'global',
+  tool,
+  affectedRoutes: ['*']
+});
 ---
 
 <a
@@ -25,9 +43,11 @@ const isPremium = product.presentationType === 'premium';
   data-v2-transition-label={product.title}
   data-product-card-presentation={isPremium ? 'premium' : 'standard'}
   data-v2-reveal
+  {...binding('order', 'reorder-item', { zoneId: product.productCategorySlug, parentSlug: product.productCategorySlug, permissions: { edit: true, reorder: true, delete: false } })}
 >
-  <div class="v2-product-card__media" data-v2-media>
-    {cardImage ? (
+  {(cardImage || editorCanvas) && (
+    <div class="v2-product-card__media" data-v2-media {...binding('gallery', 'gallery', { role: cardImage ? 'product-card-media' : 'missing-product-media', multiple: true, coverPath: 'image' })}>
+      {cardImage ? (
       <V2ResponsiveImage
         src={cardImage}
         alt={product.title}
@@ -38,21 +58,32 @@ const isPremium = product.presentationType === 'premium';
         style={imageViewStyle(product.imageView)}
         data-v2-image
       />
-    ) : null}
-    <div class="v2-media-empty" aria-hidden={Boolean(cardImage)}>
-      <p>Фото не указано</p>
+      ) : (
+        <div class="v2-media-empty" data-smu1-editor-affordance="missing-product-media">
+          <p>Добавить фотографии</p>
+        </div>
+      )}
     </div>
-  </div>
+  )}
   <div class="v2-product-card__body">
     {isPremium ? (
-      <p class="v2-product-card__presentation" data-product-presentation-indicator="premium">Решение для объекта</p>
+      <p class="v2-product-card__presentation" data-product-presentation-indicator="premium" {...productUiBinding('cardPremiumLabel')}>
+        {settings.productUi.cardPremiumLabel}
+      </p>
     ) : null}
-    <p class="v2-product-card__type">{primaryMaterial || 'Материалы не указаны'}</p>
-    <h3>{product.title}</h3>
-    <p class="v2-product-card__description">{product.shortDescription}</p>
+    <p class="v2-product-card__type" {...(!primaryMaterial ? productUiBinding('cardMaterialsMissingLabel') : adminDisposition(Astro.url, {
+      kind: 'derived',
+      reason: 'В карточке показан первый непустой пункт списка материалов; меняется через список товара.',
+      source: `products.${product.slug}.materials[0]`,
+      tool: 'list-editor'
+    }))}>
+      {primaryMaterial || settings.productUi.cardMaterialsMissingLabel}
+    </p>
+    <h3 {...binding('title', 'heading')}>{product.title}</h3>
+    <p class="v2-product-card__description" {...binding('shortDescription', 'long-text')}>{product.shortDescription}</p>
     <div class="v2-product-card__footer">
-      <strong>{formatProductPrice(product)}</strong>
-      <span class="v2-card-link">Подробнее</span>
+      <strong {...binding('priceMode', 'price', { modePath: 'priceMode', valuePath: 'priceFrom', currencyPath: 'currency' })}>{formatProductPrice(product)}</strong>
+      <span class="v2-card-link" {...productUiBinding('cardCtaLabel', 'link-label')}>{settings.productUi.cardCtaLabel}</span>
     </div>
   </div>
 </a>

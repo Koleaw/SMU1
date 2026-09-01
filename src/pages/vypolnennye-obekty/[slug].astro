@@ -23,7 +23,17 @@ interface Props {
   nextProject?: V2ProjectRecord;
 }
 
-const { project, previousProject, nextProject } = Astro.props as Props;
+let { project, previousProject, nextProject } = Astro.props as Partial<Props>;
+if (!project) {
+  const projects = await loadPublishedV2Projects();
+  const index = projects.findIndex((candidate) => candidate.slug === String(Astro.params.slug || ''));
+  if (index >= 0) {
+    project = projects[index];
+    previousProject = projects[index - 1];
+    nextProject = projects[index + 1];
+  }
+}
+if (!project) return Astro.rewrite('/404.html');
 const presentation = getV2ProjectPresentation(project);
 const previous = previousProject ? getV2ProjectPresentation(previousProject) : undefined;
 const next = nextProject ? getV2ProjectPresentation(nextProject) : undefined;

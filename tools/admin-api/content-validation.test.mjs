@@ -141,6 +141,18 @@ test('URL and canonical media policies run inside collection validation', () => 
     && issue.path === 'image'));
 });
 
+test('404 recovery links are schema-owned internal routes and reject traversal', () => {
+  const settings = readJson('src/content/site-settings/global.json');
+  const accepted = validateContentRecord({ collection: 'site-settings', slug: 'global', value: settings });
+  assert.equal(accepted.success, true);
+
+  const unsafe = clone(settings);
+  unsafe.notFoundPage.secondaryHref = '/../private';
+  const rejected = validateContentRecord({ collection: 'site-settings', slug: 'global', value: unsafe });
+  assert.ok(rejected.errors.some((issue) => issue.code === 'URL_PATH_TRAVERSAL'
+    && issue.path === 'notFoundPage.secondaryHref'));
+});
+
 test('image galleries reject video paths and explicit video fields reject images', () => {
   const product = readJson('src/content/products/besedka-kofe.json');
   product.gallery = ['/uploads/not-an-image.mp4'];

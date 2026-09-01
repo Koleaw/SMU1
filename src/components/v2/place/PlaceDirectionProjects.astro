@@ -2,15 +2,35 @@
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 import type { V2ProjectMedia, V2ProjectPresentation } from '../mediaRoleAdapter';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
 
 interface Props {
+  eyebrow?: string;
   title: string;
+  proofDescription?: string;
+  linkLabel?: string;
+  supportingLinkLabel?: string;
   projects: V2ProjectPresentation[];
   mediaBySlug?: Record<string, V2ProjectMedia[]>;
   featureIndex?: number;
+  editorSource?: string;
+  eyebrowBinding?: Record<string, string>;
+  titleBinding?: Record<string, string>;
+  proofDescriptionBinding?: Record<string, string>;
+  linkLabelBinding?: Record<string, string>;
+  supportingLinkLabelBinding?: Record<string, string>;
 }
 
-const { title, projects, mediaBySlug = {}, featureIndex = 0 } = Astro.props as Props;
+const {
+  eyebrow = 'Выполненная территория',
+  title,
+  proofDescription = 'Реальный объект показывает благоустройство как связанную работу с территорией, а не набор отдельных изделий.',
+  linkLabel = 'Смотреть полный объект',
+  supportingLinkLabel = 'Смотреть объект',
+  projects,
+  mediaBySlug = {},
+  featureIndex = 0
+} = Astro.props as Props;
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 const featured = projects[0];
 const supporting = projects.slice(1);
@@ -23,6 +43,44 @@ const meta = (project: V2ProjectPresentation) => [project.project.city, project.
   .join(' · ');
 const description = (project: V2ProjectPresentation) =>
   project.project.whatWasDone?.trim() || project.project.shortDescription;
+const descriptionField = (project: V2ProjectPresentation) =>
+  project.project.whatWasDone?.trim() ? 'whatWasDone' : 'shortDescription';
+const affectedRoutes = (project: V2ProjectPresentation) => [
+  Astro.url.pathname,
+  project.productionRoute,
+  '/vypolnennye-obekty/'
+];
+const projectBinding = (
+  project: V2ProjectPresentation,
+  fieldPath: string,
+  tool: string,
+  options: Record<string, unknown> = {}
+) => adminBinding(Astro.url, {
+  renderer: { family: 'direction-proof', variant: 'landscaping-project' },
+  owner: { collection: 'projects', slug: project.project.slug }, fieldPath,
+  stableItemId: `${project.project.slug}-landscaping-proof-${fieldPath}`,
+  scope: 'shared', tool, affectedRoutes: affectedRoutes(project),
+  ...options
+});
+const metaDisposition = (project: V2ProjectPresentation) => adminDisposition(Astro.url, {
+  kind: 'derived',
+  reason: 'Строка места и года объединяет два реквизита проекта; они редактируются раздельно в карточке объекта.',
+  source: `src/content/projects/${project.project.slug}.json#city,year`,
+  tool: 'page-settings'
+});
+const mediaAttributes = featured ? projectBinding(featured, 'presentation.mediaRoles', 'gallery', {
+  role: 'landscaping-proof-gallery', multiple: true,
+  permissions: { edit: true, reorder: false, delete: false },
+  projection: {
+    kind: 'derived',
+    formula: 'project media whose presentation.mediaRoles contain landscaping + finished-result + proof'
+  }
+}) : {};
+const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
+const titleBinding = Astro.props.titleBinding ?? {};
+const proofDescriptionBinding = Astro.props.proofDescriptionBinding ?? {};
+const linkLabelBinding = Astro.props.linkLabelBinding ?? {};
+const supportingLinkLabelBinding = Astro.props.supportingLinkLabelBinding ?? {};
 ---
 
 {featured && (
@@ -30,22 +88,22 @@ const description = (project: V2ProjectPresentation) =>
     <div class="hv2-shell">
       <header class="place-section-heading place-projects__heading hv2-grid" data-v2-reveal>
         <div>
-          <p class="hv2-eyebrow">Выполненная территория</p>
-          <h2 id="place-projects-title">{title}</h2>
+          <p class="hv2-eyebrow" {...eyebrowBinding}>{eyebrow}</p>
+          <h2 id="place-projects-title" {...titleBinding}>{title}</h2>
         </div>
-        <p>Реальный объект показывает благоустройство как связанную работу с территорией, а не набор отдельных изделий.</p>
+        <p {...proofDescriptionBinding}>{proofDescription}</p>
       </header>
 
       <article class:list={['place-projects__featured', { 'place-projects__featured--text-only': !featureMedia }]}>
         <div class="place-projects__story" data-v2-reveal>
-          <p class="place-projects__meta">{meta(featured)}</p>
-          <h3>{featured.project.title}</h3>
-          <p>{description(featured)}</p>
-          <a href={withBase(featured.v2Route)}>Смотреть полный объект</a>
+          <p class="place-projects__meta" {...metaDisposition(featured)}>{meta(featured)}</p>
+          <h3 {...projectBinding(featured, 'title', 'heading')}>{featured.project.title}</h3>
+          <p {...projectBinding(featured, descriptionField(featured), 'long-text')}>{description(featured)}</p>
+          <a href={withBase(featured.v2Route)}><span {...linkLabelBinding}>{linkLabel}</span></a>
         </div>
 
         {featureMedia && (
-          <div class="place-projects__media" data-v2-reveal>
+          <div class="place-projects__media" data-v2-reveal {...mediaAttributes}>
             <figure class="place-projects__feature" data-v2-media>
               <V2ResponsiveImage
                 src={featureMedia.src}
@@ -78,10 +136,10 @@ const description = (project: V2ProjectPresentation) =>
         <div class="place-projects__supporting" role="list">
           {supporting.map((project) => (
             <article role="listitem" data-v2-reveal>
-              <p class="place-projects__meta">{meta(project)}</p>
-              <h3>{project.project.title}</h3>
-              <p>{description(project)}</p>
-              <a href={withBase(project.v2Route)}>Смотреть объект</a>
+              <p class="place-projects__meta" {...metaDisposition(project)}>{meta(project)}</p>
+              <h3 {...projectBinding(project, 'title', 'heading')}>{project.project.title}</h3>
+              <p {...projectBinding(project, descriptionField(project), 'long-text')}>{description(project)}</p>
+              <a href={withBase(project.v2Route)}><span {...supportingLinkLabelBinding}>{supportingLinkLabel}</span></a>
             </article>
           ))}
         </div>

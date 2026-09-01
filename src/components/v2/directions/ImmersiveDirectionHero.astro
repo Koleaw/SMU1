@@ -4,6 +4,7 @@ import { imageViewStyle } from '../catalogV2Data';
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 import { resolveV2ResponsiveMedia } from '../../../utils/v2ResponsiveMedia';
+import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
 
 interface BreadcrumbItem {
   title: string;
@@ -26,6 +27,18 @@ interface Props {
   secondaryHref?: string;
   secondaryLabel?: string;
   productFinalHandoff?: boolean;
+  bindingOwner?: { collection: string; slug: string };
+  bindingFields?: { eyebrow?: string; title?: string; description?: string; image?: string; primaryLabel?: string; secondaryLabel?: string };
+  bindingScope?: 'local' | 'shared' | 'global' | 'legal' | 'derived';
+  affectedRoutes?: string[];
+  editorSource?: string;
+  mediaBinding?: {
+    owner: { collection: string; slug: string };
+    fieldPath: string;
+    scope?: 'local' | 'shared' | 'global' | 'legal' | 'derived';
+    affectedRoutes?: string[];
+    projection?: { kind?: string; formula?: string; target?: string; fallback?: string };
+  };
 }
 
 const {
@@ -72,6 +85,44 @@ const transitionPlaceholderStyle = transitionPlaceholder
       `--v2-transition-placeholder-scale:${mediaScale}`
     ].join(';')
   : undefined;
+const bindingOwner = Astro.props.bindingOwner;
+const bindingFields = Astro.props.bindingFields ?? {};
+const affectedRoutes = Astro.props.affectedRoutes ?? [Astro.url.pathname];
+const editorSource = Astro.props.editorSource ?? 'src/components/v2/directions/ImmersiveDirectionHero.astro#Astro.props';
+const binding = (fieldPath: string | undefined, tool: string, options: Record<string, unknown> = {}) => fieldPath && bindingOwner
+  ? adminBinding(Astro.url, {
+      renderer: { family: 'direction-hero', variant }, owner: bindingOwner, fieldPath,
+      stableItemId: `${bindingOwner.slug}-hero-${fieldPath}`, scope: Astro.props.bindingScope ?? 'local',
+      tool, affectedRoutes, ...options
+    })
+  : {};
+const editableOrDeclared = (
+  fieldPath: string | undefined,
+  tool: string,
+  fragment: string,
+  reason: string
+) => fieldPath && bindingOwner
+  ? binding(fieldPath, tool)
+  : adminDisposition(Astro.url, {
+      kind: 'contextual',
+      reason,
+      source: `${editorSource}#${fragment}`,
+      tool: 'page-settings'
+    });
+const breadcrumbDisposition = adminDisposition(Astro.url, {
+  kind: 'derived',
+  reason: 'Хлебные крошки отражают каноническую иерархию route и название текущей записи; они не являются отдельной копией текста.',
+  source: `${editorSource}#breadcrumbs`,
+  tool: 'page-settings'
+});
+const mediaBinding = Astro.props.mediaBinding;
+const mediaBindingAttributes = mediaBinding ? adminBinding(Astro.url, {
+  renderer: { family: 'direction-hero', variant }, owner: mediaBinding.owner,
+  fieldPath: mediaBinding.fieldPath, stableItemId: `${mediaBinding.owner.slug}-direction-hero-media`,
+  role: 'hero-media', scope: mediaBinding.scope ?? 'shared', tool: 'media',
+  affectedRoutes: mediaBinding.affectedRoutes ?? affectedRoutes,
+  projection: mediaBinding.projection, multiple: false
+}) : binding(bindingFields.image, 'media', { role: 'hero-media', multiple: false });
 ---
 
 <section
@@ -93,7 +144,7 @@ const transitionPlaceholderStyle = transitionPlaceholder
   <span class="immersive-direction-hero__sentinel" aria-hidden="true" data-home-v2-header-sentinel></span>
 
   <div class="hv2-shell immersive-direction-hero__inner">
-    <div class="immersive-direction-hero__breadcrumbs" data-v2-reveal data-v2-reveal-stage="breadcrumbs" data-v2-entrance-role="context">
+    <div class="immersive-direction-hero__breadcrumbs" data-v2-reveal data-v2-reveal-stage="breadcrumbs" data-v2-entrance-role="context" {...breadcrumbDisposition}>
       <V2Breadcrumbs items={breadcrumbs} />
     </div>
 
@@ -103,14 +154,24 @@ const transitionPlaceholderStyle = transitionPlaceholder
         data-v2-hero-scroll-copy={productFinalHandoff ? undefined : ''}
         data-v2-page-handoff="copy"
       >
-        <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-reveal data-v2-reveal-stage="eyebrow" data-v2-entrance-role="context">{eyebrow}</p>
-        <h1 id={titleId} data-v2-reveal data-v2-reveal-stage="title" data-v2-entrance-role="title-primary">{title}</h1>
-        <p class="immersive-direction-hero__lead" data-v2-reveal data-v2-reveal-stage="description" data-v2-entrance-role="lead">{description}</p>
+        <p class="hv2-eyebrow hv2-eyebrow--light" data-v2-reveal data-v2-reveal-stage="eyebrow" data-v2-entrance-role="context" {...editableOrDeclared(bindingFields.eyebrow, 'short-text', 'eyebrow', 'Надзаголовок передан renderer-владельцем; прямое редактирование доступно, когда владелец указывает schema field.')}>{eyebrow}</p>
+        <h1 id={titleId} data-v2-reveal data-v2-reveal-stage="title" data-v2-entrance-role="title-primary" {...editableOrDeclared(bindingFields.title, 'heading', 'title', 'Заголовок передан renderer-владельцем; прямое редактирование доступно, когда владелец указывает schema field.')}>{title}</h1>
+        <p class="immersive-direction-hero__lead" data-v2-reveal data-v2-reveal-stage="description" data-v2-entrance-role="lead" {...editableOrDeclared(bindingFields.description, 'long-text', 'description', 'Описание передано renderer-владельцем; прямое редактирование доступно, когда владелец указывает schema field.')}>{description}</p>
         <div class="hv2-actions immersive-direction-hero__actions" data-v2-reveal data-v2-reveal-stage="actions" data-v2-entrance-role="actions-meta">
-          <a class="hv2-button hv2-button--primary" href={href(primaryHref)}>
+          <a class="hv2-button hv2-button--primary" href={href(primaryHref)} {...editableOrDeclared(
+            bindingFields.primaryLabel,
+            'link-label',
+            'primaryLabel',
+            'Подпись главного действия задана renderer-композицией; отдельного поля текущей записи для неё нет.'
+          )}>
             {primaryLabel}
           </a>
-          <a class="hv2-button hv2-button--ghost" href={href(secondaryHref)}>
+          <a class="hv2-button hv2-button--ghost" href={href(secondaryHref)} {...editableOrDeclared(
+            bindingFields.secondaryLabel,
+            'link-label',
+            'secondaryLabel',
+            'Подпись перехода к proof-секции задана renderer-композицией и зависит от наличия этой секции.'
+          )}>
             {secondaryLabel}
           </a>
         </div>
@@ -129,6 +190,7 @@ const transitionPlaceholderStyle = transitionPlaceholder
       data-v2-transition-placeholder={transitionPlaceholder ? '' : undefined}
       data-v2-transition-placeholder-src={transitionPlaceholder ? withBase(transitionPlaceholder.path) : undefined}
       style={transitionPlaceholderStyle}
+      {...mediaBindingAttributes}
     >
       <span class="v2-transition-media-placeholder" data-v2-transition-placeholder-layer aria-hidden="true"></span>
       <script is:inline>
@@ -176,7 +238,12 @@ const transitionPlaceholderStyle = transitionPlaceholder
         data-v2-page-critical
       />
       <div class="immersive-direction-hero__fallback" aria-hidden="true"></div>
-      {caption && <figcaption>{caption}</figcaption>}
+      {caption && <figcaption {...adminDisposition(Astro.url, {
+        kind: 'contextual',
+        reason: 'Подпись передана владельцем renderer вместе с media presentation; у текущей модели нет отдельного caption field.',
+        source: `${editorSource}#caption`,
+        tool: 'media'
+      })}>{caption}</figcaption>}
     </figure>
   ) : (
     <div class="immersive-direction-hero__fallback immersive-direction-hero__fallback--standalone" aria-hidden="true"></div>

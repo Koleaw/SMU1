@@ -11,6 +11,10 @@ interface Props {
   variant?: 'engineering' | 'visual';
   presentation?: 'cards' | 'open' | 'editorial-sequence';
   id?: string;
+  titleBinding?: Record<string, string>;
+  descriptionBinding?: Record<string, string>;
+  itemsBinding?: Record<string, string>;
+  eyebrowBinding?: Record<string, string>;
 }
 
 const {
@@ -28,6 +32,10 @@ const editorialMediaIndexes = presentation === 'editorial-sequence'
   : [];
 const editorialMediaOrdinal = new Map(editorialMediaIndexes.map((itemIndex, mediaIndex) => [itemIndex, mediaIndex]));
 const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
+const titleBinding = Astro.props.titleBinding ?? {};
+const descriptionBinding = Astro.props.descriptionBinding ?? {};
+const itemsBinding = Astro.props.itemsBinding ?? {};
+const eyebrowBinding = Astro.props.eyebrowBinding ?? {};
 ---
 
 {items.length > 0 && (
@@ -53,16 +61,17 @@ const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
               'hv2-eyebrow',
               { 'hv2-eyebrow--light': variant === 'engineering' && presentation === 'cards' }
             ]}
+            {...eyebrowBinding}
           >
             {eyebrow}
           </p>
-          <h2 id={`${id}-title`}>{title}</h2>
+          <h2 id={`${id}-title`} {...titleBinding}>{title}</h2>
         </div>
-        {description && <p>{description}</p>}
+        {description && <p {...descriptionBinding}>{description}</p>}
       </header>
 
       {presentation === 'cards' ? (
-        <div class="direction-types__grid" role="list">
+        <div class="direction-types__grid" role="list" {...itemsBinding}>
           {items.map((item, index) => (
             <article
               class:list={[
@@ -93,7 +102,7 @@ const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
           ))}
         </div>
       ) : presentation === 'open' ? (
-        <ol class="direction-types__open-list" data-v2-reveal>
+        <ol class="direction-types__open-list" data-v2-reveal {...itemsBinding}>
           {items.map((item, index) => (
             <li class="direction-type-entry">
               <span class="direction-type-entry__index" aria-hidden="true">{indexLabel(index)}</span>
@@ -105,7 +114,7 @@ const indexLabel = (index: number) => String(index + 1).padStart(2, '0');
           ))}
         </ol>
       ) : (
-        <ol class="direction-types__editorial-sequence" data-v2-reveal>
+        <ol class="direction-types__editorial-sequence" data-v2-reveal {...itemsBinding}>
           {items.map((item, index) => {
             const hasMedia = Boolean(item.image);
             const mediaOrdinal = editorialMediaOrdinal.get(index);

@@ -9,13 +9,14 @@
     "admin": "node tools/admin-api/launcher.mjs --open",
     "admin:setup": "node tools/admin-api/setup.mjs",
     "admin:api": "node tools/admin-api/server.mjs",
-    "test:admin-foundation": "node --test tools/admin-api/content-store.test.mjs tools/admin-api/content-normalization.test.mjs tools/admin-api/content-registry.test.mjs tools/admin-api/content-validation.test.mjs tools/admin-api/url-policy.test.mjs tools/admin-api/security.test.mjs tools/admin-api/server-security.test.mjs tools/admin-api/setup.test.mjs tools/admin-api/launcher.test.mjs tools/admin-api/local-preview.test.mjs tools/admin-api/writer-lease.test.mjs tools/admin-api/worktree-guard.test.mjs src/utils/safeInlineJson.test.mjs",
+    "test:admin-foundation": "node --test tools/admin-api/content-store.test.mjs tools/admin-api/content-normalization.test.mjs tools/admin-api/content-registry.test.mjs tools/admin-api/content-validation.test.mjs tools/admin-api/url-policy.test.mjs tools/admin-api/security.test.mjs tools/admin-api/server-security.test.mjs tools/admin-api/setup.test.mjs tools/admin-api/astro-cli.test.mjs tools/admin-api/launcher.test.mjs tools/admin-api/local-preview.test.mjs tools/admin-api/writer-lease.test.mjs tools/admin-api/worktree-guard.test.mjs src/utils/safeInlineJson.test.mjs",
     "test:admin-import": "node --test tools/admin-api/content-json.test.mjs tools/admin-api/project-media.test.mjs tools/admin-api/server-routes.test.mjs",
     "test:admin-coverage": "node --test tools/admin-api/content-coverage-registry.test.mjs tools/admin-api/content-completeness.test.mjs",
-    "test:admin-transactions": "node --test tools/admin-api/transaction-engine.test.mjs tools/admin-api/transaction-service.test.mjs tools/admin-api/relation-graph.test.mjs",
+    "test:admin-transactions": "node --test tools/admin-api/transaction-engine.test.mjs tools/admin-api/transaction-service.test.mjs tools/admin-api/relation-graph.test.mjs tools/admin-api/backup-service.test.mjs",
     "test:admin-media": "node --test tools/admin-api/media-validation.test.mjs tools/admin-api/media-staging.test.mjs tools/admin-api/media-scheduler.test.mjs tools/admin-api/media-library.test.mjs tools/admin-api/media-server-integration.test.mjs",
-    "test:admin-publish": "node --test tools/admin-api/publish-planner.test.mjs tools/admin-api/publish-runner.test.mjs tools/admin-api/publish-runtime.test.mjs tools/admin-api/publish-status.test.mjs tools/admin-api/publish-service.test.mjs",
-    "test:admin-client-state": "node --test src/admin/core/api-client.test.mjs src/admin/media/media-selection.test.mjs src/admin/metadata/editor-fields.test.mjs src/admin/state/draft-store.test.mjs src/admin/state/history-store.test.mjs",
+    "test:admin-publish": "node --test tools/admin-api/publish-planner.test.mjs tools/admin-api/publish-runner.test.mjs tools/admin-api/publish-runtime.test.mjs tools/admin-api/publish-status.test.mjs tools/admin-api/publish-service.test.mjs tools/admin-api/exact-validation-service.test.mjs tools/admin-api/release-control.test.mjs",
+    "test:admin-client-state": "node --test tools/admin-api/admin-binding.test.mjs src/admin/core/api-client.test.mjs src/admin/media/media-selection.test.mjs src/admin/metadata/editor-fields.test.mjs src/admin/state/direction-presentation-editor.test.mjs src/admin/state/draft-store.test.mjs src/admin/state/history-store.test.mjs src/admin/state/media-queue-store.test.mjs",
+    "test:h6-evidence-contracts": "node --test tools/qa/*.test.mjs",
     "test:admin-h6:ci": "npm run test:admin-foundation && npm run test:admin-import && npm run test:admin-coverage && npm run test:admin-transactions && npm run test:admin-media && npm run test:admin-publish && npm run test:admin-client-state",
     "media:prepare": "node tools/performance/prepare-media.mjs",
     "build": "npm run media:prepare && astro build",
@@ -25,19 +26,35 @@
     "qa:performance": "node tools/performance/qa-performance.mjs",
     "qa:deploy-isolation": "node tools/migration/deploy-isolation-qa.mjs",
     "qa:final:static": "node tools/migration/final-design-qa.mjs",
-    "qa:h2:motion": "node tools/migration/h2-motion-qa.mjs && npm run qa:deploy-isolation",
+    "qa:h2:motion": "node tools/migration/h2-motion-qa.mjs",
     "qa:final:browser": "node tools/migration/browser-final-design-qa.mjs && npm run qa:h2:motion",
     "qa:admin-browser": "node tools/admin-api/admin-browser-roundtrip.mjs",
+    "qa:h6:route-passport": "node tools/qa/editor-route-passport.mjs",
+    "qa:h6:public-actions:single": "node tools/qa/public-action-crawl.mjs",
+    "qa:h6:public-actions": "node tools/qa/public-action-parallel.mjs --shards=4",
+    "qa:h6:admin-actions": "node tools/qa/isolated-admin-action-qa.mjs",
+    "qa:h6:backup-restore": "node tools/qa/backup-restore-drill.mjs",
+    "qa:h6:media-privacy": "node tools/qa/media-privacy-chain.mjs",
+    "qa:h6:public-evidence": "npm run qa:h6:route-passport && npm run qa:h6:public-actions",
+    "qa:h6:verify-evidence": "node tools/qa/verify-h6-evidence.mjs",
     "qa:h6:admin": "npm run test:admin-h6:ci && npm run qa:admin-browser",
-    "qa:final": "npm run check && npm run qa:h6:admin && npm run build && npm run qa:performance && npm run qa:final:static && npm run qa:final:browser"
+    "qa:final": "npm run check && npm run qa:h6:admin && npm run test:h6-evidence-contracts && npm run build && npm run qa:performance && npm run qa:final:static && npm run deploy:prepare && npm run qa:performance && npm run qa:final:browser && npm run qa:deploy-isolation && npm run qa:h6:public-evidence && npm run qa:h6:admin-actions && npm run qa:h6:media-privacy && npm run qa:h6:backup-restore && npm run qa:h6:verify-evidence"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.2.1",
-    "astro": "^5.1.0"
+    "@astrojs/sitemap": "3.7.4",
+    "astro": "7.2.10"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9",
-    "sharp": "0.34.5",
-    "typescript": "^5.9.3"
+    "@astrojs/check": "0.9.10",
+    "sharp": "0.35.4",
+    "typescript": "5.9.3"
+  },
+  "overrides": {
+    "@astrojs/language-server": "2.16.16",
+    "fast-uri": "3.1.6",
+    "svgo": "4.1.0",
+    "volar-service-yaml": "0.0.71",
+    "yaml": "2.9.0",
+    "yaml-language-server": "1.24.0"
   }
 }

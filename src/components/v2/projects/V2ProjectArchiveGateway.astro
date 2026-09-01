@@ -4,6 +4,7 @@ import type { V2ProjectMedia, V2ProjectPresentation } from '../mediaRoleAdapter'
 import { resolveV2ResponsiveMedia } from '../../../utils/v2ResponsiveMedia';
 import { loadPublishedV2ProjectPresentations } from './projectV2Data';
 import '../../../styles/v2/project-archive-gateway.css';
+import { adminBinding, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   variant: 'home' | 'company';
@@ -11,12 +12,19 @@ interface Props {
   title: string;
   description: string;
   ctaLabel: string;
+  projectSlugs: readonly string[];
+  projectSelectionField: string;
   excludeSources?: readonly string[];
+  bindingOwner?: { collection: string; slug: string };
+  bindingFields?: { title: string; description: string; ctaLabel: string };
 }
 
 type GatewayFrame = {
   src: string;
   position: string;
+  ownerSlug: string;
+  fieldPath: string;
+  sourceRole: 'archive-cover' | 'public-gallery';
   avifSrcset?: string;
   webpSrcset?: string;
   fallbackSrcset?: string;
@@ -33,12 +41,24 @@ const {
   title,
   description,
   ctaLabel,
+  projectSlugs,
+  projectSelectionField,
   excludeSources = []
 } = Astro.props as Props;
 
 const MAX_FRAMES = 6;
 const excluded = new Set(excludeSources.map((source) => source.trim()).filter(Boolean));
-const presentations = await loadPublishedV2ProjectPresentations();
+const publishedPresentations = await loadPublishedV2ProjectPresentations();
+const duplicateProjectSlugs = projectSlugs.filter((slug, index) => projectSlugs.indexOf(slug) !== index);
+if (duplicateProjectSlugs.length > 0) {
+  throw new Error(`Project gateway ${variant} has duplicate project relations: ${[...new Set(duplicateProjectSlugs)].join(', ')}.`);
+}
+const presentationBySlug = new Map(publishedPresentations.map((presentation) => [presentation.project.slug, presentation]));
+const missingProjectSlugs = projectSlugs.filter((slug) => !presentationBySlug.has(slug));
+if (missingProjectSlugs.length > 0) {
+  throw new Error(`Project gateway ${variant} references missing or hidden projects: ${missingProjectSlugs.join(', ')}.`);
+}
+const presentations = projectSlugs.map((slug) => presentationBySlug.get(slug)!);
 const isPlaceholder = (source: string) => /\/assets\/images\/placeholders\//iu.test(source);
 const isSafeMedia = (media: V2ProjectMedia) => (
   (media.roles.includes('finished-result') || media.roles.includes('proof'))
@@ -49,9 +69,14 @@ const isSafeMedia = (media: V2ProjectMedia) => (
 );
 const frameFromMedia = (
   presentation: V2ProjectPresentation,
-  media: V2ProjectMedia
+  media: V2ProjectMedia,
+  fieldPath: string,
+  sourceRole: GatewayFrame['sourceRole']
 ): GatewayFrame => ({
   src: media.src,
+  ownerSlug: presentation.project.slug,
+  fieldPath,
+  sourceRole,
   position: media.src === presentation.archiveCoverMedia?.src
     ? presentation.archiveCoverPosition
     : media.src === presentation.detailHeroMedia?.src
@@ -60,14 +85,25 @@ const frameFromMedia = (
 });
 const candidatesByPresentation = presentations.map((presentation) => {
   const seen = new Set<string>();
-  return [presentation.archiveCoverMedia, ...presentation.publicGallery]
-    .filter((media): media is V2ProjectMedia => Boolean(media))
-    .filter((media) => {
+  const candidates: Array<{ media: V2ProjectMedia; fieldPath: string; sourceRole: GatewayFrame['sourceRole'] }> = [
+    ...(presentation.archiveCoverMedia ? [{
+      media: presentation.archiveCoverMedia,
+      fieldPath: 'presentation.archiveCoverMedia',
+      sourceRole: 'archive-cover' as const
+    }] : []),
+    ...presentation.publicGallery.map((media, index) => ({
+      media,
+      fieldPath: `presentation.publicGallery[${index}]`,
+      sourceRole: 'public-gallery' as const
+    }))
+  ];
+  return candidates
+    .filter(({ media }) => {
       if (seen.has(media.src) || !isSafeMedia(media)) return false;
       seen.add(media.src);
       return true;
     })
-    .map((media) => frameFromMedia(presentation, media));
+    .map(({ media, fieldPath, sourceRole }) => frameFromMedia(presentation, media, fieldPath, sourceRole));
 });
 
 const selectedFrames: GatewayFrame[] = [];
@@ -104,7 +140,8 @@ const responsiveSizes = variant === 'home'
       '(min-width: 361px) calc(100vw - 32px)',
       'calc(100vw - 24px)'
     ].join(', ');
-const frames = orderedFrames.map((frame): GatewayFrame => {
+type PublicGatewayFrame = Omit<GatewayFrame, 'ownerSlug' | 'fieldPath' | 'sourceRole'>;
+const frames = orderedFrames.map((frame): PublicGatewayFrame => {
   const media = resolveV2ResponsiveMedia(frame.src, 'gateway', responsiveSizes);
   const serialize = (items: Array<{ path: string; width: number }>) => items
     .map((item) => `${v2Href(item.path, Astro.url.pathname)} ${item.width}w`)
@@ -125,6 +162,21 @@ const titleId = `${sectionId}-gateway-title`;
 const descriptionId = `${sectionId}-gateway-description`;
 const hasMedia = Boolean(firstFrame);
 const canRotate = frames.length > 1;
+const bindingOwner = Astro.props.bindingOwner;
+const bindingFields = Astro.props.bindingFields;
+const binding = (fieldPath: string | undefined, tool: string) => bindingOwner && fieldPath ? adminBinding(Astro.url, {
+  renderer: { family: 'project-gateway', variant }, owner: bindingOwner, fieldPath,
+  stableItemId: `${bindingOwner.slug}-${sectionId}-${fieldPath}`, scope: 'local', tool,
+  affectedRoutes: [Astro.url.pathname]
+}) : {};
+const isEditorCanvas = isLocalAdminCanvas(Astro.url);
+const selectionBinding = bindingOwner ? adminBinding(Astro.url, {
+  renderer: { family: 'project-gateway', variant }, owner: bindingOwner, fieldPath: projectSelectionField,
+  stableItemId: `${bindingOwner.slug}-${sectionId}-project-selection`, scope: 'local', tool: 'relation-list',
+  affectedRoutes: [Astro.url.pathname, '/vypolnennye-obekty/'],
+  permissions: { edit: true, reorder: true, delete: false },
+  projection: { kind: 'relation', formula: 'ordered project relations → archive cover/public gallery round-robin frames' }
+}) : {};
 ---
 
 <section
@@ -141,12 +193,32 @@ const canRotate = frames.length > 1;
   data-gateway-crossfade-ms={CROSSFADE_MS}
   data-gateway-sizes={responsiveSizes}
   style={`--gateway-crossfade-duration: ${CROSSFADE_MS}ms;`}
+  {...selectionBinding}
 >
   <div class:list={[
     'v2-project-archive-gateway__shell',
     variant === 'home' ? 'hf-shell hf-shell--editorial' : 'hv2-shell'
   ]}>
     <div class="v2-project-archive-gateway__stage" data-v2-reveal="media">
+      {isEditorCanvas && orderedFrames.map((frame, index) => (
+        <span
+          hidden
+          aria-hidden="true"
+          data-smu1-gateway-frame-source={index + 1}
+          {...adminBinding(Astro.url, {
+            renderer: { family: 'project-gateway-frame', variant },
+            owner: { collection: 'projects', slug: frame.ownerSlug },
+            fieldPath: frame.fieldPath,
+            stableItemId: `${sectionId}-frame-${index + 1}-${frame.ownerSlug}`,
+            role: frame.sourceRole,
+            scope: 'shared',
+            tool: frame.sourceRole === 'archive-cover' ? 'media' : 'gallery',
+            affectedRoutes: [Astro.url.pathname, '/vypolnennye-obekty/', `/vypolnennye-obekty/${frame.ownerSlug}/`],
+            projection: { kind: 'shared-media', formula: `project.${frame.fieldPath} → gateway frame ${index + 1}` },
+            permissions: { edit: true, reorder: frame.sourceRole === 'public-gallery', delete: false }
+          })}
+        ></span>
+      ))}
       <a
         class="v2-project-archive-gateway__link"
         href={archiveHref}
@@ -199,10 +271,10 @@ const canRotate = frames.length > 1;
         )}
         {hasMedia && <span class="v2-project-archive-gateway__gradient" aria-hidden="true"></span>}
         <span class="v2-project-archive-gateway__copy">
-          <h2 id={titleId}>{title}</h2>
-          <span class="v2-project-archive-gateway__description" id={descriptionId}>{description}</span>
+          <h2 id={titleId} {...binding(bindingFields?.title, 'heading')}>{title}</h2>
+          <span class="v2-project-archive-gateway__description" id={descriptionId} {...binding(bindingFields?.description, 'long-text')}>{description}</span>
           <span class="v2-project-archive-gateway__cta">
-            <span>{ctaLabel}</span>
+            <span {...binding(bindingFields?.ctaLabel, 'button-label')}>{ctaLabel}</span>
             <svg viewBox="0 0 24 24" width="24" height="24" focusable="false" aria-hidden="true">
               <path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" stroke-linejoin="miter"></path>
             </svg>

@@ -1,7 +1,9 @@
 {
   "title": "Благоустройство территорий",
   "slug": "blagoustroystvo-territoriy",
-  "shortDescription": "Благоустройство территорий, входных групп, дворов, зон отдыха и хозяйственных площадок с подбором МАФ, конструкций и монтажом.",
+  "shortDescription": "Дворы, входные группы, зоны отдыха и хозяйственные площадки с подбором конструкций и монтажом.",
+  "homeOrder": 6,
+  "homeImage": "/uploads/project-da0872c68d9a09f0a7d2f995.jpg",
   "heroKicker": "Благоустройство под задачу",
   "heroTitle": "Благоустройство территорий",
   "heroDescription": "Выполняем благоустройство общественных, коммерческих, производственных и частных территорий — от отдельных элементов и МАФ до комплекса работ на площадке.",
@@ -17,6 +19,45 @@
   "contactTelegramLabel": "Получить расчёт",
   "contactEmailLabel": "Email",
   "contactPhoneLabel": "Позвонить",
+  "directionPresentation": {
+    "hero": {
+      "primaryLabel": "Получить расчёт",
+      "secondaryLabel": "Смотреть выполненный объект",
+      "imageAlt": "Готовая благоустроенная набережная с лестницей, лавочками и ограждениями"
+    },
+    "sectionNav": {
+      "label": "Разделы направления",
+      "items": [
+        { "id": "landscaping-proof", "label": "Реальный объект", "order": 10, "isActive": true },
+        { "id": "landscaping-scope", "label": "Что благоустраиваем", "order": 20, "isActive": true },
+        { "id": "landscaping-contexts", "label": "Для каких территорий", "order": 30, "isActive": true },
+        { "id": "landscaping-brief", "label": "С чем обратиться", "order": 40, "isActive": true },
+        { "id": "contact", "label": "Контакты", "order": 50, "isActive": true }
+      ]
+    },
+    "types": { "eyebrow": "Состав благоустройства" },
+    "scope": { "eyebrow": "Территории и объекты" },
+    "brief": { "eyebrow": "Для первого обсуждения" },
+    "proof": {
+      "eyebrow": "Выполненная территория",
+      "title": "Благоустройство на реальном объекте",
+      "description": "Реальный объект показывает благоустройство как связанную работу с территорией, а не набор отдельных изделий.",
+      "linkLabel": "Смотреть полный объект",
+      "supportingLinkLabel": "Смотреть объект"
+    },
+    "related": {
+      "eyebrow": "Дальше по задаче",
+      "title": "Смежные направления",
+      "items": [
+        { "id": "street-furniture", "targetCollection": "product-sections", "targetSlug": "ulichnaya-mebel", "eyebrow": "Изделия для территории", "description": "Лавочки, урны, вазоны, велопарковки и другие изделия для организации пространства.", "order": 10, "isActive": true },
+        { "id": "fences", "targetCollection": "product-sections", "targetSlug": "ograzhdeniya-i-zabory", "eyebrow": "Границы и зонирование", "description": "Отдельное направление для ограждений, заборов и элементов зонирования территории.", "order": 20, "isActive": true },
+        { "id": "canopies", "targetCollection": "product-sections", "targetSlug": "navesy-i-kozyrki", "eyebrow": "Защищённые пространства", "description": "Навесы и козырьки для входных, хозяйственных и других зон объекта.", "order": 30, "isActive": true },
+        { "id": "construction", "targetCollection": "services", "targetSlug": "stroitelstvo-i-remonty", "eyebrow": "Работы на объекте", "description": "Более широкий комплекс строительных, ремонтных и монтажных работ на площадке.", "order": 40, "isActive": true }
+      ]
+    },
+    "contactEyebrow": "Обсудить проект",
+    "contactPhoneChannelLabel": "Основной телефон"
+  },
   "pageBlocks": [
     {
       "type": "cardGrid",

@@ -2,26 +2,34 @@
 import { getCollection } from 'astro:content';
 import PracticalV2Layout from '../components/v2/practical/PracticalV2Layout.astro';
 import V2ContactsPage from '../components/v2/practical/V2ContactsPage.astro';
+import settings from '../content/site-settings/global.json';
+import { adminBinding } from '../admin/bindings/adminBinding';
 
-type ListPanel = { type?: string; title?: string; items?: unknown[]; isActive?: boolean };
 const customOrder = (await getCollection('static-pages')).find(({ data }) => data.slug === 'custom-order')?.data;
-const inputBlock = customOrder?.pageBlocks?.find((block) => (
-  block.type === 'listPanel' && block.title === 'Что можно прислать' && block.isActive !== false
-)) as ListPanel | undefined;
-const taskInputs = (inputBlock?.items ?? [])
-  .filter((item): item is string => typeof item === 'string')
-  .map((item) => item.trim())
-  .filter(Boolean);
+const taskInputs = (customOrder?.customOrderSourceMaterials ?? [])
+  .filter((item) => item.isActive !== false && Boolean(item.label.trim()))
+  .sort((a, b) => a.order - b.order)
+  .map((item) => item.label.trim());
+const copy = settings.contactsPage;
+const shellCtaBinding = (occurrence: string) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'contacts' },
+  owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: 'contactsPage.shellCtaLabel', stableItemId: `contacts-shell-cta-${occurrence}`,
+  scope: 'local', tool: 'link-label', affectedRoutes: ['/kontakty/']
+});
 ---
 
 <PracticalV2Layout
-  title="Контакты — СМУ-1"
-  description="Контакты СМУ-1: телефоны, Telegram, электронная почта и адрес."
+  title={copy.seoTitle}
+  description={copy.seoDescription}
   canonicalPath="/kontakty/"
   currentPath={Astro.url.pathname}
   kind="contacts"
   contactHref="#contact-methods"
-  ctaLabel="Связаться"
+  ctaLabel={copy.shellCtaLabel}
+  headerCtaBinding={shellCtaBinding('header-desktop')}
+  headerMobileCtaBinding={shellCtaBinding('header-mobile')}
+  mobileCtaBinding={shellCtaBinding('footer-mobile')}
 >
   <V2ContactsPage taskInputs={taskInputs} />
 </PracticalV2Layout>

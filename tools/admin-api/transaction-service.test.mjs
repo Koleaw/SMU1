@@ -86,6 +86,42 @@ test('typed multi-record preview has exact diff and apply writes through one jou
   assert.equal(anotherOwner.length, 0, 'a different owner cannot enumerate history');
 });
 
+test('legal content requires a new explicit confirmation while ordinary global copy does not', async (t) => {
+  const { service } = await fixture(t);
+  const global = await service.readRecord({ collection: 'site-settings', slug: 'global' });
+  const unconfirmed = await service.preview({
+    ...context('legal-unconfirmed'),
+    operations: [{
+      type: 'upsert-record', collection: 'site-settings', slug: 'global', baseRevision: global.revision,
+      content: { ...global.content, inn: `${global.content.inn}0` }
+    }]
+  });
+  assert.equal(unconfirmed.state, 'blocked');
+  assert.ok(unconfirmed.blockers.some((issue) => issue.code === 'LEGAL_CONFIRMATION_REQUIRED'));
+
+  const confirmed = await service.preview({
+    ...context('legal-confirmed'),
+    operations: [{
+      type: 'upsert-record', collection: 'site-settings', slug: 'global', baseRevision: global.revision,
+      content: {
+        ...global.content,
+        inn: `${global.content.inn}0`,
+        privacyPolicy: { ...global.content.privacyPolicy, confirmedAgainstGlobalAt: '2026-09-01T10:00:00.000Z' }
+      }
+    }]
+  });
+  assert.equal(confirmed.state, 'prepared');
+
+  const ordinary = await service.preview({
+    ...context('global-ordinary'),
+    operations: [{
+      type: 'upsert-record', collection: 'site-settings', slug: 'global', baseRevision: global.revision,
+      content: { ...global.content, city: `${global.content.city} и область` }
+    }]
+  });
+  assert.equal(ordinary.state, 'prepared');
+});
+
 test('record snapshot callback stays inside the shared repository lease', async (t) => {
   const { service } = await fixture(t);
   const result = await service.withRecordStableRead(

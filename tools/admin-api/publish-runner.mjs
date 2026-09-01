@@ -13,6 +13,7 @@ import {
   runGitProcess,
   validateCommittedTransactionManifest,
 } from './publish-planner.mjs';
+import { normalizeReleaseIdentityEvidence } from '../release/artifact-identity.mjs';
 
 const FULL_GIT_SHA_PATTERN = /^[a-f0-9]{40}$/u;
 const PUBLISH_WORKSPACE_KIND = 'smu1-publish-workspace';
@@ -592,6 +593,19 @@ export function createPublishRunner({
           missingGateEvidence,
         });
       }
+      let artifactIdentity;
+      try {
+        artifactIdentity = normalizeReleaseIdentityEvidence(gateResult.artifactIdentity, {
+          expectedTestedCommitSha: testedSha,
+        });
+      } catch (error) {
+        throw new PublishRunError(
+          'PUBLISH_GATE_ARTIFACT_IDENTITY_INVALID',
+          'Content-only gates did not prove the deterministic dist byte identity for the exact prospective commit.',
+          { testedSha, causeCode: error?.code || null },
+          { cause: error },
+        );
+      }
 
       const remoteAfterGates = await readRefs(commands);
       if (remoteAfterGates.candidate !== remoteCandidate
@@ -672,7 +686,7 @@ export function createPublishRunner({
         protectedSha,
         remoteBefore: Object.freeze({ candidate: remoteCandidate, preview: remotePreview, protected: protectedSha }),
         paths: plan.paths.map((item) => Object.freeze({ ...item })),
-        gates: Object.freeze({ ...gateResult, testedSha }),
+        gates: Object.freeze({ ...gateResult, artifactIdentity, testedSha }),
         commands: Object.freeze(commands.map((item) => Object.freeze({ ...item, args: Object.freeze([...item.args]) }))),
       });
     } finally {

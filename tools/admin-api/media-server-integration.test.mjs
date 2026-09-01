@@ -139,6 +139,28 @@ async function jpegBytes() {
   }).jpeg().toBuffer();
 }
 
+function minimalMp4() {
+  const buffer = Buffer.alloc(32);
+  buffer.writeUInt32BE(24, 0);
+  buffer.write('ftyp', 4, 'ascii');
+  buffer.write('isom', 8, 'ascii');
+  buffer.writeUInt32BE(0x200, 12);
+  buffer.write('isom', 16, 'ascii');
+  buffer.write('mp42', 20, 'ascii');
+  buffer.writeUInt32BE(8, 24);
+  buffer.write('mdat', 28, 'ascii');
+  return buffer;
+}
+
+function minimalWebm() {
+  return Buffer.from([
+    0x1a, 0x45, 0xdf, 0xa3,
+    0x87,
+    0x42, 0x82, 0x84, 0x77, 0x65, 0x62, 0x6d,
+    0x18, 0x53, 0x80, 0x67, 0x80
+  ]);
+}
+
 function hiddenProject(image) {
   return {
     title: 'Скрытый объект со staged media',
@@ -196,7 +218,13 @@ test('authenticated staging and hidden-record save promote JPEG and JSON in one 
   assert.equal(stagedPreviewResponse.headers.get('content-type'), 'image/jpeg');
   assert.equal(stagedPreviewResponse.headers.get('cache-control'), 'private, no-store, max-age=0');
   assert.equal(stagedPreviewResponse.headers.get('cross-origin-resource-policy'), 'same-origin');
-  assert.deepEqual(Buffer.from(await stagedPreviewResponse.arrayBuffer()), bytes);
+  const publicBytes = Buffer.from(await stagedPreviewResponse.arrayBuffer());
+  assert.notDeepEqual(publicBytes, bytes, 'preview exposes sanitized public bytes, never the untouched upload');
+  assert.equal(staged.validation.metadataSanitized, true);
+  assert.equal(staged.validation.sourceBytes, bytes.length);
+  const publicMetadata = await sharp(publicBytes).metadata();
+  assert.equal(publicMetadata.exif, undefined);
+  assert.equal(publicMetadata.xmp, undefined);
 
   const canonicalFile = path.join(contentRoot, 'public', ...staged.canonicalPath.split('/').filter(Boolean));
   const recordFile = path.join(contentRoot, 'projects', 'hidden-staged-project.json');
@@ -226,7 +254,7 @@ test('authenticated staging and hidden-record save promote JPEG and JSON in one 
   assert.equal(saved.content.image, staged.canonicalPath);
   assert.match(saved.transactionId, /^[a-f0-9-]+$/iu);
 
-  assert.deepEqual(await fs.readFile(canonicalFile), bytes);
+  assert.deepEqual(await fs.readFile(canonicalFile), publicBytes);
   const onDisk = JSON.parse(await fs.readFile(recordFile, 'utf8'));
   assert.equal(onDisk.isActive, false);
   assert.equal(onDisk.image, staged.canonicalPath);
@@ -307,6 +335,43 @@ test('corrupt JPEG, SVG and MIME mismatch are rejected before any permanent uplo
     assert.deepEqual(await uploadNames(contentRoot), before, `${fixture.name} must not reach public/uploads.`);
   }
 
+  const usageResponse = await fetch(`${base}/media/staging/usage`, { headers: { cookie: auth.cookie } });
+  assert.equal(usageResponse.status, 200);
+  assert.deepEqual(await usageResponse.json(), {
+    bytes: 0,
+    blobs: 0,
+    maxTotalBytes: 256 * 1024 * 1024,
+    remainingBytes: 256 * 1024 * 1024
+  });
+  const historyResponse = await fetch(`${base}/history`, { headers: { cookie: auth.cookie } });
+  assert.equal(historyResponse.status, 200);
+  assert.deepEqual((await historyResponse.json()).history, []);
+});
+
+test('ordinary HTTP staging rejects MP4/WebM before staged or permanent bytes exist', { timeout: 30000 }, async (t) => {
+  const contentRoot = await temporaryContentRoot(t);
+  const base = await startServer(t, contentRoot);
+  const auth = await login(base);
+  const fixtures = [
+    { batchId: 'batch-rejected-mp4', clientId: 'rejected-mp4', filename: 'hero.mp4', mime: 'video/mp4', bytes: minimalMp4() },
+    { batchId: 'batch-rejected-webm', clientId: 'rejected-webm', filename: 'hero.webm', mime: 'video/webm', bytes: minimalWebm() }
+  ];
+
+  for (const fixture of fixtures) {
+    const response = await postStagedFile(base, auth, fixture);
+    const payload = await response.json();
+    assert.equal(response.status, 415, JSON.stringify(payload));
+    assert.equal(payload.code, 'MEDIA_UPLOAD_RASTER_ONLY');
+    assert.deepEqual(payload.details?.allowedFormats, ['jpeg', 'png', 'webp']);
+
+    const batchResponse = await fetch(`${base}/media/staging/${fixture.batchId}`, {
+      headers: { cookie: auth.cookie }
+    });
+    assert.equal(batchResponse.status, 200);
+    assert.deepEqual((await batchResponse.json()).items, [], `${fixture.filename} must not create a staging lease.`);
+  }
+
+  assert.deepEqual(await uploadNames(contentRoot), [], 'video upload must not reach public/uploads.');
   const usageResponse = await fetch(`${base}/media/staging/usage`, { headers: { cookie: auth.cookie } });
   assert.equal(usageResponse.status, 200);
   assert.deepEqual(await usageResponse.json(), {

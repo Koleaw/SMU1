@@ -6,6 +6,7 @@ const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import type { V2JobRecord } from './practicalV2Data';
 import { nonEmptyItems } from './practicalV2Data';
+import { adminBinding } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   job: V2JobRecord;
@@ -14,39 +15,54 @@ interface Props {
 const { job } = Astro.props as Props;
 const tel = (value: string) => value.replace(/[^+\d]/g, '');
 const telegramLabel = getV2TelegramLabel(settings);
+const copy = settings.vacancyDetailPage;
 const sections = [
-  { id: 'vacancy-responsibilities', title: 'Обязанности', items: nonEmptyItems(job.responsibilities) },
-  { id: 'vacancy-requirements', title: 'Требования', items: nonEmptyItems(job.requirements) },
-  { id: 'vacancy-conditions', title: 'Условия', items: nonEmptyItems(job.conditions) }
+  { id: 'vacancy-responsibilities', title: copy.responsibilitiesLabel, titleFieldPath: 'responsibilitiesLabel', fieldPath: 'responsibilities', items: nonEmptyItems(job.responsibilities) },
+  { id: 'vacancy-requirements', title: copy.requirementsLabel, titleFieldPath: 'requirementsLabel', fieldPath: 'requirements', items: nonEmptyItems(job.requirements) },
+  { id: 'vacancy-conditions', title: copy.conditionsLabel, titleFieldPath: 'conditionsLabel', fieldPath: 'conditions', items: nonEmptyItems(job.conditions) }
 ].filter((section) => section.items.length > 0);
 const facts = [
-  job.city ? { label: 'Город', value: job.city } : null,
-  job.employmentType ? { label: 'Занятость', value: job.employmentType } : null,
-  job.salary ? { label: 'Оплата', value: job.salary } : null
-].filter((item): item is { label: string; value: string } => Boolean(item));
+  job.city ? { label: copy.cityLabel, labelFieldPath: 'cityLabel', value: job.city, fieldPath: 'city' } : null,
+  job.employmentType ? { label: copy.employmentTypeLabel, labelFieldPath: 'employmentTypeLabel', value: job.employmentType, fieldPath: 'employmentType' } : null,
+  job.salary ? { label: copy.salaryLabel, labelFieldPath: 'salaryLabel', value: job.salary, fieldPath: 'salary' } : null
+].filter((item): item is { label: string; labelFieldPath: string; value: string; fieldPath: string } => Boolean(item));
+const affectedRoutes = [`/vakansii/${job.slug}/`, '/vakansii/'];
+const binding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'vacancy-detail', variant: 'job' }, owner: { collection: 'jobs', slug: job.slug },
+  fieldPath, stableItemId: job.slug, scope: 'local', tool, affectedRoutes, ...options
+});
+const pageBinding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'practical', variant: 'vacancy-detail' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: `vacancyDetailPage.${fieldPath}`, stableItemId: `vacancy-detail-${fieldPath}`, scope: 'global', tool,
+  affectedRoutes: ['/vakansii/*'], ...options
+});
+const globalBinding = (fieldPath: string, tool = 'short-text') => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'vacancy-detail' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath, scope: 'global', tool, affectedRoutes: ['*']
+});
 ---
 
 <V2Breadcrumbs items={[
-  { title: 'Главная', href: '/design-lab/home-v2/' },
-  { title: 'Вакансии', href: '/design-lab/v2/vakansii/' },
-  { title: job.title }
+  { title: copy.homeBreadcrumbLabel, href: '/design-lab/home-v2/', editor: pageBinding('homeBreadcrumbLabel', 'short-text', { stableItemId: 'vacancy-detail-home-breadcrumb' }) },
+  { title: copy.archiveBreadcrumbLabel, href: '/design-lab/v2/vakansii/', editor: pageBinding('archiveBreadcrumbLabel', 'short-text', { stableItemId: 'vacancy-detail-archive-breadcrumb' }) },
+  { title: job.title, editor: binding('title', 'heading', { stableItemId: `${job.slug}-breadcrumb` }) }
 ]} />
 
 <article class="practical-vacancy">
   <header class="practical-vacancy__hero">
     <div class="hv2-shell practical-vacancy__hero-grid" data-v2-page-handoff="copy">
       <div data-v2-reveal>
-        <p class="hv2-eyebrow" data-v2-entrance-role="context">Вакансия</p>
-        <h1 data-v2-entrance-role="title-primary">{job.title}</h1>
-        {job.shortDescription && <p class="practical-hero__lead" data-v2-entrance-role="lead">{job.shortDescription}</p>}
+        <p class="hv2-eyebrow" data-v2-entrance-role="context" {...pageBinding('eyebrow', 'short-text')}>{copy.eyebrow}</p>
+        <h1 data-v2-entrance-role="title-primary" {...binding('title', 'heading')}>{job.title}</h1>
+        {job.shortDescription && <p class="practical-hero__lead" data-v2-entrance-role="lead" {...binding('shortDescription', 'long-text')}>{job.shortDescription}</p>}
         <a class="practical-vacancy__back" href={withBase('/design-lab/v2/vakansii/')} data-v2-entrance-role="actions-meta">
-          Все вакансии
+          <span {...pageBinding('primaryLabel', 'button-label')}>{copy.primaryLabel}</span>
         </a>
       </div>
       {facts.length > 0 && (
         <dl data-v2-reveal data-v2-entrance-role="support">
           {facts.map((fact) => (
-            <div><dt>{fact.label}</dt><dd>{fact.value}</dd></div>
+            <div><dt {...pageBinding(fact.labelFieldPath, 'short-text', { stableItemId: `vacancy-detail-${job.slug}-${fact.labelFieldPath}` })}>{fact.label}</dt><dd {...binding(fact.fieldPath, 'short-text')}>{fact.value}</dd></div>
           ))}
         </dl>
       )}
@@ -57,8 +73,8 @@ const facts = [
     <div class="practical-vacancy__content hv2-shell">
       {sections.map((section) => (
         <section aria-labelledby={section.id} data-v2-reveal>
-          <h2 id={section.id}>{section.title}</h2>
-          <ul>{section.items.map((item) => <li>{item}</li>)}</ul>
+          <h2 id={section.id} {...pageBinding(section.titleFieldPath, 'heading')}>{section.title}</h2>
+          <ul {...binding(section.fieldPath, 'list', { itemKind: 'string' })}>{section.items.map((item) => <li>{item}</li>)}</ul>
         </section>
       ))}
     </div>
@@ -67,22 +83,22 @@ const facts = [
   <section class="practical-vacancy__contact" id="vacancy-contact" aria-labelledby="vacancy-contact-title">
     <div class="hv2-shell practical-vacancy__contact-grid">
       <div data-v2-reveal>
-        <p class="hv2-eyebrow hv2-eyebrow--light">Откликнуться</p>
-        <h2 id="vacancy-contact-title">Свяжитесь удобным способом</h2>
+        <p class="hv2-eyebrow hv2-eyebrow--light" {...pageBinding('ctaEyebrow', 'short-text')}>{copy.ctaEyebrow}</p>
+        <h2 id="vacancy-contact-title" {...pageBinding('ctaTitle', 'heading')}>{copy.ctaTitle}</h2>
       </div>
       <div class="practical-vacancy__channels" data-v2-reveal>
-        <a href={`mailto:${settings.email}`}><span>Email</span><strong>{settings.email}</strong></a>
-        <a href={`tel:${tel(settings.phonePrimary)}`}><span>Телефон</span><strong>{settings.phonePrimary}</strong></a>
-        <a href={settings.telegram} target="_blank" rel="noopener noreferrer"><span>Telegram</span><strong>{telegramLabel}</strong></a>
+        <a href={`mailto:${settings.email}`}><span {...pageBinding('emailChannelLabel', 'short-text')}>{copy.emailChannelLabel}</span><strong {...globalBinding('email')}>{settings.email}</strong></a>
+        <a href={`tel:${tel(settings.phonePrimary)}`}><span {...pageBinding('phoneChannelLabel', 'short-text')}>{copy.phoneChannelLabel}</span><strong {...globalBinding('phonePrimary')}>{settings.phonePrimary}</strong></a>
+        <a href={settings.telegram} target="_blank" rel="noopener noreferrer"><span {...pageBinding('telegramChannelLabel', 'short-text')}>{copy.telegramChannelLabel}</span><strong {...globalBinding('telegramLabel')}>{telegramLabel}</strong></a>
       </div>
     </div>
   </section>
 
   <nav class="practical-related-pages" aria-label="Связанные страницы">
     <div class="hv2-shell">
-      <p>Узнать больше о СМУ-1</p>
-      <a href={withBase('/design-lab/v2/o-nas/')}>О компании</a>
-      <a href={withBase('/design-lab/v2/kontakty/')}>Контакты</a>
+      <p {...pageBinding('relatedEyebrow', 'short-text')}>{copy.relatedEyebrow}</p>
+      <a href={withBase('/design-lab/v2/o-nas/')} {...pageBinding('relatedCompanyLabel', 'link-label')}>{copy.relatedCompanyLabel}</a>
+      <a href={withBase('/design-lab/v2/kontakty/')} {...pageBinding('relatedContactsLabel', 'link-label')}>{copy.relatedContactsLabel}</a>
     </div>
   </nav>
 </article>

@@ -17,6 +17,7 @@ import { isProductionDeploy, isTestDeploy, NOINDEX_ROBOTS } from '../utils/deplo
 import { loadV2TransitionRouteRegistryJson } from '../utils/v2RouteRegistry';
 import { withBase } from '../utils/withBase';
 import { getV2Scope, productionV2Path, type V2Scope } from '../utils/v2Routes';
+import { adminDisposition, isLocalAdminCanvas } from '../admin/bindings/adminBinding';
 
 interface Props {
   title: string;
@@ -49,11 +50,13 @@ const {
 } = Astro.props as Props;
 
 const isProduction = scope === 'production';
+const isEditorCanvas = isLocalAdminCanvas(Astro.url);
 const isEntryPreview = entryMotion === 'preview';
 const entrySessionKey = 'smu1:entry-intro:v2';
 const currentProductionPath = productionV2Path(Astro.url.pathname).split(/[?#]/, 1)[0];
 const compatibilityRoutes = new Set(['/lavochki-i-skameyki/', '/urny/', '/navesy/']);
 const isPublicV2Motion = isProduction
+  && !isEditorCanvas
   && !refreshTarget
   && !compatibilityRoutes.has(currentProductionPath);
 const isEntryEnabled = isPublicV2Motion || isEntryPreview;
@@ -125,7 +128,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content={robotsContent} />
     <meta name="description" content={pageDescription} />
-    {refreshTarget && <meta http-equiv="refresh" content={`0;url=${withBase(refreshTarget)}`} />}
+    {refreshTarget && !isEditorCanvas && <meta http-equiv="refresh" content={`0;url=${withBase(refreshTarget)}`} />}
     {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
     <meta property="og:type" content="website" />
     <meta property="og:title" content={pageTitle} />
@@ -452,7 +455,11 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
         data-v2-entry-mode={entryMode}
         data-v2-motion-state="armed"
       >
-        <a class="v2-entry-skip-link" href="#main-content" data-v2-entry-skip-link>
+        <a class="v2-entry-skip-link" href="#main-content" data-v2-entry-skip-link {...adminDisposition(Astro.url, {
+          kind: 'template-fixed',
+          reason: 'Accessibility-control переводит фокус к основному содержимому и не является бизнес-текстом страницы.',
+          source: 'src/layouts/PublicV2Layout.astro#entry-skip-link'
+        })}>
           К основному содержанию
         </a>
         <V2EntryExperience />
@@ -461,7 +468,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     ) : (
       <slot />
     )}
-    {isProduction && <CookieBanner />}
+    {isProduction && !isEditorCanvas && <CookieBanner />}
     <script>
       const initV2HeroScroll = () => {
         if (document.documentElement.dataset.v2HeroScrollReady === 'true') return;
@@ -537,5 +544,386 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       document.addEventListener('astro:page-load', initializeV2EntranceController);
       document.addEventListener('astro:page-load', initializeV2MotionController);
     </script>
+    {isEditorCanvas && (
+      <script
+        is:inline
+        define:vars={{
+          bridgeNonce: Astro.url.searchParams.get('editorSession'),
+          bridgeRevision: Number(Astro.url.searchParams.get('editorRevision') || 0),
+          initialEditorMode: Astro.url.searchParams.get('editorMode') === 'preview' ? 'preview' : 'edit'
+        }}
+      >
+        (() => {
+          const PROTOCOL = 'smu1-editor-bridge';
+          const VERSION = 1;
+          const parentOrigin = window.location.origin;
+          let mode = initialEditorMode;
+          let outboundSequence = 0;
+          let inboundSequence = -1;
+          let geometryFrame = 0;
+
+          document.documentElement.dataset.smu1EditorCanvas = 'true';
+          document.documentElement.dataset.smu1EditorMode = mode;
+
+          const post = (type, payload = {}) => {
+            if (window.parent === window) return;
+            window.parent.postMessage({
+              protocol: PROTOCOL,
+              version: VERSION,
+              nonce: bridgeNonce,
+              revision: bridgeRevision,
+              sequence: outboundSequence++,
+              type,
+              ...payload
+            }, parentOrigin);
+          };
+
+          const parseBinding = (element) => {
+            try {
+              const binding = JSON.parse(element.getAttribute('data-smu1-binding') || 'null');
+              if (!binding || typeof binding !== 'object' || !binding.bindingId) return null;
+              return { ...binding, route: window.location.pathname, currentDraftRevision: bridgeRevision };
+            } catch { return null; }
+          };
+
+          const bindingElements = () => Array.from(document.querySelectorAll('[data-smu1-binding-id][data-smu1-binding]'));
+          const bindingsWithGeometry = () => bindingElements().flatMap((element) => {
+            const binding = parseBinding(element);
+            if (!binding) return [];
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            if (style.display === 'none' || style.visibility === 'hidden') return [];
+            return [{
+              binding,
+              rect: {
+                left: rect.left,
+                top: rect.top,
+                right: rect.right,
+                bottom: rect.bottom,
+                width: rect.width,
+                height: rect.height
+              }
+            }];
+          });
+
+          const sendGeometry = (type = 'geometry') => post(type, {
+            bindings: bindingsWithGeometry(),
+            viewport: { width: window.innerWidth, height: window.innerHeight },
+            scroll: { x: window.scrollX, y: window.scrollY }
+          });
+
+          const queueGeometry = () => {
+            if (geometryFrame) return;
+            geometryFrame = window.requestAnimationFrame(() => {
+              geometryFrame = 0;
+              sendGeometry();
+            });
+          };
+
+          const findBindingElement = (target) => target instanceof Element
+            ? target.closest('[data-smu1-binding-id][data-smu1-binding]')
+            : null;
+
+          document.addEventListener('click', (event) => {
+            if (mode !== 'edit') return;
+            const element = findBindingElement(event.target);
+            if (element) {
+              const binding = parseBinding(element);
+              if (!binding) return;
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              const rect = element.getBoundingClientRect();
+              post('select', {
+                binding,
+                rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height }
+              });
+              return;
+            }
+            const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+            if (anchor instanceof HTMLAnchorElement && anchor.href) {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              post('navigate', { href: anchor.href });
+            }
+          }, true);
+
+          document.addEventListener('submit', (event) => {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            const form = event.target instanceof HTMLFormElement ? event.target : null;
+            post('interaction-blocked', { interaction: 'form-submit', formId: form?.id || '' });
+          }, true);
+
+          const scalarParts = (value) => {
+            if (value === null || value === undefined) return [];
+            if (typeof value !== 'object') return [String(value)];
+            return ['label', 'title', 'text', 'value', 'format', 'context', 'href']
+              .filter((key) => typeof value[key] === 'string' && value[key].trim())
+              .map((key) => String(value[key]));
+          };
+
+          const leafElements = (element) => Array.from(element.querySelectorAll('*'))
+            .filter((node) => node.children.length === 0 && !['IMG', 'SOURCE', 'SVG', 'PATH'].includes(node.tagName));
+
+          const writeParts = (element, parts) => {
+            const leaves = leafElements(element);
+            if (!leaves.length) {
+              element.textContent = parts.join(' · ');
+              return;
+            }
+            leaves.forEach((leaf, index) => {
+              if (index < parts.length) leaf.textContent = parts[index];
+            });
+          };
+
+          const projectListValue = (element, binding, payload) => {
+            const value = payload.items;
+            if (!Array.isArray(value)) {
+              writeParts(element, scalarParts(value));
+              return;
+            }
+            if (binding.fieldPath === 'regions' && !['UL', 'OL'].includes(element.tagName)) {
+              const joined = value.map((item) => scalarParts(item)[0]).filter(Boolean).join(' · ');
+              if (element.children.length === 0 || ['STRONG', 'DD'].includes(element.tagName)) element.textContent = joined;
+              else {
+                Array.from(element.childNodes).filter((node) => node.nodeType === Node.TEXT_NODE).forEach((node) => node.remove());
+                element.append(document.createTextNode(` ${joined}`));
+              }
+              return;
+            }
+            const directItems = Array.from(element.children).filter((node) => ['LI', 'ARTICLE', 'SECTION', 'DIV', 'DL'].includes(node.tagName));
+            if (!directItems.length) {
+              element.textContent = value.map((item) => scalarParts(item).join(' · ')).join(' · ');
+              return;
+            }
+            const template = directItems.at(-1);
+            while (directItems.length < value.length && template) {
+              const copy = template.cloneNode(true);
+              copy.removeAttribute('data-smu1-binding');
+              copy.removeAttribute('data-smu1-binding-id');
+              copy.querySelectorAll('[data-smu1-binding],[data-smu1-binding-id]').forEach((node) => {
+                node.removeAttribute('data-smu1-binding');
+                node.removeAttribute('data-smu1-binding-id');
+              });
+              element.append(copy);
+              directItems.push(copy);
+            }
+            while (directItems.length > value.length) directItems.pop()?.remove();
+            directItems.forEach((itemElement, index) => writeParts(itemElement, scalarParts(value[index])));
+          };
+
+          const writeLiveImage = (image, item) => {
+            if (!(image instanceof HTMLImageElement) || !item?.src) return;
+            image.hidden = false;
+            image.src = item.src;
+            image.alt = item.alt || '';
+            image.removeAttribute('srcset');
+            image.closest('picture')?.querySelectorAll('source').forEach((source) => source.removeAttribute('srcset'));
+          };
+
+          const liveGalleries = new WeakMap();
+          const projectLiveGallery = (element, value) => {
+            const items = (Array.isArray(value.items) ? value.items : value.paths || [])
+              .map((item) => typeof item === 'string' ? { src: item, alt: '', caption: '' } : item)
+              .filter((item) => item && typeof item.src === 'string' && item.src);
+            const product = element.matches('[data-v2-product-gallery]');
+            const project = element.matches('[data-v2-project-gallery]');
+            if (!product && !project) return false;
+            const previousState = liveGalleries.get(element);
+            const state = { items, current: Math.min(previousState?.current || 0, Math.max(0, items.length - 1)) };
+            liveGalleries.set(element, state);
+            const mainSelector = product ? '[data-v2-gallery-main]' : '[data-v2-project-gallery-main]';
+            const thumbSelector = product ? '[data-v2-gallery-thumb]' : '[data-v2-project-gallery-thumb]';
+            const statusSelector = product ? '[data-v2-gallery-status]' : '[data-v2-project-gallery-status]';
+            const captionSelector = product ? '[data-v2-gallery-caption]' : '[data-v2-project-gallery-caption]';
+            const lightboxSelector = product ? '[data-v2-lightbox-image]' : '[data-v2-project-lightbox-image]';
+            const lightboxStatusSelector = product ? '[data-v2-lightbox-status]' : '[data-v2-project-lightbox-status]';
+            const lightboxCaptionSelector = product ? '' : '[data-v2-project-lightbox-caption]';
+            const current = items[state.current];
+            const main = element.querySelector(mainSelector);
+            if (main && current) writeLiveImage(main, current);
+            if (main) main.hidden = !current;
+            const empty = element.querySelector(product ? '[data-v2-gallery-empty]' : '[data-v2-project-gallery-fallback]');
+            if (empty instanceof HTMLElement) empty.hidden = Boolean(current);
+            const thumbs = Array.from(element.querySelectorAll(thumbSelector));
+            thumbs.forEach((thumb, index) => {
+              const item = items[index];
+              thumb.hidden = !item;
+              thumb.dataset.smu1LiveIndex = String(index);
+              thumb.setAttribute('aria-pressed', String(index === state.current));
+              thumb.classList.toggle('is-current', index === state.current);
+              const image = thumb.querySelector('img');
+              if (image && item) writeLiveImage(image, { ...item, alt: '' });
+            });
+            const status = element.querySelector(statusSelector);
+            if (status instanceof HTMLElement) status.textContent = items.length ? `${state.current + 1} / ${items.length}` : '';
+            const caption = element.querySelector(captionSelector);
+            if (caption instanceof HTMLElement) {
+              caption.textContent = current?.caption || '';
+              caption.hidden = !current?.caption;
+            }
+            const lightboxImage = element.querySelector(lightboxSelector);
+            if (lightboxImage && current) writeLiveImage(lightboxImage, current);
+            const lightboxStatus = element.querySelector(lightboxStatusSelector);
+            if (lightboxStatus instanceof HTMLElement) lightboxStatus.textContent = items.length ? `${state.current + 1} / ${items.length}` : '';
+            const lightboxCaption = lightboxCaptionSelector ? element.querySelector(lightboxCaptionSelector) : null;
+            if (lightboxCaption instanceof HTMLElement) {
+              lightboxCaption.textContent = current?.caption || '';
+              lightboxCaption.hidden = !current?.caption;
+            }
+            return true;
+          };
+
+          document.addEventListener('click', (event) => {
+            if (mode !== 'preview' || !(event.target instanceof Element)) return;
+            const gallery = event.target.closest('[data-v2-product-gallery],[data-v2-project-gallery]');
+            const state = gallery ? liveGalleries.get(gallery) : null;
+            if (!gallery || !state?.items?.length) return;
+            const product = gallery.matches('[data-v2-product-gallery]');
+            const thumb = event.target.closest(product ? '[data-v2-gallery-thumb]' : '[data-v2-project-gallery-thumb]');
+            const previous = event.target.closest(product ? '[data-v2-gallery-prev],[data-v2-lightbox-prev]' : '[data-v2-project-gallery-prev],[data-v2-project-lightbox-prev]');
+            const next = event.target.closest(product ? '[data-v2-gallery-next],[data-v2-lightbox-next]' : '[data-v2-project-gallery-next],[data-v2-project-lightbox-next]');
+            if (!thumb && !previous && !next) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            if (thumb) state.current = Number(thumb.dataset.smu1LiveIndex || thumb.dataset.v2GalleryIndex || thumb.dataset.v2ProjectGalleryIndex || 0);
+            else state.current = (state.current + (previous ? -1 : 1) + state.items.length) % state.items.length;
+            projectLiveGallery(gallery, { items: state.items });
+          }, true);
+
+          const projectValue = (element, binding, value) => {
+            const target = binding?.projection?.target || 'text';
+            if (value && typeof value === 'object' && value.__smu1VideoProjection === true && element instanceof HTMLVideoElement) {
+              const desktop = typeof value.desktop === 'string' ? value.desktop : '';
+              const mobile = typeof value.mobile === 'string' ? value.mobile : desktop;
+              element.dataset.v2DesktopSrc = desktop;
+              element.dataset.v2MobileSrc = mobile;
+              element.dataset.hfDesktopSrc = desktop;
+              element.dataset.hfMobileSrc = mobile;
+              const next = window.matchMedia('(max-width: 760px)').matches ? mobile : desktop;
+              if (next && element.currentSrc !== next && element.src !== next) {
+                element.src = next;
+                element.load();
+              }
+              return;
+            }
+            if (value && typeof value === 'object' && value.__smu1LinkProjection === true) {
+              if (element instanceof HTMLAnchorElement && typeof value.href === 'string' && value.href) element.href = value.href;
+              const text = value.text == null ? '' : String(value.text);
+              if (element instanceof HTMLAnchorElement) {
+                const strong = element.querySelector('strong');
+                const label = strong || (element.children.length === 1 ? element.firstElementChild : null);
+                if (label) label.textContent = text;
+                else if (!element.children.length) element.textContent = binding.hrefPath === 'telegram' ? `${text} · Telegram` : text;
+              }
+              return;
+            }
+            if (value && typeof value === 'object' && value.__smu1ListProjection === true) {
+              projectListValue(element, binding, value);
+              return;
+            }
+            if (value && typeof value === 'object' && value.__smu1MediaProjection === true && Array.isArray(value.paths)) {
+              if (projectLiveGallery(element, value)) return;
+              const paths = value.paths.filter((item) => typeof item === 'string' && item);
+              const images = element instanceof HTMLImageElement
+                ? [element]
+                : Array.from(element.querySelectorAll('img'));
+              element.querySelectorAll('[data-smu1-live-media]').forEach((node) => node.remove());
+              images.forEach((image, index) => {
+                const next = paths[index];
+                image.hidden = !next;
+                if (!next) return;
+                image.src = next;
+                image.removeAttribute('srcset');
+                image.closest('picture')?.querySelectorAll('source').forEach((source) => source.removeAttribute('srcset'));
+              });
+              for (const next of paths.slice(images.length)) {
+                const image = document.createElement('img');
+                image.src = next;
+                image.alt = '';
+                image.dataset.smu1LiveMedia = 'true';
+                image.style.cssText = 'display:block;width:100%;height:auto;object-fit:cover;';
+                element.append(image);
+              }
+              return;
+            }
+            if (target === 'src' && element instanceof HTMLImageElement && typeof value === 'string') {
+              element.src = value;
+              element.removeAttribute('srcset');
+              return;
+            }
+            if (target === 'href' && element instanceof HTMLAnchorElement && typeof value === 'string') {
+              element.href = value;
+              return;
+            }
+            if (target === 'style-image' && element instanceof HTMLElement && typeof value === 'string') {
+              element.style.backgroundImage = `url("${value.replace(/["\\]/g, '\\$&')}")`;
+              return;
+            }
+            if (value === null || value === undefined || typeof value === 'object') return;
+            element.textContent = String(value);
+          };
+
+          window.addEventListener('message', (event) => {
+            if (event.origin !== parentOrigin || event.source !== window.parent) return;
+            const message = event.data;
+            if (!message || message.protocol !== PROTOCOL || message.version !== VERSION) return;
+            if (message.nonce !== bridgeNonce || message.revision !== bridgeRevision) return;
+            if (!Number.isSafeInteger(message.sequence) || message.sequence <= inboundSequence) return;
+            inboundSequence = message.sequence;
+            if (message.type === 'mode') {
+              mode = message.mode === 'preview' ? 'preview' : 'edit';
+              document.documentElement.dataset.smu1EditorMode = mode;
+              return;
+            }
+            if (message.type === 'request-geometry') {
+              queueGeometry();
+              return;
+            }
+            if (message.type === 'projection' && Array.isArray(message.projections)) {
+              for (const projection of message.projections) {
+                const selectorValue = window.CSS?.escape
+                  ? CSS.escape(String(projection.bindingId || ''))
+                  : String(projection.bindingId || '').replace(/["\\]/g, '\\$&');
+                document.querySelectorAll(`[data-smu1-binding-id="${selectorValue}"]`).forEach((element) => {
+                  const binding = parseBinding(element);
+                  if (binding) projectValue(element, binding, projection.value);
+                });
+              }
+              queueGeometry();
+              return;
+            }
+            if (message.type === 'reorder-projection' && Array.isArray(message.orderedSlugs)) {
+              const zoneId = String(message.zoneId || '');
+              const rows = bindingElements().flatMap((element) => {
+                const binding = parseBinding(element);
+                if (!binding || binding.tool !== 'reorder-item' || String(binding.zoneId || '') !== zoneId) return [];
+                const style = window.getComputedStyle(element);
+                const rect = element.getBoundingClientRect();
+                if (style.display === 'none' || style.visibility === 'hidden' || rect.width < 1 || rect.height < 1) return [];
+                const root = element.closest('[role="listitem"]') || element;
+                return [{ slug: String(binding.stableItemId || binding.recordSlug || ''), root }];
+              });
+              const rowBySlug = new Map(rows.map((row) => [row.slug, row]));
+              const roots = message.orderedSlugs.map((slug) => rowBySlug.get(String(slug))?.root).filter(Boolean);
+              const parent = roots[0]?.parentElement;
+              if (parent && roots.length === rows.length && roots.every((root) => root.parentElement === parent)) {
+                roots.forEach((root) => parent.append(root));
+              }
+              queueGeometry();
+            }
+          });
+
+          window.addEventListener('scroll', queueGeometry, { passive: true });
+          window.addEventListener('resize', queueGeometry, { passive: true });
+          if ('ResizeObserver' in window) new ResizeObserver(queueGeometry).observe(document.documentElement);
+          if ('MutationObserver' in window) new MutationObserver(queueGeometry).observe(document.body, { childList: true, subtree: true });
+
+          const ready = () => window.requestAnimationFrame(() => window.requestAnimationFrame(() => sendGeometry('ready')));
+          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready, { once: true });
+          else ready();
+        })();
+      </script>
+    )}
   </body>
 </html>

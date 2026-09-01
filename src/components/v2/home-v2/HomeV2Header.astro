@@ -1,9 +1,11 @@
 ---
 import settings from '../../../content/site-settings/global.json';
+import navigationItems from '../../../data/navigation.json';
 import { v2CurrentState, v2Href } from '../../../utils/v2Routes';
 import { getV2Navigation } from '../../../utils/v2Navigation';
 import { getV2TelegramLabel } from '../../../utils/v2SiteSettings';
 import { v2TransitionLabelForRoute } from '../../../utils/v2TransitionLabel';
+import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   mode?: 'overlay' | 'light';
@@ -11,6 +13,8 @@ interface Props {
   catalogV2?: boolean;
   contactHref?: string;
   ctaLabel?: string;
+  desktopCtaBinding?: Record<string, string>;
+  mobileCtaBinding?: Record<string, string>;
 }
 
 const {
@@ -18,8 +22,16 @@ const {
   currentPath = Astro.url.pathname,
   catalogV2 = true,
   contactHref = '#contact',
-  ctaLabel = 'Получить расчёт'
+  ctaLabel = settings.shellLabels.defaultCtaLabel
 } = Astro.props as Props;
+const directOrDeclared = (attributes: Record<string, string>, fragment: string) => Object.keys(attributes).length > 0
+  ? attributes
+  : adminDisposition(Astro.url, {
+      kind: 'contextual',
+      reason: 'Подпись CTA задаётся владельцем layout и зависит от типа текущей страницы.',
+      source: `src/components/v2/home-v2/HomeV2Header.astro#${fragment}`,
+      tool: 'page-settings'
+    });
 const path = (value: string) => v2Href(value, Astro.url.pathname);
 const resolveHref = (value: string) => value.startsWith('#') ? value : path(value);
 const productV2Roots = [
@@ -45,6 +57,7 @@ const splitRightPrimaryLinks = primaryLinks.filter(
   (item) => item.href !== metalworksV2Root && item.href !== landscapingV2Root
 );
 const telegramLabel = getV2TelegramLabel(settings);
+const shellLabels = settings.shellLabels;
 const transitionLabel = (href: string, fallback: string) => v2TransitionLabelForRoute(href, fallback);
 const contactTransitionLabel = contactHref.startsWith('#')
   ? undefined
@@ -66,6 +79,54 @@ const isCompanyV2Location = companyV2Roots.some((href) => v2CurrentState(current
 const productsMenuId = 'home-v2-products-menu';
 const companyMenuId = 'home-v2-company-menu';
 const mobileMenuId = 'home-v2-mobile-menu';
+const globalBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'header' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath, scope: 'global', tool, affectedRoutes: ['*'], ...options
+});
+const desktopCtaBinding = Astro.props.desktopCtaBinding
+  ?? (Astro.props.ctaLabel === undefined
+    ? globalBinding('shellLabels.defaultCtaLabel', 'button-label', { stableItemId: 'home-header-desktop-cta', role: 'shell-cta-label' })
+    : {});
+const mobileCtaBinding = Astro.props.mobileCtaBinding
+  ?? (Astro.props.ctaLabel === undefined
+    ? globalBinding('shellLabels.defaultCtaLabel', 'button-label', { stableItemId: 'home-header-mobile-cta', role: 'shell-cta-label' })
+    : {});
+const navigationIndex = new Map((navigationItems as Array<{ href?: string }>).map((item, index) => [item.href, index]));
+const navigationBinding = (item: { href: string }, occurrence: string) => {
+  const index = navigationIndex.get(item.href);
+  return index === undefined ? {} : adminBinding(Astro.url, {
+    renderer: { family: 'global-shell', variant: 'navigation' }, owner: { collection: 'navigation', slug: 'navigation' },
+    fieldPath: `items[${index}].title`, hrefPath: `items[${index}].href`, stableItemId: `${occurrence}-${item.href}`,
+    scope: 'global', tool: 'link', affectedRoutes: ['*']
+  });
+};
+const declared = (
+  kind: 'contextual' | 'derived' | 'global' | 'template-fixed',
+  fragment: string,
+  reason: string,
+  tool = 'global-settings'
+) => adminDisposition(Astro.url, {
+  kind,
+  reason,
+  source: `src/components/v2/home-v2/HomeV2Header.astro#${fragment}`,
+  tool
+});
+const navigationAttributes = (item: { href: string }, occurrence: string) => {
+  const binding = navigationBinding(item, occurrence);
+  return Object.keys(binding).length > 0
+    ? binding
+    : declared(
+        'derived',
+        `getV2Navigation.${item.href}`,
+        'Пункт получен из общей route/navigation композиции; если записи нет в navigation.json, подпись меняется в глобальной структуре навигации.'
+      );
+};
+const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
+  kind: 'global',
+  reason: 'Адрес канала вычисляется из глобального контактного значения; редактируйте его в настройках компании.',
+  source: `src/content/site-settings/global.json#${fieldPath}`,
+  tool: 'global-settings'
+});
 
 ---
 
@@ -85,7 +146,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
       data-hv2-header-side="left"
       data-v2-entrance-role="header-logo"
     >
-      <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="355" height="211" />
+      <img src={path(settings.brandLogo)} alt="СМУ-1" width="355" height="211" {...globalBinding('brandLogo', 'media', { role: 'brand-logo' })} />
     </a>
 
     <nav class="hv2-header__nav" aria-label="Основная навигация" data-v2-entrance-role="header-nav">
@@ -101,18 +162,19 @@ const mobileMenuId = 'home-v2-mobile-menu';
           aria-controls={productsMenuId}
           aria-current={catalogV2 && isCatalogV2Location ? 'location' : undefined}
           data-hv2-dropdown-trigger
+          {...globalBinding('shellLabels.productsGroup', 'short-text', { stableItemId: 'header-desktop-products-group' })}
         >
-          <span>Продукция</span>
+          <span>{shellLabels.productsGroup}</span>
           <span class="hv2-header__dropdown-indicator" aria-hidden="true">
             <span class="hv2-header__dropdown-indicator-open">+</span>
             <span class="hv2-header__dropdown-indicator-close">−</span>
           </span>
         </button>
         <div class="hv2-dropdown__panel" id={productsMenuId} data-hv2-dropdown-panel>
-          <p class="hv2-dropdown__eyebrow">Продукция и конструкции</p>
+          <p class="hv2-dropdown__eyebrow" {...globalBinding('shellLabels.productsMenuEyebrow')}>{shellLabels.productsMenuEyebrow}</p>
           <div class="hv2-dropdown__links">
             {productLinks.map((item) => (
-              <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-dropdown-link>
+              <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-dropdown-link {...navigationAttributes(item, 'desktop-product')}>
                 <span>{item.label}</span>
               </a>
             ))}
@@ -120,14 +182,14 @@ const mobileMenuId = 'home-v2-mobile-menu';
         </div>
       </div>
 
-      {splitLeftPrimaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)}>{item.label}</a>)}
+      {splitLeftPrimaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} {...navigationAttributes(item, 'desktop-primary-left')}>{item.label}</a>)}
       </div>
 
       <div
         class="hv2-header__nav-group hv2-header__nav-group--right"
         data-hv2-header-side="right"
       >
-      {splitRightPrimaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)}>{item.label}</a>)}
+      {splitRightPrimaryLinks.map((item) => <a class="hv2-header__nav-link" href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} {...navigationAttributes(item, 'desktop-primary-right')}>{item.label}</a>)}
 
       <div class="hv2-dropdown" data-hv2-dropdown>
         <button
@@ -137,18 +199,19 @@ const mobileMenuId = 'home-v2-mobile-menu';
           aria-controls={companyMenuId}
           aria-current={isCompanyV2Location ? 'location' : undefined}
           data-hv2-dropdown-trigger
+          {...globalBinding('shellLabels.companyMenu')}
         >
-          <span>Компания</span>
+          <span>{shellLabels.companyMenu}</span>
           <span class="hv2-header__dropdown-indicator" aria-hidden="true">
             <span class="hv2-header__dropdown-indicator-open">+</span>
             <span class="hv2-header__dropdown-indicator-close">−</span>
           </span>
         </button>
         <div class="hv2-dropdown__panel hv2-dropdown__panel--right" id={companyMenuId} data-hv2-dropdown-panel>
-          <p class="hv2-dropdown__eyebrow">СМУ-1</p>
+          <p class="hv2-dropdown__eyebrow" {...globalBinding('companyShortName')}>{settings.companyShortName}</p>
           <div class="hv2-dropdown__links">
             {companyLinks.map((item) => (
-              <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-dropdown-link>
+              <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-dropdown-link {...navigationAttributes(item, 'desktop-company')}>
                 <span>{item.label}</span>
               </a>
             ))}
@@ -159,7 +222,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
     </nav>
 
     <div class="hv2-header__actions" aria-label="Быстрые действия" data-hv2-header-side="right" data-v2-entrance-role="header-actions">
-      <a class="hv2-header__phone" href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>
+      <a class="hv2-header__phone" href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`} {...globalBinding('phonePrimary', 'link', { hrefPath: 'phonePrimary' })}>
         {settings.phonePrimary}
       </a>
       <a
@@ -168,13 +231,15 @@ const mobileMenuId = 'home-v2-mobile-menu';
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Telegram"
+        {...globalHref('telegram')}
       >
-        <span class="hv2-header__telegram-label">Telegram</span>
+        <span class="hv2-header__telegram-label" {...declared('template-fixed', 'telegram-channel-label', 'Системная подпись обозначает тип канала; username и URL редактируются глобально.')}>Telegram</span>
       </a>
       <a
         class="hv2-button hv2-button--header"
         href={resolveHref(contactHref)}
         data-v2-transition-label={contactTransitionLabel}
+        {...directOrDeclared(desktopCtaBinding, 'Astro.props.ctaLabel')}
       >{ctaLabel}</a>
     </div>
 
@@ -186,6 +251,7 @@ const mobileMenuId = 'home-v2-mobile-menu';
       aria-label="Открыть меню"
       data-hv2-mobile-open
       data-v2-entrance-role="header-actions"
+      {...declared('template-fixed', 'mobile-menu-open-label', 'Системная кнопка открывает мобильную навигацию.')}
     >
       <span>Меню</span>
       <span class="hv2-header__menu-lines" aria-hidden="true"><i></i><i></i></span>
@@ -205,9 +271,9 @@ const mobileMenuId = 'home-v2-mobile-menu';
 >
   <div class="hv2-mobile-menu__top">
     <a class="hv2-mobile-menu__brand" href={path('/')} aria-current={currentState('/')} data-v2-transition-label="Главная" data-hv2-mobile-link>
-      <img src={path('/assets/brand/logo_scan_cropped.svg')} alt="СМУ-1" width="355" height="211" />
+      <img src={path(settings.brandLogo)} alt="СМУ-1" width="355" height="211" {...globalBinding('brandLogo', 'media', { role: 'brand-logo-mobile' })} />
     </a>
-    <p id="home-v2-mobile-menu-title">Навигация</p>
+    <p id="home-v2-mobile-menu-title" {...declared('template-fixed', 'mobile-menu-title', 'Системный заголовок идентифицирует диалог навигации.')}>Навигация</p>
     <button class="hv2-mobile-menu__close" type="button" aria-label="Закрыть меню" data-hv2-mobile-close>
       <span aria-hidden="true"></span>
     </button>
@@ -219,35 +285,36 @@ const mobileMenuId = 'home-v2-mobile-menu';
       href={resolveHref(contactHref)}
       data-v2-transition-label={contactTransitionLabel}
       data-hv2-mobile-link
+      {...directOrDeclared(mobileCtaBinding, 'Astro.props.ctaLabel.mobile')}
     >
       {ctaLabel}
     </a>
 
     <nav class="hv2-mobile-menu__nav" aria-label="Мобильная навигация">
       <div class="hv2-mobile-menu__group">
-        <p>Продукция</p>
-        {productLinks.filter((item) => item.href !== customOrderV2Root).map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-mobile-link>{item.label}</a>)}
+        <p {...globalBinding('shellLabels.productsGroup', 'short-text', { stableItemId: 'header-mobile-products-group' })}>{shellLabels.productsGroup}</p>
+        {productLinks.filter((item) => item.href !== customOrderV2Root).map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-mobile-link {...navigationAttributes(item, 'mobile-product')}>{item.label}</a>)}
       </div>
 
       <div class="hv2-mobile-menu__group hv2-mobile-menu__group--primary">
-        {primaryLinks.filter((item) => item.href !== objectsV2Root).map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-mobile-link>{item.label}</a>)}
+        {primaryLinks.filter((item) => item.href !== objectsV2Root).map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-mobile-link {...navigationAttributes(item, 'mobile-primary')}>{item.label}</a>)}
       </div>
 
       <div class="hv2-mobile-menu__group">
-        <p>Работа и компания</p>
-        {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-mobile-link>{item.label}</a>)}
+        <p {...globalBinding('shellLabels.workAndCompanyGroup')}>{shellLabels.workAndCompanyGroup}</p>
+        {workAndCompanyLinks.map((item) => <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-mobile-link {...navigationAttributes(item, 'mobile-company')}>{item.label}</a>)}
       </div>
     </nav>
 
     <section class="hv2-mobile-menu__contacts" aria-labelledby="home-v2-mobile-contacts-title">
-      <p id="home-v2-mobile-contacts-title">Прямая связь</p>
-      <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`}>{settings.phonePrimary}</a>
-      <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`}>
-        {settings.phoneSecondary} <span>· дополнительный телефон</span>
+      <p id="home-v2-mobile-contacts-title" {...globalBinding('shellLabels.directContactGroup')}>{shellLabels.directContactGroup}</p>
+      <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`} {...globalBinding('phonePrimary', 'link', { hrefPath: 'phonePrimary', role: 'mobile-header-phone' })}>{settings.phonePrimary}</a>
+      <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`} {...globalHref('phoneSecondary')}>
+        <span {...globalBinding('phoneSecondary', 'short-text')}>{settings.phoneSecondary}</span> · <span {...globalBinding('shellLabels.secondaryPhoneSuffix')}>{shellLabels.secondaryPhoneSuffix}</span>
       </a>
-      <a href={settings.telegram} target="_blank" rel="noopener noreferrer">{telegramLabel} · Telegram</a>
-      <a href={`mailto:${settings.email}`}>{settings.email}</a>
-      <address>{settings.address}</address>
+      <a href={settings.telegram} target="_blank" rel="noopener noreferrer" {...globalHref('telegram')}><span {...globalBinding('telegramLabel', 'short-text', { role: 'mobile-header-telegram' })}>{telegramLabel}</span> · <span {...globalBinding('shellLabels.telegramSuffix')}>{shellLabels.telegramSuffix}</span></a>
+      <a href={`mailto:${settings.email}`} {...globalBinding('email', 'link', { hrefPath: 'email' })}>{settings.email}</a>
+      <address {...globalBinding('address', 'long-text')}>{settings.address}</address>
     </section>
   </div>
 </div>

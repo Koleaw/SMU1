@@ -426,6 +426,29 @@ export function buildRelationGraph({
       (Array.isArray(record.content.relatedProductSlugs) ? record.content.relatedProductSlugs : [])
         .forEach((slug, index) => pushRecordRelation(relations, indexes, record, 'product-related', `relatedProductSlugs[${index}]`, slug, 'products', slug));
     }
+    if (record.collection === 'static-pages') {
+      for (const field of ['gatewayProjectSlugs', 'relatedProjectSlugs']) {
+        (Array.isArray(record.content[field]) ? record.content[field] : [])
+          .forEach((slug, index) => pushRecordRelation(relations, indexes, record, 'content-project', `${field}[${index}]`, slug, 'projects', slug));
+      }
+      for (const field of ['companyHeroProjectSlug', 'customOrderHeroProjectSlug']) {
+        pushRecordRelation(relations, indexes, record, 'content-project', field, record.content[field], 'projects', record.content[field]);
+      }
+      (Array.isArray(record.content.relatedDirectionSlugs) ? record.content.relatedDirectionSlugs : [])
+        .forEach((slug, index) => {
+          const targetCollection = indexes.byId.has(recordId('product-sections', slug)) ? 'product-sections' : 'services';
+          pushRecordRelation(
+            relations,
+            indexes,
+            record,
+            targetCollection === 'product-sections' ? 'content-section' : 'content-service',
+            `relatedDirectionSlugs[${index}]`,
+            slug,
+            targetCollection,
+            slug
+          );
+        });
+    }
 
     walk(record.content, (value, key, path) => {
       if (typeof value !== 'string') return;
@@ -634,6 +657,22 @@ function projectedRenameGraph(graph, target, nextSlug) {
     for (const product of collections.products || []) {
       if (!Array.isArray(product.relatedProductSlugs)) continue;
       product.relatedProductSlugs = product.relatedProductSlugs.map((slug) => slug === target.slug ? nextSlug : slug);
+    }
+  }
+  if (target.collection === 'projects') {
+    for (const page of collections['static-pages'] || []) {
+      for (const field of ['gatewayProjectSlugs', 'relatedProjectSlugs']) {
+        if (Array.isArray(page[field])) page[field] = page[field].map((slug) => slug === target.slug ? nextSlug : slug);
+      }
+      for (const field of ['companyHeroProjectSlug', 'customOrderHeroProjectSlug']) {
+        if (page[field] === target.slug) page[field] = nextSlug;
+      }
+    }
+  }
+  if (target.collection === 'product-sections' || target.collection === 'services') {
+    for (const page of collections['static-pages'] || []) {
+      if (!Array.isArray(page.relatedDirectionSlugs)) continue;
+      page.relatedDirectionSlugs = page.relatedDirectionSlugs.map((slug) => slug === target.slug ? nextSlug : slug);
     }
   }
   return buildRelationGraph({

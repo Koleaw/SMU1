@@ -1,6 +1,9 @@
 ---
 import { withBase } from '../utils/withBase';
 import { getNavigationItems } from '../utils/navigation';
+import navigationSource from '../data/navigation.json';
+import settings from '../content/site-settings/global.json';
+import { adminBinding, adminDisposition } from '../admin/bindings/adminBinding';
 
 const navItems = await getNavigationItems();
 
@@ -56,6 +59,37 @@ const isActive = (href: string) => {
     return currentPathname === candidate || currentPathname.startsWith(`${candidate}`);
   });
 };
+
+const globalBinding = (
+  fieldPath: string,
+  tool = 'short-text',
+  options: Record<string, unknown> = {}
+) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'header' },
+  owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath,
+  stableItemId: `header-${fieldPath}`,
+  scope: 'global',
+  tool,
+  affectedRoutes: ['*'],
+  ...options
+});
+const navigationBinding = (index: number, href: string) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'header-navigation' },
+  owner: { collection: 'navigation', slug: 'navigation' },
+  fieldPath: `items[${index}].title`,
+  stableItemId: `navigation-${href}`,
+  scope: 'global',
+  tool: 'link',
+  hrefPath: `items[${index}].href`,
+  affectedRoutes: ['*']
+});
+const fixedMedia = (asset: string, role: string) => adminDisposition(Astro.url, {
+  kind: 'template-fixed',
+  reason: `Декоративный ${role} является частью утверждённой оболочки сайта и не является бизнес-фотографией.`,
+  source: `public${asset}`,
+  tool: 'global-settings'
+});
 ---
 <header
   class={`site-header${isHomePage ? ' site-header--home' : ''}${usesOverlayHeader ? ' site-header--overlay' : ''}`}
@@ -64,24 +98,38 @@ const isActive = (href: string) => {
   <div class="container site-header__desktop">
     <div class="site-header__left">
       <a href={withBase('/')} class="site-header__logo-link" aria-label="СМУ-1 на главную">
-        <img class="site-header__logo" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
+        <img class="site-header__logo" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" {...fixedMedia('/assets/brand/logo-full.svg', 'логотип')} />
       </a>
     </div>
 
     <div class="site-header__center">
       <nav class="site-header__nav" aria-label="Основная навигация">
-        {navItems.map((item) => (
-          <a class={isActive(item.href) ? 'active' : ''} href={withBase(item.href)}>{item.title}</a>
-        ))}
+        {navItems.map((item) => {
+          const sourceIndex = navigationSource.findIndex((source) => normalizePath(source.href || '') === normalizePath(item.href));
+          return (
+            <a
+              class={isActive(item.href) ? 'active' : ''}
+              href={withBase(item.href)}
+              {...(sourceIndex >= 0
+                ? navigationBinding(sourceIndex, item.href)
+                : adminDisposition(Astro.url, {
+                    kind: 'derived',
+                    reason: 'Пункт сформирован функцией навигации, но исходная запись не найдена; откройте глобальные настройки навигации.',
+                    source: 'src/utils/navigation.ts#getNavigationItems',
+                    tool: 'global-settings'
+                  }))}
+            >{item.title}</a>
+          );
+        })}
       </nav>
     </div>
 
     <div class="site-header__right">
       <div class="site-header__actions" aria-label="Контакты">
-        <a class="site-header__phone" href="tel:+79129735006">+7 (912) 973-50-06</a>
-        <a class="site-header__telegram" href="https://t.me/smu1build" target="_blank" rel="noopener noreferrer" aria-label="Telegram СМУ-1">
-          <img src={withBase('/assets/icons/send.svg')} alt="" aria-hidden="true" />
-          <span>@smu1build</span>
+        <a class="site-header__phone" href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`} {...globalBinding('phonePrimary', 'short-text')}>{settings.phonePrimary}</a>
+        <a class="site-header__telegram" href={settings.telegram} target="_blank" rel="noopener noreferrer" aria-label="Telegram СМУ-1" {...globalBinding('telegramLabel', 'link', { hrefPath: 'telegram' })}>
+          <img src={withBase('/assets/icons/send.svg')} alt="" aria-hidden="true" {...fixedMedia('/assets/icons/send.svg', 'значок Telegram')} />
+          <span>{settings.telegramLabel}</span>
         </a>
       </div>
     </div>
@@ -89,7 +137,7 @@ const isActive = (href: string) => {
 
   <div class="container site-header__mobile-bar">
     <a href={withBase('/')} class="site-header__logo-link" aria-label="СМУ-1 на главную">
-      <img class="site-header__logo" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" />
+      <img class="site-header__logo" src={withBase('/assets/brand/logo-full.svg')} alt="СМУ-1" {...fixedMedia('/assets/brand/logo-full.svg', 'логотип')} />
     </a>
 
     <button
@@ -100,7 +148,7 @@ const isActive = (href: string) => {
       aria-label="Открыть меню"
       data-mobile-menu-open
     >
-      <img src={withBase('/assets/icons/menu.svg')} alt="" aria-hidden="true" />
+      <img src={withBase('/assets/icons/menu.svg')} alt="" aria-hidden="true" {...fixedMedia('/assets/icons/menu.svg', 'значок меню')} />
     </button>
   </div>
 </header>

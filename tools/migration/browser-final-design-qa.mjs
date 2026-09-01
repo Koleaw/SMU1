@@ -3,6 +3,12 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdir, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
+import {
+  normalizeBrowserFinalBasePath,
+  resolveBrowserFinalDistRequest,
+  withBrowserFinalBasePath,
+  withoutBrowserFinalBasePath
+} from './browser-final-base-path.mjs';
 
 const root = process.cwd();
 const distRoot = path.join(root, 'dist');
@@ -13,7 +19,8 @@ const options = {
   help: hasFlag('--help') || hasFlag('-h'),
   headful: hasFlag('--headful'),
   json: hasFlag('--json'),
-  externalOrigin: optionValue('--origin').trim().replace(/\/$/, '')
+  externalOrigin: optionValue('--origin').trim().replace(/\/$/, ''),
+  basePath: normalizeBrowserFinalBasePath(optionValue('--base') || process.env.BASE_PATH || '/')
 };
 
 if (options.help) {
@@ -22,7 +29,7 @@ if (options.help) {
   process.stdout.write(`      Serve ./dist locally and test product split, image-ready reveal, hero handoff and sticky nav.\n`);
   process.stdout.write(`  node tools/migration/browser-final-design-qa.mjs --origin=http://127.0.0.1:4321\n`);
   process.stdout.write(`      Test an existing local server (image delay assertion is skipped).\n`);
-  process.stdout.write(`  Optional: --headful, --json, CHROME_PATH=/path/to/chrome.\n`);
+  process.stdout.write(`  Optional: --base=/SMU1, --headful, --json, CHROME_PATH=/path/to/chrome.\n`);
   process.stdout.write(`  The script uses only local resources and never writes reports or screenshots.\n`);
   process.exit(0);
 }
@@ -99,14 +106,18 @@ if (origin) {
   server = createServer(async (request, response) => {
     try {
       const url = new URL(request.url || '/', origin);
-      const pathname = decodeURIComponent(url.pathname);
-      let filename = pathname === '/404.html'
-        ? path.join(distRoot, '404.html')
-        : path.resolve(distRoot, `.${pathname}`);
-      if (filename !== distRoot && !filename.startsWith(`${distRoot}${path.sep}`)) {
+      const mounted = resolveBrowserFinalDistRequest(distRoot, decodeURIComponent(url.pathname), options.basePath);
+      if (mounted.status === 'outside-base') {
+        response.writeHead(404, { 'cache-control': 'no-store', 'content-type': 'text/plain; charset=utf-8' })
+          .end(request.method === 'HEAD' ? undefined : 'Outside configured BASE_PATH');
+        return;
+      }
+      if (mounted.status !== 'ok') {
         response.writeHead(403).end();
         return;
       }
+      const pathname = mounted.logicalPathname;
+      let filename = mounted.filename;
       let info = await stat(filename).catch(() => null);
       if (info?.isDirectory()) {
         filename = path.join(filename, 'index.html');
@@ -298,7 +309,7 @@ const settle = (milliseconds = 100) => evaluate(`(async () => {
   return { pathname: location.pathname, readyState: document.readyState };
 })()`);
 const navigate = async (route, milliseconds = 100) => {
-  const target = new URL(route, origin);
+  const target = new URL(withBrowserFinalBasePath(route, options.basePath), origin);
   const result = await cdp.send('Page.navigate', { url: target.href });
   if (result.errorText) throw new Error(`Navigation failed for ${route}: ${result.errorText}`);
   const ready = await waitForCondition(`location.pathname === ${JSON.stringify(target.pathname)} && document.readyState === 'complete'`, 25_000);
@@ -408,7 +419,7 @@ const runImageReadyAudit = async () => {
     return;
   }
 
-  const target = new URL(routes.premium, origin);
+  const target = new URL(withBrowserFinalBasePath(routes.premium, options.basePath), origin);
   const navigation = await cdp.send('Page.navigate', { url: target.href });
   if (navigation.errorText) throw new Error(`Navigation failed for image-ready audit: ${navigation.errorText}`);
   const pendingObserved = await waitForCondition(`(() => {
@@ -747,7 +758,7 @@ try {
 
   await navigate(routes.premium, 160);
   const selectedImageUrl = await evaluate(`document.querySelector('[data-product-presentation="premium"] [data-v2-image]')?.currentSrc || ''`);
-  selectedImagePath = new URL(selectedImageUrl, origin).pathname;
+  selectedImagePath = withoutBrowserFinalBasePath(new URL(selectedImageUrl, origin).pathname, options.basePath) || '';
   if (!delayedImagePaths.has(selectedImagePath)) {
     throw new Error(`Selected premium image is absent from its responsive manifest entry: ${selectedImagePath}`);
   }

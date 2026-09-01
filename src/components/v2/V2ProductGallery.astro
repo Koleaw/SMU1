@@ -5,19 +5,28 @@ const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import { imageViewStyle } from './catalogV2Data';
 import V2ResponsiveImage from './V2ResponsiveImage.astro';
 import { resolveV2ResponsiveMedia, type V2MediaRole } from '../../utils/v2ResponsiveMedia';
+import { adminBinding } from '../../admin/bindings/adminBinding';
 
 interface Props {
   images: string[];
+  imageMetadata?: Array<string | { src?: string; alt?: string; caption?: string }>;
   title: string;
   imageView?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number };
   caption?: string;
   entityLabel?: string;
   pageCritical?: boolean;
   mediaSizes?: string;
+  bindingOwner?: { collection: string; slug: string };
+  bindingField?: string;
+  affectedRoutes?: string[];
+  mediaDisposition?: Record<string, string>;
+  titleBinding?: Record<string, string>;
+  captionBinding?: Record<string, string>;
 }
 
 const {
   images,
+  imageMetadata = [],
   title,
   imageView,
   caption = '',
@@ -30,7 +39,13 @@ const hasImages = galleryImages.length > 0;
 const hasMultipleImages = galleryImages.length > 1;
 const galleryId = 'v2-product-gallery';
 const lightboxTitleId = 'v2-product-lightbox-title';
-const firstImageAlt = hasMultipleImages ? `${title} — фото 1 из ${galleryImages.length}` : `${title} — фото`;
+const metadataBySource = new Map<string, { alt: string; caption: string }>();
+for (const item of imageMetadata) {
+  if (!item || typeof item === 'string' || !item.src) continue;
+  metadataBySource.set(item.src.trim(), { alt: item.alt?.trim() || '', caption: item.caption?.trim() || '' });
+}
+const fallbackAlt = (index: number) => hasMultipleImages ? `${title} — фото ${index + 1} из ${galleryImages.length}` : `${title} — фото`;
+const firstImageAlt = metadataBySource.get(galleryImages[0])?.alt || fallbackAlt(0);
 const responsivePayload = (source: string, role: V2MediaRole, sizes: string) => {
   const media = resolveV2ResponsiveMedia(source, role);
   const serialise = (items: Array<{ path: string; width: number }>) => items
@@ -48,8 +63,23 @@ const responsivePayload = (source: string, role: V2MediaRole, sizes: string) => 
 };
 const galleryPayload = galleryImages.map((source) => ({
   main: responsivePayload(source, 'gallery', mediaSizes),
-  lightbox: responsivePayload(source, 'lightbox', '100vw')
+  lightbox: responsivePayload(source, 'lightbox', '100vw'),
+  alt: metadataBySource.get(source)?.alt || '',
+  caption: metadataBySource.get(source)?.caption || ''
 }));
+const hasItemCaptions = galleryPayload.some((item) => item.caption);
+const bindingOwner = Astro.props.bindingOwner;
+const bindingField = Astro.props.bindingField;
+const mediaDisposition = Astro.props.mediaDisposition ?? {};
+const galleryBinding = bindingOwner && bindingField ? adminBinding(Astro.url, {
+  renderer: { family: 'media-gallery', variant: entityLabel }, owner: bindingOwner,
+  fieldPath: bindingField, stableItemId: `${bindingOwner.slug}-${bindingField}`,
+  role: 'public-gallery', scope: 'local', tool: 'gallery', affectedRoutes: Astro.props.affectedRoutes ?? [Astro.url.pathname],
+  permissions: { edit: true, reorder: true, delete: true }, multiple: true,
+  coverPath: bindingOwner.collection === 'products' ? 'image' : undefined
+}) : {};
+const titleBinding = Astro.props.titleBinding ?? {};
+const captionBinding = Astro.props.captionBinding ?? {};
 ---
 
 <section
@@ -58,6 +88,7 @@ const galleryPayload = galleryImages.map((source) => ({
   aria-label={`Галерея: ${title}`}
   data-v2-product-gallery
   data-v2-gallery-current="0"
+  {...galleryBinding}
 >
   <div class="v2-product-gallery__stage" data-v2-gallery-context>
     <div class="v2-product-gallery__media" data-v2-media>
@@ -74,6 +105,7 @@ const galleryPayload = galleryImages.map((source) => ({
             style={imageViewStyle(imageView)}
             data-v2-gallery-main
             data-v2-page-critical={pageCritical ? '' : undefined}
+            {...mediaDisposition}
           />
           <span class="v2-product-gallery__zoom" aria-hidden="true">Развернуть</span>
         </button>
@@ -117,20 +149,21 @@ const galleryPayload = galleryImages.map((source) => ({
             height="140"
             loading="lazy"
             decoding="async"
+            {...mediaDisposition}
           />
         </button>
       ))}
     </div>
   )}
 
-  {caption && <p class="v2-product-gallery__caption">{caption}</p>}
+  {(caption || hasItemCaptions) && <p class="v2-product-gallery__caption" data-v2-gallery-caption {...captionBinding}>{galleryPayload[0]?.caption || caption}</p>}
 
   {hasImages && (
     <dialog class="v2-product-lightbox" aria-labelledby={lightboxTitleId} data-v2-product-lightbox>
       <div class="v2-product-lightbox__inner">
         <header class="v2-product-lightbox__header">
           <div>
-            <p id={lightboxTitleId}>{title}</p>
+            <p id={lightboxTitleId} {...titleBinding}>{title}</p>
             {hasMultipleImages && <span aria-live="polite" data-v2-lightbox-status>1 / {galleryImages.length}</span>}
           </div>
           <div class="v2-product-lightbox__toolbar">
@@ -180,6 +213,8 @@ const galleryPayload = galleryImages.map((source) => ({
       type GalleryCandidate = {
         main: ResponsiveCandidate;
         lightbox: ResponsiveCandidate;
+        alt?: string;
+        caption?: string;
       };
       let data: { images?: GalleryCandidate[]; title?: string } = {};
       try {
@@ -201,6 +236,7 @@ const galleryPayload = galleryImages.map((source) => ({
       const lightboxImage = gallery.querySelector<HTMLImageElement>('[data-v2-lightbox-image]');
       const lightboxStatus = gallery.querySelector<HTMLElement>('[data-v2-lightbox-status]');
       const lightboxFallback = gallery.querySelector<HTMLElement>('.v2-product-lightbox__fallback');
+      const captionElement = gallery.querySelector<HTMLElement>('[data-v2-gallery-caption]');
       if (!mainImage || !media || !stage || sources.length === 0) return;
 
       let current = 0;
@@ -211,9 +247,9 @@ const galleryPayload = galleryImages.map((source) => ({
       let suppressOpen = false;
 
       const normalizedIndex = (index: number) => (index + sources.length) % sources.length;
-      const altFor = (index: number) => sources.length > 1
+      const altFor = (index: number) => sources[index]?.alt || (sources.length > 1
         ? `${galleryTitle} — фото ${index + 1} из ${sources.length}`
-        : `${galleryTitle} — фото`;
+        : `${galleryTitle} — фото`);
       const setResponsiveSource = (image: HTMLImageElement, candidate: ResponsiveCandidate) => {
         const picture = image.closest('picture');
         const setSource = (format: string, value = '') => {
@@ -296,6 +332,10 @@ const galleryPayload = galleryImages.map((source) => ({
         current = normalizedIndex(index);
         gallery.dataset.v2GalleryCurrent = String(current);
         setImageState(mainImage, media, sources[current].main, altFor(current));
+        if (captionElement) {
+          captionElement.textContent = sources[current].caption || '';
+          captionElement.hidden = !sources[current].caption;
+        }
         thumbs.forEach((thumb, thumbIndex) => {
           const isCurrent = thumbIndex === current;
           thumb.classList.toggle('is-current', isCurrent);

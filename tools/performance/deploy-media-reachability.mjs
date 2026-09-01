@@ -469,7 +469,7 @@ const shouldRequireReference = (raw, kind, external) => {
 export const auditDeployMediaReachability = async ({
   distRoot = DEFAULT_DIST_ROOT,
   basePath = '',
-  expectedHtmlCount = 228,
+  expectedHtmlCount = 229,
   apply = false,
   reportPath = ''
 } = {}) => {
@@ -690,13 +690,13 @@ const runCli = async () => {
     process.stdout.write(`Options:\n`);
     process.stdout.write(`  --dist=<path>            Built artifact (default: ./dist)\n`);
     process.stdout.write(`  --base=/SMU1/            Optional explicit GitHub Pages base path\n`);
-    process.stdout.write(`  --expected-html=228      Fail-closed emitted HTML count\n`);
+    process.stdout.write(`  --expected-html=229      Fail-closed emitted HTML count\n`);
     process.stdout.write(`  --report=<path>          Optional deterministic JSON report\n`);
     process.stdout.write(`  --apply                  Delete only proven-unreferenced media from dist\n\n`);
     process.stdout.write(`Without --apply this command is read-only. It never changes public/ or source files.\n`);
     return;
   }
-  const expectedHtmlCount = Number.parseInt(argumentValue(argv, '--expected-html') || '228', 10);
+  const expectedHtmlCount = Number.parseInt(argumentValue(argv, '--expected-html') || '229', 10);
   if (!Number.isInteger(expectedHtmlCount) || expectedHtmlCount <= 0) throw new Error('--expected-html must be a positive integer.');
   const report = await auditDeployMediaReachability({
     distRoot: argumentValue(argv, '--dist') || DEFAULT_DIST_ROOT,

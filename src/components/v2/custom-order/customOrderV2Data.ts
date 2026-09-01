@@ -1,14 +1,15 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
-import { loadCatalogV2Snapshot } from '../catalogV2Data';
 import { getV2ProjectPresentation } from '../mediaRoleAdapter';
-import { loadV2Directions, type V2DirectionSlug } from '../../../utils/v2Directions';
+import { loadV2Directions } from '../../../utils/v2Directions';
 
-type ProjectData = CollectionEntry<'projects'>['data'];
 type StaticPageData = CollectionEntry<'static-pages'>['data'];
+type CustomOrderSourcePage = StaticPageData & Required<Pick<StaticPageData, 'heroDescription' | 'shellCtaLabel'>>;
 
 export interface CustomOrderDirection {
   title: string;
   href: string;
+  slug: string;
+  ownerCollection: 'product-sections' | 'services';
 }
 
 export interface CustomOrderMedia {
@@ -17,26 +18,34 @@ export interface CustomOrderMedia {
   fit: 'cover' | 'contain';
   position: string;
   mobilePosition: string;
+  ownerSlug: string;
+  fieldPath: 'presentation.detailHeroMedia';
 }
 
 export interface CustomOrderChangeTheme {
+  id: string;
   title: string;
-  items: string[];
+  items: Array<{ id: string; label: string }>;
 }
 
 export interface CustomOrderV2Data {
-  sourcePage: StaticPageData;
+  sourcePage: CustomOrderSourcePage;
   copy: {
     heroKicker: string;
     heroTitle: string;
     heroDescription: string;
+    heroPrimaryLabel: string;
+    heroSecondaryLabel: string;
     contactTitle: string;
     contactDescription: string;
+    contactEyebrow: string;
+    contactPrimaryLabel: string;
+    contactSecondaryLabel: string;
   };
   directions: CustomOrderDirection[];
   heroMedia: CustomOrderMedia[];
   changeThemes: CustomOrderChangeTheme[];
-  sourceMaterials: string[];
+  sourceMaterials: Array<{ id: string; label: string }>;
 }
 
 const required = <T>(value: T | undefined, message: string): T => {
@@ -44,147 +53,79 @@ const required = <T>(value: T | undefined, message: string): T => {
   return value;
 };
 
-const relatedDirectionSlugs = new Set<V2DirectionSlug>([
-  'ulichnaya-mebel',
-  'ograzhdeniya-i-zabory',
-  'navesy-i-kozyrki',
-  'metallokonstruktsii-dlya-biznesa'
-]);
-
-const customOrderHero = {
-  projectSlug: 'gorodskie-kacheli-dlya-obshchestvennyh-territoriy',
-  src: '/uploads/project-05c77513c1a391e5a71a7dee.jpg',
-  position: '50% 64%',
-  mobilePosition: '50% 58%'
-} as const;
-
 export const loadCustomOrderV2Data = async (): Promise<CustomOrderV2Data> => {
-  const [snapshot, staticEntries, projectEntries, activeDirections] = await Promise.all([
-    loadCatalogV2Snapshot(),
+  const [staticEntries, projectEntries, activeDirections] = await Promise.all([
     getCollection('static-pages'),
     getCollection('projects'),
     loadV2Directions()
   ]);
-
-  const sourcePage = required(
+  const rawSourcePage = required(
     staticEntries.find(({ data }) => data.slug === 'custom-order' && data.isActive !== false)?.data,
     'Custom order V2 requires the current custom-order static-page record.'
   );
-  const projects = projectEntries.map(({ data }) => data).filter((item) => item.isActive);
-  const directions = activeDirections
-    .filter(({ slug }) => relatedDirectionSlugs.has(slug))
-    .map(({ title, href }) => ({ title, href }));
-  const approvedUntilEdited = (current: string | undefined, legacy: string, approved: string) => {
-    const value = current?.trim() ?? '';
-    return value === legacy ? approved : (value || approved);
+  const sourcePage: CustomOrderSourcePage = {
+    ...rawSourcePage,
+    heroDescription: required(rawSourcePage.heroDescription, 'Custom order V2 requires a Hero description.'),
+    shellCtaLabel: required(rawSourcePage.shellCtaLabel, 'Custom order V2 requires a shell CTA label.')
   };
-  const copy = {
-    heroKicker: approvedUntilEdited(sourcePage.heroKicker, 'Служебный сценарий', 'Индивидуальная задача'),
-    heroTitle: approvedUntilEdited(sourcePage.heroTitle, 'Изготовление на заказ', 'Изготовление под задачу объекта'),
-    heroDescription: approvedUntilEdited(
-      sourcePage.heroDescription,
-      'Если задача не укладывается в каталог, присылайте фото, размеры, эскиз или описание. Подготовим рабочий вариант и расчет.',
-      'Рассматриваем изделия и конструкции по фотографии, эскизу, чертежу или техническому заданию и подбираем исполнение под условия конкретного объекта.'
-    ),
-    contactTitle: approvedUntilEdited(sourcePage.contactTitle, 'Не нашли, что искали?', 'Передайте задачу удобным способом'),
-    contactDescription: approvedUntilEdited(
-      sourcePage.contactDescription,
-      'Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.',
-      'Можно начать с краткого описания и тех материалов, которые уже подготовлены.'
-    )
-  };
+  const directionBySlug = new Map(activeDirections.map((direction) => [direction.slug, direction]));
+  const directions = (sourcePage.relatedDirectionSlugs ?? [])
+    .map((slug) => directionBySlug.get(slug as Parameters<typeof directionBySlug.get>[0]))
+    .filter((direction): direction is NonNullable<typeof direction> => Boolean(direction))
+    .map(({ title, href, slug, ownerCollection }) => ({ title, href, slug, ownerCollection }));
 
-  const publicProducts = snapshot.products.filter((product) => product.showInCatalog !== false);
-  const projectPresentations = projects
-    .map((project) => getV2ProjectPresentation(project as ProjectData))
-    .filter((item) => item.hasMedia);
-  const heroProject = projectPresentations.find(
-    (item) => item.project.slug === customOrderHero.projectSlug
-  );
-  const heroProjectMedia = heroProject?.media.find(
-    (item) => item.src === customOrderHero.src
-      && item.roles.includes('finished-result')
-      && item.roles.includes('hero')
-  );
-  const heroMedia: CustomOrderMedia[] = [required(
-    heroProjectMedia ? {
-      src: heroProjectMedia.src,
-      alt: heroProjectMedia.alt,
-      fit: 'cover',
-      position: customOrderHero.position,
-      mobilePosition: customOrderHero.mobilePosition
-    } : undefined,
-    'Custom order V2 requires the approved finished-result swings Hero media.'
-  )];
+  const heroProject = projectEntries
+    .map(({ data }) => data)
+    .find((project) => project.isActive && project.slug === sourcePage.customOrderHeroProjectSlug);
+  const heroPresentation = heroProject ? getV2ProjectPresentation(heroProject) : undefined;
+  const heroProjectMedia = heroPresentation?.detailHeroMedia;
+  const heroMedia: CustomOrderMedia[] = [required(heroProject && heroProjectMedia ? {
+    src: heroProjectMedia.src,
+    alt: heroProjectMedia.alt,
+    fit: 'cover',
+    position: sourcePage.customOrderHeroPosition ?? '50% 50%',
+    mobilePosition: sourcePage.customOrderHeroMobilePosition ?? sourcePage.customOrderHeroPosition ?? '50% 50%',
+    ownerSlug: heroProject.slug,
+    fieldPath: 'presentation.detailHeroMedia'
+  } : undefined, 'Custom order V2 requires a published project-backed Hero media role.')];
 
-  // Capabilities are derived from every currently public product. If an editor removes
-  // the supporting records or text, that granular claim and any empty theme disappear.
-  const evidenceText = publicProducts
-    .flatMap((product) => product.customizationItems || [])
-    .join(' · ')
-    .toLocaleLowerCase('ru');
-  const supported = (pattern: RegExp, label: string) =>
-    pattern.test(evidenceText) ? label : undefined;
-  const theme = (title: string, items: Array<string | undefined>) => ({
-    title,
-    items: items.filter((item): item is string => Boolean(item))
-  });
-  const changeThemes = [
-    theme('Размеры', [
-      supported(/размер|габарит/, 'Размеры и габариты')
-    ]),
-    theme('Форма и конструктив', [
-      supported(/форму|наклон/, 'Форма и геометрия отдельных элементов'),
-      supported(
-        /количество стоек|расстояние между стойками/,
-        'Количество и расстояние между стойками в составном решении'
-      )
-    ]),
-    theme('Цвет металла и дерева', [
-      supported(/цвет металла/, 'Цвет металлических элементов'),
-      supported(/оттенок дерева/, 'Оттенок деревянных элементов')
-    ]),
-    theme('Комплектация и крепление', [
-      supported(/способ крепления/, 'Способ крепления')
-    ]),
-    theme('Дополнительные элементы', [
-      supported(/логотип/, 'Добавление логотипа')
-    ])
-  ].filter((item) => item.items.length > 0);
-
-  const approvedSourceMaterials = [
-    'Фотография или референс',
-    'Примерные размеры',
-    'Эскиз',
-    'Чертёж',
-    'Техническое задание',
-    'Описание задачи'
-  ];
-  const legacySourceMaterials = [
-    'фото текущей ситуации',
-    'размеры и привязки',
-    'эскиз или пример',
-    'описание условий эксплуатации'
-  ];
-  const sourceMaterialsBlock = (sourcePage.pageBlocks as Array<{
-    type?: string;
-    title?: string;
-    items?: unknown[];
-    isActive?: boolean;
-  }>).find((block) => block.type === 'listPanel' && block.title === 'Что можно прислать' && block.isActive !== false);
-  const editedSourceMaterials = (sourceMaterialsBlock?.items ?? [])
-    .filter((item): item is string => typeof item === 'string' && Boolean(item.trim()))
-    .map((item) => item.trim());
-  const sourceMaterials = JSON.stringify(editedSourceMaterials) === JSON.stringify(legacySourceMaterials)
-    ? approvedSourceMaterials
-    : (editedSourceMaterials.length > 0 ? editedSourceMaterials : approvedSourceMaterials);
+  const sourceMaterials = (sourcePage.customOrderSourceMaterials ?? [])
+    .filter((item) => item.isActive !== false)
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map(({ id, label }) => ({ id, label }));
+  const changeThemes = (sourcePage.customOrderChangeThemes ?? [])
+    .filter((theme) => theme.isActive !== false)
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map((theme) => ({
+      id: theme.id,
+      title: theme.title,
+      items: theme.items
+        .filter((item) => item.isActive !== false)
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map(({ id, label }) => ({ id, label }))
+    }))
+    .filter((theme) => theme.items.length > 0);
 
   return {
     sourcePage,
-    copy,
+    copy: {
+      heroKicker: sourcePage.heroKicker ?? '',
+      heroTitle: sourcePage.heroTitle,
+      heroDescription: sourcePage.heroDescription ?? '',
+      heroPrimaryLabel: sourcePage.heroPrimaryLabel ?? 'Позвонить',
+      heroSecondaryLabel: sourcePage.heroSecondaryLabel ?? 'Отправить исходные данные',
+      contactTitle: sourcePage.contactTitle ?? '',
+      contactDescription: sourcePage.contactDescription ?? '',
+      contactEyebrow: sourcePage.contactEyebrow ?? 'Прямая связь',
+      contactPrimaryLabel: sourcePage.contactPrimaryLabel ?? 'Основной телефон',
+      contactSecondaryLabel: sourcePage.contactSecondaryLabel ?? 'Email'
+    },
     directions,
     heroMedia,
     changeThemes,
-    sourceMaterials,
+    sourceMaterials
   };
 };

@@ -1,19 +1,5 @@
 ---
-import CatalogV2Layout from '../components/v2/CatalogV2Layout.astro';
-import V2NotFoundPage from '../components/v2/not-found/V2NotFoundPage.astro';
+import V2NotFoundRoute from '../components/v2/not-found/V2NotFoundRoute.astro';
 ---
 
-<CatalogV2Layout
-  title="Страница не найдена — СМУ-1"
-  description="Запрошенная страница не найдена. Перейдите на главную, к направлениям или свяжитесь с СМУ-1."
-  canonicalPath=""
-  currentPath={Astro.url.pathname}
-  pageKind="section"
-  contactHref="#contact"
-  mobileCtaLabel="Связаться"
-  headerCtaLabel="Связаться"
-  noCanonical
-  noindex
->
-  <V2NotFoundPage />
-</CatalogV2Layout>
+<V2NotFoundRoute />

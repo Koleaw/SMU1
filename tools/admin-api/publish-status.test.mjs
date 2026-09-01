@@ -8,6 +8,7 @@ import {
   createPublishStatusTracker,
   transitionPublishStatus,
 } from './publish-status.mjs';
+import { parseReleaseIdentityBytes, serializeReleaseIdentity } from '../release/artifact-identity.mjs';
 
 const BASE_SHA = '1'.repeat(40);
 const TESTED_SHA = '2'.repeat(40);
@@ -16,6 +17,18 @@ const ROUTE_EXPECTATIONS = [
   { route: '/', expected: 'html' },
   { route: '/catalog/item/', expected: 'not-found' },
 ];
+
+function artifactIdentity(testedCommitSha = TESTED_SHA) {
+  return parseReleaseIdentityBytes(serializeReleaseIdentity({
+    version: 1,
+    kind: 'smu1-release-artifact-identity',
+    testedCommitSha,
+    artifactManifestSha256: 'a'.repeat(64),
+    fileCount: 2,
+    totalBytes: 30,
+    largestFile: { path: 'index.html', bytes: 20, sha256: 'b'.repeat(64) },
+  }));
+}
 
 function plan() {
   return {
@@ -27,7 +40,7 @@ function plan() {
   };
 }
 
-function successfulSmoke(testedSha, affectedRoutes, routeExpectations) {
+function successfulSmoke(testedSha, affectedRoutes, routeExpectations, identity = artifactIdentity(testedSha)) {
   return {
     sha: testedSha,
     ok: true,
@@ -40,6 +53,9 @@ function successfulSmoke(testedSha, affectedRoutes, routeExpectations) {
       status: expected === 'html' ? 200 : 404,
       outcome: expected === 'html' ? 'html' : 'intentional-not-found',
     })),
+    artifactIdentity: identity,
+    byteIdentityVerified: true,
+    identityVerified: true,
   };
 }
 
@@ -48,7 +64,7 @@ function receipt() {
     status: 'committed',
     empty: false,
     testedSha: TESTED_SHA,
-    gates: { ok: true, testedSha: TESTED_SHA },
+    gates: { ok: true, testedSha: TESTED_SHA, artifactIdentity: artifactIdentity() },
   };
 }
 
@@ -79,9 +95,9 @@ test('status succeeds only after workflow, Pages, and live smoke all prove the e
       calls.push(['pages', testedSha]);
       return { sha: testedSha, status: 'completed', conclusion: 'success', url: 'pages-url' };
     },
-    smokeRunner: async ({ testedSha, affectedRoutes, routeExpectations }) => {
-      calls.push(['smoke', testedSha, affectedRoutes, routeExpectations]);
-      return successfulSmoke(testedSha, affectedRoutes, routeExpectations);
+    smokeRunner: async ({ testedSha, affectedRoutes, routeExpectations, artifactIdentity: identity }) => {
+      calls.push(['smoke', testedSha, affectedRoutes, routeExpectations, identity]);
+      return successfulSmoke(testedSha, affectedRoutes, routeExpectations, identity);
     },
     now: () => new Date('2026-01-01T00:00:00Z'),
   });
@@ -92,11 +108,37 @@ test('status succeeds only after workflow, Pages, and live smoke all prove the e
   assert.deepEqual(calls, [
     ['workflow', TESTED_SHA],
     ['pages', TESTED_SHA],
-    ['smoke', TESTED_SHA, ['/', '/catalog/item/'], ROUTE_EXPECTATIONS],
+    ['smoke', TESTED_SHA, ['/', '/catalog/item/'], ROUTE_EXPECTATIONS, artifactIdentity()],
   ]);
   assert.equal(result.evidence.workflow.sha, TESTED_SHA);
   assert.equal(result.evidence.pages.sha, TESTED_SHA);
   assert.equal(result.evidence.smoke.sha, TESTED_SHA);
+  assert.equal(result.evidence.smoke.byteIdentityVerified, true);
+});
+
+test('status refuses deploy success when smoke claims a different artifact manifest', async () => {
+  const tracker = createPublishStatusTracker({
+    workflowProvider: async () => ({ sha: TESTED_SHA, status: 'completed', conclusion: 'success' }),
+    pagesProvider: async () => ({ sha: TESTED_SHA, status: 'completed', conclusion: 'success' }),
+    smokeRunner: async ({ testedSha, affectedRoutes, routeExpectations }) => successfulSmoke(
+      testedSha,
+      affectedRoutes,
+      routeExpectations,
+      parseReleaseIdentityBytes(serializeReleaseIdentity({
+        version: 1,
+        kind: 'smu1-release-artifact-identity',
+        testedCommitSha: TESTED_SHA,
+        artifactManifestSha256: 'c'.repeat(64),
+        fileCount: 2,
+        totalBytes: 30,
+        largestFile: { path: 'index.html', bytes: 20, sha256: 'b'.repeat(64) },
+      })),
+    ),
+  });
+  const result = await tracker.poll(reachPushed(tracker));
+  assert.equal(result.status, PUBLISH_STATUSES.FAILURE);
+  assert.equal(result.success, false);
+  assert.equal(result.evidence.smoke.byteIdentityVerified, true, 'provider claim alone is not sufficient');
 });
 
 test('a successful workflow for another SHA is treated as queued and cannot produce success', async () => {

@@ -1,0 +1,241 @@
+---
+import '../styles/visual-editor.css';
+import { withBase } from '../../utils/withBase';
+
+interface Props {
+  initialRoute?: string;
+}
+
+const { initialRoute = '/' } = Astro.props;
+const adminApiBase = import.meta.env.PUBLIC_ADMIN_API_BASE || '/api/admin';
+const adminHealthMarker = import.meta.env.PUBLIC_ADMIN_HEALTH_MARKER || '';
+const brandIcon = withBase('/assets/brand/favicon.svg');
+const adminBase = withBase('/admin/');
+---
+
+<!doctype html>
+<html lang="ru" class="ve-html">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive" />
+    <meta name="theme-color" content="#142a23" />
+    {adminHealthMarker && <meta name="smu1-admin-health" content={adminHealthMarker} />}
+    <link rel="icon" href={brandIcon} />
+    <title>Визуальный редактор · СМУ-1</title>
+  </head>
+  <body class="ve-body">
+    <a class="ve-skip" href="#veCanvas">Перейти к странице</a>
+    <noscript><p class="ve-noscript">Для редактора нужен JavaScript. Публичный сайт продолжает работать без JavaScript.</p></noscript>
+
+    <div
+      id="visualEditorRoot"
+      class="ve-root"
+      data-api-base={adminApiBase}
+      data-admin-base={adminBase}
+      data-site-base={import.meta.env.BASE_URL}
+      data-initial-route={initialRoute}
+      data-brand-icon={brandIcon}
+      data-repo-identity={adminHealthMarker}
+    >
+      <section id="veLogin" class="ve-login" aria-labelledby="veLoginTitle">
+        <div class="ve-login__story">
+          <img src={brandIcon} alt="" />
+          <p class="ve-kicker">Локальная программа</p>
+          <h1>Редактор сайта СМУ-1</h1>
+          <p>Откройте страницу, нажмите на текст, карточку или фотографию и внесите правку прямо в настоящем сайте.</p>
+          <ul>
+            <li>Черновик восстанавливается после перезапуска</li>
+            <li>Сохранение работает без интернета</li>
+            <li>Тестовая публикация запускается отдельно</li>
+          </ul>
+        </div>
+        <form id="veLoginForm" class="ve-login__form" method="post" action={adminBase}>
+          <div class="ve-login__mark"><img src={brandIcon} alt="" /></div>
+          <p class="ve-kicker">Защищённый вход</p>
+          <h2 id="veLoginTitle">Продолжить работу</h2>
+          <label class="ve-field">
+            <span>Логин владельца</span>
+            <input id="veLoginName" name="login" autocomplete="username" required />
+          </label>
+          <label class="ve-field">
+            <span>Пароль</span>
+            <input id="veLoginPassword" name="password" type="password" autocomplete="current-password" required />
+          </label>
+          <button id="veLoginSubmit" class="ve-button ve-button--primary ve-button--wide" type="submit">Войти в редактор</button>
+          <p id="veLoginStatus" class="ve-form-status" role="status" aria-live="polite"></p>
+          <p class="ve-login__privacy">Данные остаются на этом компьютере. Эта программа недоступна из интернета.</p>
+        </form>
+      </section>
+
+      <div id="veApp" class="ve-app" hidden>
+        <header class="ve-topbar" aria-label="Панель редактора">
+          <button id="veNavigatorToggle" class="ve-icon-button" type="button" aria-label="Скрыть навигатор" aria-controls="veNavigator" aria-expanded="true">
+            <span aria-hidden="true">☰</span>
+          </button>
+          <a class="ve-brand" href={adminBase} aria-label="На главную редактора">
+            <img src={brandIcon} alt="" />
+            <span>СМУ-1</span>
+          </a>
+          <div class="ve-history-nav" aria-label="История переходов">
+            <button id="veBack" class="ve-icon-button" type="button" aria-label="Назад" disabled>←</button>
+            <button id="veForward" class="ve-icon-button" type="button" aria-label="Вперёд" disabled>→</button>
+          </div>
+          <button id="vePagePicker" class="ve-page-picker" type="button" aria-haspopup="dialog" aria-controls="vePageDialog">
+            <span id="vePagePickerType">Страница</span>
+            <strong id="vePagePickerTitle">Главная</strong>
+            <span aria-hidden="true">⌄</span>
+          </button>
+          <div class="ve-material-nav" aria-label="Соседние материалы">
+            <button id="vePreviousMaterial" class="ve-icon-button" type="button" aria-label="Предыдущий материал" disabled>‹</button>
+            <button id="veNextMaterial" class="ve-icon-button" type="button" aria-label="Следующий материал" disabled>›</button>
+          </div>
+          <div class="ve-topbar__spacer"></div>
+          <div class="ve-viewport-switcher" role="group" aria-label="Размер страницы">
+            <button type="button" data-viewport="desktop" aria-pressed="true" aria-label="Компьютер, 1440 на 900" title="Компьютер 1440 × 900">▰</button>
+            <button type="button" data-viewport="tablet" aria-pressed="false" aria-label="Планшет, 834 на 1112" title="Планшет 834 × 1112">▯</button>
+            <button type="button" data-viewport="mobile" aria-pressed="false" aria-label="Телефон, 390 на 844" title="Телефон 390 × 844">▯</button>
+          </div>
+          <div class="ve-mode-switcher" role="group" aria-label="Режим страницы">
+            <button type="button" data-mode="edit" aria-pressed="true">Редактирование</button>
+            <button type="button" data-mode="preview" aria-pressed="false">Просмотр</button>
+          </div>
+          <button id="veUndo" class="ve-icon-button" type="button" aria-label="Отменить изменение" disabled>↶</button>
+          <button id="veRedo" class="ve-icon-button" type="button" aria-label="Повторить изменение" disabled>↷</button>
+          <button id="veStatus" class="ve-status" type="button" aria-haspopup="dialog" aria-controls="vePublishDrawer">
+            <span class="ve-status__dot" aria-hidden="true"></span>
+            <span id="veStatusLabel">Сохранено на компьютере</span>
+          </button>
+          <button id="vePageSettings" class="ve-button ve-button--quiet" type="button" aria-haspopup="dialog" aria-controls="veSettingsDrawer">Настройки</button>
+          <button id="veSave" class="ve-button ve-button--save" type="button" disabled>Сохранить</button>
+          <button id="vePublish" class="ve-button ve-button--dark" type="button" aria-haspopup="dialog" aria-controls="vePublishDrawer">Публикация</button>
+        </header>
+
+        <div class="ve-workspace">
+          <aside id="veNavigator" class="ve-navigator" aria-label="Страницы сайта">
+            <div class="ve-navigator__head">
+              <div>
+                <p class="ve-kicker">Сайт</p>
+                <h2>Страницы</h2>
+              </div>
+              <button id="veCommandOpen" class="ve-icon-button" type="button" aria-label="Командная палитра" aria-haspopup="dialog" aria-controls="veCommandDialog" title="Командная палитра (Ctrl+K)">⌘</button>
+            </div>
+            <label class="ve-search">
+              <span class="ve-sr-only">Поиск страниц</span>
+              <span aria-hidden="true">⌕</span>
+              <input id="veSearch" type="search" placeholder="Название, slug, категория…" autocomplete="off" />
+              <kbd>Ctrl K</kbd>
+            </label>
+            <div class="ve-filter-row" role="group" aria-label="Фильтры страниц">
+              <button type="button" data-filter="all" aria-pressed="true">Все</button>
+              <button type="button" data-filter="changed" aria-pressed="false">Изменённые</button>
+              <button type="button" data-filter="missing-media" aria-pressed="false">Без фото</button>
+              <button type="button" data-filter="hidden" aria-pressed="false">Скрытые</button>
+              <button type="button" data-filter="errors" aria-pressed="false">Ошибки</button>
+            </div>
+            <div id="veRecent" class="ve-nav-section" hidden>
+              <div class="ve-nav-section__title"><span>Недавние</span></div>
+              <div id="veRecentList" role="tree" aria-label="Недавно открытые страницы"></div>
+            </div>
+            <div id="veFavorites" class="ve-nav-section" hidden>
+              <div class="ve-nav-section__title"><span>Избранные</span></div>
+              <div id="veFavoritesList" role="tree" aria-label="Избранные страницы"></div>
+            </div>
+            <div id="vePageTree" class="ve-page-tree" role="tree" aria-label="Все страницы"></div>
+            <div class="ve-navigator__footer">
+              <a href={withBase('/admin/all-materials/')} class="ve-secondary-link">Все материалы <span>Таблица и технические поля</span></a>
+              <button id="veGlobalSettings" class="ve-secondary-link" type="button">Общие настройки <span>Контакты, меню и Footer</span></button>
+            </div>
+          </aside>
+
+          <main id="veCanvas" class="ve-canvas" tabindex="-1">
+            <nav id="veBreadcrumbs" class="ve-breadcrumbs" aria-label="Путь страницы"></nav>
+            <div class="ve-canvas__toolbar">
+              <span id="veCanvasHint">Нажмите на текст, карточку или фотографию, чтобы изменить</span>
+              <button id="veRefreshCanvas" class="ve-canvas-action" type="button">Обновить</button>
+              <button id="veFullScreen" class="ve-canvas-action" type="button">На весь экран</button>
+            </div>
+            <div id="veCanvasScroller" class="ve-canvas__scroller">
+              <div id="veCanvasViewport" class="ve-canvas__viewport" data-viewport="desktop">
+                <iframe id="veFrame" title="Редактируемая страница сайта" sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerpolicy="same-origin"></iframe>
+                <div id="veOverlay" class="ve-overlay" aria-label="Инструменты редактирования страницы"></div>
+                <form id="veInlineEditor" class="ve-inline-editor" hidden>
+                  <label><span id="veInlineLabel">Текст</span><input id="veInlineInput" autocomplete="off" /></label>
+                  <span class="ve-inline-editor__hint">Enter — готово · Esc — отменить</span>
+                </form>
+              </div>
+            </div>
+            <button id="veFooterSettings" class="ve-footer-settings" type="button" aria-haspopup="dialog" aria-controls="veSettingsDrawer">Настройки этой страницы</button>
+          </main>
+
+          <aside id="veInspector" class="ve-inspector" aria-label="Параметры выбранного элемента" hidden>
+            <div class="ve-inspector__head">
+              <div><p id="veInspectorKicker" class="ve-kicker">Элемент страницы</p><h2 id="veInspectorTitle">Редактирование</h2></div>
+              <button id="veInspectorClose" class="ve-icon-button" type="button" aria-label="Закрыть панель">×</button>
+            </div>
+            <div id="veProvenance" class="ve-provenance" hidden></div>
+            <form id="veInspectorForm" class="ve-inspector__body"></form>
+            <div class="ve-inspector__footer">
+              <button id="veInspectorDone" class="ve-button ve-button--primary ve-button--wide" type="button">Готово</button>
+            </div>
+          </aside>
+        </div>
+
+        <section id="veChangesTray" class="ve-changes-tray" aria-label="Изменения" hidden>
+          <button id="veChangesToggle" class="ve-changes-tray__handle" type="button" aria-expanded="false" aria-controls="veChangesBody">
+            <span>Изменения</span><strong id="veChangesCount">0</strong><span aria-hidden="true">⌃</span>
+          </button>
+          <div id="veChangesBody" class="ve-changes-tray__body"></div>
+        </section>
+      </div>
+
+      <dialog id="vePageDialog" class="ve-dialog ve-dialog--picker" aria-labelledby="vePageDialogTitle">
+        <header><div><p class="ve-kicker">Навигатор</p><h2 id="vePageDialogTitle">Открыть страницу</h2></div><button type="button" data-dialog-close aria-label="Закрыть">×</button></header>
+        <label class="ve-search ve-search--large"><span class="ve-sr-only">Поиск страницы по названию или адресу</span><span aria-hidden="true">⌕</span><input id="vePageDialogSearch" type="search" placeholder="Начните вводить название или адрес" autocomplete="off" /></label>
+        <div id="vePageDialogResults" class="ve-dialog-results"></div>
+      </dialog>
+
+      <dialog id="veCommandDialog" class="ve-dialog ve-dialog--command" aria-labelledby="veCommandTitle">
+        <header class="ve-sr-only"><h2 id="veCommandTitle">Командная палитра</h2></header>
+        <label class="ve-command-search"><span class="ve-sr-only">Поиск страницы или команды</span><span aria-hidden="true">⌘</span><input id="veCommandSearch" type="search" placeholder="Перейти к странице или выполнить действие…" autocomplete="off" /><kbd>Esc</kbd></label>
+        <div id="veCommandResults" class="ve-command-results"></div>
+      </dialog>
+
+      <dialog id="veSettingsDrawer" class="ve-drawer" aria-labelledby="veSettingsTitle">
+        <header><div><p class="ve-kicker">Страница</p><h2 id="veSettingsTitle">Настройки страницы</h2><p id="veSettingsSubtitle"></p></div><button type="button" data-dialog-close aria-label="Закрыть">×</button></header>
+        <nav class="ve-drawer-tabs" aria-label="Разделы настроек">
+          <button type="button" data-settings-tab="general" aria-pressed="true">Основное</button>
+          <button type="button" data-settings-tab="seo" aria-pressed="false">SEO и ссылки</button>
+          <button type="button" data-settings-tab="history" aria-pressed="false">История</button>
+          <button type="button" data-settings-tab="impact" aria-pressed="false">Затронутые страницы</button>
+        </nav>
+        <div id="veSettingsBody" class="ve-drawer__body"></div>
+      </dialog>
+
+      <dialog id="vePublishDrawer" class="ve-drawer ve-drawer--publish" aria-labelledby="vePublishTitle">
+        <header><div><p class="ve-kicker">Выпуск сайта</p><h2 id="vePublishTitle">Публикация</h2><p>Сохранение, проверка и публикация — отдельные безопасные шаги.</p></div><button type="button" data-dialog-close aria-label="Закрыть">×</button></header>
+        <div id="vePublishBody" class="ve-drawer__body"></div>
+      </dialog>
+
+      <dialog id="veMediaDialog" class="ve-dialog ve-dialog--media" aria-labelledby="veMediaTitle">
+        <header><div><p class="ve-kicker">Фотографии</p><h2 id="veMediaTitle">Массовая загрузка</h2><p id="veMediaSubtitle">Порядок в пронумерованной очереди станет порядком галереи.</p></div><button type="button" data-dialog-close aria-label="Закрыть">×</button></header>
+        <div id="veMediaBody" class="ve-media-body"></div>
+        <footer><button type="button" data-dialog-close class="ve-button">Отмена</button><button id="veMediaConfirm" type="button" class="ve-button ve-button--primary" disabled>Добавить в черновик</button></footer>
+      </dialog>
+
+      <dialog id="veConflictDialog" class="ve-dialog ve-dialog--conflict" aria-labelledby="veConflictTitle">
+        <header><div><p class="ve-kicker">Безопасность изменений</p><h2 id="veConflictTitle">Страница изменилась в другой вкладке</h2></div><button type="button" data-dialog-close aria-label="Закрыть">×</button></header>
+        <div id="veConflictBody" class="ve-dialog__body"></div>
+      </dialog>
+
+      <div id="veToastRegion" class="ve-toasts" aria-live="polite" aria-atomic="false"></div>
+      <div id="veLiveRegion" class="ve-sr-only" aria-live="polite" aria-atomic="true"></div>
+    </div>
+
+    <script>
+      import { startVisualEditor } from './visual-editor-app.mjs';
+      startVisualEditor();
+    </script>
+  </body>
+</html>

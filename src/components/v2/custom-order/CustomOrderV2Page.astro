@@ -7,6 +7,7 @@ import V2HeroHandoff from '../V2HeroHandoff.astro';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 import type { CustomOrderV2Data } from './customOrderV2Data';
 import '../../../styles/v2/custom-order-v2.css';
+import { adminBinding, adminDisposition, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
 
 interface Props {
   data: CustomOrderV2Data;
@@ -18,6 +19,41 @@ const phoneHref = `tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`;
 const emailHref = `mailto:${settings.email}`;
 const telegramLabel = getV2TelegramLabel(settings);
 const heroMedia = data.heroMedia[0];
+const isEditorCanvas = isLocalAdminCanvas(Astro.url);
+const pageBinding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'custom-order', variant: 'production' }, owner: { collection: 'static-pages', slug: 'custom-order' },
+  fieldPath, scope: 'local', tool, affectedRoutes: ['/izgotovlenie-na-zakaz/'], ...options
+});
+const globalBinding = (
+  fieldPath: string,
+  tool = 'short-text',
+  occurrence = fieldPath,
+  options: Record<string, unknown> = {}
+) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'contact' }, owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath, stableItemId: `custom-order-${occurrence}`, scope: 'global', tool, affectedRoutes: ['*'], ...options
+});
+const contactHrefDisposition = (fieldPath: 'phonePrimary' | 'email' | 'telegram', occurrence: string) => adminDisposition(Astro.url, {
+  kind: 'derived',
+  reason: fieldPath === 'phonePrimary'
+    ? 'Адрес звонка вычисляется из основного телефона без пробелов и служебных символов.'
+    : fieldPath === 'email'
+      ? 'Адрес письма вычисляется из электронной почты компании.'
+      : 'Ссылка ведёт на общий Telegram компании.',
+  source: `site-settings/global.${fieldPath} → ${fieldPath === 'phonePrimary' ? 'tel:' : fieldPath === 'email' ? 'mailto:' : 'https:'} (${occurrence})`,
+  tool: 'global-settings'
+});
+const breadcrumbItems = [
+  {
+    title: settings.catalogUi.shared.homeBreadcrumbLabel,
+    href: '/design-lab/home-v2/',
+    editor: globalBinding('catalogUi.shared.homeBreadcrumbLabel', 'short-text', 'breadcrumb-home')
+  },
+  {
+    title: data.sourcePage.title,
+    editor: pageBinding('title', 'heading', { stableItemId: 'custom-order-breadcrumb-current', role: 'breadcrumb-current' })
+  }
+];
 ---
 
 <div class="custom-order-v2">
@@ -31,30 +67,48 @@ const heroMedia = data.heroMedia[0];
         <div class="hv2-shell custom-order-hero__grid">
           <div class="custom-order-hero__copy" data-v2-page-handoff="copy">
             <div class="custom-order-hero__breadcrumbs" data-v2-entrance-role="context">
-              <V2Breadcrumbs items={[
-                { title: 'Главная', href: '/design-lab/home-v2/' },
-                { title: data.sourcePage.title }
-              ]} />
+              <V2Breadcrumbs items={breadcrumbItems} />
             </div>
-            <p class="hv2-eyebrow" data-v2-entrance-role="context">{data.copy.heroKicker}</p>
-            <h1 id="custom-order-title" data-v2-entrance-role="title-primary">{data.copy.heroTitle}</h1>
-            <p class="custom-order-hero__lead" data-v2-entrance-role="lead">{data.copy.heroDescription}</p>
+            <p class="hv2-eyebrow" data-v2-entrance-role="context" {...pageBinding('heroKicker', 'short-text')}>{data.copy.heroKicker}</p>
+            <h1 id="custom-order-title" data-v2-entrance-role="title-primary" {...pageBinding('heroTitle', 'heading')}>{data.copy.heroTitle}</h1>
+            <p class="custom-order-hero__lead" data-v2-entrance-role="lead" {...pageBinding('heroDescription', 'long-text')}>{data.copy.heroDescription}</p>
             <div class="custom-order-hero__actions" data-v2-entrance-role="actions-meta">
               <a
                 class="hv2-button hv2-button--primary custom-order-hero__phone"
                 href={phoneHref}
-                aria-label={`Позвонить ${settings.phonePrimary}`}
+                aria-label={`${data.copy.heroPrimaryLabel} ${settings.phonePrimary}`}
+                {...contactHrefDisposition('phonePrimary', 'hero-primary')}
               >
-                <span>Позвонить</span>
-                <strong>{settings.phonePrimary}</strong>
+                <span {...pageBinding('heroPrimaryLabel', 'button-label')}>{data.copy.heroPrimaryLabel}</span>
+                <strong {...globalBinding('phonePrimary', 'short-text', 'hero-phone-value')}>{settings.phonePrimary}</strong>
               </a>
-              <a class="hv2-button custom-order-hero__email" href={emailHref}>
-                Отправить исходные данные
+              <a class="hv2-button custom-order-hero__email" href={emailHref} {...pageBinding('heroSecondaryLabel', 'button-label')} {...contactHrefDisposition('email', 'hero-secondary')}>
+                {data.copy.heroSecondaryLabel}
               </a>
             </div>
           </div>
 
-          <div class="custom-order-hero__media" data-v2-media data-v2-entrance-role="media">
+          <div class="custom-order-hero__media" data-v2-media data-v2-entrance-role="media" {...pageBinding('customOrderHeroProjectSlug', 'relation-select', {
+            stableItemId: 'custom-order-hero-source', role: 'custom-order-hero-source',
+            projection: { kind: 'relation', formula: 'customOrderHeroProjectSlug → project.presentation.detailHeroMedia' }
+          })}>
+            {isEditorCanvas && (
+              <>
+                <span hidden aria-hidden="true" {...adminBinding(Astro.url, {
+                  renderer: { family: 'custom-order', variant: 'borrowed-project-hero' },
+                  owner: { collection: 'projects', slug: heroMedia.ownerSlug }, fieldPath: heroMedia.fieldPath,
+                  stableItemId: 'custom-order-hero-project-media', role: 'detail-hero', scope: 'shared', tool: 'media',
+                  affectedRoutes: ['/izgotovlenie-na-zakaz/', `/vypolnennye-obekty/${heroMedia.ownerSlug}/`],
+                  projection: { kind: 'shared-media', formula: 'project.presentation.detailHeroMedia → custom order hero' }
+                })}></span>
+                <span hidden aria-hidden="true" {...pageBinding('customOrderHeroPosition', 'focal-position', {
+                  stableItemId: 'custom-order-hero-position-desktop', role: 'desktop-crop'
+                })}></span>
+                <span hidden aria-hidden="true" {...pageBinding('customOrderHeroMobilePosition', 'focal-position', {
+                  stableItemId: 'custom-order-hero-position-mobile', role: 'mobile-crop'
+                })}></span>
+              </>
+            )}
             <V2ResponsiveImage
               src={heroMedia.src}
               alt={heroMedia.alt}
@@ -76,33 +130,33 @@ const heroMedia = data.heroMedia[0];
   <section class="custom-order-brief" aria-labelledby="custom-order-brief-title">
     <div class="hv2-shell">
       <header class="custom-order-brief__heading">
-        <h2 id="custom-order-brief-title">Что можно прислать / Что можно изменить</h2>
+        <h2 id="custom-order-brief-title" {...pageBinding('customOrderBriefTitle', 'heading')}>{data.sourcePage.customOrderBriefTitle}</h2>
       </header>
 
       <div class="custom-order-brief__content">
         <div class="custom-order-brief__column custom-order-brief__column--sources">
           <div class="custom-order-brief__intro">
-            <h3>Что можно прислать</h3>
-            <p>Не нужно готовить полный комплект документов. Пришлите один или несколько материалов — остальное уточним вместе.</p>
+            <h3 {...pageBinding('customOrderSourceHeading', 'heading')}>{data.sourcePage.customOrderSourceHeading}</h3>
+            <p {...pageBinding('customOrderSourceDescription', 'long-text')}>{data.sourcePage.customOrderSourceDescription}</p>
           </div>
           <ol class="custom-order-sources">
             {data.sourceMaterials.map((item) => (
-              <li><span>{item}</span></li>
+              <li {...pageBinding('customOrderSourceMaterials', 'list', { stableItemId: item.id, itemKind: 'object' })}><span>{item.label}</span></li>
             ))}
           </ol>
         </div>
 
         <div class="custom-order-brief__column custom-order-brief__column--changes">
           <div class="custom-order-brief__intro">
-            <h3>Что можно изменить</h3>
-            <p>Набор параметров зависит от изделия и условий объекта. На старте фиксируем только то, что действительно влияет на исполнение.</p>
+            <h3 {...pageBinding('customOrderChangeHeading', 'heading')}>{data.sourcePage.customOrderChangeHeading}</h3>
+            <p {...pageBinding('customOrderChangeDescription', 'long-text')}>{data.sourcePage.customOrderChangeDescription}</p>
           </div>
           <ul class="custom-order-themes">
             {data.changeThemes.map((theme) => (
-              <li>
+              <li {...pageBinding('customOrderChangeThemes', 'list', { stableItemId: theme.id, itemKind: 'object' })}>
                 <h4>{theme.title}</h4>
                 <ul>
-                  {theme.items.map((item) => <li>{item}</li>)}
+                  {theme.items.map((item) => <li>{item.label}</li>)}
                 </ul>
               </li>
             ))}
@@ -114,11 +168,19 @@ const heroMedia = data.heroMedia[0];
 
   <section class="custom-order-directions" aria-labelledby="custom-order-directions-title">
     <div class="hv2-shell custom-order-directions__inner">
-      <h2 id="custom-order-directions-title">Выберите близкое направление</h2>
-      <ul class="custom-order-directions__links">
+      <h2 id="custom-order-directions-title" {...pageBinding('customOrderDirectionsTitle', 'heading')}>{data.sourcePage.customOrderDirectionsTitle}</h2>
+      <ul class="custom-order-directions__links" {...pageBinding('relatedDirectionSlugs', 'relation-list', {
+        stableItemId: 'custom-order-related-directions', permissions: { edit: true, reorder: true, delete: false },
+        projection: { kind: 'relation', formula: 'ordered relatedDirectionSlugs → direction links' }
+      })}>
         {data.directions.map((direction) => (
           <li>
-            <a href={withBase(direction.href)}>{direction.title}</a>
+            <a href={withBase(direction.href)} {...adminBinding(Astro.url, {
+              renderer: { family: 'custom-order', variant: 'related-direction' },
+              owner: { collection: direction.ownerCollection, slug: direction.slug }, fieldPath: 'title',
+              stableItemId: direction.slug, scope: 'shared', tool: 'heading',
+              affectedRoutes: ['/izgotovlenie-na-zakaz/', direction.href]
+            })}>{direction.title}</a>
           </li>
         ))}
       </ul>
@@ -128,27 +190,28 @@ const heroMedia = data.heroMedia[0];
   <section class="custom-order-contact" id="contact" aria-labelledby="custom-order-contact-title">
     <div class="hv2-shell custom-order-contact__grid">
       <div class="custom-order-contact__intro">
-        <p class="hv2-eyebrow hv2-eyebrow--light">Прямая связь</p>
-        <h2 id="custom-order-contact-title">{data.copy.contactTitle}</h2>
-        <p>{data.copy.contactDescription}</p>
+        <p class="hv2-eyebrow hv2-eyebrow--light" {...pageBinding('contactEyebrow', 'short-text')}>{data.copy.contactEyebrow}</p>
+        <h2 id="custom-order-contact-title" {...pageBinding('contactTitle', 'heading')}>{data.copy.contactTitle}</h2>
+        <p {...pageBinding('contactDescription', 'long-text')}>{data.copy.contactDescription}</p>
       </div>
       <div class="custom-order-contact__channels">
-        <a class="custom-order-contact__channel custom-order-contact__channel--primary" href={phoneHref}>
-          <span>Основной телефон</span>
-          <strong>{settings.phonePrimary}</strong>
+        <a class="custom-order-contact__channel custom-order-contact__channel--primary" href={phoneHref} {...contactHrefDisposition('phonePrimary', 'contact-primary')}>
+          <span {...pageBinding('contactPrimaryLabel', 'short-text')}>{data.copy.contactPrimaryLabel}</span>
+          <strong {...globalBinding('phonePrimary', 'short-text', 'contact-phone-value')}>{settings.phonePrimary}</strong>
         </a>
-        <a class="custom-order-contact__channel custom-order-contact__channel--primary" href={emailHref}>
-          <span>Email</span>
-          <strong>{settings.email}</strong>
+        <a class="custom-order-contact__channel custom-order-contact__channel--primary" href={emailHref} {...contactHrefDisposition('email', 'contact-secondary')}>
+          <span {...pageBinding('contactSecondaryLabel', 'short-text')}>{data.copy.contactSecondaryLabel}</span>
+          <strong {...globalBinding('email', 'short-text', 'contact-email-value')}>{settings.email}</strong>
         </a>
         <a
           class="custom-order-contact__channel custom-order-contact__channel--secondary"
           href={settings.telegram}
           target="_blank"
           rel="noopener noreferrer"
+          {...contactHrefDisposition('telegram', 'contact-telegram')}
         >
-          <span>Telegram</span>
-          <strong>{telegramLabel}</strong>
+          <span {...globalBinding('contactsPage.telegramCardLabel', 'short-text', 'contact-telegram-label')}>{settings.contactsPage.telegramCardLabel}</span>
+          <strong {...globalBinding('telegram', 'link', 'contact-telegram-value')}>{telegramLabel}</strong>
         </a>
       </div>
     </div>

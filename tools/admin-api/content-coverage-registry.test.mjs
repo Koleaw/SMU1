@@ -50,8 +50,11 @@ function unwrapZod(schema) {
     } else if (current instanceof z.ZodDefault) {
       current = current.removeDefault();
       changed = true;
-    } else if (current instanceof z.ZodEffects) {
+    } else if (z.ZodEffects && current instanceof z.ZodEffects) {
       current = current.innerType();
+      changed = true;
+    } else if (z.ZodPipe && current instanceof z.ZodPipe) {
+      current = current._def.out;
       changed = true;
     }
   }
@@ -362,8 +365,11 @@ test('page-block policies match the selectors in actual production adapters', ()
   for (const type of ['whoWeAre', 'directionCards', 'companyProof', 'companyDirections', 'companyDetails', 'cta']) {
     assert.match(company, new RegExp(`block\\.type === '${type}'`, 'u'));
   }
-  assert.match(customOrder, /block\.type === 'listPanel' && block\.title === 'Что можно прислать'/u);
-  assert.match(getPageBlockTemplatePolicy('listPanel').supportByTemplate['custom-order'].selector.description, /точный title/u);
+  assert.match(customOrder, /sourcePage\.customOrderSourceMaterials/u);
+  assert.match(customOrder, /sourcePage\.customOrderChangeThemes/u);
+  const customOrderSupport = getPageBlockTemplatePolicy('listPanel').supportByTemplate['custom-order'];
+  assert.equal(customOrderSupport.status, PAGE_BLOCK_SUPPORT_STATUS.NOT_RENDERED);
+  assert.match(customOrderSupport.reason, /структурирован/u);
 });
 
 test('live page-block corpus has an explicit honest support decision for its actual template family', async () => {
@@ -376,7 +382,7 @@ test('live page-block corpus has an explicit honest support decision for its act
     'services:blagoustroystvo-territoriy': new Set([0, 1, 2]),
     'services:stroitelstvo-i-remonty': new Set([0, 1, 2]),
     'static-pages:o-nas': new Set([0, 1, 2, 3, 4, 6]),
-    'static-pages:custom-order': new Set([0]),
+    'static-pages:custom-order': new Set(),
     'static-pages:home': new Set([0]),
     'static-pages:vypolnennye-obekty': new Set()
   };

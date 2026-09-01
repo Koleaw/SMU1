@@ -3,6 +3,8 @@ import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 import type { V2ProjectPresentation } from '../mediaRoleAdapter';
 import V2ProjectMeta from './V2ProjectMeta.astro';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import { adminBinding } from '../../../admin/bindings/adminBinding';
+import settings from '../../../content/site-settings/global.json';
 
 interface Props {
   presentation: V2ProjectPresentation;
@@ -16,6 +18,17 @@ const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 const showMedia = !presentation.isTextOnly && Boolean(archiveCoverMedia);
 const mediaPlacement = index % 2 === 0 ? 'media-start' : 'media-end';
 const description = project.whatWasDone?.trim() || project.shortDescription;
+const affectedRoutes = ['/vypolnennye-obekty/', productionRoute];
+const binding = (fieldPath: string, tool = 'long-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
+  renderer: { family: 'project-archive', variant: showMedia ? archiveCoverOrientation : 'text-only' },
+  owner: { collection: 'projects', slug: project.slug }, fieldPath, stableItemId: project.slug,
+  scope: 'shared', tool, affectedRoutes, ...options
+});
+const projectUiBinding = (fieldPath: string, tool = 'short-text') => adminBinding(Astro.url, {
+  renderer: { family: 'project-archive', variant: showMedia ? archiveCoverOrientation : 'text-only' },
+  owner: { collection: 'site-settings', slug: 'global' }, fieldPath: `projectUi.${fieldPath}`,
+  stableItemId: `${project.slug}-${fieldPath}`, scope: 'shared', tool, affectedRoutes: ['/vypolnennye-obekty/']
+});
 ---
 
 <article
@@ -28,6 +41,7 @@ const description = project.whatWasDone?.trim() || project.shortDescription;
   ]}
   data-v2-project-card
   data-v2-reveal
+  {...binding('order', 'reorder-item', { zoneId: 'project-archive', permissions: { edit: true, reorder: true, delete: false } })}
 >
   <a class="v2-project-archive-row__link" href={withBase(productionRoute)} data-v2-transition-label={project.title}>
     {showMedia && archiveCoverMedia && (
@@ -35,6 +49,7 @@ const description = project.whatWasDone?.trim() || project.shortDescription;
         class="v2-project-archive-row__media"
         style={`--v2-project-archive-position: ${archiveCoverPosition};`}
         data-v2-media
+        {...binding('gallery', 'gallery', { role: 'archive-cover', multiple: true, archivePath: 'presentation.archiveCoverMedia', coverPath: 'presentation.archiveCoverMedia', heroPath: 'presentation.detailHeroMedia' })}
       >
         <V2ResponsiveImage
           class="v2-project-archive-row__image"
@@ -52,10 +67,10 @@ const description = project.whatWasDone?.trim() || project.shortDescription;
     )}
 
     <div class="v2-project-archive-row__copy">
-      <V2ProjectMeta location={location} year={project.year} />
-      <h3>{project.title}</h3>
-      <p class="v2-project-archive-row__description">{description}</p>
-      <span class="v2-project-archive-row__cta" aria-hidden="true">Смотреть объект</span>
+      <V2ProjectMeta location={location} year={project.year} bindingOwner={{ collection: 'projects', slug: project.slug }} affectedRoutes={affectedRoutes} />
+      <h3 {...binding('title', 'heading')}>{project.title}</h3>
+      <p class="v2-project-archive-row__description" {...binding(project.whatWasDone?.trim() ? 'whatWasDone' : 'shortDescription', 'long-text', { projection: { kind: 'fallback', formula: 'whatWasDone || shortDescription' } })}>{description}</p>
+      <span class="v2-project-archive-row__cta" aria-hidden="true" {...projectUiBinding('archiveCardCtaLabel', 'button-label')}>{settings.projectUi.archiveCardCtaLabel}</span>
     </div>
   </a>
 </article>

@@ -1,8 +1,8 @@
 ---
-import AdminShell from '../../admin/shell/AdminShell.astro';
+const localAdminEnabled = import.meta.env.DEV && process.env.SMU1_LOCAL_ADMIN === 'true';
+const Shell = localAdminEnabled
+  ? (await import('../../admin/shell/AdminShell.astro')).default
+  : (await import('../../admin/shell/AdminUnavailable.astro')).default;
 ---
 
-<AdminShell
-  initialView="settings"
-  legacyNotice="Технический экран оставлен как совместимая ссылка. Обычная работа перенесена в понятные разделы редактора."
-/>
+<Shell initialView="settings" />

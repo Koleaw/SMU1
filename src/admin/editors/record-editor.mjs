@@ -4,6 +4,14 @@ import { getAtPath } from '../state/history-store.mjs';
 import { groupsForCollection, isVisibleRecord } from '../metadata/editor-fields.mjs';
 import { assessPublicCompleteness } from '../metadata/content-completeness.mjs';
 import {
+  addDirectionRelation,
+  directionTargetKey,
+  moveDirectionItem,
+  orderedDirectionItems,
+  removeDirectionRelation,
+  updateDirectionItem
+} from '../state/direction-presentation-editor.mjs';
+import {
   getCreatablePageBlockTypes,
   getPageBlockTemplatePolicy,
   isPageBlockRenderedForTemplate,
@@ -14,6 +22,24 @@ const blockLabel = (type) => getPageBlockTemplatePolicy(type)?.label || `Legacy:
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
+}
+
+const clampPercentage = (value, fallback = 50) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : fallback;
+};
+
+export function parseFocalPosition(value) {
+  const match = String(value ?? '').trim().match(/^(-?(?:\d+(?:\.\d+)?|\.\d+))%\s+(-?(?:\d+(?:\.\d+)?|\.\d+))%$/u);
+  return Object.freeze({
+    x: clampPercentage(match?.[1]),
+    y: clampPercentage(match?.[2])
+  });
+}
+
+export function formatFocalPosition(value) {
+  const format = (part) => String(Math.round(clampPercentage(part) * 100) / 100);
+  return `${format(value?.x)}% ${format(value?.y)}%`;
 }
 
 function fieldId(collection, path) {
@@ -575,6 +601,491 @@ function navigationItemsControl(definition, collection, initialValue, update) {
   return { node: element('div', { className: 'admin-field admin-field--wide', dataset: { fieldPath: definition.path } }, [element('span', { className: 'admin-field__label', text: definition.label }), body]), sync: (content, reason) => { if (reason !== 'commit') { current = clone(getAtPath(content, definition.path) || []); render(); } }, focus: () => body.querySelector('input,button')?.focus() };
 }
 
+function directionOrderButtons({ item, items, move, label }) {
+  const ordered = orderedDirectionItems(items).map((row) => row.item);
+  const index = ordered.findIndex((entry) => String(entry.id) === String(item.id));
+  const actions = element('div', { className: 'admin-list-editor__actions' });
+  for (const [glyph, destination, title, disabled] of [
+    ['⇤', 'start', 'В начало', index === 0],
+    ['↑', -1, 'Выше', index === 0],
+    ['↓', 1, 'Ниже', index === ordered.length - 1],
+    ['⇥', 'end', 'В конец', index === ordered.length - 1]
+  ]) {
+    actions.append(element('button', {
+      className: 'admin-btn admin-btn--icon admin-btn--small',
+      disabled,
+      attrs: { type: 'button', title, 'aria-label': `${title}: ${label}` },
+      on: { click: () => move(destination) }
+    }, [glyph]));
+  }
+  return actions;
+}
+
+function unavailableDirectionControl(definition) {
+  const note = element('div', { className: 'admin-alert', attrs: { tabindex: '-1' } }, [
+    icon('info'),
+    element('p', { text: 'Этот материал использует другой production-шаблон. Структурная подача специального направления для него не создаётся частично.' })
+  ]);
+  return {
+    node: element('div', { className: 'admin-field admin-field--wide', dataset: { fieldPath: definition.path } }, [
+      element('span', { className: 'admin-field__label', text: definition.label }), note
+    ]),
+    sync() {},
+    focus: () => note.focus()
+  };
+}
+
+function directionSectionNavControl(definition, initialValue, update, content) {
+  if (!content?.directionPresentation) return unavailableDirectionControl(definition);
+  const body = element('div', { className: 'admin-section-stack' });
+  const hint = element('p', {
+    className: 'admin-field__hint',
+    text: 'Якоря создаёт production-шаблон. Подписи, видимость и порядок сохраняются в общем черновике; технические id не изменяются.'
+  });
+  let current = Array.isArray(initialValue) ? clone(initialValue) : [];
+  const commit = (label, coalesceKey = '') => update(definition.path, current, { label, coalesceKey });
+  const move = (item, destination) => {
+    current = moveDirectionItem(current, item.id, destination);
+    commit('Изменить порядок навигации по странице');
+    render();
+  };
+  function render() {
+    clear(body);
+    orderedDirectionItems(current).forEach(({ item }) => {
+      const label = element('input', {
+        value: item.label || '',
+        attrs: { 'aria-label': `Подпись пункта ${item.id}`, maxlength: 120 },
+        on: { input: (event) => {
+          current = updateDirectionItem(current, item.id, { label: event.currentTarget.value });
+          commit('Изменить подпись навигации', `${definition.path}.${item.id}.label`);
+        } }
+      });
+      const active = element('input', {
+        attrs: { type: 'checkbox', 'aria-label': `Показывать пункт ${item.label || item.id}` },
+        checked: item.isActive !== false,
+        on: { change: (event) => {
+          current = updateDirectionItem(current, item.id, { isActive: event.currentTarget.checked });
+          commit('Изменить видимость пункта навигации');
+          render();
+        } }
+      });
+      body.append(element('article', { className: 'admin-card', dataset: { itemId: item.id } }, [
+        element('div', { className: 'admin-card__body admin-section-stack' }, [
+          element('small', { text: `#${item.id}` }),
+          label,
+          element('div', { className: 'admin-list-editor__footer' }, [
+            element('label', {}, [active, ' Показывать']),
+            directionOrderButtons({ item, items: current, move: (destination) => move(item, destination), label: item.label || item.id })
+          ])
+        ])
+      ]));
+    });
+  }
+  render();
+  return {
+    node: element('div', { className: 'admin-field admin-field--wide', dataset: { fieldPath: definition.path } }, [
+      element('span', { className: 'admin-field__label', text: definition.label }), hint, body
+    ]),
+    sync: (content, reason) => {
+      if (reason !== 'commit') {
+        current = clone(getAtPath(content, definition.path) || []);
+        render();
+      }
+    },
+    focus: () => body.querySelector('input,button')?.focus()
+  };
+}
+
+function directionRelatedCandidates(relations, currentCollection, currentSlug) {
+  const labels = {
+    'product-sections': 'Раздел каталога',
+    'product-categories': 'Категория',
+    services: 'Услуга'
+  };
+  const activeSections = new Set((relations?.summaries?.get?.('product-sections') || [])
+    .filter((entry) => entry.isActive !== false)
+    .map((entry) => entry.slug));
+  return ['product-sections', 'product-categories', 'services'].flatMap((targetCollection) => (
+    relations?.summaries?.get?.(targetCollection) || []
+  ).filter((entry) => (
+    entry.isActive !== false
+    && !(targetCollection === currentCollection && entry.slug === currentSlug)
+    && (targetCollection !== 'product-categories' || activeSections.has(entry.summary?.parentSectionSlug))
+  ))
+    .map((entry) => ({
+      collection: targetCollection,
+      slug: entry.slug,
+      title: entry.title || entry.slug,
+      typeLabel: labels[targetCollection]
+    })));
+}
+
+function directionRelatedControl(definition, collection, initialValue, update, relations, content) {
+  if (!content?.directionPresentation) return unavailableDirectionControl(definition);
+  const body = element('div', { className: 'admin-section-stack' });
+  const hint = element('p', {
+    className: 'admin-field__hint',
+    text: 'Адрес вычисляется из выбранной страницы. Пустые название и описание наследуются из связанной записи.'
+  });
+  const candidates = directionRelatedCandidates(relations, collection, content?.slug);
+  const candidateByKey = new Map(candidates.map((candidate) => [directionTargetKey(candidate.collection, candidate.slug), candidate]));
+  let current = Array.isArray(initialValue) ? clone(initialValue) : [];
+  const commit = (label, coalesceKey = '') => update(definition.path, current, { label, coalesceKey });
+  const move = (item, destination) => {
+    current = moveDirectionItem(current, item.id, destination);
+    commit('Изменить порядок связанных страниц');
+    render();
+  };
+  function render() {
+    clear(body);
+    orderedDirectionItems(current).forEach(({ item }) => {
+      const candidate = candidateByKey.get(directionTargetKey(item.targetCollection, item.targetSlug));
+      const title = candidate?.title || item.targetSlug;
+      const eyebrow = element('input', {
+        value: item.eyebrow || '',
+        attrs: { 'aria-label': `Надпись связи ${title}`, placeholder: 'Надпись над названием' },
+        on: { input: (event) => {
+          current = updateDirectionItem(current, item.id, { eyebrow: event.currentTarget.value });
+          commit('Изменить подпись связанной страницы', `${definition.path}.${item.id}.eyebrow`);
+        } }
+      });
+      const titleOverride = element('input', {
+        value: item.title || '',
+        attrs: { 'aria-label': `Локальное название связи ${title}`, placeholder: `Наследовать: ${title}` },
+        on: { input: (event) => {
+          current = updateDirectionItem(current, item.id, { title: event.currentTarget.value || undefined });
+          commit('Изменить локальное название связи', `${definition.path}.${item.id}.title`);
+        } }
+      });
+      const description = element('textarea', {
+        value: item.description || '',
+        attrs: { 'aria-label': `Локальное описание связи ${title}`, rows: 3, placeholder: 'Наследовать краткое описание страницы' },
+        on: { input: (event) => {
+          current = updateDirectionItem(current, item.id, { description: event.currentTarget.value || undefined });
+          commit('Изменить локальное описание связи', `${definition.path}.${item.id}.description`);
+        } }
+      });
+      const active = element('input', {
+        attrs: { type: 'checkbox', 'aria-label': `Показывать связь ${title}` },
+        checked: item.isActive !== false,
+        on: { change: (event) => {
+          current = updateDirectionItem(current, item.id, { isActive: event.currentTarget.checked });
+          commit('Изменить видимость связанной страницы');
+          render();
+        } }
+      });
+      const remove = element('button', {
+        className: 'admin-btn admin-btn--danger admin-btn--small',
+        attrs: { type: 'button', 'aria-label': `Убрать связь ${title}` },
+        on: { click: () => {
+          current = removeDirectionRelation(current, item.id);
+          commit('Убрать связанную страницу');
+          render();
+        } }
+      }, [icon('trash'), 'Убрать']);
+      body.append(element('article', { className: 'admin-card', dataset: { itemId: item.id } }, [
+        element('div', { className: 'admin-card__body admin-section-stack' }, [
+          element('div', {}, [element('strong', { text: title }), element('small', { text: ` · ${candidate?.typeLabel || item.targetCollection} · ${item.targetSlug}` })]),
+          eyebrow,
+          titleOverride,
+          description,
+          element('div', { className: 'admin-list-editor__footer' }, [
+            element('label', {}, [active, ' Показывать']),
+            directionOrderButtons({ item, items: current, move: (destination) => move(item, destination), label: title }),
+            remove
+          ])
+        ])
+      ]));
+    });
+
+    const used = new Set(current.map((item) => directionTargetKey(item.targetCollection, item.targetSlug)));
+    const available = candidates.filter((candidate) => !used.has(directionTargetKey(candidate.collection, candidate.slug)));
+    const select = element('select', { attrs: { 'aria-label': 'Новая связанная страница' } }, [
+      element('option', { text: 'Выберите страницу…', attrs: { value: '' } }),
+      ...available.map((candidate) => element('option', {
+        text: `${candidate.title} · ${candidate.typeLabel}`,
+        attrs: { value: directionTargetKey(candidate.collection, candidate.slug) }
+      }))
+    ]);
+    const add = element('button', {
+      className: 'admin-btn admin-btn--small',
+      disabled: available.length === 0,
+      attrs: { type: 'button' },
+      on: { click: () => {
+        const candidate = available.find((entry) => directionTargetKey(entry.collection, entry.slug) === select.value);
+        if (!candidate) return;
+        current = addDirectionRelation(current, {
+          targetCollection: candidate.collection,
+          targetSlug: candidate.slug
+        }, { eyebrow: candidate.typeLabel });
+        commit('Добавить связанную страницу');
+        render();
+      } }
+    }, [icon('plus'), 'Добавить']);
+    body.append(element('div', { className: 'admin-list-editor__footer' }, [select, add]));
+  }
+  render();
+  return {
+    node: element('div', { className: 'admin-field admin-field--wide', dataset: { fieldPath: definition.path } }, [
+      element('span', { className: 'admin-field__label', text: definition.label }), hint, body
+    ]),
+    sync: (nextContent, reason) => {
+      if (reason !== 'commit') {
+        current = clone(getAtPath(nextContent, definition.path) || []);
+        render();
+      }
+    },
+    focus: () => body.querySelector('input,select,button')?.focus()
+  };
+}
+
+function relationListCandidates(definition, relations) {
+  const labels = {
+    projects: 'Объект',
+    'product-sections': 'Раздел каталога',
+    services: 'Услуга'
+  };
+  return (definition.relationCollections || []).flatMap((collection) => (
+    relations?.summaries?.get?.(collection) || []
+  ).filter((entry) => entry.isActive !== false).map((entry) => ({
+    collection,
+    slug: entry.slug,
+    title: entry.title || entry.slug,
+    typeLabel: labels[collection] || collection
+  })));
+}
+
+function simpleOrderButtons({ index, count, label, move }) {
+  const actions = element('div', { className: 'admin-list-editor__actions' });
+  for (const [glyph, destination, title, disabled] of [
+    ['⇤', 'start', 'В начало', index === 0],
+    ['↑', -1, 'Выше', index === 0],
+    ['↓', 1, 'Ниже', index === count - 1],
+    ['⇥', 'end', 'В конец', index === count - 1]
+  ]) {
+    actions.append(element('button', {
+      className: 'admin-btn admin-btn--icon admin-btn--small',
+      disabled,
+      attrs: { type: 'button', title, 'aria-label': `${title}: ${label}` },
+      on: { click: () => move(destination) }
+    }, [glyph]));
+  }
+  return actions;
+}
+
+function moveArrayItem(items, index, destination) {
+  if (index < 0 || index >= items.length) return items;
+  const next = [...items];
+  const [item] = next.splice(index, 1);
+  const target = destination === 'start'
+    ? 0
+    : destination === 'end'
+      ? next.length
+      : Math.min(next.length, Math.max(0, index + Number(destination)));
+  next.splice(target, 0, item);
+  return next;
+}
+
+function relationListControl(definition, initialValue, update, relations) {
+  const body = element('div', { className: 'admin-section-stack' });
+  const candidates = relationListCandidates(definition, relations);
+  const candidateBySlug = new Map(candidates.map((candidate) => [candidate.slug, candidate]));
+  let current = Array.isArray(initialValue) ? [...initialValue] : [];
+  const commit = (label) => update(definition.path, current, { label });
+
+  function move(index, destination) {
+    current = moveArrayItem(current, index, destination);
+    commit(`Изменить порядок: ${definition.label}`);
+    render();
+  }
+
+  function render() {
+    clear(body);
+    current.forEach((slug, index) => {
+      const candidate = candidateBySlug.get(slug);
+      const title = candidate?.title || slug;
+      body.append(element('article', { className: 'admin-card', dataset: { itemId: slug } }, [
+        element('div', { className: 'admin-card__body admin-section-stack' }, [
+          element('div', {}, [
+            element('strong', { text: `${index + 1}. ${title}` }),
+            element('small', { text: ` · ${candidate?.typeLabel || 'Недоступная связь'} · ${slug}` })
+          ]),
+          element('div', { className: 'admin-list-editor__footer' }, [
+            simpleOrderButtons({ index, count: current.length, label: title, move: (destination) => move(index, destination) }),
+            element('button', {
+              className: 'admin-btn admin-btn--danger admin-btn--small',
+              attrs: { type: 'button', 'aria-label': `Убрать связь ${title}` },
+              on: { click: () => {
+                current.splice(index, 1);
+                commit(`Убрать из списка: ${title}`);
+                render();
+              } }
+            }, [icon('trash'), 'Убрать'])
+          ])
+        ])
+      ]));
+    });
+
+    const used = new Set(current);
+    const available = candidates.filter((candidate) => !used.has(candidate.slug));
+    const select = element('select', { attrs: { 'aria-label': `Добавить: ${definition.label}` } }, [
+      element('option', { text: 'Выберите материал…', attrs: { value: '' } }),
+      ...available.map((candidate) => element('option', {
+        text: `${candidate.title} · ${candidate.typeLabel}`,
+        attrs: { value: candidate.slug }
+      }))
+    ]);
+    const add = element('button', {
+      className: 'admin-btn admin-btn--small',
+      disabled: available.length === 0,
+      attrs: { type: 'button' },
+      on: { click: () => {
+        if (!select.value || used.has(select.value)) return;
+        current.push(select.value);
+        commit(`Добавить в список: ${candidateBySlug.get(select.value)?.title || select.value}`);
+        render();
+      } }
+    }, [icon('plus'), 'Добавить']);
+    body.append(element('div', { className: 'admin-list-editor__footer' }, [select, add]));
+  }
+
+  render();
+  return {
+    node: element('div', { className: 'admin-field admin-field--wide', dataset: { fieldPath: definition.path } }, [
+      element('span', { className: 'admin-field__label', text: definition.label }),
+      element('p', { className: 'admin-field__hint', text: 'Нумерация — точный публичный порядок. Перемещение и удаление сохраняются как одна правка списка.' }),
+      body
+    ]),
+    sync: (content, reason) => {
+      if (reason !== 'commit') {
+        current = [...(getAtPath(content, definition.path) || [])];
+        render();
+      }
+    },
+    focus: () => body.querySelector('button,select')?.focus()
+  };
+}
+
+function focalPositionControl(definition, collection, initialValue, update) {
+  const id = fieldId(collection, definition.path);
+  let current = parseFocalPosition(initialValue);
+  const output = element('output', { text: formatFocalPosition(current), attrs: { for: `${id}-x ${id}-y` } });
+  const controls = {};
+  const commit = (key, rawValue) => {
+    current = { ...current, [key]: clampPercentage(rawValue) };
+    output.textContent = formatFocalPosition(current);
+    update(definition.path, output.textContent, { label: `Изменить: ${definition.label}`, coalesceKey: `${definition.path}.${key}` });
+  };
+  for (const [key, label] of [['x', 'По горизонтали'], ['y', 'По вертикали']]) {
+    controls[key] = element('input', {
+      value: current[key],
+      attrs: { id: `${id}-${key}`, type: 'range', min: 0, max: 100, step: 1, 'aria-label': `${definition.label}: ${label}` },
+      on: { input: (event) => commit(key, event.currentTarget.value) }
+    });
+  }
+  const node = element('div', { className: 'admin-field admin-field--wide', dataset: { fieldPath: definition.path } }, [
+    element('span', { className: 'admin-field__label', text: definition.label }),
+    element('div', { className: 'admin-section-stack' }, [
+      element('label', { className: 'admin-field' }, [element('span', { text: 'По горизонтали' }), controls.x]),
+      element('label', { className: 'admin-field' }, [element('span', { text: 'По вертикали' }), controls.y]),
+      output
+    ]),
+    element('p', { className: 'admin-field__hint', text: '0% — левый или верхний край, 100% — правый или нижний.' })
+  ]);
+  return {
+    node,
+    sync: (content, reason) => {
+      if (reason === 'commit' && (document.activeElement === controls.x || document.activeElement === controls.y)) return;
+      current = parseFocalPosition(getAtPath(content, definition.path));
+      controls.x.value = current.x;
+      controls.y.value = current.y;
+      output.textContent = formatFocalPosition(current);
+    },
+    focus: () => controls.x.focus()
+  };
+}
+
+function nextOrderedLabelId(items) {
+  const used = new Set(items.map((item) => String(item?.id || '')));
+  let index = items.length + 1;
+  while (used.has(`item-${index}`)) index += 1;
+  return `item-${index}`;
+}
+
+function orderedLabelListControl(definition, initialValue, update, content) {
+  if (!content?.directionPresentation) return unavailableDirectionControl(definition);
+  const body = element('div', { className: 'admin-section-stack' });
+  let current = Array.isArray(initialValue) ? clone(initialValue) : [];
+  const normalized = () => current.map((item, index) => ({ ...item, order: (index + 1) * 10 }));
+  const commit = (label, coalesceKey = '') => update(definition.path, normalized(), { label, coalesceKey });
+
+  function move(index, destination) {
+    current = moveArrayItem(current, index, destination);
+    commit(`Изменить порядок: ${definition.label}`);
+    render();
+  }
+
+  function render() {
+    clear(body);
+    current.forEach((item, index) => {
+      const label = element('input', {
+        value: item?.label || '',
+        attrs: { 'aria-label': `Пункт ${index + 1}`, maxlength: 160 },
+        on: { input: (event) => {
+          current[index] = { ...current[index], label: event.currentTarget.value };
+          commit(`Изменить пункт: ${definition.label}`, `${definition.path}.${item.id}.label`);
+        } }
+      });
+      const active = element('input', {
+        attrs: { type: 'checkbox', 'aria-label': `Показывать пункт ${item?.label || index + 1}` },
+        checked: item?.isActive !== false,
+        on: { change: (event) => {
+          current[index] = { ...current[index], isActive: event.currentTarget.checked };
+          commit(`Изменить видимость: ${definition.label}`);
+          render();
+        } }
+      });
+      body.append(element('article', { className: 'admin-card', dataset: { itemId: item.id } }, [
+        element('div', { className: 'admin-card__body admin-section-stack' }, [
+          element('small', { text: `${index + 1} · ${item.id}` }),
+          label,
+          element('div', { className: 'admin-list-editor__footer' }, [
+            element('label', {}, [active, ' Показывать']),
+            simpleOrderButtons({ index, count: current.length, label: item.label || item.id, move: (destination) => move(index, destination) }),
+            element('button', {
+              className: 'admin-btn admin-btn--danger admin-btn--small', attrs: { type: 'button', 'aria-label': `Удалить пункт ${item.label || item.id}` },
+              on: { click: () => { current.splice(index, 1); commit(`Удалить пункт: ${definition.label}`); render(); } }
+            }, [icon('trash'), 'Удалить'])
+          ])
+        ])
+      ]));
+    });
+    body.append(element('button', {
+      className: 'admin-btn admin-btn--small', attrs: { type: 'button' },
+      on: { click: () => {
+        current.push({ id: nextOrderedLabelId(current), label: '', order: (current.length + 1) * 10, isActive: true });
+        commit(`Добавить пункт: ${definition.label}`);
+        render();
+        body.querySelector('article:last-of-type input[type="text"], article:last-of-type input:not([type])')?.focus();
+      } }
+    }, [icon('plus'), 'Добавить пункт']));
+  }
+
+  render();
+  return {
+    node: element('div', { className: 'admin-field admin-field--wide', dataset: { fieldPath: definition.path } }, [
+      element('span', { className: 'admin-field__label', text: definition.label }), body
+    ]),
+    sync: (nextContent, reason) => {
+      if (reason !== 'commit') {
+        current = clone(getAtPath(nextContent, definition.path) || []);
+        render();
+      }
+    },
+    focus: () => body.querySelector('input,button')?.focus()
+  };
+}
+
 function readonlyJsonControl(definition, collection, initialValue) {
   const pre = element('pre', { className: 'admin-json-editor', text: JSON.stringify(initialValue ?? null, null, 2), attrs: { tabindex: '0' } });
   return {
@@ -602,6 +1113,11 @@ function createControl(definition, context) {
   if (definition.kind === 'image-view') return imageViewControl(definition, context.collection, value, context.update);
   if (definition.kind === 'page-blocks') return pageBlocksControl(definition, context.collection, value, context.update, context.onMediaRequest, context.getContent);
   if (definition.kind === 'navigation-items') return navigationItemsControl(definition, context.collection, value, context.update);
+  if (definition.kind === 'direction-section-nav') return directionSectionNavControl(definition, value, context.update, context.content);
+  if (definition.kind === 'direction-related') return directionRelatedControl(definition, context.collection, value, context.update, context.relations, context.content);
+  if (definition.kind === 'relation-list') return relationListControl(definition, value, context.update, context.relations);
+  if (definition.kind === 'focal-position') return focalPositionControl(definition, context.collection, value, context.update);
+  if (definition.kind === 'ordered-label-list') return orderedLabelListControl(definition, value, context.update, context.content);
   if (definition.kind === 'json-readonly') return readonlyJsonControl(definition, context.collection, value);
   return scalarControl(definitionWithOptions, context.collection, value, context.update, { isNew: context.isNew });
 }
@@ -612,7 +1128,9 @@ export function assessCompleteness(collection, content, relations = {}) {
   const publicBlockers = [];
   const recommendations = [];
   const visible = isVisibleRecord(collection, content) === true;
-  for (const definition of groups.flatMap((entry) => entry.fields)) {
+  for (const definition of groups
+    .filter((entry) => !entry.appliesToSlugs || entry.appliesToSlugs.includes(content?.slug))
+    .flatMap((entry) => entry.fields)) {
     const value = getAtPath(content, definition.path);
     const empty = value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
     if (definition.required && empty) saveBlockers.push({ path: definition.path, message: `Заполните поле «${definition.label}».` });
@@ -665,6 +1183,7 @@ export function renderRecordEditor({ root, collection, content, relations, updat
   }
 
   for (const definition of groups) {
+    if (definition.appliesToSlugs && !definition.appliesToSlugs.includes(content?.slug)) continue;
     const section = element(definition.collapsible ? 'details' : 'section', {
       className: definition.collapsible ? 'admin-details' : 'admin-form-section',
       open: !definition.advanced

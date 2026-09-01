@@ -6,6 +6,8 @@ import V2PaletteSwitch from './V2PaletteSwitch.astro';
 import { getV2Scope } from '../../utils/v2Routes';
 import catalogStylesheetUrl from '../../styles/v2/catalog-v2.css?url';
 import productFinalStylesheetUrl from '../../styles/v2/product-final-stage-a.css?url';
+import settings from '../../content/site-settings/global.json';
+import { adminBinding, adminDisposition } from '../../admin/bindings/adminBinding';
 
 interface Props {
   title: string;
@@ -17,6 +19,9 @@ interface Props {
   contactHref?: string;
   mobileCtaLabel?: string;
   headerCtaLabel?: string;
+  headerCtaBinding?: Record<string, string>;
+  headerMobileCtaBinding?: Record<string, string>;
+  mobileCtaBinding?: Record<string, string>;
   noCanonical?: boolean;
   noindex?: boolean;
   robots?: string;
@@ -34,8 +39,6 @@ const {
   ogImage = '',
   pageKind = 'section',
   contactHref = '#contact',
-  mobileCtaLabel = pageKind === 'product' ? 'Запросить расчёт' : 'Получить расчёт',
-  headerCtaLabel = pageKind === 'product' ? 'Запросить расчёт' : 'Получить расчёт',
   noCanonical = false,
   noindex = false,
   robots,
@@ -44,6 +47,30 @@ const {
   rootClass = '',
   productFinalPrototype
 } = Astro.props as Props;
+const defaultCtaFieldPath = pageKind === 'product'
+  ? 'shellLabels.catalogRequestCtaLabel'
+  : 'shellLabels.defaultCtaLabel';
+const defaultCtaLabel = pageKind === 'product'
+  ? settings.shellLabels.catalogRequestCtaLabel
+  : settings.shellLabels.defaultCtaLabel;
+const headerCtaLabel = Astro.props.headerCtaLabel ?? defaultCtaLabel;
+const mobileCtaLabel = Astro.props.mobileCtaLabel ?? defaultCtaLabel;
+const globalCtaBinding = (occurrence: 'header-desktop' | 'header-mobile' | 'footer-mobile') => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: occurrence },
+  owner: { collection: 'site-settings', slug: 'global' },
+  fieldPath: defaultCtaFieldPath,
+  stableItemId: `global-shell-cta-${occurrence}`,
+  role: 'shell-cta-label',
+  scope: 'global',
+  tool: 'button-label',
+  affectedRoutes: ['*']
+});
+const headerCtaBinding = Astro.props.headerCtaBinding
+  ?? (Astro.props.headerCtaLabel === undefined ? globalCtaBinding('header-desktop') : {});
+const headerMobileCtaBinding = Astro.props.headerMobileCtaBinding
+  ?? (Astro.props.headerCtaLabel === undefined ? globalCtaBinding('header-mobile') : {});
+const mobileCtaBinding = Astro.props.mobileCtaBinding
+  ?? (Astro.props.mobileCtaLabel === undefined ? globalCtaBinding('footer-mobile') : {});
 const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
 const productFinalEnabled = productFinalPrototype === 'hub'
   || productFinalPrototype === 'category'
@@ -73,12 +100,24 @@ const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
     data-catalog-v2-root
     data-product-final-prototype={productFinalPrototype}
   >
-    <a class="v2-skip-link" href="#main-content">К основному содержанию</a>
-    <HomeV2Header mode={resolvedHeaderMode} currentPath={currentPath} catalogV2 contactHref={contactHref} ctaLabel={headerCtaLabel} />
+    <a class="v2-skip-link" href="#main-content" {...adminDisposition(Astro.url, {
+      kind: 'template-fixed',
+      reason: 'Accessibility-control переводит фокус к основному содержимому и не является бизнес-текстом страницы.',
+      source: 'src/components/v2/CatalogV2Layout.astro#skip-link'
+    })}>К основному содержанию</a>
+    <HomeV2Header
+      mode={resolvedHeaderMode}
+      currentPath={currentPath}
+      catalogV2
+      contactHref={contactHref}
+      ctaLabel={headerCtaLabel}
+      desktopCtaBinding={headerCtaBinding}
+      mobileCtaBinding={headerMobileCtaBinding}
+    />
     <main id="main-content" tabindex="-1">
       <slot />
     </main>
-    <HomeV2Footer currentPath={currentPath} catalogV2 mobileCtaLabel={mobileCtaLabel} contactHref={contactHref} />
+    <HomeV2Footer currentPath={currentPath} catalogV2 mobileCtaLabel={mobileCtaLabel} mobileCtaBinding={mobileCtaBinding} contactHref={contactHref} />
     {isDesignLab && <V2PaletteSwitch />}
   </div>
 </PublicV2Layout>

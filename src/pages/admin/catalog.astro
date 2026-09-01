@@ -1,8 +1,8 @@
 ---
-import AdminShell from '../../admin/shell/AdminShell.astro';
+const localAdminEnabled = import.meta.env.DEV && process.env.SMU1_LOCAL_ADMIN === 'true';
+const Shell = localAdminEnabled
+  ? (await import('../../admin/shell/AdminShell.astro')).default
+  : (await import('../../admin/shell/AdminUnavailable.astro')).default;
 ---
 
-<AdminShell
-  initialView="catalog"
-  legacyNotice="Структура каталога теперь редактируется в единой рабочей области с проверкой связей."
-/>
+<Shell initialView="catalog" />

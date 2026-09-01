@@ -1,8 +1,8 @@
 ---
-import AdminShell from '../../admin/shell/AdminShell.astro';
+const localAdminEnabled = import.meta.env.DEV && process.env.SMU1_LOCAL_ADMIN === 'true';
+const Shell = localAdminEnabled
+  ? (await import('../../admin/shell/VisualAdminShell.astro')).default
+  : (await import('../../admin/shell/AdminUnavailable.astro')).default;
 ---
 
-<AdminShell
-  initialView="pages"
-  legacyNotice="Старый визуальный редактор объединён с общей рабочей областью. Закладка продолжает работать."
-/>
+<Shell initialRoute="/" />

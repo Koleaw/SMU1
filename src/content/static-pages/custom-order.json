@@ -3,11 +3,60 @@
   "slug": "custom-order",
   "seoTitle": "Изготовление на заказ — СМУ-1",
   "seoDescription": "Страница для нестандартных задач: что можно изготовить, какие вводные нужны, как отправить материалы.",
-  "heroKicker": "Служебный сценарий",
-  "heroTitle": "Изготовление на заказ",
-  "heroDescription": "Если задача не укладывается в каталог, присылайте фото, размеры, эскиз или описание. Подготовим рабочий вариант и расчет.",
-  "contactTitle": "Не нашли, что искали?",
-  "contactDescription": "Если типовое решение не закрывает задачу, напишите нам. Подберем формат реализации под объект, референс, ТЗ или чертеж.",
+  "heroKicker": "Индивидуальная задача",
+  "heroTitle": "Изготовление под задачу объекта",
+  "heroDescription": "Рассматриваем изделия и конструкции по фотографии, эскизу, чертежу или техническому заданию и подбираем исполнение под условия конкретного объекта.",
+  "heroPrimaryLabel": "Позвонить",
+  "heroSecondaryLabel": "Отправить исходные данные",
+  "shellCtaLabel": "Обсудить задачу",
+  "contactTitle": "Передайте задачу удобным способом",
+  "contactDescription": "Можно начать с краткого описания и тех материалов, которые уже подготовлены.",
+  "contactEyebrow": "Прямая связь",
+  "contactPrimaryLabel": "Основной телефон",
+  "contactSecondaryLabel": "Email",
+  "image": "/uploads/project-05c77513c1a391e5a71a7dee.jpg",
+  "customOrderHeroProjectSlug": "gorodskie-kacheli-dlya-obshchestvennyh-territoriy",
+  "customOrderHeroPosition": "50% 64%",
+  "customOrderHeroMobilePosition": "50% 58%",
+  "customOrderBriefTitle": "Что можно прислать / Что можно изменить",
+  "customOrderSourceHeading": "Что можно прислать",
+  "customOrderSourceDescription": "Не нужно готовить полный комплект документов. Пришлите один или несколько материалов — остальное уточним вместе.",
+  "customOrderChangeHeading": "Что можно изменить",
+  "customOrderChangeDescription": "Набор параметров зависит от изделия и условий объекта. На старте фиксируем только то, что действительно влияет на исполнение.",
+  "customOrderDirectionsTitle": "Выберите близкое направление",
+  "relatedDirectionSlugs": [
+    "ulichnaya-mebel",
+    "ograzhdeniya-i-zabory",
+    "navesy-i-kozyrki",
+    "metallokonstruktsii-dlya-biznesa"
+  ],
+  "customOrderSourceMaterials": [
+    { "id": "photo", "label": "Фотография или референс", "order": 10, "isActive": true },
+    { "id": "dimensions", "label": "Примерные размеры", "order": 20, "isActive": true },
+    { "id": "sketch", "label": "Эскиз", "order": 30, "isActive": true },
+    { "id": "drawing", "label": "Чертёж", "order": 40, "isActive": true },
+    { "id": "brief", "label": "Техническое задание", "order": 50, "isActive": true },
+    { "id": "description", "label": "Описание задачи", "order": 60, "isActive": true }
+  ],
+  "customOrderChangeThemes": [
+    { "id": "dimensions", "title": "Размеры", "order": 10, "isActive": true, "items": [
+      { "id": "dimensions", "label": "Размеры и габариты", "order": 10, "isActive": true }
+    ] },
+    { "id": "shape", "title": "Форма и конструктив", "order": 20, "isActive": true, "items": [
+      { "id": "geometry", "label": "Форма и геометрия отдельных элементов", "order": 10, "isActive": true },
+      { "id": "posts", "label": "Количество и расстояние между стойками в составном решении", "order": 20, "isActive": true }
+    ] },
+    { "id": "color", "title": "Цвет металла и дерева", "order": 30, "isActive": true, "items": [
+      { "id": "metal", "label": "Цвет металлических элементов", "order": 10, "isActive": true },
+      { "id": "wood", "label": "Оттенок деревянных элементов", "order": 20, "isActive": true }
+    ] },
+    { "id": "mounting", "title": "Комплектация и крепление", "order": 40, "isActive": true, "items": [
+      { "id": "mount", "label": "Способ крепления", "order": 10, "isActive": true }
+    ] },
+    { "id": "extra", "title": "Дополнительные элементы", "order": 50, "isActive": true, "items": [
+      { "id": "logo", "label": "Добавление логотипа", "order": 10, "isActive": true }
+    ] }
+  ],
   "pageBlocks": [
     {
       "type": "listPanel",
@@ -17,10 +66,12 @@
       "isActive": true,
       "order": 10,
       "items": [
-        "фото текущей ситуации",
-        "размеры и привязки",
-        "эскиз или пример",
-        "описание условий эксплуатации"
+        "Фотография или референс",
+        "Примерные размеры",
+        "Эскиз",
+        "Чертёж",
+        "Техническое задание",
+        "Описание задачи"
       ]
     },
     {

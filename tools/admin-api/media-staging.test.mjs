@@ -70,6 +70,64 @@ test('staging is content-addressed, task-scoped and idempotent by batch/client',
   assert.equal(JSON.stringify(batch).includes(root), false, 'Filesystem staging paths are never exposed.');
 });
 
+test('public media preparation has a server-side concurrency ceiling', async (t) => {
+  const root = await temporaryRoot(t);
+  let active = 0;
+  let peak = 0;
+  const service = createMediaStagingService({
+    stagingRoot: root,
+    maxConcurrentPrepares: 2,
+    preparer: async ({ buffer, filename }) => {
+      active += 1;
+      peak = Math.max(peak, active);
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      active -= 1;
+      const sha256 = (await import('node:crypto')).createHash('sha256').update(buffer).digest('hex');
+      return {
+        buffer,
+        validation: {
+          kind: 'raster', format: 'jpeg', extension: '.jpg', mime: 'image/jpeg',
+          originalFilename: filename, bytes: buffer.length, sha256,
+          width: 1, height: 1, pixels: 1, pages: 1, orientation: null,
+          hasAlpha: false, privateMetadata: { detected: false }
+        }
+      };
+    }
+  });
+  const uploads = Array.from({ length: 6 }, (_, index) => service.stage(stageInput(
+    Buffer.from([0xff, 0xd8, 0xff, index + 1]),
+    { clientId: `client-item-00${index + 1}`, originalIndex: index }
+  )));
+  await Promise.all(uploads);
+  assert.equal(peak, 2);
+  assert.equal((await service.listBatch({ batchId: 'batch-test-001', ownerId: 'recovery-owner-001' })).length, 6);
+});
+
+test('staging rejects a non-raster result even when an injected preparer accepts it', async (t) => {
+  const root = await temporaryRoot(t);
+  const bytes = Buffer.from('validated-video-fixture');
+  const sha256 = (await import('node:crypto')).createHash('sha256').update(bytes).digest('hex');
+  const service = createMediaStagingService({
+    stagingRoot: root,
+    preparer: async () => ({
+      buffer: bytes,
+      validation: {
+        kind: 'video', format: 'mp4', extension: '.mp4', mime: 'video/mp4',
+        originalFilename: 'hero.mp4', bytes: bytes.length, sha256
+      }
+    })
+  });
+  await rejectsCode(service.stage(stageInput(bytes, {
+    filename: 'hero.mp4', declaredMime: 'video/mp4'
+  })), 'MEDIA_UPLOAD_RASTER_ONLY');
+  assert.deepEqual(await service.usage(), {
+    bytes: 0,
+    blobs: 0,
+    maxTotalBytes: 256 * 1024 * 1024,
+    remainingBytes: 256 * 1024 * 1024
+  });
+});
+
 test('same user filename with different bytes produces different staged IDs', async (t) => {
   const root = await temporaryRoot(t);
   const service = createMediaStagingService({ stagingRoot: root });
@@ -215,7 +273,13 @@ test('promotion resolver returns the exact verified bytes without exposing them 
     leaseId: staged.leaseId
   });
   assert.ok(Buffer.isBuffer(resolved.bytes));
-  assert.deepEqual(resolved.bytes, bytes);
+  assert.deepEqual(resolved.bytes, await fs.readFile(resolved.filePath));
+  assert.notDeepEqual(resolved.bytes, bytes, 'public staging stores sanitized canonical bytes, not the untouched upload');
+  assert.equal(resolved.validation.metadataSanitized, true);
+  assert.equal(resolved.validation.sourceBytes, bytes.length);
+  const publicMetadata = await sharp(resolved.bytes).metadata();
+  assert.equal(publicMetadata.exif, undefined);
+  assert.equal(publicMetadata.xmp, undefined);
   assert.equal(path.dirname(resolved.filePath), path.join(root, 'blobs'));
   assert.equal(Object.hasOwn(await service.get({
     batchId: staged.batchId,

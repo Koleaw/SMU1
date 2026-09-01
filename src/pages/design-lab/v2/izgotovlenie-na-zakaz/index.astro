@@ -2,21 +2,30 @@
 import CatalogV2Layout from '../../../../components/v2/CatalogV2Layout.astro';
 import CustomOrderV2Page from '../../../../components/v2/custom-order/CustomOrderV2Page.astro';
 import { loadCustomOrderV2Data } from '../../../../components/v2/custom-order/customOrderV2Data';
+import { adminBinding } from '../../../../admin/bindings/adminBinding';
 
 const currentPath = '/design-lab/v2/izgotovlenie-na-zakaz/';
 const data = await loadCustomOrderV2Data();
-const description = 'Рассматриваем изделия и конструкции по фотографии, эскизу, чертежу или техническому заданию и подбираем исполнение под условия конкретного объекта.';
+const shellCtaBinding = (occurrence: string) => adminBinding(Astro.url, {
+  renderer: { family: 'global-shell', variant: 'custom-order' },
+  owner: { collection: 'static-pages', slug: data.sourcePage.slug },
+  fieldPath: 'shellCtaLabel', stableItemId: `custom-order-shell-cta-${occurrence}`,
+  scope: 'local', tool: 'link-label', affectedRoutes: ['/izgotovlenie-na-zakaz/']
+});
 ---
 
 <CatalogV2Layout
-  title="Изготовление под задачу объекта — СМУ-1"
-  description={description}
+  title={`${data.sourcePage.heroTitle} — СМУ-1`}
+  description={data.sourcePage.heroDescription}
   canonicalPath="/izgotovlenie-na-zakaz/"
   currentPath={currentPath}
   ogImage={data.heroMedia[0].src}
   contactHref="#contact"
-  mobileCtaLabel="Обсудить задачу"
-  headerCtaLabel="Обсудить задачу"
+  mobileCtaLabel={data.sourcePage.shellCtaLabel}
+  headerCtaLabel={data.sourcePage.shellCtaLabel}
+  headerCtaBinding={shellCtaBinding('header-desktop')}
+  headerMobileCtaBinding={shellCtaBinding('header-mobile')}
+  mobileCtaBinding={shellCtaBinding('footer-mobile')}
   productFinalPrototype="custom"
 >
   <CustomOrderV2Page data={data} />

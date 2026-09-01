@@ -67,7 +67,9 @@ const categoryGalleryPaths = (name = 'gallery') => [
   `${name}[]`,
   `${name}[].src`,
   `${name}[].alt`,
-  `${name}[].caption`
+  `${name}[].caption`,
+  `${name}[].order`,
+  `${name}[].isActive`
 ];
 
 const projectMediaPaths = (name) => [
@@ -80,6 +82,49 @@ const projectMediaPaths = (name) => [
   `${name}[].caption`
 ];
 
+const directionPresentationPaths = () => [
+  'directionPresentation',
+  ...objectPaths('directionPresentation.hero', ['primaryLabel', 'secondaryLabel', 'imageAlt']),
+  'directionPresentation.sectionNav', 'directionPresentation.sectionNav.label',
+  ...objectArrayPaths('directionPresentation.sectionNav.items', ['id', 'label', 'order', 'isActive']),
+  ...objectPaths('directionPresentation.gallery', ['eyebrow', 'title', 'description', 'galleryTitle', 'caption']),
+  ...['types', 'scope', 'brief'].flatMap((name) => objectPaths(`directionPresentation.${name}`, ['eyebrow', 'title', 'description'])),
+  ...objectArrayPaths('directionPresentation.brief.items', ['id', 'label', 'order', 'isActive']),
+  ...objectPaths('directionPresentation.proof', ['eyebrow', 'title', 'description', 'linkLabel', 'supportingLinkLabel']),
+  'directionPresentation.related', 'directionPresentation.related.eyebrow', 'directionPresentation.related.title',
+  ...objectArrayPaths('directionPresentation.related.items', [
+    'id', 'targetCollection', 'targetSlug', 'eyebrow', 'title', 'description', 'order', 'isActive'
+  ]),
+  'directionPresentation.contactEyebrow', 'directionPresentation.contactPhoneChannelLabel'
+];
+
+const catalogUiPaths = () => [
+  'catalogUi',
+  ...objectPaths('catalogUi.shared', ['homeBreadcrumbLabel', 'phoneChannelLabel', 'telegramChannelLabel', 'emailChannelLabel']),
+  ...objectPaths('catalogUi.card', [
+    'productCountOne', 'productCountFew', 'productCountMany', 'sparseLabel', 'minimalLabel', 'emptyMediaLabel', 'ctaLabel'
+  ]),
+  ...objectPaths('catalogUi.hub', [
+    'heroKicker', 'heroPrimaryLabel', 'heroSecondaryLabel', 'categoryCountSuffix',
+    'gridEyebrow', 'gridTitle', 'gridDescription', 'emptyTitle', 'emptyDescription',
+    'customEyebrow', 'customDefaultTitle', 'customDefaultDescription', 'customLinkLabel',
+    'contactEyebrow', 'contactDefaultTitle', 'contactDefaultDescription', 'contactPrimaryLabel', 'contactSecondaryLabel'
+  ]),
+  ...objectPaths('catalogUi.category', [
+    'heroKicker', 'productCountOne', 'productCountFew', 'productCountMany', 'sparseCountLabel',
+    'heroProductsPrimaryLabel', 'heroSparsePrimaryLabel', 'heroProductsSecondaryLabel', 'heroSparseSecondaryPrefix',
+    'sectionNavLabel', 'navProductsLabel', 'navExamplesLabel', 'navCustomLabel', 'navContactLabel',
+    'listEyebrow', 'listTitle', 'listDescription', 'galleryEyebrow', 'galleryTitle',
+    'customEyebrow', 'customTitle', 'customDescription', 'customLinkLabel',
+    'contactEyebrow', 'contactTitle', 'contactDefaultDescription', 'contactPrimaryLabel', 'contactSecondaryLabel'
+  ]),
+  ...objectPaths('catalogUi.sparse', [
+    'galleryTitle', 'eyebrow', 'title', 'summary', 'materialsLabel', 'sectionLinkPrefix',
+    'contactEyebrow', 'contactTitle', 'contactDefaultDescription', 'contactPrimaryLabel', 'contactSecondaryLabel'
+  ]),
+  ...objectArrayPaths('catalogUi.sparse.materials', ['id', 'label', 'order', 'isActive'])
+];
+
 const PRODUCT_SECTION_PATHS = freezeArray([
   'title', 'slug', 'shortDescription', 'heroTitle', 'heroDescription', 'order', 'showOnHome', 'isActive', 'mode',
   'showInMenu', 'menuTitle', 'heroKicker', 'showBadge', 'heroMediaVideo', 'heroMediaVideoMobile',
@@ -90,7 +135,7 @@ const PRODUCT_SECTION_PATHS = freezeArray([
   'image', ...objectPaths('imageView', IMAGE_VIEW_FIELDS),
   ...categoryGalleryPaths(), 'galleryIntro', 'placeholderLabel',
   'contactTitle', 'contactDescription', 'contactTelegramLabel', 'contactEmailLabel', 'contactPhoneLabel',
-  'seoTitle', 'seoDescription', ...pageBlockPaths()
+  'seoTitle', 'seoDescription', 'homeOrder', 'homeImage', ...directionPresentationPaths(), ...pageBlockPaths()
 ]);
 
 const PRODUCT_CATEGORY_PATHS = freezeArray([
@@ -108,7 +153,7 @@ const PRODUCT_PATHS = freezeArray([
   ...scalarArrayPaths('materials'), ...scalarArrayPaths('colors'),
   ...objectArrayPaths('dimensions', ['label', 'value', 'order', 'isActive']),
   ...scalarArrayPaths('features'), 'priceMode', 'priceFrom', 'currency', 'image',
-  ...objectPaths('imageView', IMAGE_VIEW_FIELDS), ...scalarArrayPaths('gallery'), 'placeholderLabel',
+  ...objectPaths('imageView', IMAGE_VIEW_FIELDS), ...categoryGalleryPaths(), 'placeholderLabel',
   ...scalarArrayPaths('customizationItems'), 'showDeliveryBlock', 'deliveryText',
   ...scalarArrayPaths('relatedProductSlugs'), 'showCustomProjectBlock', 'customProjectTitle', 'customProjectText',
   ...objectPaths('descriptionTextStyle', TEXT_STYLE_FIELDS),
@@ -125,7 +170,7 @@ const SERVICE_PATHS = freezeArray([
   ...objectPaths('heroLayout', TEXT_LAYOUT_FIELDS),
   'image', ...objectPaths('imageView', IMAGE_VIEW_FIELDS), 'placeholderLabel',
   'contactTitle', 'contactDescription', 'contactTelegramLabel', 'contactEmailLabel', 'contactPhoneLabel',
-  'seoTitle', 'seoDescription', ...pageBlockPaths()
+  'seoTitle', 'seoDescription', 'homeOrder', 'homeImage', ...directionPresentationPaths(), ...pageBlockPaths()
 ]);
 
 const PROJECT_PATHS = freezeArray([
@@ -133,24 +178,116 @@ const PROJECT_PATHS = freezeArray([
   ...scalarArrayPaths('workTypes'), 'scope', 'result', ...scalarArrayPaths('materials'), ...scalarArrayPaths('features'),
   'clientVisibility', 'shortDescription', 'whatWasDone', 'image', 'coverImage',
   ...projectMediaPaths('gallery'), ...projectMediaPaths('images'), ...scalarArrayPaths('captions'),
-  'placeholderLabel', 'order', 'isActive', 'year', 'seoTitle', 'seoDescription'
+  'placeholderLabel', 'order', 'isActive', 'year',
+  'presentation', 'presentation.archiveCoverMedia', 'presentation.detailHeroMedia',
+  ...scalarArrayPaths('presentation.publicGallery'), 'presentation.archiveCoverPosition',
+  'presentation.archiveCoverOrientation', 'presentation.detailHeroPosition',
+  ...objectArrayPaths('presentation.relatedDirections', ['id', 'label', 'href', 'context', 'order']),
+  'presentation.altOverrides', 'presentation.mediaRoles',
+  'seoTitle', 'seoDescription'
 ]);
 
 const JOB_PATHS = freezeArray([
   'title', 'slug', 'city', 'employmentType', 'salary', 'shortDescription',
   ...scalarArrayPaths('responsibilities'), ...scalarArrayPaths('requirements'), ...scalarArrayPaths('conditions'),
-  'order', 'isActive'
+  'order', 'isActive', 'seoTitle', 'seoDescription'
 ]);
 
 const SITE_SETTINGS_PATHS = freezeArray([
   'companyName', 'companyShortName', 'inn', 'kpp', 'ogrn', 'registrationDate', 'legalAddress',
   'phonePrimary', 'phoneSecondary', 'telegram', 'telegramLabel', 'email', 'city', 'address',
-  ...scalarArrayPaths('regions'), 'vacanciesEmptyTitle', 'vacanciesEmptyText'
+  ...scalarArrayPaths('regions'), 'vacanciesEmptyTitle', 'vacanciesEmptyText',
+  ...['contactsPage', 'vacanciesPage', 'vacancyDetailPage', 'notFoundPage'].flatMap((name) => objectPaths(name, [
+    'eyebrow', 'title', 'description', 'briefEyebrow', 'briefTitle', 'briefDescription',
+    'ctaEyebrow', 'ctaTitle', 'primaryLabel', 'secondaryLabel', 'seoTitle', 'seoDescription', 'shellCtaLabel'
+  ])),
+  ...objectPaths('contactsPage', [
+    'homeBreadcrumbLabel', 'breadcrumbLabel',
+    'primaryPhoneLabel', 'secondaryPhoneLabel', 'telegramCardLabel', 'emailCardLabel',
+    'addressEyebrow', 'addressDescription', 'regionsLabel', 'ratingTitle', 'mapLinkLabel',
+    'requisitesEyebrow', 'innLabel', 'kppLabel', 'ogrnLabel', 'aboutLabel', 'vacanciesLabel'
+  ]).slice(1),
+  ...objectPaths('vacanciesPage', [
+    'homeBreadcrumbLabel', 'breadcrumbLabel', 'cityLabel', 'employmentTypeLabel', 'salaryLabel',
+    'openPositionLabel', 'emptyEyebrow', 'relatedEyebrow', 'relatedCompanyLabel', 'relatedContactsLabel'
+  ]).slice(1),
+  ...objectPaths('vacancyDetailPage', [
+    'homeBreadcrumbLabel', 'archiveBreadcrumbLabel', 'responsibilitiesLabel', 'requirementsLabel',
+    'conditionsLabel', 'cityLabel', 'employmentTypeLabel', 'salaryLabel', 'emailChannelLabel',
+    'phoneChannelLabel', 'telegramChannelLabel', 'relatedEyebrow', 'relatedCompanyLabel', 'relatedContactsLabel'
+  ]).slice(1),
+  ...objectPaths('companyPage', [
+    'homeBreadcrumbLabel', 'breadcrumbLabel', 'companyLabel', 'cityLabel', 'registrationLabel', 'regionsLabel',
+    'contactsLabel', 'privacyLabel', 'innLabel', 'kppLabel', 'ogrnLabel', 'registrationDateLabel',
+    'legalAddressLabel', 'contactAddressLabel'
+  ]),
+  ...objectPaths('notFoundPage', [
+    'seoTitle', 'seoDescription', 'shellCtaLabel', 'primaryHref', 'secondaryHref',
+    'phoneLabel', 'telegramLabel', 'emailLabel'
+  ]).slice(1),
+  'privacyPolicy', 'privacyPolicy.title', 'privacyPolicy.seoTitle', 'privacyPolicy.seoDescription',
+  'privacyPolicy.documentLabel', 'privacyPolicy.documentDescription', 'privacyPolicy.revisionDate',
+  'privacyPolicy.confirmedAgainstGlobalAt', 'privacyPolicy.operatorHeading', 'privacyPolicy.operatorFullName',
+  'privacyPolicy.homeBreadcrumbLabel', 'privacyPolicy.shellCtaLabel',
+  'privacyPolicy.sections', 'privacyPolicy.sections[].id', 'privacyPolicy.sections[].heading',
+  'privacyPolicy.sections[].order', 'privacyPolicy.sections[].isActive', 'privacyPolicy.sections[].blocks',
+  'privacyPolicy.sections[].blocks[].id', 'privacyPolicy.sections[].blocks[].type',
+  'privacyPolicy.sections[].blocks[].text', 'privacyPolicy.sections[].blocks[].order',
+  'privacyPolicy.sections[].blocks[].items', 'privacyPolicy.sections[].blocks[].items[].id',
+  'privacyPolicy.sections[].blocks[].items[].label', 'privacyPolicy.sections[].blocks[].items[].order',
+  'privacyPolicy.sections[].blocks[].items[].isActive',
+  'brandLogo', 'footerDisclaimer', 'copyrightLabel',
+  ...objectPaths('shellLabels', [
+    'productsGroup', 'productsMenuEyebrow', 'companyMenu', 'workAndCompanyGroup',
+    'directionsGroup', 'directContactGroup', 'secondaryPhoneSuffix', 'telegramSuffix',
+    'defaultCtaLabel', 'catalogRequestCtaLabel'
+  ]),
+  ...objectPaths('cookieNotice', ['message', 'privacyLabel', 'privacyHref', 'acceptLabel', 'settingsLabel', 'dialogTitle', 'dialogDescription', 'closeLabel']),
+  ...objectPaths('productUi', [
+    'cardPremiumLabel', 'cardMaterialsMissingLabel', 'cardCtaLabel',
+    'standardHeroPrimaryLabel', 'standardHeroSecondaryLabel', 'standardContactEyebrow',
+    'standardContactPrimaryLabel', 'standardContactSecondaryLabel', 'standardDefaultCustomTitle',
+    'standardDefaultRegularTitle', 'standardDefaultDescription', 'standardPriceLabel', 'standardSectionNavLabel',
+    'standardNavOverviewLabel', 'standardNavDescriptionLabel', 'standardNavSpecificationsLabel',
+    'standardNavDeliveryLabel', 'standardNavRelatedLabel', 'standardNavContactLabel',
+    'standardDescriptionEyebrow', 'standardDescriptionTitle', 'standardSpecificationsEyebrow',
+    'standardSpecificationsTitle', 'standardMaterialsEyebrow', 'standardMaterialsTitle',
+    'standardColorsEyebrow', 'standardColorsTitle', 'standardCustomizationEyebrow', 'standardCustomizationTitle',
+    'standardDeliveryEyebrow', 'standardDeliveryTitle', 'standardDeliveryLinkLabel', 'standardRelatedEyebrow',
+    'standardRelatedCategoryTitle', 'standardRelatedSectionTitle', 'standardRelatedLinkLabel',
+    'premiumHeroPrimaryLabel',
+    'premiumHeroSecondaryLabel', 'premiumContactEyebrow', 'premiumContactPrimaryLabel',
+    'premiumContactSecondaryLabel', 'premiumDefaultTitle', 'premiumDefaultDescription',
+    'premiumDefaultSolutionKicker', 'premiumPriceLabel', 'premiumSectionNavLabel',
+    'premiumNavSolutionLabel', 'premiumNavApplicationsLabel', 'premiumNavGalleryLabel',
+    'premiumNavAdaptationLabel', 'premiumNavVariantsLabel', 'premiumNavTechnicalLabel',
+    'premiumNavDeliveryLabel', 'premiumNavRelatedLabel', 'premiumNavContactLabel',
+    'premiumSolutionEyebrow', 'premiumApplicationsEyebrow', 'premiumApplicationsTitle',
+    'premiumGalleryEyebrow', 'premiumGalleryTitle', 'premiumAdaptationEyebrow', 'premiumAdaptationTitle',
+    'premiumVariantsEyebrow', 'premiumVariantsTitle', 'premiumTechnicalEyebrow', 'premiumTechnicalTitle',
+    'premiumSpecificationsTitle', 'premiumMaterialsTitle', 'premiumColorsTitle',
+    'premiumDeliveryEyebrow', 'premiumDeliveryTitle', 'premiumRelatedEyebrow', 'premiumRelatedTitle',
+    'premiumRelatedLinkLabel'
+  ]),
+  ...objectPaths('projectUi', [
+    'homeBreadcrumbLabel', 'archiveBreadcrumbLabel', 'archiveCardCtaLabel',
+    'detailDefaultEyebrow', 'detailArchiveBackLabel', 'detailSectionNavLabel',
+    'detailNavOverviewLabel', 'detailNavWorkLabel', 'detailNavFactsLabel',
+    'detailNavGalleryLabel', 'detailNavDirectionsLabel', 'detailNavContactLabel',
+    'detailWorkTitle', 'detailFactsEyebrow', 'detailFactsTitle',
+    'detailFactSummaryLabel', 'detailFactTaskLabel', 'detailFactWorkTypesLabel',
+    'detailFactScopeLabel', 'detailFactMaterialsLabel', 'detailFactFeaturesLabel',
+    'detailGalleryEyebrow', 'detailGalleryTitle', 'detailDirectionsEyebrow',
+    'detailDirectionsTitle', 'detailPreviousLabel', 'detailNextLabel',
+    'detailContactEyebrow', 'detailContactTitle', 'detailContactDescription',
+    'detailContactPrimaryLabel', 'detailContactSecondaryLabel'
+  ]),
+  ...catalogUiPaths()
 ]);
 
 const STATIC_PAGE_PATHS = freezeArray([
   'title', 'slug', 'seoTitle', 'seoDescription', 'isActive', 'order', 'showInMenu', 'menuTitle', 'showBadge',
-  'heroKicker', 'heroTitle', 'heroDescription', 'heroPrimaryLabel', 'heroSecondaryLabel',
+  'heroKicker', 'heroTitle', 'heroDescription', 'heroPrimaryLabel', 'heroPrimaryHref', 'heroSecondaryLabel', 'heroSecondaryHref',
   'heroMediaVideo', 'heroMediaVideoMobile', 'heroMediaPoster', 'heroMediaPosterMobile', 'heroMediaCaption',
   'heroOverlayOpacity', ...objectPaths('heroTitleStyle', TEXT_STYLE_FIELDS),
   ...objectPaths('heroDescriptionStyle', TEXT_STYLE_FIELDS), ...objectPaths('heroLayout', TEXT_LAYOUT_FIELDS),
@@ -162,7 +299,26 @@ const STATIC_PAGE_PATHS = freezeArray([
     'placeholderLabel', 'buttonLabel', 'buttonHref'
   ]),
   'productsTitle', 'productsIntro', 'servicesTitle', 'servicesIntro', 'trustTitle', 'trustText',
-  'trustImage', 'trustCaption', 'contactTitle', 'contactDescription', ...pageBlockPaths()
+  'trustImage', 'trustCaption', 'contactTitle', 'contactDescription',
+  'positioningSummary', 'directionsEyebrow', 'directionsDescription', 'directionsTitle', 'projectsCtaLabel',
+  ...objectArrayPaths('homeDirectionCards', ['id', 'directionSlug', 'group', 'className', 'kicker', 'order', 'isActive']),
+  'intakeEyebrow', 'intakeTitle', 'intakeDescription', 'intakeLinkLabel', 'intakeLinkHref',
+  ...objectArrayPaths('intakeItems', ['id', 'label', 'format', 'order', 'isActive']),
+  'contactEyebrow', 'contactPrimaryLabel', 'contactSecondaryLabel', 'contactSecondaryHref',
+  'contactPhonePrimaryLabel', 'contactPhoneSecondaryLabel', 'contactTelegramLabel', 'contactEmailLabel',
+  'contactAddressLabel', 'contactRegionsLabel',
+  ...scalarArrayPaths('relatedProjectSlugs'), ...scalarArrayPaths('relatedDirectionSlugs'),
+  ...scalarArrayPaths('gatewayProjectSlugs'),
+  'companyHeroProjectSlug', 'companyHeroPosition',
+  'customOrderHeroProjectSlug', 'customOrderHeroPosition', 'customOrderHeroMobilePosition',
+  'customOrderBriefTitle', 'customOrderSourceHeading', 'customOrderSourceDescription',
+  'customOrderChangeHeading', 'customOrderChangeDescription', 'customOrderDirectionsTitle',
+  ...objectArrayPaths('customOrderSourceMaterials', ['id', 'label', 'order', 'isActive']),
+  ...objectArrayPaths('customOrderChangeThemes', ['id', 'title', 'order', 'isActive']),
+  'customOrderChangeThemes[].items', 'customOrderChangeThemes[].items[].id',
+  'customOrderChangeThemes[].items[].label', 'customOrderChangeThemes[].items[].order',
+  'customOrderChangeThemes[].items[].isActive', 'shellCtaLabel',
+  ...pageBlockPaths()
 ]);
 
 const NAVIGATION_PATHS = freezeArray([
@@ -198,12 +354,13 @@ export const TEMPLATE_FAMILIES = deepFreeze({
   CATEGORY: { key: 'category', routeFamily: '/[section]/[category]/', consumers: ['src/components/v2/CatalogCategoryV2.astro'] },
   STANDARD_PRODUCT: { key: 'standard-product', routeFamily: '/[section]/[category]/[product]/', consumers: ['src/components/v2/CatalogStandardProductV2.astro'] },
   PREMIUM_PRODUCT: { key: 'premium-product', routeFamily: '/[section]/[category]/[product]/', consumers: ['src/components/v2/CatalogPremiumProductV2.astro'] },
-  PROJECT_ARCHIVE: { key: 'project-archive', routeFamily: '/vypolnennye-obekty/', consumers: ['src/components/v2/projects/V2ProjectArchivePage.astro'] },
+  PROJECT_ARCHIVE: { key: 'project-archive', routeFamily: '/vypolnennye-obekty/', consumers: ['src/components/v2/projects/V2ProjectArchivePage.astro', 'src/components/v2/projects/V2ProjectArchiveRow.astro'] },
   PROJECT_DETAIL: { key: 'project-detail', routeFamily: '/vypolnennye-obekty/[slug]/', consumers: ['src/components/v2/projects/V2ProjectDetail.astro'] },
   COMPANY: { key: 'company', routeFamily: '/o-nas/', consumers: ['src/components/v2/practical/V2CompanyPage.astro'] },
   CONTACTS: { key: 'contacts', routeFamily: '/kontakty/', consumers: ['src/components/v2/practical/V2ContactsPage.astro'] },
   JOB_ARCHIVE: { key: 'job-archive', routeFamily: '/vakansii/', consumers: ['src/components/v2/practical/V2VacanciesArchive.astro'] },
   JOB_DETAIL: { key: 'job-detail', routeFamily: '/vakansii/[slug]/', consumers: ['src/components/v2/practical/V2VacancyDetail.astro'] },
+  NOT_FOUND: { key: 'not-found', routeFamily: '/404.html', consumers: ['src/components/v2/not-found/V2NotFoundRoute.astro', 'src/components/v2/not-found/V2NotFoundPage.astro'] },
   CUSTOM_ORDER: { key: 'custom-order', routeFamily: '/izgotovlenie-na-zakaz/', consumers: ['src/components/v2/custom-order/CustomOrderV2Page.astro', 'src/components/v2/custom-order/customOrderV2Data.ts'] },
   SERVICE_DIRECTION: { key: 'service-direction', routeFamily: '/[slug]/', consumers: ['src/components/v2/pages/LandscapingV2Page.astro', 'src/components/v2/pages/ConstructionV2Page.astro'] },
   NAVIGATION_HEADER: { key: 'navigation-header', routeFamily: 'global', consumers: ['src/utils/navigation.ts', 'src/utils/v2Navigation.ts'] },
@@ -398,6 +555,314 @@ const FIELD_LABELS = Object.freeze({
   links: 'Ссылки Яндекса',
   yandexMapsCompanyUrl: 'Страница компании в Яндекс Картах',
   yandexReviewUrl: 'Страница отзыва в Яндексе'
+  ,heroPrimaryHref: 'Ссылка основной кнопки первого экрана'
+  ,heroSecondaryHref: 'Ссылка второй кнопки первого экрана'
+  ,contactSecondaryHref: 'Ссылка второй контактной кнопки'
+  ,contactPhonePrimaryLabel: 'Подпись основного телефона в контактах'
+  ,contactPhoneSecondaryLabel: 'Подпись дополнительного телефона в контактах'
+  ,contactTelegramLabel: 'Подпись Telegram в контактах'
+  ,contactAddressLabel: 'Подпись адреса в контактах'
+  ,contactRegionsLabel: 'Подпись географии в контактах'
+  ,breadcrumbLabel: 'Название текущей страницы в хлебных крошках'
+  ,cityLabel: 'Подпись города'
+  ,employmentTypeLabel: 'Подпись занятости'
+  ,salaryLabel: 'Подпись оплаты'
+  ,openPositionLabel: 'Надзаголовок открытой позиции'
+  ,emptyEyebrow: 'Надзаголовок пустого состояния'
+  ,relatedEyebrow: 'Надзаголовок связанных страниц'
+  ,relatedCompanyLabel: 'Ссылка на страницу компании'
+  ,relatedContactsLabel: 'Ссылка на страницу контактов'
+  ,responsibilitiesLabel: 'Заголовок обязанностей'
+  ,requirementsLabel: 'Заголовок требований'
+  ,conditionsLabel: 'Заголовок условий'
+  ,emailChannelLabel: 'Подпись канала email'
+  ,phoneChannelLabel: 'Подпись телефонного канала'
+  ,telegramChannelLabel: 'Подпись канала Telegram'
+  ,companyPage: 'Подписи страницы компании'
+  ,companyLabel: 'Подпись компании'
+  ,registrationLabel: 'Подпись регистрации'
+  ,contactsLabel: 'Ссылка на контакты'
+  ,registrationDateLabel: 'Подпись даты регистрации'
+  ,legalAddressLabel: 'Подпись юридического адреса'
+  ,acceptLabel: 'Текст кнопки согласия'
+  ,altOverrides: 'Переопределения описаний изображений'
+  ,archiveCoverMedia: 'Обложка объекта в архиве'
+  ,archiveCoverOrientation: 'Ориентация обложки в архиве'
+  ,archiveCoverPosition: 'Кадрирование обложки в архиве'
+  ,blocks: 'Содержимое раздела'
+  ,brandLogo: 'Логотип компании'
+  ,briefDescription: 'Описание вводного блока'
+  ,briefEyebrow: 'Надзаголовок вводного блока'
+  ,briefTitle: 'Заголовок вводного блока'
+  ,className: 'Служебный класс оформления'
+  ,closeLabel: 'Текст кнопки закрытия'
+  ,confirmedAgainstGlobalAt: 'Дата юридического подтверждения'
+  ,contactEyebrow: 'Надзаголовок контактного блока'
+  ,contactPrimaryLabel: 'Текст основной контактной кнопки'
+  ,contactSecondaryLabel: 'Текст второй контактной кнопки'
+  ,contactsPage: 'Тексты страницы контактов'
+  ,shellLabels: 'Подписи шапки и подвала'
+  ,productsGroup: 'Группа продукции'
+  ,productsMenuEyebrow: 'Подпись меню продукции'
+  ,companyMenu: 'Меню компании'
+  ,workAndCompanyGroup: 'Группа работы и компании'
+  ,directionsGroup: 'Группа направлений'
+  ,directContactGroup: 'Группа прямой связи'
+  ,secondaryPhoneSuffix: 'Подпись дополнительного телефона'
+  ,telegramSuffix: 'Подпись Telegram'
+  ,primaryPhoneLabel: 'Подпись основного телефона'
+  ,secondaryPhoneLabel: 'Подпись дополнительного телефона'
+  ,telegramCardLabel: 'Подпись карточки Telegram'
+  ,emailCardLabel: 'Подпись карточки email'
+  ,addressEyebrow: 'Надзаголовок адреса'
+  ,addressDescription: 'Описание адреса'
+  ,regionsLabel: 'Подпись географии'
+  ,ratingTitle: 'Название рейтинга'
+  ,mapLinkLabel: 'Текст ссылки на карту'
+  ,requisitesEyebrow: 'Надзаголовок реквизитов'
+  ,innLabel: 'Подпись ИНН'
+  ,kppLabel: 'Подпись КПП'
+  ,ogrnLabel: 'Подпись ОГРН'
+  ,aboutLabel: 'Ссылка на компанию'
+  ,vacanciesLabel: 'Ссылка на вакансии'
+  ,context: 'Контекст связи'
+  ,cookieNotice: 'Уведомление о cookie'
+  ,copyrightLabel: 'Текст об авторских правах'
+  ,ctaEyebrow: 'Надзаголовок призыва к действию'
+  ,ctaTitle: 'Заголовок призыва к действию'
+  ,customOrderBriefTitle: 'Заголовок краткого описания заказа'
+  ,customOrderChangeDescription: 'Описание возможных изменений'
+  ,customOrderChangeHeading: 'Заголовок возможных изменений'
+  ,customOrderChangeThemes: 'Темы возможных изменений'
+  ,customOrderDirectionsTitle: 'Заголовок направлений заказа'
+  ,customOrderHeroMobilePosition: 'Кадрирование обложки заказа на телефоне'
+  ,customOrderHeroPosition: 'Кадрирование обложки заказа'
+  ,customOrderHeroProjectSlug: 'Объект для обложки заказа'
+  ,gatewayProjectSlugs: 'Объекты витрины и их порядок'
+  ,companyHeroProjectSlug: 'Объект для обложки компании'
+  ,companyHeroPosition: 'Кадрирование обложки компании'
+  ,customOrderSourceDescription: 'Описание исходных материалов'
+  ,customOrderSourceHeading: 'Заголовок исходных материалов'
+  ,customOrderSourceMaterials: 'Список исходных материалов'
+  ,detailHeroMedia: 'Главное изображение карточки объекта'
+  ,detailHeroPosition: 'Кадрирование главного изображения объекта'
+  ,dialogDescription: 'Описание окна cookie'
+  ,dialogTitle: 'Заголовок окна cookie'
+  ,directionSlug: 'Связанное направление'
+  ,directionPresentation: 'Представление страницы направления'
+  ,hero: 'Первый экран'
+  ,sectionNav: 'Навигация по разделам страницы'
+  ,galleryTitle: 'Название галереи'
+  ,types: 'Типы решений'
+  ,proof: 'Подтверждение опытом'
+  ,related: 'Связанные направления'
+  ,targetCollection: 'Тип связанного материала'
+  ,targetSlug: 'Связанный материал'
+  ,imageAlt: 'Описание изображения первого экрана'
+  ,linkLabel: 'Текст основной ссылки'
+  ,supportingLinkLabel: 'Текст дополнительной ссылки'
+  ,contactPhoneChannelLabel: 'Подпись телефонного канала'
+  ,directionsDescription: 'Описание направлений'
+  ,directionsEyebrow: 'Надзаголовок направлений'
+  ,directionsTitle: 'Заголовок направлений'
+  ,documentDescription: 'Описание юридического документа'
+  ,documentLabel: 'Название юридического документа'
+  ,eyebrow: 'Надзаголовок'
+  ,footerDisclaimer: 'Юридическое примечание в подвале'
+  ,format: 'Формат значения'
+  ,group: 'Группа навигации'
+  ,heading: 'Заголовок раздела'
+  ,homeDirectionCards: 'Карточки направлений на главной'
+  ,homeImage: 'Изображение карточки на главной'
+  ,homeOrder: 'Порядок карточки на главной'
+  ,id: 'Постоянный идентификатор'
+  ,intakeDescription: 'Описание блока обращения'
+  ,intakeEyebrow: 'Надзаголовок блока обращения'
+  ,intakeItems: 'Пункты блока обращения'
+  ,intakeLinkHref: 'Ссылка блока обращения'
+  ,intakeLinkLabel: 'Текст ссылки блока обращения'
+  ,intakeTitle: 'Заголовок блока обращения'
+  ,kicker: 'Надзаголовок карточки'
+  ,mediaRoles: 'Роли изображений объекта'
+  ,message: 'Текст сообщения'
+  ,notFoundPage: 'Тексты страницы 404'
+  ,operatorFullName: 'Полное имя оператора данных'
+  ,operatorHeading: 'Заголовок сведений об операторе'
+  ,positioningSummary: 'Краткое позиционирование компании'
+  ,premiumContactEyebrow: 'Надзаголовок контакта премиального товара'
+  ,premiumContactPrimaryLabel: 'Основная кнопка премиального товара'
+  ,premiumContactSecondaryLabel: 'Вторая кнопка премиального товара'
+  ,premiumDefaultDescription: 'Описание премиального товара по умолчанию'
+  ,premiumDefaultTitle: 'Заголовок премиального товара по умолчанию'
+  ,premiumDefaultSolutionKicker: 'Надзаголовок премиального решения по умолчанию'
+  ,premiumHeroPrimaryLabel: 'Основная кнопка премиального первого экрана'
+  ,premiumHeroSecondaryLabel: 'Вторая кнопка премиального первого экрана'
+  ,presentation: 'Настройки показа объекта'
+  ,primaryLabel: 'Текст основной кнопки'
+  ,privacyHref: 'Ссылка на политику конфиденциальности'
+  ,privacyLabel: 'Название политики конфиденциальности'
+  ,privacyPolicy: 'Политика конфиденциальности'
+  ,productUi: 'Общие тексты товарных страниц'
+  ,projectUi: 'Общие тексты страниц выполненных объектов'
+  ,homeBreadcrumbLabel: 'Подпись главной в хлебных крошках объектов'
+  ,archiveBreadcrumbLabel: 'Подпись архива в хлебных крошках объектов'
+  ,archiveCardCtaLabel: 'Ссылка карточки объекта в архиве'
+  ,detailDefaultEyebrow: 'Надзаголовок объекта по умолчанию'
+  ,detailArchiveBackLabel: 'Ссылка назад к объектам'
+  ,detailSectionNavLabel: 'Название навигации карточки объекта'
+  ,detailNavOverviewLabel: 'Пункт навигации «Обзор»'
+  ,detailNavWorkLabel: 'Пункт навигации «Что выполнено»'
+  ,detailNavFactsLabel: 'Пункт навигации «Сведения»'
+  ,detailNavGalleryLabel: 'Пункт навигации «Фотографии»'
+  ,detailNavDirectionsLabel: 'Пункт навигации «Направления»'
+  ,detailNavContactLabel: 'Пункт навигации «Обсудить задачу»'
+  ,detailWorkTitle: 'Заголовок выполненных работ'
+  ,detailFactsEyebrow: 'Надзаголовок сведений об объекте'
+  ,detailFactsTitle: 'Заголовок сведений об объекте'
+  ,detailFactSummaryLabel: 'Подпись описания объекта'
+  ,detailFactTaskLabel: 'Подпись задачи объекта'
+  ,detailFactWorkTypesLabel: 'Подпись видов работ'
+  ,detailFactScopeLabel: 'Подпись объёма работ'
+  ,detailFactMaterialsLabel: 'Подпись материалов объекта'
+  ,detailFactFeaturesLabel: 'Подпись особенностей объекта'
+  ,detailGalleryEyebrow: 'Надзаголовок фотографий объекта'
+  ,detailGalleryTitle: 'Заголовок галереи объекта'
+  ,detailDirectionsEyebrow: 'Надзаголовок связанных направлений объекта'
+  ,detailDirectionsTitle: 'Заголовок связанных направлений объекта'
+  ,detailPreviousLabel: 'Подпись предыдущего объекта'
+  ,detailNextLabel: 'Подпись следующего объекта'
+  ,detailContactEyebrow: 'Надзаголовок контакта объекта'
+  ,detailContactTitle: 'Заголовок контакта объекта'
+  ,detailContactDescription: 'Описание контакта объекта'
+  ,detailContactPrimaryLabel: 'Основная кнопка контакта объекта'
+  ,detailContactSecondaryLabel: 'Вторая кнопка контакта объекта'
+  ,shellCtaLabel: 'Подпись CTA в оболочке страницы'
+  ,primaryHref: 'Основная recovery-ссылка'
+  ,secondaryHref: 'Дополнительная recovery-ссылка'
+  ,phoneLabel: 'Подпись телефона'
+  ,emailLabel: 'Подпись электронной почты'
+  ,projectsCtaLabel: 'Текст кнопки объектов'
+  ,publicGallery: 'Опубликованные фотографии'
+  ,relatedDirectionSlugs: 'Связанные направления'
+  ,relatedDirections: 'Связанные направления объекта'
+  ,relatedProjectSlugs: 'Связанные объекты'
+  ,revisionDate: 'Дата редакции документа'
+  ,secondaryLabel: 'Текст второй кнопки'
+  ,sections: 'Разделы документа'
+  ,settingsLabel: 'Название настроек cookie'
+  ,standardContactEyebrow: 'Надзаголовок контакта обычного товара'
+  ,standardContactPrimaryLabel: 'Основная кнопка обычного товара'
+  ,standardContactSecondaryLabel: 'Вторая кнопка обычного товара'
+  ,standardDefaultCustomTitle: 'Заголовок индивидуального исполнения по умолчанию'
+  ,standardDefaultDescription: 'Описание обычного товара по умолчанию'
+  ,standardDefaultRegularTitle: 'Заголовок серийного исполнения по умолчанию'
+  ,standardHeroPrimaryLabel: 'Основная кнопка обычного первого экрана'
+  ,standardHeroSecondaryLabel: 'Вторая кнопка обычного первого экрана'
+  ,standardPriceLabel: 'Подпись стоимости обычного товара'
+  ,standardSectionNavLabel: 'Название навигации обычного товара'
+  ,standardNavOverviewLabel: 'Навигация обычного товара: обзор'
+  ,standardNavDescriptionLabel: 'Навигация обычного товара: описание'
+  ,standardNavSpecificationsLabel: 'Навигация обычного товара: характеристики'
+  ,standardNavDeliveryLabel: 'Навигация обычного товара: доставка'
+  ,standardNavRelatedLabel: 'Навигация обычного товара: связанные изделия'
+  ,standardNavContactLabel: 'Навигация обычного товара: контакт'
+  ,standardDescriptionEyebrow: 'Надзаголовок описания обычного товара'
+  ,standardDescriptionTitle: 'Заголовок описания обычного товара'
+  ,standardSpecificationsEyebrow: 'Надзаголовок характеристик обычного товара'
+  ,standardSpecificationsTitle: 'Заголовок характеристик обычного товара'
+  ,standardMaterialsEyebrow: 'Надзаголовок материалов обычного товара'
+  ,standardMaterialsTitle: 'Заголовок материалов обычного товара'
+  ,standardColorsEyebrow: 'Надзаголовок покрытия обычного товара'
+  ,standardColorsTitle: 'Заголовок покрытия обычного товара'
+  ,standardCustomizationEyebrow: 'Надзаголовок изменений обычного товара'
+  ,standardCustomizationTitle: 'Заголовок изменений обычного товара'
+  ,defaultCtaLabel: 'Основная CTA-подпись сайта'
+  ,catalogRequestCtaLabel: 'CTA-подпись товарного каталога'
+  ,cardPremiumLabel: 'Метка премиальной карточки товара'
+  ,cardMaterialsMissingLabel: 'Подпись отсутствующих материалов товара'
+  ,cardCtaLabel: 'Ссылка карточки товара'
+  ,standardDeliveryEyebrow: 'Надзаголовок доставки обычного товара'
+  ,standardDeliveryTitle: 'Заголовок доставки обычного товара'
+  ,standardDeliveryLinkLabel: 'Ссылка доставки обычного товара'
+  ,standardRelatedEyebrow: 'Надзаголовок связанных обычных товаров'
+  ,standardRelatedCategoryTitle: 'Заголовок связанных товаров категории'
+  ,standardRelatedSectionTitle: 'Заголовок связанных товаров раздела'
+  ,standardRelatedLinkLabel: 'Ссылка на категорию обычного товара'
+  ,premiumPriceLabel: 'Подпись расчёта премиального товара'
+  ,premiumSectionNavLabel: 'Название навигации премиального товара'
+  ,premiumNavSolutionLabel: 'Навигация премиального товара: решение'
+  ,premiumNavApplicationsLabel: 'Навигация премиального товара: применение'
+  ,premiumNavGalleryLabel: 'Навигация премиального товара: галерея'
+  ,premiumNavAdaptationLabel: 'Навигация премиального товара: адаптация'
+  ,premiumNavVariantsLabel: 'Навигация премиального товара: варианты'
+  ,premiumNavTechnicalLabel: 'Навигация премиального товара: конструктив'
+  ,premiumNavDeliveryLabel: 'Навигация премиального товара: доставка'
+  ,premiumNavRelatedLabel: 'Навигация премиального товара: связанные решения'
+  ,premiumNavContactLabel: 'Навигация премиального товара: контакт'
+  ,premiumSolutionEyebrow: 'Надзаголовок премиального решения'
+  ,premiumApplicationsEyebrow: 'Надзаголовок применения премиального товара'
+  ,premiumApplicationsTitle: 'Заголовок применения премиального товара'
+  ,premiumGalleryEyebrow: 'Надзаголовок галереи премиального товара'
+  ,premiumGalleryTitle: 'Заголовок галереи премиального товара'
+  ,premiumAdaptationEyebrow: 'Надзаголовок адаптации премиального товара'
+  ,premiumAdaptationTitle: 'Заголовок адаптации премиального товара'
+  ,premiumVariantsEyebrow: 'Надзаголовок вариантов премиального товара'
+  ,premiumVariantsTitle: 'Заголовок вариантов премиального товара'
+  ,premiumTechnicalEyebrow: 'Надзаголовок конструктива премиального товара'
+  ,premiumTechnicalTitle: 'Заголовок конструктива премиального товара'
+  ,premiumSpecificationsTitle: 'Заголовок характеристик премиального товара'
+  ,premiumMaterialsTitle: 'Заголовок материалов премиального товара'
+  ,premiumColorsTitle: 'Заголовок покрытия премиального товара'
+  ,premiumDeliveryEyebrow: 'Надзаголовок доставки премиального товара'
+  ,premiumDeliveryTitle: 'Заголовок доставки премиального товара'
+  ,premiumRelatedEyebrow: 'Надзаголовок связанных премиальных товаров'
+  ,premiumRelatedTitle: 'Заголовок связанных премиальных товаров'
+  ,premiumRelatedLinkLabel: 'Ссылка на категорию премиального товара'
+  ,catalogUi: 'Общие тексты разделов и категорий каталога'
+  ,shared: 'Общие подписи каталога'
+  ,card: 'Общие подписи карточки категории'
+  ,hub: 'Тексты раздела каталога'
+  ,sparse: 'Тексты категории без товаров'
+  ,sparseLabel: 'Подпись карточки категории с примерами'
+  ,minimalLabel: 'Подпись карточки категории без медиа'
+  ,emptyMediaLabel: 'Подпись отсутствующего медиа категории'
+  ,ctaLabel: 'Текст ссылки карточки категории'
+  ,phoneChannelLabel: 'Подпись телефонного канала'
+  ,telegramChannelLabel: 'Подпись канала Telegram'
+  ,emailChannelLabel: 'Подпись канала электронной почты'
+  ,categoryCountSuffix: 'Подпись количества категорий'
+  ,gridEyebrow: 'Надзаголовок сетки каталога'
+  ,gridTitle: 'Заголовок сетки каталога'
+  ,gridDescription: 'Описание сетки каталога'
+  ,emptyTitle: 'Заголовок пустого каталога'
+  ,emptyDescription: 'Описание пустого каталога'
+  ,customEyebrow: 'Надзаголовок индивидуального исполнения'
+  ,customDefaultTitle: 'Заголовок индивидуального исполнения по умолчанию'
+  ,customDefaultDescription: 'Описание индивидуального исполнения по умолчанию'
+  ,customLinkLabel: 'Ссылка индивидуального исполнения'
+  ,contactDefaultTitle: 'Заголовок контакта по умолчанию'
+  ,contactDefaultDescription: 'Описание контакта по умолчанию'
+  ,productCountOne: 'Форма «одно изделие»'
+  ,productCountFew: 'Форма «несколько изделий»'
+  ,productCountMany: 'Форма «много изделий»'
+  ,sparseCountLabel: 'Подпись категории без товаров'
+  ,heroProductsPrimaryLabel: 'Основная кнопка категории с товарами'
+  ,heroSparsePrimaryLabel: 'Основная кнопка категории без товаров'
+  ,heroProductsSecondaryLabel: 'Вторая кнопка категории с товарами'
+  ,heroSparseSecondaryPrefix: 'Префикс второй кнопки категории без товаров'
+  ,sectionNavLabel: 'Название навигации категории'
+  ,navProductsLabel: 'Навигация категории: изделия'
+  ,navExamplesLabel: 'Навигация категории: примеры'
+  ,navCustomLabel: 'Навигация категории: по вашей задаче'
+  ,navContactLabel: 'Навигация категории: расчёт'
+  ,listEyebrow: 'Надзаголовок списка изделий'
+  ,listTitle: 'Заголовок списка изделий'
+  ,listDescription: 'Описание списка изделий'
+  ,galleryEyebrow: 'Надзаголовок галереи категории'
+  ,materialsLabel: 'Название списка материалов для расчёта'
+  ,sectionLinkPrefix: 'Префикс ссылки на раздел каталога'
+  ,vacanciesPage: 'Тексты списка вакансий'
+  ,vacancyDetailPage: 'Общие тексты карточки вакансии'
 });
 
 const REQUIRED_ROOT_FIELDS = deepFreeze({
@@ -406,7 +871,7 @@ const REQUIRED_ROOT_FIELDS = deepFreeze({
   products: ['title', 'slug', 'productCategorySlug', 'shortDescription', 'leadText', 'priceMode', 'priceFrom', 'currency', 'image', 'placeholderLabel', 'order', 'isActive', 'showInCatalog', 'seoTitle', 'seoDescription'],
   services: ['title', 'slug', 'shortDescription', 'heroTitle', 'heroDescription', 'order', 'showOnHome', 'isActive', 'image', 'placeholderLabel', 'seoTitle', 'seoDescription'],
   projects: ['title', 'slug', 'city', 'shortDescription', 'whatWasDone', 'order', 'isActive', 'seoTitle', 'seoDescription'],
-  jobs: ['title', 'slug', 'city', 'employmentType', 'salary', 'shortDescription', 'responsibilities', 'requirements', 'conditions', 'order', 'isActive'],
+  jobs: ['title', 'slug', 'city', 'employmentType', 'salary', 'shortDescription', 'responsibilities', 'requirements', 'conditions', 'order', 'isActive', 'seoTitle', 'seoDescription'],
   'site-settings': ['companyName', 'companyShortName', 'inn', 'kpp', 'ogrn', 'registrationDate', 'legalAddress', 'phonePrimary', 'phoneSecondary', 'telegram', 'email', 'city', 'address', 'vacanciesEmptyTitle', 'vacanciesEmptyText'],
   'static-pages': ['title', 'slug', 'seoTitle', 'seoDescription', 'heroTitle'],
   navigation: ['items'],
@@ -484,7 +949,11 @@ const DEFAULT_TEMPLATES_BY_OWNER = deepFreeze({
   services: [TEMPLATE_KEYS.SERVICE_DIRECTION],
   projects: [TEMPLATE_KEYS.HOME, TEMPLATE_KEYS.PROJECT_ARCHIVE, TEMPLATE_KEYS.PROJECT_DETAIL, TEMPLATE_KEYS.SERVICE_DIRECTION],
   jobs: [TEMPLATE_KEYS.JOB_ARCHIVE, TEMPLATE_KEYS.JOB_DETAIL],
-  'site-settings': [TEMPLATE_KEYS.GLOBAL_SETTINGS, TEMPLATE_KEYS.HOME, TEMPLATE_KEYS.COMPANY, TEMPLATE_KEYS.CONTACTS, TEMPLATE_KEYS.JOB_DETAIL],
+  'site-settings': [
+    TEMPLATE_KEYS.GLOBAL_SETTINGS, TEMPLATE_KEYS.HOME, TEMPLATE_KEYS.COMPANY, TEMPLATE_KEYS.CONTACTS,
+    TEMPLATE_KEYS.JOB_ARCHIVE, TEMPLATE_KEYS.JOB_DETAIL, TEMPLATE_KEYS.PROJECT_ARCHIVE,
+    TEMPLATE_KEYS.PROJECT_DETAIL, TEMPLATE_KEYS.NOT_FOUND
+  ],
   'static-pages': [TEMPLATE_KEYS.HOME, TEMPLATE_KEYS.COMPANY, TEMPLATE_KEYS.CUSTOM_ORDER, TEMPLATE_KEYS.PROJECT_ARCHIVE],
   navigation: [TEMPLATE_KEYS.NAVIGATION_HEADER],
   yandex: [TEMPLATE_KEYS.YANDEX_INTEGRATIONS, TEMPLATE_KEYS.CONTACTS]
@@ -542,6 +1011,18 @@ const relationRoleFor = (owner, path) => {
   if (path === 'parentSectionSlug') return { kind: 'belongs-to', target: 'product-sections', cardinality: 'one' };
   if (path === 'productCategorySlug') return { kind: 'belongs-to', target: 'product-categories', cardinality: 'one' };
   if (path === 'relatedProductSlugs' || path === 'relatedProductSlugs[]') return { kind: 'related-record', target: 'products', cardinality: 'many' };
+  if (owner === 'static-pages' && ['gatewayProjectSlugs', 'gatewayProjectSlugs[]', 'relatedProjectSlugs', 'relatedProjectSlugs[]'].includes(path)) {
+    return { kind: 'related-record', target: 'projects', cardinality: 'many' };
+  }
+  if (owner === 'static-pages' && ['companyHeroProjectSlug', 'customOrderHeroProjectSlug'].includes(path)) {
+    return { kind: 'related-record', target: 'projects', cardinality: 'one' };
+  }
+  if (owner === 'static-pages' && ['relatedDirectionSlugs', 'relatedDirectionSlugs[]'].includes(path)) {
+    return { kind: 'related-record', target: ['product-sections', 'services'], cardinality: 'many' };
+  }
+  if (owner === 'site-settings' && (path === 'notFoundPage.primaryHref' || path === 'notFoundPage.secondaryHref')) {
+    return { kind: 'internal-route', target: 'route-registry', cardinality: 'one' };
+  }
   if (owner === 'navigation' && path === 'items[].href') return { kind: 'internal-route', target: 'route-registry', cardinality: 'one' };
   if (/buttonHref$/u.test(path)) return { kind: 'internal-or-approved-external-url', target: 'route-registry', cardinality: 'one' };
   if (path === 'slug') return { kind: 'route-key', target: owner, cardinality: 'self' };
@@ -568,7 +1049,7 @@ const SELECT_LEAVES = new Set([
 const TEXTAREA_LEAVES = new Set([
   'shortDescription', 'heroDescription', 'description', 'leadText', 'intro', 'text', 'seoDescription',
   'contactDescription', 'deliveryText', 'customProjectText', 'summary', 'task', 'scope', 'result',
-  'whatWasDone', 'vacanciesEmptyText', 'productsIntro', 'servicesIntro', 'trustText'
+  'whatWasDone', 'vacanciesEmptyText', 'productsIntro', 'servicesIntro', 'trustText', 'detailContactDescription'
 ]);
 
 const inferEditorControl = (owner, path, allPaths, coverageStatus) => {
@@ -577,6 +1058,10 @@ const inferEditorControl = (owner, path, allPaths, coverageStatus) => {
   if (path === 'slug') return 'slug-field';
   if (path === 'parentSectionSlug' || path === 'productCategorySlug') return 'relation-select';
   if (path === 'relatedProductSlugs' || path === 'relatedProductSlugs[]') return 'relation-multi-select';
+  if (owner === 'static-pages' && ['gatewayProjectSlugs', 'gatewayProjectSlugs[]', 'relatedProjectSlugs', 'relatedProjectSlugs[]', 'relatedDirectionSlugs', 'relatedDirectionSlugs[]'].includes(path)) return 'relation-list';
+  if (owner === 'static-pages' && ['companyHeroProjectSlug', 'customOrderHeroProjectSlug'].includes(path)) return 'relation-select';
+  if (owner === 'static-pages' && ['companyHeroPosition', 'customOrderHeroPosition', 'customOrderHeroMobilePosition'].includes(path)) return 'focal-position';
+  if (path === 'directionPresentation.brief.items' || path.startsWith('directionPresentation.brief.items[].')) return 'ordered-label-list';
   if (isMediaPath(path)) return /gallery|images/u.test(path) ? 'ordered-media-list' : 'media-picker';
   if (/Href$|Url$|scriptSrc$|constructorSrc$|telegram$/u.test(path)) return 'url-input';
   if (/seoTitle$/u.test(path)) return 'text-input';
@@ -596,6 +1081,22 @@ const templateDefinitionByKey = new Map(
 
 const templatesForField = (owner, path, coverageStatus) => {
   if (coverageStatus === FIELD_COVERAGE_STATUS.LEGACY_ONLY) return [];
+  if (owner === 'static-pages' && matchesPrefix(path, 'gatewayProjectSlugs')) return [TEMPLATE_KEYS.HOME, TEMPLATE_KEYS.COMPANY];
+  if (owner === 'static-pages' && (matchesPrefix(path, 'companyHeroProjectSlug') || matchesPrefix(path, 'companyHeroPosition'))) return [TEMPLATE_KEYS.COMPANY];
+  if (owner === 'static-pages' && (matchesPrefix(path, 'customOrderHeroProjectSlug') || matchesPrefix(path, 'customOrderHeroPosition') || matchesPrefix(path, 'customOrderHeroMobilePosition') || matchesPrefix(path, 'relatedDirectionSlugs'))) return [TEMPLATE_KEYS.CUSTOM_ORDER];
+  if (owner === 'site-settings' && matchesPrefix(path, 'projectUi')) {
+    return [TEMPLATE_KEYS.PROJECT_ARCHIVE, TEMPLATE_KEYS.PROJECT_DETAIL];
+  }
+  if (owner === 'site-settings' && matchesPrefix(path, 'notFoundPage')) return [TEMPLATE_KEYS.NOT_FOUND];
+  if (owner === 'site-settings' && matchesPrefix(path, 'productUi')) {
+    return [TEMPLATE_KEYS.STANDARD_PRODUCT, TEMPLATE_KEYS.PREMIUM_PRODUCT];
+  }
+  if (owner === 'site-settings' && matchesPrefix(path, 'catalogUi')) {
+    return [TEMPLATE_KEYS.DIRECTION_HUB, TEMPLATE_KEYS.CATEGORY];
+  }
+  if (owner === 'site-settings' && matchesPrefix(path, 'contactsPage')) return [TEMPLATE_KEYS.CONTACTS];
+  if (owner === 'site-settings' && matchesPrefix(path, 'vacanciesPage')) return [TEMPLATE_KEYS.JOB_ARCHIVE];
+  if (owner === 'site-settings' && matchesPrefix(path, 'vacancyDetailPage')) return [TEMPLATE_KEYS.JOB_DETAIL];
   if (owner === 'products' && ['solutionKicker', 'applicationItems', 'applicationItems[]', 'executionVariants', 'executionVariants[]'].includes(path)) {
     return [TEMPLATE_KEYS.PREMIUM_PRODUCT];
   }
@@ -810,11 +1311,11 @@ const PAGE_BLOCK_TEMPLATE_KEYS = Object.freeze([
 
 const GENERIC_PAGE_BLOCK_CONSUMER = 'src/components/PageBlocksRenderer.astro';
 
-const notRenderedSupport = () => ({
+const notRenderedSupport = (reason = 'Текущий production V2 template family не читает этот тип секции.') => ({
   status: PAGE_BLOCK_SUPPORT_STATUS.NOT_RENDERED,
   consumers: [],
   consumedFields: [],
-  reason: 'Текущий production V2 template family не читает этот тип секции.'
+  reason
 });
 
 const renderedSupport = ({ consumers, consumedFields, selector = null }) => ({
@@ -1010,16 +1511,9 @@ export const PAGE_BLOCK_TEMPLATE_POLICIES = deepFreeze({
           description: 'sectionId выбирает contexts/brief; fallback допустим только для первого listPanel.'
         }
       }),
-      [TEMPLATE_KEYS.CUSTOM_ORDER]: renderedSupport({
-        consumers: ['src/components/v2/custom-order/customOrderV2Data.ts'],
-        consumedFields: ['type', 'title', 'isActive', ...textListFields],
-        selector: {
-          kind: 'block-field-equals',
-          field: 'title',
-          value: 'Что можно прислать',
-          description: 'Только type=listPanel и точный title «Что можно прислать».'
-        }
-      })
+      [TEMPLATE_KEYS.CUSTOM_ORDER]: notRenderedSupport(
+        'Страница заказа читает материализованные структурированные customOrderSourceMaterials/customOrderChangeThemes; legacy pageBlocks сохранены только для lossless-совместимости.'
+      )
     },
     creatableFieldsByTemplate: {
       [TEMPLATE_KEYS.SPECIALIZED_DIRECTION]: ['type', 'title', 'intro', 'text', 'isActive', 'order', ...textListFields],
