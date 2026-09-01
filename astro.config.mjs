@@ -106,6 +106,11 @@ const isSitemapPageAllowed = (page) => {
 export default defineConfig({
   site: siteUrl,
   base: basePath,
+  // The editor already owns its complete UI and strict loopback API boundary.
+  // Astro's developer toolbar adds unrelated controls to screenshots and its
+  // accessibility audit probes rejected local endpoints, producing false
+  // console/network errors. Keep the production canvas free of that toolbar.
+  devToolbar: { enabled: false },
   prefetch: {
     prefetchAll: false,
     defaultStrategy: 'hover'

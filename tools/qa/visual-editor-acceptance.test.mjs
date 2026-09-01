@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -36,6 +36,11 @@ test('visual acceptance core browser probes are syntactically valid JavaScript',
   for (const expression of acceptanceBrowserExpressionsForTest()) {
     assert.doesNotThrow(() => new Function(`return (${expression});`));
   }
+});
+
+test('local production canvas excludes the unrelated Astro developer toolbar', async () => {
+  const config = await readFile(new URL('../../astro.config.mjs', import.meta.url), 'utf8');
+  assert.match(config, /devToolbar:\s*\{\s*enabled:\s*false\s*\}/u);
 });
 
 test('visual acceptance origin parser is loopback-only and accepts no URL credentials or paths', () => {
