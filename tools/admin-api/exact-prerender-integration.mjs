@@ -65,6 +65,17 @@ export function exactRouteManifestSha256(value) {
   return crypto.createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
 }
 
+export function validatedExactRouteManifestInput(value) {
+  const normalized = normalizeExactRouteManifest(value);
+  return {
+    version: normalized.version,
+    kind: normalized.kind,
+    runId: normalized.runId,
+    transactionId: normalized.transactionId,
+    expectations: normalized.expectations.map(({ route, expected }) => ({ route, expected }))
+  };
+}
+
 export function selectExactStaticPaths(paths, manifest) {
   if (!Array.isArray(paths) || paths.some((entry) => !entry || typeof entry.pathname !== 'string' || !entry.route)) {
     throw new ExactPrerenderManifestError('EXACT_PRERENDER_PATHS_INVALID', 'Astro prerenderer вернул некорректный route set.');
@@ -124,7 +135,7 @@ async function readOwnedManifest(manifestPath) {
   let value;
   try { value = JSON.parse(await fs.readFile(resolved, 'utf8')); }
   catch (error) { throw new ExactPrerenderManifestError('EXACT_MANIFEST_JSON_INVALID', 'Exact route manifest содержит некорректный JSON.', { cause: error?.message }); }
-  return { path: resolved, manifest: normalizeExactRouteManifest(value) };
+  return { path: resolved, manifest: validatedExactRouteManifestInput(value) };
 }
 
 async function writeEvidence(manifestPath, evidence) {

@@ -5,7 +5,8 @@ import {
   ExactPrerenderManifestError,
   normalizeExactRoute,
   normalizeExactRouteManifest,
-  selectExactStaticPaths
+  selectExactStaticPaths,
+  validatedExactRouteManifestInput
 } from './exact-prerender-integration.mjs';
 
 const route = (pathname) => ({ pathname, route: { component: `${pathname || 'root'}.astro`, prerender: true } });
@@ -40,6 +41,14 @@ test('targeted production SSG selection enumerates full topology but emits only 
   assert.equal(selected.evidence.mode, 'targeted-production-ssg');
   assert.equal(selected.evidence.authoritativePathCount, 5);
   assert.equal(selected.evidence.selectedPathCount, 2);
+});
+
+test('validated manifest input remains strict when the Astro hook validates it again', () => {
+  const input = manifest([{ route: '/catalog/item/', expected: 'html' }]);
+  const validatedInput = validatedExactRouteManifestInput(input);
+  assert.deepEqual(Object.keys(validatedInput.expectations[0]).sort(), ['expected', 'route']);
+  const selected = selectExactStaticPaths([route('/catalog/item/')], validatedInput);
+  assert.deepEqual(selected.selected.map((entry) => entry.pathname), ['/catalog/item/']);
 });
 
 test('not-found expectation proves absence from topology and selects the canonical 404 renderer', () => {
