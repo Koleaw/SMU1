@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -106,6 +106,16 @@ test('inert admin compatibility pages may share public prefetch but never an edi
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }
+});
+
+test('inert admin compatibility styles cannot leak through Astro dev HMR into the visual editor', async () => {
+  const source = await readFile(path.resolve('src/admin/shell/AdminUnavailable.astro'), 'utf8');
+  assert.match(source, /<html[^>]+class="admin-unavailable-html"/u);
+  assert.match(source, /<body[^>]+class="admin-unavailable-body"/u);
+  assert.match(source, /\.admin-unavailable-html\s*\{/u);
+  assert.match(source, /\.admin-unavailable-body\s*\{/u);
+  assert.doesNotMatch(source, /(?:^|\n)\s*:root\s*\{/u);
+  assert.doesNotMatch(source, /(?:^|\n)\s*body\s*\{/u);
 });
 
 test('public artifact isolation rejects local canvas affordance markup and CSS', async () => {
