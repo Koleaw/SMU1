@@ -15,9 +15,9 @@ test('catalog UI copy and the catalog shell labels live behind the strict shared
   assert.equal(settings.shellLabels.defaultCtaLabel, 'Получить расчёт');
   assert.equal(settings.shellLabels.catalogRequestCtaLabel, 'Запросить расчёт');
   assert.equal(settings.catalogUi.hub.gridTitle, 'Выберите тип изделия');
-  assert.equal(settings.catalogUi.category.listTitle, 'Все опубликованные изделия');
-  assert.equal(settings.catalogUi.card.productCountOne, 'опубликованное изделие');
-  assert.equal(settings.catalogUi.card.emptyMediaLabel, 'Фотоматериалы не указаны');
+  assert.equal(settings.catalogUi.category.listTitle, 'Модели и варианты');
+  assert.equal(settings.catalogUi.card.productCountOne, 'изделие');
+  assert.equal(settings.catalogUi.card.emptyMediaLabel, 'Изображение недоступно');
   assert.equal(settings.catalogUi.card.ctaLabel, 'Открыть категорию');
   assert.deepEqual(settings.catalogUi.sparse.materials.map(({ id }) => id), ['dimensions', 'place-photo', 'drawing']);
   assert.equal(settings.productUi.standardPriceLabel, 'Стоимость');
@@ -50,7 +50,7 @@ test('category cards and both product renderers use schema-owned UI copy with ex
   assert.match(premium, /productUiBinding\('premiumTechnicalTitle', 'heading'\)/u);
 
   for (const [source, literals] of [
-    [card, ['Фотоматериалы не указаны', 'Открыть категорию', 'Описание без фотоматериалов']],
+    [card, ['Изображение недоступно', 'Открыть категорию', 'Описание без фотоматериалов']],
     [standard, ['>Стоимость<', '>О модели<', '>Технические данные<', '>Другие изделия категории<']],
     [premium, ['>Формат расчёта<', '>Что это за решение<', '>Материалы и конструктив<', '>Покрытие и цвет<']]
   ]) {
@@ -77,7 +77,7 @@ test('hub, category and sparse production renderers consume catalogUi with exact
   assert.match(hero, /primaryLabelBinding\?: Record<string, string>/u);
 
   for (const literal of [
-    'Полный ассортимент', 'Категории пока не опубликованы', 'Все опубликованные изделия',
+    'Полный ассортимент', 'Обсудим нужное вам изделие', 'Модели и варианты',
     'Что можно прислать для расчёта', 'Конструкцию можно рассчитать по вашим вводным.'
   ]) {
     assert.equal([hub, category, sparse].some((source) => source.includes(`>${literal}<`)), false, literal);

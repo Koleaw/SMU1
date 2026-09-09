@@ -76,7 +76,7 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
 const progress = (message) => process.stderr.write(`[production-browser-qa] ${message}\n`);
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.ico': 'image/x-icon',
-  '.jpeg': 'image/jpeg', '.jpg': 'image/jpeg', '.js': 'text/javascript; charset=utf-8',
+  '.jpeg': 'image/jpeg', '.jpg': 'image/jpeg', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.mp4': 'video/mp4', '.png': 'image/png',
   '.svg': 'image/svg+xml', '.webm': 'video/webm', '.xml': 'application/xml; charset=utf-8'
 };

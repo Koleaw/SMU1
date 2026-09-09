@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { classifyPublicAction, validateContactProtocol } from './action-crawl-core.mjs';
+import { exercisePublicSearch } from './public-search-probe.mjs';
 import { CdpBrowser, createDistServer } from './cdp-browser.mjs';
 import { PUBLIC_LIFECYCLE_SEMANTIC_IDS } from './evidence-contract.mjs';
 import { sourceWorkingTreeDirty } from './git-evidence.mjs';
@@ -125,6 +126,7 @@ if (!['127.0.0.1', 'localhost', '[::1]'].includes(new URL(origin).hostname)) {
 }
 const browser = await new CdpBrowser({ headful: options.headful }).start();
 const context = { route: '', viewport: '', actionId: '' };
+const searchProbeCoverage = new Map();
 const events = [];
 const requests = [];
 const documentResponses = [];
@@ -170,7 +172,10 @@ const registerExpression = `(() => {
       visible: visible(element), disabled: Boolean(element.disabled || element.getAttribute('aria-disabled') === 'true'),
       selected: element.getAttribute('aria-current') === 'true' || element.getAttribute('aria-current') === 'page'
         || element.getAttribute('aria-selected') === 'true' || element.getAttribute('aria-pressed') === 'true',
-      tabIndex: element.tabIndex, dataActions: Array.from(element.attributes).filter((item) => item.name.startsWith('data-') && item.name !== 'data-h6-action-id').map((item) => item.name)
+      tabIndex: element.tabIndex, dataActions: [
+        ...Array.from(element.attributes).filter((item) => item.name.startsWith('data-') && item.name !== 'data-h6-action-id').map((item) => item.name),
+        ...(element.closest('[data-search-dialog]') ? ['data-public-search-control'] : [])
+      ]
     };
   });
 })()`;
@@ -261,6 +266,14 @@ const executeAction = async (action, mode) => {
     await browser.dispatchKey('Enter', { code: 'Enter' });
   }
   await new Promise((resolve) => setTimeout(resolve, 35));
+  let searchSemantics = null;
+  let searchOpenState = null;
+  if ((action.dataActions || []).includes('data-search-open')) {
+    searchOpenState = await browser.evaluate(stateExpression(action.id)).catch(() => null);
+    const extended = !searchProbeCoverage.has(context.viewport);
+    searchSemantics = await exercisePublicSearch(browser, { extended });
+    if (extended) searchProbeCoverage.set(context.viewport, { route: context.route, ...searchSemantics });
+  }
   const after = await browser.evaluate(stateExpression(action.id)).catch(() => null);
   const actionEvents = events.slice(eventIndex);
   const failures = actionEvents.filter((event) => {
@@ -269,17 +282,20 @@ const executeAction = async (action, mode) => {
   });
   const actionRequests = requests.slice(requestIndex);
   const unexpectedMutationRequests = actionRequests.filter((request) => !['GET', 'HEAD', 'OPTIONS'].includes(request.method));
-  const observableChange = Boolean(before && (!after || before.fingerprint !== after.fingerprint));
+  const observableChange = Boolean(before && (!after || before.fingerprint !== after.fingerprint
+    || searchOpenState && before.fingerprint !== searchOpenState.fingerprint));
   return {
     mode,
     before,
     after,
     focusPrepared,
     observableChange,
+    searchSemantics,
+    searchOpenState,
     events: actionEvents,
     requests: actionRequests,
     unexpectedMutationRequests,
-    status: !focusPrepared || (!observableChange && !action.selected) || failures.length || unexpectedMutationRequests.length ? 'fail' : 'pass'
+    status: !focusPrepared || (searchSemantics ? searchSemantics.status !== 'pass' : !observableChange && !action.selected) || failures.length || unexpectedMutationRequests.length ? 'fail' : 'pass'
   };
 };
 
@@ -468,6 +484,8 @@ const exerciseCurrentSurface = async ({ requestedUrl, loadedLocation }) => {
         }
       } else if (policy.policy === 'protected-form-action') {
         result.executionNote = 'Intentionally not executed: QA must not send a lead or open a file picker.';
+      } else if (policy.policy === 'public-search-semantic-coverage') {
+        result.executionNote = 'Exercised by the public search semantic probe: query, result focus, clear, examples, pagination, close and Escape.';
       }
       actionResultsById.set(action.id, result);
       inventoried += 1;
@@ -1131,6 +1149,7 @@ try {
     routeResults,
     noJsResults,
     publicLifecycleSemantics,
+    publicSearchSemantics: Object.fromEntries(searchProbeCoverage),
     unknownResults,
     unknownNoJsResult,
     aggregate: {

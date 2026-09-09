@@ -20,11 +20,11 @@ test('project archive/detail shared copy is schema-owned and preserves the accep
     detailDefaultEyebrow: 'Выполненный объект',
     detailWorkTitle: 'Что было выполнено',
     detailFactsEyebrow: 'Сведения об объекте',
-    detailFactsTitle: 'По опубликованным данным',
+    detailFactsTitle: 'Об объекте',
     detailGalleryEyebrow: 'Фотографии объекта',
     detailGalleryTitle: 'Объект в кадрах',
-    detailDirectionsEyebrow: 'Связанные направления',
-    detailDirectionsTitle: 'Продолжить по задаче',
+    detailDirectionsEyebrow: 'Решения СМУ-1',
+    detailDirectionsTitle: 'Для вашего объекта',
     detailContactTitle: 'Обсудим похожую задачу',
     detailContactDescription: 'Кратко опишите объект и имеющиеся исходные материалы — обсудим задачу и подготовим расчёт.'
   };

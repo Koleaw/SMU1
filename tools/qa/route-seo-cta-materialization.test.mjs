@@ -30,7 +30,7 @@ test('project and product card business labels have exact shared owners', () => 
     assert.ok(getFieldCoverage('site-settings', `productUi.${fieldPath}`));
   }
 
-  assert.equal(settings.productUi.cardMaterialsMissingLabel, 'Материалы не указаны');
+  assert.equal(settings.productUi.cardMaterialsMissingLabel, 'Индивидуальное исполнение');
   assert.ok(getFieldCoverage('site-settings', 'productUi.cardMaterialsMissingLabel'));
   assert.match(productCard, /binding\('materials', 'list',[\s\S]*itemKind: 'string'/u);
   assert.match(productCard, /first non-empty materials item \|\| site-settings\.global\.productUi\.cardMaterialsMissingLabel/u);

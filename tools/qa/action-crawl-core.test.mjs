@@ -49,3 +49,11 @@ test('skip links are keyboard-only actions instead of false mouse failures', () 
     tag: 'a', href: '#main-content', visible: true, disabled: false, dataActions: ['data-v2-entry-skip-link']
   }), { policy: 'keyboard-focus-action', execute: true, modes: ['keyboard-enter'] });
 });
+
+test('search form controls have semantic coverage while lead forms remain protected', () => {
+  assert.deepEqual(classifyPublicAction({ tag: 'button', type: 'submit', inForm: true, visible: true, dataActions: ['data-public-search-control'] }), {
+    policy: 'public-search-semantic-coverage', execute: false
+  });
+  assert.equal(classifyPublicAction({ tag: 'button', type: 'submit', inForm: true, visible: true }).policy, 'protected-form-action');
+  assert.equal(classifyPublicAction({ tag: 'button', type: 'button', visible: true, dataActions: ['data-search-open'] }).execute, true);
+});

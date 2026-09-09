@@ -27,6 +27,8 @@
     "qa:performance": "node tools/performance/qa-performance.mjs",
     "qa:deploy-isolation": "node tools/migration/deploy-isolation-qa.mjs",
     "qa:final:static": "node tools/migration/final-design-qa.mjs",
+    "test:public-search": "node --test tools/search/public-search.test.mjs",
+    "qa:public-search": "node tools/search/qa-public-search.mjs",
     "qa:h2:motion": "node tools/migration/h2-motion-qa.mjs",
     "qa:final:browser": "node tools/migration/browser-final-design-qa.mjs && npm run qa:h2:motion",
     "qa:admin-browser": "node tools/admin-api/admin-browser-roundtrip.mjs",
@@ -40,7 +42,7 @@
     "qa:h6:public-evidence": "npm run qa:h6:route-passport && npm run qa:h6:public-actions",
     "qa:h6:verify-evidence": "node tools/qa/verify-h6-evidence.mjs",
     "qa:h6:admin": "npm run test:admin-h6:ci && npm run qa:admin-browser",
-    "qa:final": "npm run check && npm run qa:h6:admin && npm run test:h6-evidence-contracts && npm run build && npm run qa:h6:exact-targeted && npm run qa:performance && npm run qa:final:static && npm run deploy:prepare && npm run qa:performance && npm run qa:final:browser && npm run qa:deploy-isolation && npm run qa:h6:public-evidence && npm run qa:h6:admin-actions && npm run qa:h6:media-privacy && npm run qa:h6:backup-restore && npm run qa:h6:verify-evidence"
+    "qa:final": "npm run check && npm run qa:h6:admin && npm run test:h6-evidence-contracts && npm run build && npm run qa:h6:exact-targeted && npm run qa:performance && npm run qa:final:static && npm run test:public-search && npm run qa:public-search && npm run deploy:prepare && npm run qa:performance && npm run qa:public-search && npm run qa:final:browser && npm run qa:deploy-isolation && npm run qa:h6:public-evidence && npm run qa:h6:admin-actions && npm run qa:h6:media-privacy && npm run qa:h6:backup-restore && npm run qa:h6:verify-evidence"
   },
   "dependencies": {
     "@astrojs/sitemap": "3.7.4",

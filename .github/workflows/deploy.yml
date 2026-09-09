@@ -185,6 +185,9 @@ jobs:
           DEPLOY_TARGET: ${{ steps.deploy-meta.outputs.deploy_target }}
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
 
+      - name: Validate public search matching and generated coverage
+        run: npm run test:public-search && npm run qa:public-search
+
       - name: Prepare proven reachable Pages artifact
         run: npm run deploy:prepare
         env:
@@ -194,6 +197,9 @@ jobs:
         run: npm run qa:performance
         env:
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
+      - name: Verify public search survives deploy pruning
+        run: npm run qa:public-search
 
       - name: Run browser and motion gates
         run: npm run qa:final:browser

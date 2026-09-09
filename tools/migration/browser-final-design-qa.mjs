@@ -71,7 +71,7 @@ const record = (id, ok, details = {}) => {
 const mimeTypes = {
   '.avif': 'image/avif', '.css': 'text/css; charset=utf-8', '.gif': 'image/gif',
   '.html': 'text/html; charset=utf-8', '.ico': 'image/x-icon', '.jpeg': 'image/jpeg',
-  '.jpg': 'image/jpeg', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8',
+  '.jpg': 'image/jpeg', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.mp4': 'video/mp4', '.png': 'image/png', '.svg': 'image/svg+xml', '.webm': 'video/webm',
   '.webp': 'image/webp', '.xml': 'application/xml; charset=utf-8'
 };
@@ -752,7 +752,9 @@ try {
     ]
   });
   await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
-    source: `try { Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: true } }); } catch {}`
+    // Suppress home autoplay only. Image readiness is audited under the normal
+    // network profile; Save-Data intentionally exposes its fallback immediately.
+    source: `if (location.pathname === ${JSON.stringify(withBrowserFinalBasePath(routes.home, options.basePath))}) { try { Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: true } }); } catch {} }`
   });
   await setViewport(1440, 900, false);
 

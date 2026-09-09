@@ -18,6 +18,9 @@ const SAFE_ADMIN_CONTAINERS = new Set([
 export function classifyPublicAction(action) {
   if (action.disabled) return { policy: 'disabled-state', execute: false };
   if (!action.visible) return { policy: 'hidden-state', execute: false };
+  if ((action.dataActions || []).includes('data-public-search-control')) {
+    return { policy: 'public-search-semantic-coverage', execute: false };
+  }
   if (action.tag === 'a') {
     if ((action.dataActions || []).includes('data-v2-entry-skip-link') || /^К основному содержанию$/iu.test(String(action.name || '').trim())) {
       return { policy: 'keyboard-focus-action', execute: true, modes: ['keyboard-enter'] };

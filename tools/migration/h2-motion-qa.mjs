@@ -199,7 +199,7 @@ if (!routes.standard || !routes.premium) throw new Error('H2 QA requires both a 
 const mimeTypes = {
   '.avif': 'image/avif', '.css': 'text/css; charset=utf-8', '.gif': 'image/gif',
   '.html': 'text/html; charset=utf-8', '.ico': 'image/x-icon', '.jpeg': 'image/jpeg',
-  '.jpg': 'image/jpeg', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8',
+  '.jpg': 'image/jpeg', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.mp4': 'video/mp4', '.png': 'image/png', '.svg': 'image/svg+xml', '.webm': 'video/webm',
   '.webp': 'image/webp', '.xml': 'application/xml; charset=utf-8'
 };
@@ -1410,6 +1410,19 @@ const introAudit = async (id, href) => {
     const state = document.querySelector('[data-v2-entry-root]')?.getAttribute('data-v2-entry-state') || '';
     return html.dataset.v2EntryBootstrap === 'armed' || ['logo','waiting','opening','assembling'].includes(state);
   })()`, 2500);
+  if (id === 'cold-root') {
+    await waitForCondition(`document.documentElement.dataset.v2EntranceController === 'ready'`, 2500);
+    const networkChange = await evaluate(`(() => {
+      const html = document.documentElement;
+      const before = html.dataset.v2EntranceState;
+      // RTT/downlink updates emit the same event as Save-Data changes. An
+      // unchanged preference must not cancel the first entrance before start.
+      navigator.connection?.dispatchEvent(new Event('change'));
+      return { before, after: html.dataset.v2EntranceState, profile: html.dataset.v2MotionProfile };
+    })()`);
+    record('entry.network-metrics-preserve-entrance', networkChange.before === networkChange.after
+      && networkChange.profile === 'normal', networkChange);
+  }
   const early = await stateSnapshot();
   const baselineFile = await screenshot(`first-entry-${id}`, {
     directory: 'baseline-smu1', flow: `first-entry-${id}`, activationSource: 'first-entry'
@@ -3989,14 +4002,14 @@ const responsiveHeaderTypographyAudit = async () => {
     }
     return null;
   };
-  const typeScaleFor = (routeKind, width) => {
+  const typeScaleFor = (routeKind, width, pathname = '') => {
     const family = typeFamilyForRouteKind(routeKind);
     if (!family) return null;
     const breakpoint = width <= 760 ? 'mobile' : width <= 1180 ? 'tablet' : 'desktop';
     const clampPx = (minimum, preferredRatio, maximum) => (
       Math.min(maximum, Math.max(minimum, width * preferredRatio))
     );
-    const h1 = {
+    let h1 = {
       desktop: {
         home: () => clampPx(88, .05, 96),
         short: () => clampPx(88, .059, 112),
@@ -4016,6 +4029,19 @@ const responsiveHeaderTypographyAudit = async () => {
         long: () => clampPx(38, .113, 46)
       }
     }[breakpoint][family]();
+    // Accepted public finishing scale: category composition and compact
+    // document/job titles intentionally differ from the earlier H4 families.
+    if (routeKind === 'category') {
+      const fenceCategory = pathname.startsWith('/ograzhdeniya-i-zabory/');
+      const textOnlyFenceCategory = /\/(dekorativnye-ograzhdeniya|stolbiki-i-bollardy)\/$/.test(pathname);
+      if (width <= 760) h1 = clampPx(34, .103, 44);
+      else if (width >= 981 && textOnlyFenceCategory) h1 = clampPx(48, .047, 68);
+      else if (width >= 981 && !fenceCategory) h1 = clampPx(42, .0405, 64);
+    } else if (routeKind === 'legal') {
+      h1 = width <= 760 ? clampPx(25, .07, 32) : clampPx(28, .03, 44);
+    } else if (routeKind === 'career-detail' && width <= 760) {
+      h1 = clampPx(24, .068, 30);
+    }
     const h2 = breakpoint === 'desktop'
       ? clampPx(44, .0325, 62)
       : breakpoint === 'tablet' ? clampPx(38, .04, 44) : clampPx(32, .098, 42);
@@ -4123,7 +4149,7 @@ const responsiveHeaderTypographyAudit = async () => {
       const h1 = initial.type.h1;
       const h2 = initial.type.h2;
       const lead = initial.type.lead;
-      const typeScale = typeScaleFor(descriptor.routeKind, viewport.width);
+      const typeScale = typeScaleFor(descriptor.routeKind, viewport.width, descriptor.pathname);
       const h2Ok = !h2 || Boolean(typeScale)
         && Math.abs(h2.fontSize - typeScale.h2) <= typeScale.tolerance;
       const leadOk = !lead || Boolean(typeScale)

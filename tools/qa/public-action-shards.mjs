@@ -212,6 +212,7 @@ export function mergePublicActionShards(reports, {
     routeResults,
     noJsResults,
     publicLifecycleSemantics,
+    publicSearchSemantics: ordered.map((report) => ({ shard: report.manifest.shard.index, viewports: report.publicSearchSemantics || {} })),
     unknownResults,
     unknownNoJsResult: unknownNoJs[0],
     aggregate: {

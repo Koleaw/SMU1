@@ -172,7 +172,21 @@ test('local editor canvas keeps production visual selectors while disabling only
   const layout = await readFile(new URL('../../src/layouts/PublicV2Layout.astro', import.meta.url), 'utf8');
   assert.match(layout, /data-v2-public-route=\{isProduction \? 'true' : undefined\}/u);
   assert.match(layout, /const stylesheetUrl = \(value: string\) => import\.meta\.env\.DEV/u);
-  assert.match(layout, /const fontStylesheetUrl = 'https:\/\/fonts\.googleapis\.com\/css2\?family=Manrope:wght@400;500;600;700&display=optional'/u);
+  assert.match(layout, /const fontStylesheetUrl = withBase\('\/assets\/fonts\/manrope\/fonts\.css'\)/u);
+  assert.doesNotMatch(layout, /fonts\.(?:googleapis|gstatic)\.com/u);
+  assert.match(layout, /\[400, 600, 700\]\.map\(\(weight\) => <link\s+href=\{withBase\(`\/assets\/fonts\/manrope\/manrope-\$\{weight\}-latin-cyrillic\.woff2`\)\}\s+rel="preload"\s+as="font"\s+type="font\/woff2"\s+crossorigin/u);
+  const fonts = await readFile(new URL('../../public/assets/fonts/manrope/fonts.css', import.meta.url), 'utf8');
+  const faces = [...fonts.matchAll(/@font-face\s*\{([^}]+)\}/gu)].map((match) => match[1]);
+  assert.equal(faces.length, 4);
+  for (const weight of [400, 500, 600, 700]) {
+    const face = faces.find((block) => block.includes(`font-weight: ${weight};`));
+    assert.ok(face, `Manrope ${weight} must have a static local face`);
+    assert.match(face, /font-family: 'Manrope';/u);
+    assert.match(face, /font-display: optional;/u);
+    assert.ok(face.includes(`url('./manrope-${weight}-latin-cyrillic.woff2') format('woff2')`));
+    const bytes = await readFile(new URL(`../../public/assets/fonts/manrope/manrope-${weight}-latin-cyrillic.woff2`, import.meta.url));
+    assert.equal(bytes.subarray(0, 4).toString('ascii'), 'wOF2');
+  }
   assert.match(layout, /\$\{value\.includes\('\?'\) \? '&' : '\?'\}direct/u);
   assert.match(layout, /\{isProduction && <link rel="stylesheet" href=\{h4ScaleV2StylesheetUrl\}/u);
   assert.match(layout, /\{isPublicV2Motion && <link rel="stylesheet" href=\{entranceV2StylesheetUrl\}/u);
