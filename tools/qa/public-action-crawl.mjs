@@ -663,6 +663,8 @@ const homeVideoStateExpression = `(() => {
   const toggle = document.querySelector('[data-hf-video-toggle]');
   const label = document.querySelector('[data-hf-video-toggle-label]');
   if (!(video instanceof HTMLVideoElement) || !(toggle instanceof HTMLButtonElement)) return null;
+  const controlRect = toggle.getBoundingClientRect();
+  const controlStyle = getComputedStyle(toggle);
   return {
     paused: video.paused,
     ended: video.ended,
@@ -671,8 +673,9 @@ const homeVideoStateExpression = `(() => {
     source: video.getAttribute('src') || '',
     currentSource: video.currentSrc || '',
     sourceLoaded: Boolean(video.getAttribute('src') || video.currentSrc),
-    controlReady: !toggle.hidden && !toggle.disabled && toggle.getAttribute('aria-hidden') !== 'true',
-    controlSuppressed: toggle.hidden || toggle.disabled || toggle.getAttribute('aria-hidden') === 'true',
+    controlReady: !toggle.hidden && !toggle.disabled && toggle.getAttribute('aria-hidden') !== 'true'
+      && controlRect.width > 0 && controlRect.height > 0 && controlStyle.display !== 'none'
+      && controlStyle.visibility !== 'hidden' && Number(controlStyle.opacity) > 0,
     label: label?.textContent?.replace(/\\s+/gu, ' ').trim() || '',
     ariaLabel: toggle.getAttribute('aria-label') || ''
   };
@@ -684,6 +687,44 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
   run: async () => {
     const homeUrl = `${origin}${withBase('/')}`;
     const evidence = {};
+    const clickVideoAsUser = async () => {
+      const point = await browser.evaluate(`(() => {
+        const control = document.querySelector('[data-hf-video-toggle]');
+        if (!(control instanceof HTMLButtonElement) || control.hidden || control.disabled) return null;
+        control.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+        const rect = control.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      })()`);
+      if (!point) throw new Error('Explicit video control is unavailable');
+      await browser.dispatchClick(point);
+    };
+    const exerciseExplicitPlayback = async () => {
+      const requestIndex = requests.length;
+      await clickVideoAsUser();
+      const playing = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused && state.readyState >= 2 ? state : null; })()`, {
+        timeoutMs: 12_000, label: 'explicit Home video playback'
+      });
+      const advanced = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused && state.currentTime > ${Number(playing.currentTime) + 0.05} ? state : null; })()`, {
+        timeoutMs: 12_000, label: 'explicit Home video time advancement'
+      });
+      await clickVideoAsUser();
+      const paused = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state?.paused ? state : null; })()`, { label: 'explicit Home video pause' });
+      await delay(350);
+      const settledPause = await browser.evaluate(homeVideoStateExpression);
+      return {
+        controlReady: playing.controlReady === true,
+        sourceLoaded: playing.sourceLoaded === true,
+        videoRequestCount: requests.slice(requestIndex).filter((request) => VIDEO_ASSET_URL.test(request.url || '')).length,
+        playing: playing.paused === false,
+        startTime: playing.currentTime,
+        advancedTime: advanced.currentTime,
+        pausedAfterPause: paused.paused === true && settledPause?.paused === true,
+        pausedTime: paused.currentTime,
+        settledPauseTime: settledPause?.currentTime,
+        labelAfterPause: settledPause?.label || '',
+        ariaAfterPause: settledPause?.ariaLabel || ''
+      };
+    };
     let saveDataScriptIdentifier = '';
     try {
       await browser.setViewport(REQUIRED_VIEWPORTS[0]);
@@ -739,10 +780,11 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
       evidence.reducedMotion = {
         reducedMotion: true,
         saveData: false,
-        controlSuppressed: reduced?.controlSuppressed === true,
+        controlReady: reduced?.controlReady === true,
         sourceLoaded: reduced?.sourceLoaded === true,
         videoRequestCount: requests.slice(reducedRequestIndex).filter((request) => VIDEO_ASSET_URL.test(request.url || '')).length
       };
+      evidence.reducedMotion.explicitPlayback = await exerciseExplicitPlayback();
 
       await browser.emulateMedia({ reducedMotion: false });
       const saveDataScript = await browser.send('Page.addScriptToEvaluateOnNewDocument', {
@@ -770,10 +812,11 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
       evidence.saveData = {
         reducedMotion: false,
         saveData: await browser.evaluate('navigator.connection?.saveData === true'),
-        controlSuppressed: saveData?.controlSuppressed === true,
+        controlReady: saveData?.controlReady === true,
         sourceLoaded: saveData?.sourceLoaded === true,
         videoRequestCount: requests.slice(saveDataRequestIndex).filter((request) => VIDEO_ASSET_URL.test(request.url || '')).length
       };
+      evidence.saveData.explicitPlayback = await exerciseExplicitPlayback();
     } finally {
       if (saveDataScriptIdentifier) {
         await browser.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: saveDataScriptIdentifier }).catch(() => {});
@@ -788,7 +831,15 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
       issues.push('normal-motion-pause-resume');
     }
     for (const [profile, value] of [['reduced-motion', evidence.reducedMotion], ['save-data', evidence.saveData]]) {
-      if (!value?.controlSuppressed || value?.sourceLoaded !== false || value?.videoRequestCount !== 0) issues.push(`${profile}-suppression`);
+      if (!value?.controlReady || value?.sourceLoaded !== false || value?.videoRequestCount !== 0) issues.push(`${profile}-autoplay-suppression`);
+      const explicit = value?.explicitPlayback;
+      if (!explicit?.controlReady || !explicit?.sourceLoaded || !(explicit?.videoRequestCount > 0)
+        || explicit?.playing !== true || !Number.isFinite(explicit?.startTime) || !Number.isFinite(explicit?.advancedTime)
+        || !(explicit.advancedTime > explicit.startTime + 0.05) || explicit?.pausedAfterPause !== true
+        || !Number.isFinite(explicit?.pausedTime) || !Number.isFinite(explicit?.settledPauseTime)
+        || Math.abs(explicit.settledPauseTime - explicit.pausedTime) > 0.1
+        || !/включить видео/iu.test(explicit?.labelAfterPause || '')
+        || !/включить фоновое видео/iu.test(explicit?.ariaAfterPause || '')) issues.push(`${profile}-explicit-playback`);
     }
     return { evidence, issues };
   }

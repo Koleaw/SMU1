@@ -91,8 +91,14 @@ const lifecycleResult = (id) => {
         labelAfterPause: 'Включить видео', labelAfterResume: 'Пауза видео',
         ariaAfterPause: 'Включить фоновое видео', ariaAfterResume: 'Приостановить фоновое видео'
       },
-      reducedMotion: { reducedMotion: true, saveData: false, controlSuppressed: true, sourceLoaded: false, videoRequestCount: 0 },
-      saveData: { reducedMotion: false, saveData: true, controlSuppressed: true, sourceLoaded: false, videoRequestCount: 0 }
+      reducedMotion: { reducedMotion: true, saveData: false, controlReady: true, sourceLoaded: false, videoRequestCount: 0,
+          explicitPlayback: { controlReady: true, sourceLoaded: true, videoRequestCount: 1, playing: true,
+            startTime: 0, advancedTime: 0.25, pausedAfterPause: true, pausedTime: 0.3, settledPauseTime: 0.3,
+            labelAfterPause: 'Включить видео', ariaAfterPause: 'Включить фоновое видео' } },
+      saveData: { reducedMotion: false, saveData: true, controlReady: true, sourceLoaded: false, videoRequestCount: 0,
+          explicitPlayback: { controlReady: true, sourceLoaded: true, videoRequestCount: 1, playing: true,
+            startTime: 0, advancedTime: 0.25, pausedAfterPause: true, pausedTime: 0.3, settledPauseTime: 0.3,
+            labelAfterPause: 'Включить видео', ariaAfterPause: 'Включить фоновое видео' } }
     }
   };
   if (id === 'cookie-notice') return {

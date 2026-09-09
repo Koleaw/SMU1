@@ -297,8 +297,18 @@ export function validatePublicActionEvidence(report, {
         const profileIdentity = profile === 'reduced-motion'
           ? value?.reducedMotion === true && value?.saveData === false
           : value?.reducedMotion === false && value?.saveData === true;
-        if (!profileIdentity || value?.controlSuppressed !== true || value?.sourceLoaded !== false || value?.videoRequestCount !== 0) {
+        if (!profileIdentity || value?.controlReady !== true || value?.sourceLoaded !== false || value?.videoRequestCount !== 0) {
           issues.push(`public-actions:lifecycle-home-video-${profile}`);
+        }
+        const explicit = value?.explicitPlayback;
+        if (explicit?.controlReady !== true || explicit?.sourceLoaded !== true || !(explicit?.videoRequestCount > 0)
+          || explicit?.playing !== true || !Number.isFinite(explicit?.startTime) || !Number.isFinite(explicit?.advancedTime)
+          || !(explicit.advancedTime > explicit.startTime + 0.05) || explicit?.pausedAfterPause !== true
+          || !Number.isFinite(explicit?.pausedTime) || !Number.isFinite(explicit?.settledPauseTime)
+          || Math.abs(explicit.settledPauseTime - explicit.pausedTime) > 0.1
+          || !/включить видео/iu.test(explicit?.labelAfterPause || '')
+          || !/включить фоновое видео/iu.test(explicit?.ariaAfterPause || '')) {
+          issues.push(`public-actions:lifecycle-home-video-${profile}-explicit-playback`);
         }
       }
     } else if (id === 'cookie-notice') {

@@ -168,8 +168,14 @@ test('public action evidence requires each viewport, click, keyboard and no-JS r
           labelAfterPause: 'Включить видео', labelAfterResume: 'Пауза видео',
           ariaAfterPause: 'Включить фоновое видео', ariaAfterResume: 'Приостановить фоновое видео'
         },
-        reducedMotion: { reducedMotion: true, saveData: false, controlSuppressed: true, sourceLoaded: false, videoRequestCount: 0 },
-        saveData: { reducedMotion: false, saveData: true, controlSuppressed: true, sourceLoaded: false, videoRequestCount: 0 }
+        reducedMotion: { reducedMotion: true, saveData: false, controlReady: true, sourceLoaded: false, videoRequestCount: 0,
+          explicitPlayback: { controlReady: true, sourceLoaded: true, videoRequestCount: 1, playing: true,
+            startTime: 0, advancedTime: 0.25, pausedAfterPause: true, pausedTime: 0.3, settledPauseTime: 0.3,
+            labelAfterPause: 'Включить видео', ariaAfterPause: 'Включить фоновое видео' } },
+        saveData: { reducedMotion: false, saveData: true, controlReady: true, sourceLoaded: false, videoRequestCount: 0,
+          explicitPlayback: { controlReady: true, sourceLoaded: true, videoRequestCount: 1, playing: true,
+            startTime: 0, advancedTime: 0.25, pausedAfterPause: true, pausedTime: 0.3, settledPauseTime: 0.3,
+            labelAfterPause: 'Включить видео', ariaAfterPause: 'Включить фоновое видео' } }
       }
     }, {
       id: 'cookie-notice', route: '/', status: 'pass', issues: [], events: [],
@@ -206,6 +212,21 @@ test('public action evidence requires each viewport, click, keyboard and no-JS r
   const unsuppressedVideo = structuredClone(report);
   unsuppressedVideo.publicLifecycleSemantics[0].evidence.saveData.sourceLoaded = true;
   assert.match(validatePublicActionEvidence(unsuppressedVideo, { authoritativeRoutes: [route] }).issues.join('\n'), /lifecycle-home-video-save-data/u);
+  for (const profile of ['reducedMotion', 'saveData']) {
+    for (const mutation of [
+      (value) => { value.controlReady = false; },
+      (value) => { value.videoRequestCount = 1; },
+      (value) => { delete value.explicitPlayback; },
+      (value) => { value.explicitPlayback.videoRequestCount = 0; },
+      (value) => { value.explicitPlayback.advancedTime = value.explicitPlayback.startTime; },
+      (value) => { value.explicitPlayback.pausedAfterPause = false; },
+      (value) => { value.explicitPlayback.settledPauseTime = value.explicitPlayback.pausedTime + 0.5; }
+    ]) {
+      const invalidPlayback = structuredClone(report);
+      mutation(invalidPlayback.publicLifecycleSemantics[0].evidence[profile]);
+      assert.match(validatePublicActionEvidence(invalidPlayback, { authoritativeRoutes: [route] }).issues.join('\n'), /lifecycle-home-video-/u);
+    }
+  }
   report.routeResults[0].actionResults[0].executions.pop();
   assert.match(validatePublicActionEvidence(report, { authoritativeRoutes: [route] }).issues.join('\n'), /execution-gap/u);
 
