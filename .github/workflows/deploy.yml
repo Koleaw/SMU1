@@ -145,7 +145,8 @@ jobs:
         run: npm run test:h6-evidence-contracts
 
       - name: Restore responsive media build cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        id: responsive-media-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: public/_media/h5
           key: ${{ runner.os }}-node22-h5-media-v2-${{ github.sha }}
@@ -178,6 +179,13 @@ jobs:
         run: npm run qa:performance
         env:
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
+
+      - name: Save validated responsive media build cache
+        if: success() && steps.responsive-media-cache.outputs.cache-hit != 'true' && hashFiles('public/_media/h5/manifest.json') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: public/_media/h5
+          key: ${{ steps.responsive-media-cache.outputs.cache-primary-key }}
 
       - name: Validate final source and rendered contracts
         run: npm run qa:final:static

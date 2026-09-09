@@ -8,6 +8,9 @@ import path from 'node:path';
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const ANALYTICS_OR_FORM_URL = /(?:mc\.yandex\.ru|metrika|webvisor|google-analytics\.com|googletagmanager\.com|formspree\.io|api\.web3forms\.com)/iu;
 const ADMIN_RELEASE_URL = /\/api\/admin\/(?:publish|release|rollback|production)(?=\/|-|$|\?)/iu;
+const documentReplacementError = (error) => error?.cdpMethod === 'Runtime.evaluate'
+  && /^(?:Execution context was destroyed|Cannot find context with specified id|Inspected target navigated or closed)(?:[. :].*)?$/iu
+    .test(String(error.cdpMessage || ''));
 
 export function isAdminReleaseMutationRequest({ method = 'GET', url = '' } = {}) {
   return !['GET', 'HEAD', 'OPTIONS'].includes(String(method).toUpperCase()) && ADMIN_RELEASE_URL.test(String(url));
@@ -204,7 +207,10 @@ export class CdpBrowser {
         const pending = this.pending.get(message.id);
         if (!pending) return;
         this.pending.delete(message.id);
-        if (message.error) pending.reject(new Error(message.error.message));
+        if (message.error) pending.reject(Object.assign(
+          new Error(`Chrome DevTools ${pending.method} failed: ${message.error.message}`),
+          { name: 'CdpProtocolError', cdpMethod: pending.method, cdpCode: message.error.code, cdpMessage: message.error.message }
+        ));
         else pending.resolve(message.result || {});
         return;
       }
@@ -304,6 +310,7 @@ export class CdpBrowser {
         callback(value);
       };
       this.pending.set(id, {
+        method,
         resolve: (value) => finish(resolve, value),
         reject: (error) => finish(reject, error)
       });
@@ -356,8 +363,8 @@ export class CdpBrowser {
     if (failures.length > 1) throw new AggregateError(failures, 'Multiple unexpected background JavaScript dialogs were observed.');
   }
 
-  async evaluate(expression, { awaitPromise = true } = {}) {
-    const response = await this.send('Runtime.evaluate', { expression, awaitPromise, returnByValue: true, userGesture: true });
+  async evaluate(expression, { awaitPromise = true, timeoutMs = this.commandTimeoutMs } = {}) {
+    const response = await this.send('Runtime.evaluate', { expression, awaitPromise, returnByValue: true, userGesture: true }, { timeoutMs });
     if (response.exceptionDetails) {
       throw new Error(response.exceptionDetails.exception?.description || response.exceptionDetails.text || 'Runtime evaluation failed.');
     }
@@ -396,29 +403,61 @@ export class CdpBrowser {
     const ready = readyWaiter.promise.catch(() => null);
     let navigation = null;
     let navigationFailure = null;
+    const diagnostics = { requestedUrl: url, phase: 'navigate', readinessAttempts: 0, replacements: [], finalUrl: '' };
+    this.lastNavigation = diagnostics;
     try {
       navigation = await this.send('Page.navigate', { url });
       await Promise.all(dialogContext.tasks);
       if (dialogContext.failure) throw dialogContext.failure;
       if (navigation.errorText) throw new Error(`Navigation failed for ${url}: ${navigation.errorText}`);
       await ready;
+      diagnostics.phase = 'document-readiness';
       const deadline = Date.now() + 5_000;
+      let settled = false;
       while (Date.now() < deadline) {
-        if (await this.evaluate("document.readyState !== 'loading'", { awaitPromise: !scriptExecutionDisabled }).catch(() => false)) break;
-        await delay(40);
+        diagnostics.readinessAttempts += 1;
+        const remaining = () => Math.max(1, deadline - Date.now());
+        try {
+          const before = (await this.send('Page.getFrameTree', {}, { timeoutMs: remaining() })).frameTree.frame;
+          diagnostics.finalUrl = before.url;
+          const documentReady = await this.evaluate("document.readyState !== 'loading'", {
+            awaitPromise: !scriptExecutionDisabled, timeoutMs: remaining()
+          });
+          if (!documentReady) { await delay(40); continue; }
+          if (!scriptExecutionDisabled) {
+            await this.evaluate(`(async () => {
+              if (${waitForFonts ? 'true' : 'false'} && document.fonts?.ready) await Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 900))]);
+              await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+              return true;
+            })()`, { timeoutMs: remaining() });
+          }
+          if (waitAfterMs) await delay(Math.min(waitAfterMs, remaining()));
+          const after = (await this.send('Page.getFrameTree', {}, { timeoutMs: remaining() })).frameTree.frame;
+          diagnostics.finalUrl = after.url;
+          if (before.loaderId !== after.loaderId) {
+            diagnostics.replacements.push({ reason: 'main-frame-loader-changed', from: before.url, to: after.url });
+            continue;
+          }
+          settled = true;
+          break;
+        } catch (error) {
+          // Only repeat our read-only document/font readiness after a redirect.
+          // Never replay a caller's evaluate/click or swallow a JavaScript error.
+          if (!documentReplacementError(error)) throw error;
+          // A genuinely closed target also uses this CDP error text; this
+          // context-independent command must still succeed before we retry.
+          const frame = (await this.send('Page.getFrameTree', {}, { timeoutMs: remaining() })).frameTree.frame;
+          diagnostics.finalUrl = frame.url;
+          diagnostics.replacements.push({ reason: error.cdpMessage, url: frame.url });
+          await delay(Math.min(40, remaining()));
+        }
       }
-      if (!scriptExecutionDisabled) {
-        await this.evaluate(`(async () => {
-          if (${waitForFonts ? 'true' : 'false'} && document.fonts?.ready) await Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 900))]);
-          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-          return true;
-        })()`);
-      }
-      if (waitAfterMs) await delay(waitAfterMs);
+      if (!settled) throw new Error(`Document readiness did not settle within 5000ms for ${url}.`);
+      diagnostics.phase = 'settled';
     } catch (error) {
       navigationFailure = error;
     } finally {
-      await this.send('Runtime.evaluate', { expression: 'void 0', returnByValue: true }, { timeoutMs: 1_500 }).catch((error) => {
+      await this.send('Page.getFrameTree', {}, { timeoutMs: 1_500 }).catch((error) => {
         if (!navigationFailure && !dialogContext.failure) navigationFailure = error;
       });
       await delay(0);
@@ -431,7 +470,11 @@ export class CdpBrowser {
       });
     }
     if (dialogContext.failure) throw dialogContext.failure;
-    if (navigationFailure) throw navigationFailure;
+    if (navigationFailure) {
+      navigationFailure.navigation = diagnostics;
+      navigationFailure.message += ` [navigation ${JSON.stringify(diagnostics)}]`;
+      throw navigationFailure;
+    }
     return navigation;
   }
 

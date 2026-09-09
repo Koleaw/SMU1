@@ -85,7 +85,10 @@ const mediaBinding = cardImageUsesPrimary
 ---
 
 <a
-  class:list={['v2-category-card', { 'v2-category-card--featured': featured }]}
+  class:list={['v2-category-card', {
+    'v2-category-card--featured': featured,
+    'v2-product-card--editor-missing-media': !hasMedia && editorCanvas
+  }]}
   href={withBase(href)}
   data-v2-transition-label={category.title}
   data-v2-category-state={state}
@@ -97,7 +100,12 @@ const mediaBinding = cardImageUsesPrimary
     permissions: { edit: true, reorder: true, delete: false }
   })}
 >
-  {(hasMedia || editorCanvas) && <div class="v2-category-card__media" data-v2-media {...mediaBinding}>
+  {(hasMedia || editorCanvas) && <div
+    class:list={['v2-category-card__media', { 'v2-product-card__media--editor-affordance': !hasMedia }]}
+    data-v2-media
+    data-smu1-editor-affordance={!hasMedia ? 'missing-category-media' : undefined}
+    {...mediaBinding}
+  >
     {cardImage ? (
       <V2ResponsiveImage
         src={cardImage}
@@ -110,7 +118,7 @@ const mediaBinding = cardImageUsesPrimary
         data-v2-image
       />
     ) : null}
-    <div class="v2-media-empty" aria-hidden={hasMedia}>
+    <div class:list={['v2-media-empty', { 'v2-media-empty--editor-affordance': !hasMedia }]} aria-hidden={hasMedia}>
       <p {...catalogUiBinding('emptyMediaLabel')}>{cardCopy.emptyMediaLabel}</p>
     </div>
   </div>}

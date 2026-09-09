@@ -841,7 +841,17 @@ const warmFontCache = async () => {
 };
 
 const routeResults = [];
+const unknownResults = [];
 const archivePresentation = new Map();
+const reportFailedRoutes = (results) => results.filter((result) => result.status === 'fail').forEach((result) => {
+  progress(`FAIL ${JSON.stringify({
+    route: result.route || REAL_UNKNOWN_ROUTE,
+    viewport: result.viewport?.id || result.viewport,
+    issues: result.issues,
+    editorEquivalenceIssues: result.editor?.equivalence?.issues || [],
+    stableGeometryIssues: result.editor?.equivalence?.normalization?.stableGeometryIssues || []
+  })}`);
+});
 try {
   const fontWarmup = await warmFontCache();
   progress(`authoritative manifest reconciled: ${model.routes.length} concrete routes`);
@@ -1092,7 +1102,6 @@ try {
     }
   }
 
-  const unknownResults = [];
   const notFoundExpected = model.routes.find((route) => route.pathname === '/404.html');
   for (const viewport of REQUIRED_VIEWPORTS) {
     current.route = REAL_UNKNOWN_ROUTE;
@@ -1341,10 +1350,35 @@ try {
   };
   await mkdir(path.dirname(options.output), { recursive: true });
   await writeFile(options.output, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
+  reportFailedRoutes([...routeResults, ...unknownResults]);
   progress(`passport written to ${path.relative(root, options.output)}; ${output.aggregate.passed}/${routeResults.length} route/viewports passed`);
   if (options.json) process.stdout.write(`${JSON.stringify(output)}\n`);
   else process.stdout.write(`${JSON.stringify({ manifest: output.manifest, aggregate: output.aggregate, output: options.output }, null, 2)}\n`);
   if (!artifactIsolation.clean || failed.length || unknownResults.some((result) => result.status === 'fail')) process.exitCode = 1;
+} catch (error) {
+  const partialPath = options.output.replace(/(?:\.json)?$/u, '.partial.json');
+  const partial = {
+    kind: 'smu1-route-passport-partial', complete: false,
+    generatedAt: new Date().toISOString(), sourceSHA: git('rev-parse', 'HEAD'),
+    current: { ...current },
+    fatal: {
+      name: error.name, message: error.message, stack: error.stack,
+      cdpMethod: error.cdpMethod, cdpCode: error.cdpCode,
+      navigation: error.navigation || browser.lastNavigation || null
+    },
+    routeResults, unknownResults, events, documentResponses,
+    browserSafety: browser.safetyEvidence()
+  };
+  reportFailedRoutes([...routeResults, ...unknownResults]);
+  progress(`FATAL ${JSON.stringify({ current, error: partial.fatal })}`);
+  try {
+    await mkdir(path.dirname(partialPath), { recursive: true });
+    await writeFile(partialPath, `${JSON.stringify(partial, null, 2)}\n`, 'utf8');
+    progress(`incomplete diagnostic passport written to ${partialPath}`);
+  } catch (writeError) {
+    progress(`could not write partial diagnostic passport: ${writeError.message}`);
+  }
+  throw error;
 } finally {
   await browser.close();
   await distServer?.close();

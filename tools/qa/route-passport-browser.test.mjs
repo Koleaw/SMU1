@@ -174,7 +174,7 @@ test('local editor canvas keeps production visual selectors while disabling only
   assert.match(layout, /const stylesheetUrl = \(value: string\) => import\.meta\.env\.DEV/u);
   assert.match(layout, /const fontStylesheetUrl = withBase\('\/assets\/fonts\/manrope\/fonts\.css'\)/u);
   assert.doesNotMatch(layout, /fonts\.(?:googleapis|gstatic)\.com/u);
-  assert.match(layout, /\[400, 600, 700\]\.map\(\(weight\) => <link\s+href=\{withBase\(`\/assets\/fonts\/manrope\/manrope-\$\{weight\}-latin-cyrillic\.woff2`\)\}\s+rel="preload"\s+as="font"\s+type="font\/woff2"\s+crossorigin/u);
+  assert.match(layout, /\[400, 500, 600, 700\]\.map\(\(weight\) => <link\s+href=\{withBase\(`\/assets\/fonts\/manrope\/manrope-\$\{weight\}-latin-cyrillic\.woff2`\)\}\s+rel="preload"\s+as="font"\s+type="font\/woff2"\s+crossorigin/u);
   const fonts = await readFile(new URL('../../public/assets/fonts/manrope/fonts.css', import.meta.url), 'utf8');
   const faces = [...fonts.matchAll(/@font-face\s*\{([^}]+)\}/gu)].map((match) => match[1]);
   assert.equal(faces.length, 4);

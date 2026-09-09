@@ -2,14 +2,14 @@
   "status": "pass",
   "summary": {
     "artifact": {
-      "bytesAfter": 414013926,
-      "bytesBefore": 414013926,
+      "bytesAfter": 414041964,
+      "bytesBefore": 414041964,
       "duplicateGroups": 12,
       "duplicateWastedBytes": 17594638,
       "files": 4342,
       "mediaBytes": 390617582,
       "mediaFiles": 4061,
-      "nonMediaBytes": 23396344,
+      "nonMediaBytes": 23424382,
       "nonMediaFiles": 281,
       "referencedMediaBytes": 390617582,
       "referencedMediaFiles": 4061,
@@ -108,777 +108,777 @@
   "routes": [
     {
       "route": "/404.html",
-      "htmlGzipBytes": 17867,
+      "htmlGzipBytes": 17871,
       "cssGzipBytes": 44660,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/blagoustroystvo-territoriy/",
-      "htmlGzipBytes": 22530,
+      "htmlGzipBytes": 22538,
       "cssGzipBytes": 64399,
       "jsGzipBytes": 22872,
       "fontBytes": 91140
     },
     {
       "route": "/",
-      "htmlGzipBytes": 22528,
+      "htmlGzipBytes": 22532,
       "cssGzipBytes": 43121,
       "jsGzipBytes": 24425,
       "fontBytes": 91140
     },
     {
       "route": "/izgotovlenie-na-zakaz/",
-      "htmlGzipBytes": 19050,
+      "htmlGzipBytes": 19055,
       "cssGzipBytes": 59500,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/kontakty/",
-      "htmlGzipBytes": 19286,
+      "htmlGzipBytes": 19290,
       "cssGzipBytes": 50024,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/lavochki-i-skameyki/",
-      "htmlGzipBytes": 5930,
+      "htmlGzipBytes": 5934,
       "cssGzipBytes": 43747,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/metallokonstruktsii-dlya-biznesa/",
-      "htmlGzipBytes": 23231,
+      "htmlGzipBytes": 23237,
       "cssGzipBytes": 64399,
       "jsGzipBytes": 22872,
       "fontBytes": 91140
     },
     {
       "route": "/navesy-i-kozyrki/",
-      "htmlGzipBytes": 24067,
+      "htmlGzipBytes": 24071,
       "cssGzipBytes": 75537,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
       "route": "/navesy/",
-      "htmlGzipBytes": 5894,
+      "htmlGzipBytes": 5898,
       "cssGzipBytes": 43747,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/o-nas/",
-      "htmlGzipBytes": 23095,
+      "htmlGzipBytes": 23102,
       "cssGzipBytes": 63443,
       "jsGzipBytes": 24986,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/dekorativnye-ograzhdeniya/",
-      "htmlGzipBytes": 18009,
+      "htmlGzipBytes": 18014,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/gazonnye-ograzhdeniya/",
-      "htmlGzipBytes": 23495,
+      "htmlGzipBytes": 23499,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 23710,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/",
-      "htmlGzipBytes": 22684,
+      "htmlGzipBytes": 22688,
       "cssGzipBytes": 76468,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/kalitki/",
-      "htmlGzipBytes": 21744,
+      "htmlGzipBytes": 21748,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 23710,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/ograzhdeniya-kontejnernyh-ploshchadok/",
-      "htmlGzipBytes": 21327,
+      "htmlGzipBytes": 21332,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/ograzhdeniya-kontejnernyh-ploshchadok/konteynernaya-ploshchadka-duo/",
-      "htmlGzipBytes": 19506,
+      "htmlGzipBytes": 19510,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 22872,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/ograzhdeniya-kontejnernyh-ploshchadok/konteynernaya-ploshchadka-modul/",
-      "htmlGzipBytes": 19425,
+      "htmlGzipBytes": 19429,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 22872,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/ograzhdeniya-kontejnernyh-ploshchadok/konteynernaya-ploshchadka-zakrytaya/",
-      "htmlGzipBytes": 19451,
+      "htmlGzipBytes": 19455,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 22872,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/perila-i-poruchni/",
-      "htmlGzipBytes": 19464,
+      "htmlGzipBytes": 19468,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 23710,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/sekcionnye-ograzhdeniya/",
-      "htmlGzipBytes": 20676,
+      "htmlGzipBytes": 20681,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 23710,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/stolbiki-i-bollardy/",
-      "htmlGzipBytes": 18050,
+      "htmlGzipBytes": 18055,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/vorota/",
-      "htmlGzipBytes": 20710,
+      "htmlGzipBytes": 20714,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 23710,
       "fontBytes": 91140
     },
     {
       "route": "/ograzhdeniya-i-zabory/zabory/",
-      "htmlGzipBytes": 24506,
+      "htmlGzipBytes": 24511,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 23710,
       "fontBytes": 91140
     },
     {
       "route": "/politika-konfidencialnosti/",
-      "htmlGzipBytes": 20445,
+      "htmlGzipBytes": 20449,
       "cssGzipBytes": 50024,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/stroitelstvo-i-remonty/",
-      "htmlGzipBytes": 23068,
+      "htmlGzipBytes": 23075,
       "cssGzipBytes": 64399,
       "jsGzipBytes": 22872,
       "fontBytes": 91140
     },
     {
       "route": "/topiarii/",
-      "htmlGzipBytes": 21491,
+      "htmlGzipBytes": 21496,
       "cssGzipBytes": 75537,
       "jsGzipBytes": 22872,
       "fontBytes": 91140
     },
     {
       "route": "/ulichnaya-mebel/besedki-i-pergoly/besedka-kofe/",
-      "htmlGzipBytes": 23188,
+      "htmlGzipBytes": 23193,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
       "route": "/ulichnaya-mebel/besedki-i-pergoly/besedka-kub/",
-      "htmlGzipBytes": 23209,
+      "htmlGzipBytes": 23214,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
       "route": "/ulichnaya-mebel/besedki-i-pergoly/",
-      "htmlGzipBytes": 20348,
+      "htmlGzipBytes": 20351,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 22872,
       "fontBytes": 91140
     },
     {
       "route": "/ulichnaya-mebel/besedki-i-pergoly/pergola-lamel/",
-      "htmlGzipBytes": 23090,
+      "htmlGzipBytes": 23095,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
       "route": "/ulichnaya-mebel/besedki-i-pergoly/pergola-s-lavkoy/",
-      "htmlGzipBytes": 23091,
+      "htmlGzipBytes": 23096,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
       "route": "/ulichnaya-mebel/",
-      "htmlGzipBytes": 22297,
+      "htmlGzipBytes": 22302,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/ulichnaya-mebel/kacheli/",
-      "htmlGzipBytes": 20750,
+      "htmlGzipBytes": 20754,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 22872,
       "fontBytes": 91140
     },
     {
       "route": "/ulichnaya-mebel/kacheli/kachel-duga/",
-      "htmlGzipBytes": 22593,
+      "htmlGzipBytes": 22598,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
       "route": "/ulichnaya-mebel/kacheli/kachel-patio/",
-      "htmlGzipBytes": 22565,
+      "htmlGzipBytes": 22570,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
       "route": "/ulichnaya-mebel/kacheli/kachel-portal/",
-      "htmlGzipBytes": 23671,
+      "htmlGzipBytes": 23675,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
       "route": "/ulichnaya-mebel/kacheli/kachel-s-navesom/",
-      "htmlGzipBytes": 22609,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/kacheli/kacheli-pergola/",
-      "htmlGzipBytes": 23251,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/kacheli/kacheli-s-dlinnym-navesom/",
-      "htmlGzipBytes": 23253,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/bolshaya-skameyka-amplituda/",
-      "htmlGzipBytes": 23499,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/",
-      "htmlGzipBytes": 23250,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 22872,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-bulvar/",
-      "htmlGzipBytes": 22739,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-kapsula/",
-      "htmlGzipBytes": 22722,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-kontur/",
-      "htmlGzipBytes": 22605,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-liniya-so-spinkami/",
-      "htmlGzipBytes": 22698,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-liniya/",
-      "htmlGzipBytes": 22639,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-loft/",
-      "htmlGzipBytes": 22629,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-park/",
-      "htmlGzipBytes": 22724,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-plato/",
-      "htmlGzipBytes": 22727,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-podium/",
-      "htmlGzipBytes": 22763,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-radius-so-spinkami/",
-      "htmlGzipBytes": 22665,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-radius/",
-      "htmlGzipBytes": 22656,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-reyka/",
-      "htmlGzipBytes": 22692,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-skoba/",
-      "htmlGzipBytes": 22678,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-smu1-bazovaya/",
-      "htmlGzipBytes": 21139,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-volna/",
       "htmlGzipBytes": 22614,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/malye-elementy/",
-      "htmlGzipBytes": 19296,
+      "route": "/ulichnaya-mebel/kacheli/kacheli-pergola/",
+      "htmlGzipBytes": 23256,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/kacheli/kacheli-s-dlinnym-navesom/",
+      "htmlGzipBytes": 23258,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/bolshaya-skameyka-amplituda/",
+      "htmlGzipBytes": 23504,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/",
+      "htmlGzipBytes": 23255,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 22872,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/malye-elementy/sidenie-kub/",
-      "htmlGzipBytes": 21867,
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-bulvar/",
+      "htmlGzipBytes": 22744,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/malye-elementy/sidenie-pilon/",
-      "htmlGzipBytes": 21886,
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-kapsula/",
+      "htmlGzipBytes": 22727,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/navesy/ekran-s-navesom/",
-      "htmlGzipBytes": 22218,
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-kontur/",
+      "htmlGzipBytes": 22610,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/navesy/",
-      "htmlGzipBytes": 19765,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 22872,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/navesy/naves-galereya/",
-      "htmlGzipBytes": 22827,
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-liniya-so-spinkami/",
+      "htmlGzipBytes": 22703,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/navesy/naves-terra/",
-      "htmlGzipBytes": 22193,
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-liniya/",
+      "htmlGzipBytes": 22644,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/shezlongi/",
-      "htmlGzipBytes": 19813,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 22872,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/shezlongi/shezlong-dyuna/",
-      "htmlGzipBytes": 22332,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/shezlongi/shezlong-siluet/",
-      "htmlGzipBytes": 22412,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/shezlongi/shezlong-vitok/",
-      "htmlGzipBytes": 22393,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/shezlongi/shezlong-volna/",
-      "htmlGzipBytes": 22355,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/stoly-i-komplekty/",
-      "htmlGzipBytes": 19099,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 22872,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/stoly-i-komplekty/stol-so-skamyami-orbita/",
-      "htmlGzipBytes": 21391,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-liniya/",
-      "htmlGzipBytes": 22595,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-mayak/",
-      "htmlGzipBytes": 22609,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-prizma/",
-      "htmlGzipBytes": 22564,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-sektor/",
-      "htmlGzipBytes": 22632,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-vektor-vysokiy/",
-      "htmlGzipBytes": 22545,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-vektor/",
-      "htmlGzipBytes": 22551,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/",
-      "htmlGzipBytes": 20746,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 22872,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/urny/",
-      "htmlGzipBytes": 21969,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 22872,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/urny/stantsiya-razdelnogo-sbora/",
-      "htmlGzipBytes": 22720,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/urny/urna-blok/",
-      "htmlGzipBytes": 22580,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/urny/urna-ellips/",
-      "htmlGzipBytes": 22704,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/urny/urna-kolonna/",
-      "htmlGzipBytes": 22611,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/urny/urna-layn/",
-      "htmlGzipBytes": 22633,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/urny/urna-monolit/",
-      "htmlGzipBytes": 22643,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/urny/urna-panel/",
-      "htmlGzipBytes": 22585,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/urny/urna-profil/",
-      "htmlGzipBytes": 22656,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/urny/urna-slim/",
-      "htmlGzipBytes": 22747,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/urny/urna-vertikal/",
-      "htmlGzipBytes": 22636,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/",
-      "htmlGzipBytes": 21266,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 22872,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-gorizont/",
-      "htmlGzipBytes": 22604,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-koltso/",
-      "htmlGzipBytes": 22645,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-kontur/",
-      "htmlGzipBytes": 22602,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-lenta/",
-      "htmlGzipBytes": 22618,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-oval/",
-      "htmlGzipBytes": 22696,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-ritm/",
-      "htmlGzipBytes": 22620,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-soft/",
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-loft/",
       "htmlGzipBytes": 22634,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/veloparkovki/",
-      "htmlGzipBytes": 20988,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 22872,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/veloparkovki/parkovka-dlya-samokatov-arka/",
-      "htmlGzipBytes": 22597,
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-park/",
+      "htmlGzipBytes": 22728,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/veloparkovki/veloparkovka-duga/",
-      "htmlGzipBytes": 22611,
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-plato/",
+      "htmlGzipBytes": 22732,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/veloparkovki/veloparkovka-marker/",
-      "htmlGzipBytes": 22652,
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-podium/",
+      "htmlGzipBytes": 22768,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/veloparkovki/veloparkovka-pik/",
-      "htmlGzipBytes": 22600,
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-radius-so-spinkami/",
+      "htmlGzipBytes": 22670,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
-      "route": "/ulichnaya-mebel/veloparkovki/veloparkovka-pilon/",
-      "htmlGzipBytes": 22638,
-      "cssGzipBytes": 57685,
-      "jsGzipBytes": 24810,
-      "fontBytes": 91140
-    },
-    {
-      "route": "/ulichnaya-mebel/veloparkovki/veloparkovka-ramka/",
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-radius/",
       "htmlGzipBytes": 22661,
       "cssGzipBytes": 57685,
       "jsGzipBytes": 24810,
       "fontBytes": 91140
     },
     {
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-reyka/",
+      "htmlGzipBytes": 22697,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-skoba/",
+      "htmlGzipBytes": 22683,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-smu1-bazovaya/",
+      "htmlGzipBytes": 21144,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-volna/",
+      "htmlGzipBytes": 22619,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/malye-elementy/",
+      "htmlGzipBytes": 19301,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 22872,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/malye-elementy/sidenie-kub/",
+      "htmlGzipBytes": 21871,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/malye-elementy/sidenie-pilon/",
+      "htmlGzipBytes": 21890,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/navesy/ekran-s-navesom/",
+      "htmlGzipBytes": 22223,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/navesy/",
+      "htmlGzipBytes": 19769,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 22872,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/navesy/naves-galereya/",
+      "htmlGzipBytes": 22832,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/navesy/naves-terra/",
+      "htmlGzipBytes": 22198,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/shezlongi/",
+      "htmlGzipBytes": 19817,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 22872,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/shezlongi/shezlong-dyuna/",
+      "htmlGzipBytes": 22337,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/shezlongi/shezlong-siluet/",
+      "htmlGzipBytes": 22417,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/shezlongi/shezlong-vitok/",
+      "htmlGzipBytes": 22398,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/shezlongi/shezlong-volna/",
+      "htmlGzipBytes": 22360,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/stoly-i-komplekty/",
+      "htmlGzipBytes": 19103,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 22872,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/stoly-i-komplekty/stol-so-skamyami-orbita/",
+      "htmlGzipBytes": 21396,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-liniya/",
+      "htmlGzipBytes": 22600,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-mayak/",
+      "htmlGzipBytes": 22620,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-prizma/",
+      "htmlGzipBytes": 22568,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-sektor/",
+      "htmlGzipBytes": 22637,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-vektor-vysokiy/",
+      "htmlGzipBytes": 22550,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/fonar-vektor/",
+      "htmlGzipBytes": 22555,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/ulichnoe-osveshchenie/",
+      "htmlGzipBytes": 20750,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 22872,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/urny/",
+      "htmlGzipBytes": 21974,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 22872,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/urny/stantsiya-razdelnogo-sbora/",
+      "htmlGzipBytes": 22724,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/urny/urna-blok/",
+      "htmlGzipBytes": 22585,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/urny/urna-ellips/",
+      "htmlGzipBytes": 22709,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/urny/urna-kolonna/",
+      "htmlGzipBytes": 22616,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/urny/urna-layn/",
+      "htmlGzipBytes": 22638,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/urny/urna-monolit/",
+      "htmlGzipBytes": 22648,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/urny/urna-panel/",
+      "htmlGzipBytes": 22590,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/urny/urna-profil/",
+      "htmlGzipBytes": 22661,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/urny/urna-slim/",
+      "htmlGzipBytes": 22752,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/urny/urna-vertikal/",
+      "htmlGzipBytes": 22641,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/",
+      "htmlGzipBytes": 21270,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 22872,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-gorizont/",
+      "htmlGzipBytes": 22609,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-koltso/",
+      "htmlGzipBytes": 22650,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-kontur/",
+      "htmlGzipBytes": 22607,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-lenta/",
+      "htmlGzipBytes": 22623,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-oval/",
+      "htmlGzipBytes": 22701,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-ritm/",
+      "htmlGzipBytes": 22625,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/vazony-i-tsvetochnitsy/vazon-soft/",
+      "htmlGzipBytes": 22639,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/veloparkovki/",
+      "htmlGzipBytes": 20992,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 22872,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/veloparkovki/parkovka-dlya-samokatov-arka/",
+      "htmlGzipBytes": 22602,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/veloparkovki/veloparkovka-duga/",
+      "htmlGzipBytes": 22616,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/veloparkovki/veloparkovka-marker/",
+      "htmlGzipBytes": 22656,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/veloparkovki/veloparkovka-pik/",
+      "htmlGzipBytes": 22605,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/veloparkovki/veloparkovka-pilon/",
+      "htmlGzipBytes": 22643,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
+      "route": "/ulichnaya-mebel/veloparkovki/veloparkovka-ramka/",
+      "htmlGzipBytes": 22666,
+      "cssGzipBytes": 57685,
+      "jsGzipBytes": 24810,
+      "fontBytes": 91140
+    },
+    {
       "route": "/urny/",
-      "htmlGzipBytes": 5908,
+      "htmlGzipBytes": 5913,
       "cssGzipBytes": 43747,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/vakansii/",
-      "htmlGzipBytes": 17405,
+      "htmlGzipBytes": 17409,
       "cssGzipBytes": 50024,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/vakansii/svarshchik-metallokonstruktsiy/",
-      "htmlGzipBytes": 17749,
+      "htmlGzipBytes": 17753,
       "cssGzipBytes": 50024,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/vypolnennye-obekty/blagoustroystvo-naberezhnoy-reki-tobol/",
-      "htmlGzipBytes": 21334,
+      "htmlGzipBytes": 21338,
       "cssGzipBytes": 49435,
       "jsGzipBytes": 24750,
       "fontBytes": 91140
     },
     {
       "route": "/vypolnennye-obekty/gorodskie-kacheli-dlya-obshchestvennyh-territoriy/",
-      "htmlGzipBytes": 21645,
+      "htmlGzipBytes": 21649,
       "cssGzipBytes": 49435,
       "jsGzipBytes": 24750,
       "fontBytes": 91140
     },
     {
       "route": "/vypolnennye-obekty/",
-      "htmlGzipBytes": 19641,
+      "htmlGzipBytes": 19646,
       "cssGzipBytes": 49435,
       "jsGzipBytes": 21772,
       "fontBytes": 91140
     },
     {
       "route": "/vypolnennye-obekty/kompleks-rabot-na-proizvodstvennoy-territorii/",
-      "htmlGzipBytes": 23998,
+      "htmlGzipBytes": 24003,
       "cssGzipBytes": 49435,
       "jsGzipBytes": 24750,
       "fontBytes": 91140
     },
     {
       "route": "/vypolnennye-obekty/remont-skvera-na-ulitse-gogolya/",
-      "htmlGzipBytes": 18278,
+      "htmlGzipBytes": 18282,
       "cssGzipBytes": 49435,
       "jsGzipBytes": 22872,
       "fontBytes": 91140
