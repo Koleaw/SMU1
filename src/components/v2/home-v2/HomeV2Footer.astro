@@ -137,7 +137,7 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
       <p id="hv2-footer-contacts-title" {...globalBinding('shellLabels.directContactGroup')}>{shellLabels.directContactGroup}</p>
       {catalogV2 && (
         <a
-          class="hv2-footer__mobile-cta"
+          class="hv2-footer__mobile-cta hv2-button hv2-button--contrast"
           href={resolveHref(contactHref)}
           data-v2-transition-label={contactTransitionLabel}
           {...(Object.keys(mobileCtaBinding).length > 0
@@ -147,7 +147,7 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
       )}
       <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`} {...globalBinding('phonePrimary', 'link', { hrefPath: 'phonePrimary' })}>{settings.phonePrimary}</a>
       <a href={`tel:${settings.phoneSecondary.replace(/[^+\d]/g, '')}`} {...globalBinding('phoneSecondary', 'link', { hrefPath: 'phoneSecondary' })}>{settings.phoneSecondary}</a>
-      <a href={settings.telegram} target="_blank" rel="noopener noreferrer" {...globalHref('telegram')}><span {...globalBinding('telegramLabel')}>{telegramLabel}</span> · <span {...globalBinding('shellLabels.telegramSuffix')}>{shellLabels.telegramSuffix}</span></a>
+      <a href={settings.telegram} target="_blank" rel="noopener noreferrer" {...globalHref('telegram')}><span {...globalBinding('telegramLabel')}>{telegramLabel}</span>{' · '}<span {...globalBinding('shellLabels.telegramSuffix')}>{shellLabels.telegramSuffix}</span></a>
       <a href={`mailto:${settings.email}`} {...globalBinding('email', 'link', { hrefPath: 'email' })}>{settings.email}</a>
       <address {...globalBinding('address', 'long-text')}>{settings.address}</address>
     </section>

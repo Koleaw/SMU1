@@ -6,6 +6,7 @@ import { getV2Navigation } from '../../../utils/v2Navigation';
 import { getV2TelegramLabel } from '../../../utils/v2SiteSettings';
 import { v2TransitionLabelForRoute } from '../../../utils/v2TransitionLabel';
 import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
+import PublicSearch from '../PublicSearch.astro';
 
 interface Props {
   mode?: 'overlay' | 'light';
@@ -219,6 +220,12 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
       </div>
     </nav>
 
+    <button class="hv2-search-open" type="button" aria-label="Открыть поиск" aria-haspopup="dialog"
+      aria-controls="public-search" aria-expanded="false" data-search-open hidden data-v2-entrance-role="header-actions">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.6" /><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="1.6" /></svg>
+      <span>Поиск</span>
+    </button>
+
     <div class="hv2-header__actions" aria-label="Быстрые действия" data-hv2-header-side="right" data-v2-entrance-role="header-actions">
       <a class="hv2-header__phone" href={`tel:${settings.phonePrimary.replace(/[^+\d]/g, '')}`} {...globalBinding('phonePrimary', 'link', { hrefPath: 'phonePrimary' })}>
         {settings.phonePrimary}
@@ -317,9 +324,20 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
   </div>
 </div>
 
+<PublicSearch />
+
 <style>
   .hv2-header__nav-group {
     display: contents;
+  }
+
+  /* Visibility must switch immediately so the first ArrowDown can focus a link. */
+  .hv2-dropdown.is-open .hv2-dropdown__panel {
+    transition-property: opacity, transform;
+  }
+
+  :global(html.hv2-menu-open .cookie-banner) {
+    display: none;
   }
 </style>
 
@@ -338,6 +356,7 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
     ) ? 1320 : 1180;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const dropdowns = Array.from(header.querySelectorAll<HTMLElement>('[data-hv2-dropdown]'));
+    const clickedDropdowns = new WeakSet<HTMLElement>();
     let closeTimer = 0;
     const revealHeader = () => header.classList.remove('is-hidden');
     header.addEventListener('focusin', revealHeader);
@@ -345,6 +364,7 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
     const closeDropdown = (group: HTMLElement, restoreFocus = false) => {
       const trigger = group.querySelector<HTMLButtonElement>('[data-hv2-dropdown-trigger]');
       group.classList.remove('is-open');
+      clickedDropdowns.delete(group);
       trigger?.setAttribute('aria-expanded', 'false');
       if (restoreFocus) trigger?.focus();
     };
@@ -362,7 +382,13 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
       const trigger = group.querySelector<HTMLButtonElement>('[data-hv2-dropdown-trigger]');
       group.classList.add('is-open');
       trigger?.setAttribute('aria-expanded', 'true');
-      if (focusFirst) group.querySelector<HTMLAnchorElement>('[data-hv2-dropdown-link]')?.focus();
+      if (focusFirst) {
+        const firstLink = group.querySelector<HTMLAnchorElement>('[data-hv2-dropdown-link]');
+        firstLink?.focus();
+        if (firstLink && document.activeElement !== firstLink) window.requestAnimationFrame(() => {
+          if (group.classList.contains('is-open')) firstLink.focus();
+        });
+      }
     };
 
     dropdowns.forEach((group) => {
@@ -387,8 +413,11 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
       });
 
       trigger.addEventListener('click', () => {
-        if (group.classList.contains('is-open')) closeDropdown(group);
-        else openDropdown(group);
+        if (clickedDropdowns.has(group) && group.classList.contains('is-open')) closeDropdown(group);
+        else {
+          openDropdown(group);
+          clickedDropdowns.add(group);
+        }
       });
 
       trigger.addEventListener('keydown', (event) => {
@@ -532,8 +561,9 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
     const openMobileMenu = () => {
       window.clearTimeout(hideTimer);
       revealHeader();
-      const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      lastFocus = activeElement && activeElement !== document.body ? activeElement : menuOpen;
+      // Pointer activation does not focus buttons in WebKit. The single menu
+      // entry point is always the correct place to return after dismissal.
+      lastFocus = menuOpen;
       menu.hidden = false;
       menu.setAttribute('aria-hidden', 'false');
       menuOpen.setAttribute('aria-expanded', 'true');

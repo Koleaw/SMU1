@@ -8,6 +8,7 @@ import '../styles/v2/page-transition-v2.css';
 import entranceV2Url from '../styles/v2/entrance-v2.css?url';
 import finalArtDirectionUrl from '../styles/v2/final-art-direction-v2.css?url';
 import h4ScaleV2Url from '../styles/v2/h4-scale-v2.css?url';
+import publicPolishUrl from '../styles/v2/public-polish.css?url';
 import CookieBanner from '../components/CookieBanner.astro';
 import V2EntryExperience from '../components/v2/motion/V2EntryExperience.astro';
 import V2PageTransition from '../components/v2/motion/V2PageTransition.astro';
@@ -59,7 +60,7 @@ const stylesheetUrl = (value: string) => import.meta.env.DEV
 const entranceV2StylesheetUrl = stylesheetUrl(entranceV2Url);
 const finalArtDirectionStylesheetUrl = stylesheetUrl(finalArtDirectionUrl);
 const h4ScaleV2StylesheetUrl = stylesheetUrl(h4ScaleV2Url);
-const fontStylesheetUrl = 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=optional';
+const fontStylesheetUrl = withBase('/assets/fonts/manrope/fonts.css');
 const entrySessionKey = 'smu1:entry-intro:v2';
 const currentProductionPath = productionV2Path(Astro.url.pathname).split(/[?#]/, 1)[0];
 const compatibilityRoutes = new Set(['/lavochki-i-skameyki/', '/urny/', '/navesy/']);
@@ -261,15 +262,13 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
         })();
       </script>
     )}
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSvfedN4.woff2"
+    {[400, 600, 700].map((weight) => <link
+      href={withBase(`/assets/fonts/manrope/manrope-${weight}-latin-cyrillic.woff2`)}
       rel="preload"
       as="font"
       type="font/woff2"
       crossorigin
-    />
+    />)}
     <link
       href={fontStylesheetUrl}
       rel="preload"
@@ -452,8 +451,9 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     {isPublicV2Motion && <link rel="stylesheet" href={entranceV2StylesheetUrl} data-v2-entrance-styles />}
     {isProduction && <link rel="stylesheet" href={h4ScaleV2StylesheetUrl} data-v2-h4-scale-styles />}
     {blockingStylesheetUrls.map((href) => (
-      <link rel="stylesheet" href={href} data-v2-route-styles />
+      <link rel="stylesheet" href={stylesheetUrl(href)} data-v2-route-styles />
     ))}
+    {isProduction && <link rel="stylesheet" href={stylesheetUrl(publicPolishUrl)} />}
     {isEditorCanvas && (
       <style is:inline set:html={editorCanvasAffordancesCss} data-smu1-editor-canvas-styles />
     )}

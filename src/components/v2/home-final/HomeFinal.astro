@@ -309,6 +309,7 @@ const globalHrefDisposition = (fieldPath: string, reason: string) => adminDispos
 
 <script>
   import { waitForRevealMedia } from '../../../utils/v2ImageReady';
+  import { initializeHomeFinalVideo } from '../../../scripts/homeFinalVideo';
 
   const initializeHomeFinalHero = (root: HTMLElement) => {
     const hero = root.querySelector<HTMLElement>('[data-hf-hero]');
@@ -321,102 +322,9 @@ const globalHrefDisposition = (fieldPath: string, reason: string) => adminDispos
     root.dataset.hfHeroReady = 'true';
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const initialMobile = window.matchMedia('(max-width: 760px)').matches;
-    const initialNarrow = window.matchMedia('(max-width: 359px)').matches;
-    const connection = (navigator as Navigator & {
-      connection?: { saveData?: boolean; effectiveType?: string };
-    }).connection;
-    const motionRoot = root.closest<HTMLElement>('[data-v2-motion-root][data-v2-entry-mode]');
-    const entryManaged = Boolean(motionRoot && document.documentElement.classList.contains('v2-entry-js'));
-    const pageArrivalManaged = document.documentElement.dataset.v2PageBootstrap === 'arrival'
-      && document.documentElement.dataset.v2PageState !== 'done';
-    const constrainedConnection = ['slow-2g', '2g'].includes(connection?.effectiveType ?? '');
-    const videoAllowed = !reducedMotion.matches
-      && !connection?.saveData
-      && !constrainedConnection
-      && !initialNarrow;
-    const selectedSource = initialMobile ? video.dataset.hfMobileSrc : video.dataset.hfDesktopSrc;
+    const mobile = window.matchMedia('(max-width: 760px)');
+    initializeHomeFinalVideo(root);
 
-    const setPlayingState = (playing: boolean) => {
-      hero.classList.toggle('is-video-playing', playing);
-      toggleLabel.textContent = playing ? 'Пауза видео' : 'Включить видео';
-      toggle.setAttribute('aria-label', playing ? 'Приостановить фоновое видео' : 'Включить фоновое видео');
-    };
-
-    const stopAndUnloadVideo = () => {
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
-      toggle.hidden = true;
-      toggle.disabled = true;
-      toggle.setAttribute('aria-hidden', 'true');
-      setPlayingState(false);
-    };
-
-    const primeVideoControl = () => {
-      if (!videoAllowed || !selectedSource) return;
-      toggle.hidden = false;
-      toggle.disabled = true;
-      toggle.setAttribute('aria-hidden', 'true');
-    };
-
-    let videoStarted = false;
-    const startVideo = () => {
-      if (videoStarted || !videoAllowed || !selectedSource) return;
-      videoStarted = true;
-      video.src = selectedSource;
-      video.defaultMuted = true;
-      video.muted = true;
-      setPlayingState(false);
-      toggle.hidden = false;
-      toggle.disabled = false;
-      toggle.removeAttribute('aria-hidden');
-      video.addEventListener('playing', () => setPlayingState(true));
-      video.addEventListener('pause', () => setPlayingState(false));
-      video.addEventListener('error', stopAndUnloadVideo);
-      video.load();
-      requestAnimationFrame(() => {
-        video.play().catch(() => setPlayingState(false));
-      });
-
-      toggle.addEventListener('click', () => {
-        if (video.paused) video.play().catch(() => setPlayingState(false));
-        else video.pause();
-      });
-    };
-
-    if (pageArrivalManaged) {
-      primeVideoControl();
-      document.addEventListener('v2:page-revealing', startVideo, { once: true });
-      document.addEventListener('v2:page-done', startVideo, { once: true });
-    } else if (entryManaged && motionRoot) {
-      primeVideoControl();
-      const state = motionRoot.dataset.v2MotionState;
-      const entryStillBlocking = state === 'armed' || state === 'logo' || state === 'waiting';
-      if (!entryStillBlocking) startVideo();
-      else {
-        motionRoot.addEventListener('v2:entry-opening', startVideo, { once: true });
-        motionRoot.addEventListener('v2:entry-done', startVideo, { once: true });
-      }
-    } else {
-      startVideo();
-    }
-
-    reducedMotion.addEventListener('change', (event) => {
-      if (event.matches) stopAndUnloadVideo();
-    });
-
-    const initialMode = initialMobile ? 'mobile' : 'desktop';
-    let modeInvalidated = false;
-    window.addEventListener('resize', () => {
-      if (modeInvalidated) return;
-      const currentMode = window.matchMedia('(max-width: 760px)').matches ? 'mobile' : 'desktop';
-      if (currentMode === initialMode) return;
-      modeInvalidated = true;
-      stopAndUnloadVideo();
-    }, { passive: true });
-
-    if (!initialMobile) return;
     let ticking = false;
     const updateMobileHandoff = () => {
       ticking = false;

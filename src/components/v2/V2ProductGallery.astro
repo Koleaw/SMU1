@@ -107,18 +107,18 @@ const captionBinding = Astro.props.captionBinding ?? {};
             data-v2-page-critical={pageCritical ? '' : undefined}
             {...mediaDisposition}
           />
-          <span class="v2-product-gallery__zoom" aria-hidden="true">Развернуть</span>
+          <span class="v2-product-gallery__zoom" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </button>
       ) : null}
       <div class="v2-media-empty v2-product-gallery__empty" aria-hidden={hasImages} data-v2-gallery-empty>
-        <p>Фотоматериалы {entityLabel} не указаны</p>
+        <p>Изображение недоступно</p>
       </div>
     </div>
 
     {hasMultipleImages && (
       <div class="v2-product-gallery__arrows" aria-label="Переключение изображений">
-        <button type="button" aria-label="Назад" data-v2-gallery-prev>Назад</button>
-        <button type="button" aria-label="Далее" data-v2-gallery-next>Далее</button>
+        <button type="button" aria-label="Назад" data-v2-gallery-prev><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none"><path d="M19 12H5m6-6-6 6 6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button type="button" aria-label="Далее" data-v2-gallery-next><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
     )}
 
@@ -169,8 +169,8 @@ const captionBinding = Astro.props.captionBinding ?? {};
           <div class="v2-product-lightbox__toolbar">
             {hasMultipleImages && (
               <div class="v2-product-lightbox__arrows" aria-label="Переключение полноэкранных изображений">
-                <button type="button" aria-label="Назад" data-v2-lightbox-prev>Назад</button>
-                <button type="button" aria-label="Далее" data-v2-lightbox-next>Далее</button>
+                <button type="button" aria-label="Назад" data-v2-lightbox-prev><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none"><path d="M19 12H5m6-6-6 6 6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                <button type="button" aria-label="Далее" data-v2-lightbox-next><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
               </div>
             )}
             <button class="v2-product-lightbox__close" type="button" aria-label="Закрыть полноэкранную галерею" data-v2-lightbox-close>
@@ -392,7 +392,7 @@ const captionBinding = Astro.props.captionBinding ?? {};
         : [];
       const openLightbox = () => {
         if (!lightbox || !lightboxImage) return;
-        lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : openButton;
+        lastFocus = openButton;
         lightbox.showModal();
         document.documentElement.classList.add('v2-lightbox-open');
         syncLightbox();
@@ -417,7 +417,9 @@ const captionBinding = Astro.props.captionBinding ?? {};
       });
       lightbox?.addEventListener('close', () => {
         document.documentElement.classList.remove('v2-lightbox-open');
-        lastFocus?.focus();
+        // WebKit may finish its native dialog focus restoration after close.
+        // Restore on the next frame so keyboard users return to the opener.
+        requestAnimationFrame(() => lastFocus?.focus({ preventScroll: true }));
       });
       lightbox?.addEventListener('click', (event) => {
         if (event.target === lightbox) closeLightbox();

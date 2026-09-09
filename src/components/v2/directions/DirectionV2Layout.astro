@@ -2,6 +2,7 @@
 import CatalogV2Layout from '../CatalogV2Layout.astro';
 import '../../../styles/v2/direction-v2.css';
 import '../../../styles/v2/immersive-direction-v2.css';
+import directionPolishUrl from '../../../styles/v2/direction-polish.css?url';
 
 interface Props {
   title: string;
@@ -32,6 +33,7 @@ const {
 ---
 
 <CatalogV2Layout
+  blockingStylesheetUrls={[directionPolishUrl]}
   title={title}
   description={description}
   canonicalPath={canonicalPath}

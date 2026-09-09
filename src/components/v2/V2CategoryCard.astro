@@ -7,7 +7,7 @@ import {
   type ProductCategoryData
 } from './catalogV2Data';
 import V2ResponsiveImage from './V2ResponsiveImage.astro';
-import { adminBinding } from '../../admin/bindings/adminBinding';
+import { adminBinding, isLocalAdminCanvas } from '../../admin/bindings/adminBinding';
 import settings from '../../content/site-settings/global.json';
 
 interface Props {
@@ -31,6 +31,7 @@ const galleryFallbackSource = typeof galleryFallback === 'string'
   ? galleryFallback.trim()
   : galleryFallback?.src?.trim() || '';
 const cardImage = cardImageUsesPrimary ? rawCategoryImage : galleryFallbackSource;
+const editorCanvas = isLocalAdminCanvas(Astro.url);
 const hasMedia = Boolean(cardImage);
 const cardCopy = settings.catalogUi.card;
 const productNoun = productCount % 10 === 1 && productCount % 100 !== 11
@@ -96,7 +97,7 @@ const mediaBinding = cardImageUsesPrimary
     permissions: { edit: true, reorder: true, delete: false }
   })}
 >
-  <div class="v2-category-card__media" data-v2-media {...mediaBinding}>
+  {(hasMedia || editorCanvas) && <div class="v2-category-card__media" data-v2-media {...mediaBinding}>
     {cardImage ? (
       <V2ResponsiveImage
         src={cardImage}
@@ -112,7 +113,7 @@ const mediaBinding = cardImageUsesPrimary
     <div class="v2-media-empty" aria-hidden={hasMedia}>
       <p {...catalogUiBinding('emptyMediaLabel')}>{cardCopy.emptyMediaLabel}</p>
     </div>
-  </div>
+  </div>}
   <div class="v2-category-card__body">
     <p {...stateLabelBinding}>{stateLabel}</p>
     <h3 {...binding('title', 'heading')}>{category.title}</h3>

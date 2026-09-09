@@ -124,6 +124,13 @@ export default defineConfig({
       : [])
   ],
   vite: {
+    // Keep the public client parseable in the last Chrome supported on Windows 8.
+    build: {
+      target: ['chrome109', 'firefox115', 'safari15.4'],
+      // Shared modules should be cached across the catalogue rather than copied
+      // into each HTML document (including ?url bootstrap modules).
+      assetsInlineLimit: (filePath) => /\.(?:m?js)$/.test(filePath) ? false : undefined
+    },
     server: {
       proxy: {
         '/api/admin': {

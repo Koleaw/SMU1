@@ -6,6 +6,7 @@ import V2PaletteSwitch from './V2PaletteSwitch.astro';
 import { getV2Scope } from '../../utils/v2Routes';
 import catalogStylesheetUrl from '../../styles/v2/catalog-v2.css?url';
 import productFinalStylesheetUrl from '../../styles/v2/product-final-stage-a.css?url';
+import catalogPolishStylesheetUrl from '../../styles/v2/catalog-public-polish.css?url';
 import settings from '../../content/site-settings/global.json';
 import { adminBinding, adminDisposition } from '../../admin/bindings/adminBinding';
 
@@ -29,6 +30,7 @@ interface Props {
   headerMode?: 'overlay' | 'light';
   rootClass?: string;
   productFinalPrototype?: 'hub' | 'category' | 'standard-product' | 'premium-product' | 'direction' | 'custom';
+  blockingStylesheetUrls?: string[];
 }
 
 const {
@@ -92,7 +94,9 @@ const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
   refreshTarget={refreshTarget}
   blockingStylesheetUrls={[
     catalogStylesheetUrl,
-    ...(productFinalEnabled ? [productFinalStylesheetUrl] : [])
+    ...(Astro.props.blockingStylesheetUrls ?? []),
+    ...(productFinalEnabled ? [productFinalStylesheetUrl] : []),
+    ...(['hub', 'category', 'standard-product', 'premium-product'].includes(productFinalPrototype ?? '') ? [catalogPolishStylesheetUrl] : [])
   ]}
 >
   <div
@@ -147,7 +151,7 @@ const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
       // H4 exclusively owns production entrance and scroll visibility. Keep
       // the accepted image readiness/fallback pipeline independent so a slow
       // or broken asset never removes its accessible replacement.
-      const mediaItems = revealItems.filter((element) => element.querySelector('[data-v2-image]'));
+      const mediaItems = revealItems.filter((element) => element.querySelector('img:not([data-v2-image-readiness-ignore])'));
       const compactMediaProfile = reducedMotion.matches
         || document.documentElement.dataset.v2MotionProfile === 'save-data';
       let mediaObserver: IntersectionObserver | undefined;
@@ -162,9 +166,13 @@ const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
 
       if (compactMediaProfile || !('IntersectionObserver' in window)) {
         watchAllMedia(0);
-      } else {
-        try {
-          mediaObserver = new IntersectionObserver((entries) => {
+        } else {
+          try {
+            // Prepare first-screen media synchronously. An observer callback can
+            // arrive after the entrance timeline has already revealed the hero.
+            mediaItems.filter((element) => element.querySelector('[data-v2-page-critical]'))
+              .forEach((element) => watchMedia(element));
+            mediaObserver = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
               if (entry.isIntersecting) watchMedia(entry.target as HTMLElement);
             });

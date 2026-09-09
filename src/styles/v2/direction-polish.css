@@ -1,0 +1,142 @@
+/* Public direction polish: isolated product media gets a continuous field,
+ * project photography keeps its proportions, and compact lists stay readable. */
+.catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction'] [data-direction-v2-root]
+  .immersive-direction-hero--topiary .immersive-direction-hero__media,
+.catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction'] [data-direction-v2-root]
+  .immersive-direction-hero--topiary .immersive-direction-hero__media img {
+  background: #f9f9f9;
+}
+
+.catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction'] [data-direction-v2-root]
+  .immersive-direction-hero--topiary .immersive-direction-hero__media img {
+  object-fit: contain !important;
+  object-position: center !important;
+  transform: none !important;
+}
+
+.catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction'] [data-direction-v2-root]
+  .immersive-direction-hero--product-final .immersive-direction-hero__copy {
+  grid-column: 1 / 7;
+  max-width: 620px;
+  padding-right: clamp(30px, 4vw, 64px);
+}
+
+.catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction'] [data-direction-v2-root]
+  .direction-gallery--media-led .v2-product-gallery__stage {
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+  background: transparent;
+}
+
+.catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction'] [data-direction-v2-root]
+  .direction-gallery--media-led .v2-product-gallery__open img {
+  background: transparent;
+}
+
+.catalog-v2[data-catalog-v2-root] [data-direction-v2-root] .v2-product-gallery__arrows button,
+.catalog-v2[data-catalog-v2-root] [data-direction-v2-root] .v2-product-lightbox__arrows button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 56px;
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, .65);
+  border-radius: 4px;
+  background: #0b1d36;
+  color: #fff;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.catalog-v2[data-catalog-v2-root] [data-direction-v2-root] .v2-product-gallery__arrows button:is(:hover, :focus-visible),
+.catalog-v2[data-catalog-v2-root] [data-direction-v2-root] .v2-product-lightbox__arrows button:is(:hover, :focus-visible) {
+  color: #0b1d36;
+  background: #fff;
+}
+
+.catalog-v2[data-catalog-v2-root] [data-direction-v2-root] .v2-product-gallery__zoom {
+  padding: 12px 16px;
+  border-radius: 4px;
+  background: #0b1d36;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.catalog-v2[data-catalog-v2-root] [data-direction-v2-root] .direction-gallery__viewer .v2-product-gallery__caption {
+  margin-top: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, .8);
+}
+
+.catalog-v2[data-catalog-v2-root] [data-direction-v2-root] .project-contexts__list > li > span:not([aria-hidden]) {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  background: none;
+}
+
+.catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction'] [data-direction-v2-root]
+  .direction-brief--integrated .v2-direct-contact__intro h2 {
+  max-width: 22ch;
+  line-height: 1.06;
+}
+
+.catalog-v2[data-catalog-v2-root][data-product-final-prototype='custom'] .custom-order-v2 .custom-order-hero__media {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+}
+
+.catalog-v2[data-catalog-v2-root][data-product-final-prototype='custom'] .custom-order-v2 .custom-order-contact h2 {
+  max-width: 20ch;
+  font-size: clamp(34px, 3.3vw, 48px);
+  line-height: 1.08;
+}
+
+@media (min-width: 761px) {
+  :root[data-v2-public-route='true'] .catalog-v2[data-catalog-v2-root][data-product-final-prototype='custom'] .custom-order-v2 .custom-order-hero__copy {
+    grid-column: 1 / 7;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  :root[data-v2-public-route='true'] .catalog-v2[data-catalog-v2-root][data-product-final-prototype='custom'] .custom-order-v2 .custom-order-hero h1 {
+    font-size: clamp(46px, 6.1vw, 64px);
+  }
+}
+
+@media (max-width: 1100px) {
+  .catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction'] .hv2-header:not(.is-scrolled),
+  .catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction']:has(.immersive-direction-hero--topiary) .hv2-header:not(.is-scrolled) {
+    background: rgba(11, 29, 54, .96);
+  }
+}
+
+@media (max-width: 760px) {
+  .catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction'] [data-direction-v2-root]
+    .immersive-direction-hero--product-final .immersive-direction-hero__copy {
+    grid-column: 1 / -1;
+    max-width: none;
+    padding-right: 0;
+  }
+
+  :root[data-v2-public-route='true'] .catalog-v2[data-catalog-v2-root] [data-direction-v2-root] .immersive-direction-hero--construction h1 {
+    font-size: clamp(26px, 8.2vw, 36px);
+    max-width: none;
+    line-height: 1.08;
+    hyphens: none;
+  }
+
+  :root[data-v2-public-route='true'] .catalog-v2[data-catalog-v2-root] [data-direction-v2-root] .immersive-direction-hero--metalworks h1 {
+    font-size: clamp(25px, 8vw, 34px);
+    max-width: none;
+    hyphens: none;
+  }
+}

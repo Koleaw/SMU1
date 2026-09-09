@@ -30,7 +30,7 @@ const fixedPrefix = (source: string, reason: string) => adminDisposition(Astro.u
 
 <article class="practical-legal">
   <div class="hv2-shell practical-legal__layout">
-    <aside class="practical-legal__aside" aria-label="О документе" data-v2-reveal>
+    <aside class="practical-legal__aside" aria-label="О документе" data-v2-reveal data-v2-entrance-role="context">
       <p class="hv2-eyebrow" {...legalBinding('documentLabel', 'short-text')}>{policy.documentLabel}</p>
       <p {...legalBinding('documentDescription', 'long-text')}>{policy.documentDescription}</p>
     </aside>

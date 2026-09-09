@@ -1,0 +1,29 @@
+/* Static instances keep font weight consistent in older/embedded browsers. */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: optional;
+  src: url('./manrope-400-latin-cyrillic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: optional;
+  src: url('./manrope-500-latin-cyrillic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: optional;
+  src: url('./manrope-600-latin-cyrillic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: optional;
+  src: url('./manrope-700-latin-cyrillic.woff2') format('woff2');
+}

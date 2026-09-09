@@ -195,10 +195,10 @@ const sectionNavItems = [
             <p {...globalBinding('category.listDescription', 'long-text')}>{catalogCopy.category.listDescription}</p>
           </header>
 
-        <div class="v2-product-grid" role="list" aria-label={`Товары категории ${category.title}`}>
+        <div class="v2-product-grid" data-catalog-grid-count={displayProducts.length} role="list" aria-label={`Товары категории ${category.title}`}>
           {displayProducts.map((product) => (
             <div role="listitem">
-              <V2ProductCard product={product} href={productHref(product)} loading="lazy" />
+              <V2ProductCard product={product} href={productHref(product)} loading="lazy" gridCount={displayProducts.length} />
             </div>
           ))}
         </div>

@@ -194,7 +194,7 @@ const mobileCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-labe
   mobileCtaBinding={mobileCtaBinding}
   productFinalPrototype="standard-product"
 >
-  <div class="v2-standard-product-page" data-product-presentation="standard">
+  <div class="v2-standard-product-page" data-product-presentation="standard" data-catalog-product-slug={product.slug}>
   <V2HeroHandoff enabled>
   <section
     class:list={[
@@ -391,7 +391,7 @@ const mobileCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-labe
               <div><p class="hv2-eyebrow" {...productUiBinding('standardRelatedEyebrow')}>{settings.productUi.standardRelatedEyebrow}</p><h2 id="v2-related-title" {...productUiBinding(relatedTitleField, 'heading', 'related-title')}>{relatedTitle}</h2></div>
               <a class="hv2-text-link" href={withBase(relatedHref)} {...productUiBinding('standardRelatedLinkLabel', 'link-label')}>{settings.productUi.standardRelatedLinkLabel}</a>
             </header>
-            <div class="v2-product-grid v2-product-grid--related" role="list" {...relatedProductsBinding} {...relatedProductsEditorMetadata}>
+            <div class="v2-product-grid v2-product-grid--related" data-catalog-grid-count={displayRelatedProducts.length} role="list" {...relatedProductsBinding} {...relatedProductsEditorMetadata}>
               <div role="listitem" data-smu1-card-template-presentation="standard"><V2ProductCard product={standardTemplateProduct} href={currentPath} related /></div>
               <div role="listitem" data-smu1-card-template-presentation="premium"><V2ProductCard product={premiumTemplateProduct} href={currentPath} related /></div>
             </div>
@@ -405,9 +405,9 @@ const mobileCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-labe
             <div><p class="hv2-eyebrow" {...productUiBinding('standardRelatedEyebrow')}>{settings.productUi.standardRelatedEyebrow}</p><h2 id="v2-related-title" {...productUiBinding(relatedTitleField, 'heading', 'related-title')}>{relatedTitle}</h2></div>
             <a class="hv2-text-link" href={withBase(relatedHref)} {...productUiBinding('standardRelatedLinkLabel', 'link-label')}>{settings.productUi.standardRelatedLinkLabel}</a>
           </header>
-          <div class="v2-product-grid v2-product-grid--related" role="list" {...relatedProductsBinding} {...relatedProductsEditorMetadata}>
+          <div class="v2-product-grid v2-product-grid--related" data-catalog-grid-count={displayRelatedProducts.length} role="list" {...relatedProductsBinding} {...relatedProductsEditorMetadata}>
             {displayRelatedProducts.map((item) => (
-              <div role="listitem"><V2ProductCard product={item.product} href={relatedProductHref(item)} related /></div>
+              <div role="listitem"><V2ProductCard product={item.product} href={relatedProductHref(item)} gridCount={displayRelatedProducts.length} related /></div>
             ))}
           </div>
         </section>

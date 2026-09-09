@@ -506,11 +506,12 @@ const mobileCtaBinding = productUiBinding('premiumHeroPrimaryLabel', 'link-label
             class="v2-product-grid v2-product-grid--related"
             role="list"
             data-premium-related-count={displayRelatedProducts.length}
+            data-catalog-grid-count={displayRelatedProducts.length}
             {...relatedProductsBinding}
             {...relatedProductsEditorMetadata}
           >
             {displayRelatedProducts.map((item) => (
-              <div role="listitem"><V2ProductCard product={item.product} href={relatedProductHref(item)} related /></div>
+              <div role="listitem"><V2ProductCard product={item.product} href={relatedProductHref(item)} gridCount={displayRelatedProducts.length} related /></div>
             ))}
           </div>
         </div>

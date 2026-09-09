@@ -9,6 +9,28 @@
   --v2-entrance-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Media builds more gradually than copy; navigation keeps its quick response. */
+html[data-v2-motion-profile='normal'] [data-v2-scroll-role='media'][data-v2-scroll-state='revealing'],
+html[data-v2-motion-profile='normal'] [data-v2-entrance-role='media'][data-v2-entrance-node='revealing'] {
+  transition-timing-function: cubic-bezier(.25, .15, .25, 1);
+}
+
+html[data-v2-motion-profile='normal'] .v2-media-arriving {
+  animation: v2-media-arrival 640ms cubic-bezier(.25, .15, .25, 1) both;
+}
+
+@keyframes v2-media-arrival {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* An announced load error is immediately readable, even during entrance. */
+html[data-v2-public-route='true'] :is([data-v2-reveal], [data-reveal]).v2-image-fallback {
+  opacity: 1 !important;
+  transition: none !important;
+  animation: none !important;
+}
+
 /* Waiting state: only explicitly marked semantic groups are prepared. */
 html[data-v2-motion-profile='normal']:is(
   [data-v2-entrance-state='armed'],

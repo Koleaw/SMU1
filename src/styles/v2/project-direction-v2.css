@@ -448,7 +448,7 @@
   line-height: 1.4;
 }
 
-.project-contexts__list span {
+.project-contexts__list > li > span[aria-hidden='true'] {
   width: 16px;
   height: 1px;
   background: rgba(255, 255, 255, 0.6);

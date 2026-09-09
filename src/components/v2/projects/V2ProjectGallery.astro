@@ -112,9 +112,9 @@ const galleryBinding = bindingOwner && bindingField ? adminBinding(Astro.url, {
 
       {hasMultiple && (
         <div class="v2-project-gallery__controls" aria-label="Переключение изображений">
-          <button type="button" aria-label="Назад" data-v2-project-gallery-prev>Назад</button>
+          <button type="button" aria-label="Назад" data-v2-project-gallery-prev><span aria-hidden="true">←</span></button>
           <p aria-live="polite" aria-atomic="true" data-v2-project-gallery-status>1 / {galleryImages.length}</p>
-          <button type="button" aria-label="Далее" data-v2-project-gallery-next>Далее</button>
+          <button type="button" aria-label="Далее" data-v2-project-gallery-next><span aria-hidden="true">→</span></button>
         </div>
       )}
     </div>
@@ -168,8 +168,8 @@ const galleryBinding = bindingOwner && bindingField ? adminBinding(Astro.url, {
           <div class="v2-project-lightbox__toolbar">
             {hasMultiple && (
               <div class="v2-project-lightbox__arrows" aria-label="Переключение полноэкранных изображений">
-                <button type="button" aria-label="Назад" data-v2-project-lightbox-prev>Назад</button>
-                <button type="button" aria-label="Далее" data-v2-project-lightbox-next>Далее</button>
+                <button type="button" aria-label="Назад" data-v2-project-lightbox-prev><span aria-hidden="true">←</span></button>
+                <button type="button" aria-label="Далее" data-v2-project-lightbox-next><span aria-hidden="true">→</span></button>
               </div>
             )}
             <button
@@ -401,7 +401,9 @@ const galleryBinding = bindingOwner && bindingField ? adminBinding(Astro.url, {
         'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
       )).filter((item) => !item.hasAttribute('hidden'));
       const openLightbox = () => {
-        lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : openButton;
+        // WebKit need not focus a button on pointer click. Always restore the
+        // actual gallery opener rather than a previously focused arrow.
+        lastFocus = openButton;
         lightbox.showModal();
         document.documentElement.classList.add('v2-project-lightbox-open');
         syncLightbox();
@@ -425,7 +427,7 @@ const galleryBinding = bindingOwner && bindingField ? adminBinding(Astro.url, {
       });
       lightbox.addEventListener('close', () => {
         document.documentElement.classList.remove('v2-project-lightbox-open');
-        lastFocus?.focus();
+        window.requestAnimationFrame(() => lastFocus?.focus({ preventScroll: true }));
       });
       lightbox.addEventListener('click', (event) => {
         if (event.target === lightbox) closeLightbox();

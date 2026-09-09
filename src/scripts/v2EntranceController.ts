@@ -894,10 +894,20 @@ const initializeEntranceRoot = async (root: HTMLElement) => {
     let scrollFrame = 0;
     const inspectActualScroll = () => {
       scrollFrame = 0;
-      if (entranceTerminal || lifecycleStopped || !started || scope !== 'hero') return;
+      if (lifecycleStopped) return;
+      // A scrollbar drag, anchor or Page Down can jump over the heading that
+      // IntersectionObserver watches. Reached content must remain available.
+      const headerHeight = getHeaderHeight();
+      scrollGroups.forEach((group) => {
+        if (group.container.dataset.v2ScrollGroupState === 'pending'
+          && group.trigger.getBoundingClientRect().bottom <= headerHeight) {
+          settleScrollGroup(group, true);
+        }
+      });
+      if (entranceTerminal || !started || scope !== 'hero') return;
       const hero = root.querySelector<HTMLElement>('[data-v2-hero-scroll], main > section, main > header');
       if (!hero) return;
-      if (hero.getBoundingClientRect().bottom <= getHeaderHeight()) completeEntrance();
+      if (hero.getBoundingClientRect().bottom <= headerHeight) completeEntrance();
     };
     window.addEventListener('scroll', () => {
       if (scrollFrame) return;
@@ -928,7 +938,7 @@ const initializeEntranceRoot = async (root: HTMLElement) => {
       html.dataset.v2MotionProfile = detectMotionProfile();
     };
     reducedMotion.addEventListener('change', settleForPreferenceChange, { signal });
-    getConnection()?.addEventListener('change', settleForPreferenceChange, { signal });
+    getConnection()?.addEventListener?.('change', settleForPreferenceChange, { signal });
 
     state = 'waiting';
     html.dataset.v2EntranceController = 'ready';

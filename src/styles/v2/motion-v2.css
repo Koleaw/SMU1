@@ -33,16 +33,16 @@ html.v2-entry-js:is([data-v2-entry-bootstrap='armed'], [data-v2-entry-bootstrap=
   opacity: 1;
 }
 
-@media (scripting: enabled) {
-  html.v2-entry-js:is([data-v2-entry-bootstrap='armed'], [data-v2-entry-bootstrap='fail-open']) .v2-entry-experience:is(
+/* The bootstrap class is the JS gate. Chrome 109 does not understand the
+ * scripting media feature and would otherwise omit the entire entry scene. */
+html.v2-entry-js:is([data-v2-entry-bootstrap='armed'], [data-v2-entry-bootstrap='fail-open']) .v2-entry-experience:is(
     [data-v2-entry-state='armed'],
     [data-v2-entry-state='logo'],
     [data-v2-entry-state='waiting'],
     [data-v2-entry-state='opening'],
     [data-v2-entry-state='assembling']
-  ) {
-    display: block;
-  }
+) {
+  display: block;
 }
 
 .v2-entry-experience:is(

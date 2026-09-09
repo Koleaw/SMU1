@@ -158,6 +158,17 @@ const watchImage = (image: HTMLImageElement, onStateChange: () => void): ImageWa
 };
 
 const setRevealState = (element: HTMLElement, state: ImageReadinessState) => {
+  const previouslyPending = element.dataset.v2ImageReady === 'pending'
+    || element.dataset.v2ImageReady === 'fallback';
+  const timelineSettled = element.dataset.v2ScrollState === 'settled'
+    || element.dataset.v2EntranceNode === 'settled';
+  // Image readiness and the entrance timeline are independent. If decoding
+  // finishes after the timeline, give that late frame its own short fade.
+  // Otherwise the !important loading opacity jumps straight to a settled 1.
+  if (state === 'ready' && previouslyPending && timelineSettled) {
+    element.classList.add('v2-media-arriving');
+    element.addEventListener('animationend', () => element.classList.remove('v2-media-arriving'), { once: true });
+  }
   element.classList.remove('v2-image-awaiting', 'v2-image-ready', 'v2-image-fallback');
   if (state === 'pending') element.classList.add('v2-image-awaiting');
   else if (state === 'ready') element.classList.add('v2-image-ready');

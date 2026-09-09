@@ -1,0 +1,47 @@
+---
+import { withBase } from '../../utils/withBase';
+import searchModuleUrl from '../../scripts/public-search.mjs?url&no-inline';
+import searchDialogUrl from '../../scripts/public-search-dialog.mjs?url&no-inline';
+import searchStyleUrl from '../../styles/v2/public-search.css?url&no-inline';
+---
+
+<dialog class="v2-search ym-hide-content" id="public-search" aria-labelledby="public-search-title" data-search-dialog
+  data-search-module={searchModuleUrl} data-search-index={withBase('/search-index.json')} data-search-base={withBase('/')}>
+  <div class="v2-search__sheet">
+    <div class="v2-search__top">
+      <p id="public-search-title">Поиск по сайту</p>
+      <button class="v2-search__close" type="button" aria-label="Закрыть поиск" data-search-close>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" stroke="currentColor" stroke-width="1.6" /></svg>
+      </button>
+    </div>
+    <form class="v2-search__form ym-disable-submit" role="search">
+      <label class="v2-search__label" for="public-search-input">Что вы ищете?</label>
+      <div class="v2-search__field">
+        <input class="ym-disable-keys" id="public-search-input" type="search" placeholder="Например, скамья Радиус" maxlength="120"
+          autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"
+          aria-describedby="public-search-status" data-search-input />
+        <button class="v2-search__clear" type="button" aria-label="Очистить запрос" data-search-clear hidden>×</button>
+        <button class="v2-search__submit" type="submit" aria-label="Найти">
+          <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.6" /></svg>
+        </button>
+      </div>
+    </form>
+    <div class="v2-search__body">
+      <p id="public-search-status" class="v2-search__status" role="status" aria-live="polite" aria-atomic="true" data-search-status>Загружаем поиск…</p>
+      <button class="v2-search__retry" type="button" data-search-retry hidden>Попробовать ещё раз</button>
+      <div class="v2-search__suggestions" data-search-suggestions>
+        <span>Например</span>
+        <button type="button">Скамейки</button><button type="button">Навесы</button><button type="button">Набережная</button>
+      </div>
+      <ol class="v2-search__results" aria-label="Результаты поиска" data-search-results></ol>
+      <button class="v2-search__more" type="button" data-search-more hidden>Показать ещё</button>
+    </div>
+    <p class="v2-search__hint">↑ ↓ — по результатам <span>Esc — закрыть</span></p>
+  </div>
+</dialog>
+
+<link rel="stylesheet" href={searchStyleUrl} />
+
+<script is:inline type="module" src={searchDialogUrl}></script>
+
+

@@ -11,9 +11,11 @@ interface Props {
   href: string;
   loading?: 'eager' | 'lazy';
   related?: boolean;
+  gridCount?: number;
 }
 
-const { product, href, loading = 'lazy', related = false } = Astro.props as Props;
+const { product, href, loading = 'lazy', related = false, gridCount = 4 } = Astro.props as Props;
+const mediaSizes = gridCount <= 3 ? `(max-width: 760px) calc(100vw - 32px), (max-width: 980px) 48vw, ${gridCount === 3 ? '32vw' : '48vw'}` : '(max-width: 760px) calc(100vw - 32px), (max-width: 1180px) 48vw, 24vw';
 const primaryMaterial = Array.isArray(product.materials)
   ? product.materials.find((item) => typeof item === 'string' && item.trim())?.trim()
   : '';
@@ -40,11 +42,14 @@ const productUiBinding = (fieldPath: string, tool = 'short-text') => adminBindin
 <a
   class:list={['v2-product-card', {
     'v2-product-card--related': related,
+    'v2-product-card--no-media': !cardImage,
+    'v2-product-card--isolated': /\.(png|svg)$/i.test(cardImage),
     'v2-product-card--premium': isPremium,
     'v2-product-card--editor-missing-media': !cardImage && editorCanvas
   }]}
   href={withBase(href)}
   data-v2-transition-label={product.title}
+  data-catalog-product-slug={product.slug}
   data-product-card-presentation={isPremium ? 'premium' : 'standard'}
   data-smu1-live-product-slug={editorCanvas ? product.slug : undefined}
   data-smu1-live-product-category={editorCanvas ? product.productCategorySlug : undefined}
@@ -63,7 +68,7 @@ const productUiBinding = (fieldPath: string, tool = 'short-text') => adminBindin
         src={cardImage}
         alt={product.title}
         role="card"
-        sizes="(max-width: 760px) calc(100vw - 48px), (max-width: 1180px) 44vw, 24vw"
+        sizes={mediaSizes}
         loading={loading}
         decoding="async"
         style={imageViewStyle(product.imageView)}

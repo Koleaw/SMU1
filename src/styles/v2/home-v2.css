@@ -2365,15 +2365,15 @@
     outline-offset: 4px;
   }
 
-  .hv2-footer__accordion summary > span {
+  .hv2-footer__accordion summary > span[aria-hidden='true'] {
     position: relative;
     width: 18px;
     height: 18px;
     flex: 0 0 18px;
   }
 
-  .hv2-footer__accordion summary > span::before,
-  .hv2-footer__accordion summary > span::after {
+  .hv2-footer__accordion summary > span[aria-hidden='true']::before,
+  .hv2-footer__accordion summary > span[aria-hidden='true']::after {
     position: absolute;
     top: 8px;
     left: 3px;
@@ -2384,11 +2384,11 @@
     transition: transform var(--hv2-motion-fast) var(--hv2-ease);
   }
 
-  .hv2-footer__accordion summary > span::after {
+  .hv2-footer__accordion summary > span[aria-hidden='true']::after {
     transform: rotate(90deg);
   }
 
-  .hv2-footer__accordion[open] summary > span::after {
+  .hv2-footer__accordion[open] summary > span[aria-hidden='true']::after {
     transform: rotate(0);
   }
 
