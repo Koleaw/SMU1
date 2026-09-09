@@ -1,383 +1,820 @@
 {
-  "$ref": "#/definitions/product-sections",
-  "definitions": {
-    "product-sections": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "shortDescription": {
+      "type": "string"
+    },
+    "heroTitle": {
+      "type": "string"
+    },
+    "heroDescription": {
+      "type": "string"
+    },
+    "order": {
+      "type": "number"
+    },
+    "showOnHome": {
+      "type": "boolean"
+    },
+    "isActive": {
+      "type": "boolean"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "catalog-hub",
+        "custom-direction"
+      ]
+    },
+    "showInMenu": {
+      "type": "boolean"
+    },
+    "menuTitle": {
+      "type": "string"
+    },
+    "heroKicker": {
+      "type": "string"
+    },
+    "showBadge": {
+      "type": "boolean"
+    },
+    "heroMediaVideo": {
+      "type": "string"
+    },
+    "heroMediaVideoMobile": {
+      "type": "string"
+    },
+    "heroMediaPoster": {
+      "type": "string"
+    },
+    "heroMediaPosterMobile": {
+      "type": "string"
+    },
+    "heroOverlayOpacity": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "heroTitleStyle": {
       "type": "object",
       "properties": {
-        "title": {
-          "type": "string"
-        },
-        "slug": {
-          "type": "string"
-        },
-        "shortDescription": {
-          "type": "string"
-        },
-        "heroTitle": {
-          "type": "string"
-        },
-        "heroDescription": {
-          "type": "string"
-        },
-        "order": {
-          "type": "number"
-        },
-        "showOnHome": {
-          "type": "boolean"
-        },
-        "isActive": {
-          "type": "boolean"
-        },
-        "mode": {
+        "fontSize": {
           "type": "string",
           "enum": [
-            "catalog-hub",
-            "custom-direction"
+            "small",
+            "base",
+            "large",
+            "xl",
+            "2xl"
           ]
         },
-        "showInMenu": {
+        "fontWeight": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "medium",
+            "semibold",
+            "bold"
+          ]
+        },
+        "italic": {
           "type": "boolean"
         },
-        "menuTitle": {
-          "type": "string"
+        "align": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
         },
-        "heroKicker": {
-          "type": "string"
+        "lineHeight": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "relaxed"
+          ]
         },
-        "showBadge": {
+        "color": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "secondary",
+            "white",
+            "accent"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "heroDescriptionStyle": {
+      "type": "object",
+      "properties": {
+        "fontSize": {
+          "type": "string",
+          "enum": [
+            "small",
+            "base",
+            "large",
+            "xl",
+            "2xl"
+          ]
+        },
+        "fontWeight": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "medium",
+            "semibold",
+            "bold"
+          ]
+        },
+        "italic": {
           "type": "boolean"
         },
-        "heroMediaVideo": {
-          "type": "string"
+        "align": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
         },
-        "heroMediaVideoMobile": {
-          "type": "string"
+        "lineHeight": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "relaxed"
+          ]
         },
-        "heroMediaPoster": {
-          "type": "string"
+        "color": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "secondary",
+            "white",
+            "accent"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "heroLayout": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "string",
+          "enum": [
+            "narrow",
+            "medium",
+            "wide",
+            "full"
+          ]
         },
-        "heroMediaPosterMobile": {
-          "type": "string"
+        "widthPercent": {
+          "type": "number",
+          "minimum": 30,
+          "maximum": 100
         },
-        "heroOverlayOpacity": {
+        "maxWidth": {
+          "type": "number",
+          "minimum": 280,
+          "maximum": 1200
+        },
+        "position": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        "padding": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "large"
+          ]
+        },
+        "verticalPadding": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "large"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "image": {
+      "type": "string"
+    },
+    "imageView": {
+      "type": "object",
+      "properties": {
+        "fit": {
+          "type": "string",
+          "enum": [
+            "cover",
+            "contain"
+          ]
+        },
+        "positionX": {
           "type": "number",
           "minimum": 0,
           "maximum": 100
         },
-        "heroTitleStyle": {
-          "type": "object",
-          "properties": {
-            "fontSize": {
-              "type": "string",
-              "enum": [
-                "small",
-                "base",
-                "large",
-                "xl",
-                "2xl"
-              ]
-            },
-            "fontWeight": {
-              "type": "string",
-              "enum": [
-                "normal",
-                "medium",
-                "semibold",
-                "bold"
-              ]
-            },
-            "italic": {
-              "type": "boolean"
-            },
-            "align": {
-              "type": "string",
-              "enum": [
-                "left",
-                "center",
-                "right"
-              ]
-            },
-            "lineHeight": {
-              "type": "string",
-              "enum": [
-                "compact",
-                "normal",
-                "relaxed"
-              ]
-            },
-            "color": {
-              "type": "string",
-              "enum": [
-                "primary",
-                "secondary",
-                "white",
-                "accent"
-              ]
-            }
+        "positionY": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "scale": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3
+        }
+      },
+      "required": [
+        "fit",
+        "positionX",
+        "positionY",
+        "scale"
+      ],
+      "additionalProperties": false
+    },
+    "gallery": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
           },
-          "additionalProperties": false
-        },
-        "heroDescriptionStyle": {
-          "$ref": "#/definitions/product-sections/properties/heroTitleStyle"
-        },
-        "heroLayout": {
+          {
+            "type": "object",
+            "properties": {
+              "src": {
+                "type": "string"
+              },
+              "alt": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "string"
+              },
+              "order": {
+                "type": "number"
+              },
+              "isActive": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "src"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "galleryIntro": {
+      "type": "string"
+    },
+    "placeholderLabel": {
+      "type": "string"
+    },
+    "contactTitle": {
+      "type": "string"
+    },
+    "contactDescription": {
+      "type": "string"
+    },
+    "contactTelegramLabel": {
+      "type": "string"
+    },
+    "contactEmailLabel": {
+      "type": "string"
+    },
+    "contactPhoneLabel": {
+      "type": "string"
+    },
+    "seoTitle": {
+      "type": "string"
+    },
+    "seoDescription": {
+      "type": "string"
+    },
+    "homeOrder": {
+      "type": "number"
+    },
+    "homeImage": {
+      "type": "string"
+    },
+    "directionPresentation": {
+      "type": "object",
+      "properties": {
+        "hero": {
           "type": "object",
           "properties": {
-            "width": {
-              "type": "string",
-              "enum": [
-                "narrow",
-                "medium",
-                "wide",
-                "full"
-              ]
+            "primaryLabel": {
+              "type": "string"
             },
-            "widthPercent": {
-              "type": "number",
-              "minimum": 30,
-              "maximum": 100
+            "secondaryLabel": {
+              "type": "string"
             },
-            "maxWidth": {
-              "type": "number",
-              "minimum": 280,
-              "maximum": 1200
-            },
-            "position": {
-              "type": "string",
-              "enum": [
-                "left",
-                "center",
-                "right"
-              ]
-            },
-            "padding": {
-              "type": "string",
-              "enum": [
-                "compact",
-                "normal",
-                "large"
-              ]
-            },
-            "verticalPadding": {
-              "type": "string",
-              "enum": [
-                "compact",
-                "normal",
-                "large"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "image": {
-          "type": "string"
-        },
-        "imageView": {
-          "type": "object",
-          "properties": {
-            "fit": {
-              "type": "string",
-              "enum": [
-                "cover",
-                "contain"
-              ]
-            },
-            "positionX": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 100
-            },
-            "positionY": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 100
-            },
-            "scale": {
-              "type": "number",
-              "minimum": 1,
-              "maximum": 3
+            "imageAlt": {
+              "type": "string"
             }
           },
           "required": [
-            "fit",
-            "positionX",
-            "positionY",
-            "scale"
+            "primaryLabel",
+            "secondaryLabel",
+            "imageAlt"
+          ],
+          "additionalProperties": false
+        },
+        "sectionNav": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "order": {
+                    "type": "number"
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label",
+                  "order"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "label",
+            "items"
           ],
           "additionalProperties": false
         },
         "gallery": {
-          "type": "array",
+          "type": "object",
+          "properties": {
+            "eyebrow": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "galleryTitle": {
+              "type": "string"
+            },
+            "caption": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "eyebrow",
+            "title",
+            "description",
+            "galleryTitle",
+            "caption"
+          ],
+          "additionalProperties": false
+        },
+        "types": {
+          "type": "object",
+          "properties": {
+            "eyebrow": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "eyebrow"
+          ],
+          "additionalProperties": false
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "eyebrow": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "eyebrow"
+          ],
+          "additionalProperties": false
+        },
+        "brief": {
+          "type": "object",
+          "properties": {
+            "eyebrow": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "order": {
+                    "type": "number"
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label",
+                  "order"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "eyebrow"
+          ],
+          "additionalProperties": false
+        },
+        "proof": {
+          "type": "object",
+          "properties": {
+            "eyebrow": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "linkLabel": {
+              "type": "string"
+            },
+            "supportingLinkLabel": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "eyebrow",
+            "linkLabel"
+          ],
+          "additionalProperties": false
+        },
+        "related": {
+          "type": "object",
+          "properties": {
+            "eyebrow": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "targetCollection": {
+                    "type": "string",
+                    "enum": [
+                      "product-sections",
+                      "product-categories",
+                      "services"
+                    ]
+                  },
+                  "targetSlug": {
+                    "type": "string"
+                  },
+                  "eyebrow": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "order": {
+                    "type": "number"
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "targetCollection",
+                  "targetSlug",
+                  "eyebrow",
+                  "order"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "eyebrow",
+            "title",
+            "items"
+          ],
+          "additionalProperties": false
+        },
+        "contactEyebrow": {
+          "type": "string"
+        },
+        "contactPhoneChannelLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "hero",
+        "sectionNav",
+        "types",
+        "scope",
+        "brief",
+        "related",
+        "contactEyebrow",
+        "contactPhoneChannelLabel"
+      ],
+      "additionalProperties": false
+    },
+    "pageBlocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "intro": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "dark",
+              "light",
+              "graphite"
+            ]
+          },
+          "background": {
+            "type": "string",
+            "enum": [
+              "dark",
+              "light",
+              "graphite"
+            ]
+          },
+          "grid": {
+            "type": "string",
+            "enum": [
+              "2",
+              "3",
+              "4",
+              "auto"
+            ]
+          },
+          "columns": {
+            "anyOf": [
+              {
+                "type": "number",
+                "const": 2
+              },
+              {
+                "type": "number",
+                "const": 3
+              },
+              {
+                "type": "number",
+                "const": 4
+              }
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "order": {
+            "type": "number"
+          },
+          "sectionId": {
+            "type": "string"
+          },
           "items": {
+            "type": "array",
+            "items": {}
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "title": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "order": {
+                  "type": "number"
+                },
+                "isActive": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "title",
+                "order"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          "media": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "video": {
+            "type": "string"
+          },
+          "poster": {
+            "type": "string"
+          },
+          "placeholderLabel": {
+            "type": "string"
+          },
+          "mediaPosition": {
+            "type": "string",
+            "enum": [
+              "left",
+              "right"
+            ]
+          },
+          "mediaView": {
+            "type": "object",
+            "properties": {
+              "fit": {
+                "type": "string",
+                "enum": [
+                  "cover",
+                  "contain"
+                ]
+              },
+              "positionX": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "positionY": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "scale": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 3
+              }
+            },
+            "required": [
+              "fit",
+              "positionX",
+              "positionY",
+              "scale"
+            ],
+            "additionalProperties": false
+          },
+          "buttonLabel": {
+            "type": "string"
+          },
+          "buttonHref": {
+            "type": "string"
+          },
+          "textWidth": {
+            "type": "string"
+          },
+          "textAlign": {
+            "type": "string",
+            "enum": [
+              "left",
+              "center",
+              "right"
+            ]
+          },
+          "titleSize": {
+            "type": "string"
+          },
+          "textSize": {
+            "type": "string"
+          },
+          "textWeight": {
             "anyOf": [
               {
                 "type": "string"
               },
               {
-                "type": "object",
-                "properties": {
-                  "src": {
-                    "type": "string"
-                  },
-                  "alt": {
-                    "type": "string"
-                  },
-                  "caption": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "src"
-                ],
-                "additionalProperties": false
+                "type": "number"
               }
             ]
-          }
-        },
-        "galleryIntro": {
-          "type": "string"
-        },
-        "placeholderLabel": {
-          "type": "string"
-        },
-        "contactTitle": {
-          "type": "string"
-        },
-        "contactDescription": {
-          "type": "string"
-        },
-        "contactTelegramLabel": {
-          "type": "string"
-        },
-        "contactEmailLabel": {
-          "type": "string"
-        },
-        "contactPhoneLabel": {
-          "type": "string"
-        },
-        "seoTitle": {
-          "type": "string"
-        },
-        "seoDescription": {
-          "type": "string"
-        },
-        "pageBlocks": {
-          "type": "array",
-          "items": {
+          },
+          "textItalic": {
+            "type": "boolean"
+          },
+          "textStyle": {
             "type": "object",
             "properties": {
-              "type": {
-                "type": "string"
-              },
-              "title": {
-                "type": "string"
-              },
-              "intro": {
-                "type": "string"
-              },
-              "text": {
-                "type": "string"
-              },
-              "theme": {
+              "fontSize": {
                 "type": "string",
                 "enum": [
-                  "dark",
-                  "light",
-                  "graphite"
+                  "small",
+                  "base",
+                  "large",
+                  "xl",
+                  "2xl"
                 ]
               },
-              "background": {
-                "$ref": "#/definitions/product-sections/properties/pageBlocks/items/properties/theme"
-              },
-              "grid": {
+              "fontWeight": {
                 "type": "string",
                 "enum": [
-                  "auto",
-                  "2",
-                  "3",
-                  "4"
+                  "normal",
+                  "medium",
+                  "semibold",
+                  "bold"
                 ]
               },
-              "columns": {
-                "type": "number",
-                "enum": [
-                  2,
-                  3,
-                  4
-                ]
-              },
-              "isActive": {
+              "italic": {
                 "type": "boolean"
               },
-              "order": {
-                "type": "number"
-              },
-              "sectionId": {
-                "type": "string"
-              },
-              "items": {
-                "type": "array"
-              },
-              "steps": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "title": {
-                      "type": "string"
-                    },
-                    "text": {
-                      "type": "string"
-                    },
-                    "order": {
-                      "type": "number"
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "title",
-                    "order"
-                  ],
-                  "additionalProperties": true
-                }
-              },
-              "media": {
-                "type": "string"
-              },
-              "image": {
-                "type": "string"
-              },
-              "video": {
-                "type": "string"
-              },
-              "poster": {
-                "type": "string"
-              },
-              "placeholderLabel": {
-                "type": "string"
-              },
-              "mediaPosition": {
-                "type": "string",
-                "enum": [
-                  "left",
-                  "right"
-                ]
-              },
-              "mediaView": {
-                "$ref": "#/definitions/product-sections/properties/imageView"
-              },
-              "buttonLabel": {
-                "type": "string"
-              },
-              "buttonHref": {
-                "type": "string"
-              },
-              "textWidth": {
-                "type": "string"
-              },
-              "textAlign": {
+              "align": {
                 "type": "string",
                 "enum": [
                   "left",
@@ -385,65 +822,160 @@
                   "right"
                 ]
               },
-              "titleSize": {
-                "type": "string"
-              },
-              "textSize": {
-                "type": "string"
-              },
-              "textWeight": {
-                "type": [
-                  "string",
-                  "number"
+              "lineHeight": {
+                "type": "string",
+                "enum": [
+                  "compact",
+                  "normal",
+                  "relaxed"
                 ]
               },
-              "textItalic": {
-                "type": "boolean"
-              },
-              "textStyle": {
-                "$ref": "#/definitions/product-sections/properties/heroTitleStyle"
-              },
-              "titleStyle": {
-                "$ref": "#/definitions/product-sections/properties/heroTitleStyle"
-              },
-              "layout": {
-                "$ref": "#/definitions/product-sections/properties/heroLayout"
-              },
-              "paddingTop": {
-                "type": "string"
-              },
-              "paddingBottom": {
-                "type": "string"
+              "color": {
+                "type": "string",
+                "enum": [
+                  "primary",
+                  "secondary",
+                  "white",
+                  "accent"
+                ]
               }
             },
-            "required": [
-              "type",
-              "order"
-            ],
-            "additionalProperties": true
+            "additionalProperties": false
+          },
+          "titleStyle": {
+            "type": "object",
+            "properties": {
+              "fontSize": {
+                "type": "string",
+                "enum": [
+                  "small",
+                  "base",
+                  "large",
+                  "xl",
+                  "2xl"
+                ]
+              },
+              "fontWeight": {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "medium",
+                  "semibold",
+                  "bold"
+                ]
+              },
+              "italic": {
+                "type": "boolean"
+              },
+              "align": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "center",
+                  "right"
+                ]
+              },
+              "lineHeight": {
+                "type": "string",
+                "enum": [
+                  "compact",
+                  "normal",
+                  "relaxed"
+                ]
+              },
+              "color": {
+                "type": "string",
+                "enum": [
+                  "primary",
+                  "secondary",
+                  "white",
+                  "accent"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "layout": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "string",
+                "enum": [
+                  "narrow",
+                  "medium",
+                  "wide",
+                  "full"
+                ]
+              },
+              "widthPercent": {
+                "type": "number",
+                "minimum": 30,
+                "maximum": 100
+              },
+              "maxWidth": {
+                "type": "number",
+                "minimum": 280,
+                "maximum": 1200
+              },
+              "position": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "center",
+                  "right"
+                ]
+              },
+              "padding": {
+                "type": "string",
+                "enum": [
+                  "compact",
+                  "normal",
+                  "large"
+                ]
+              },
+              "verticalPadding": {
+                "type": "string",
+                "enum": [
+                  "compact",
+                  "normal",
+                  "large"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "paddingTop": {
+            "type": "string"
+          },
+          "paddingBottom": {
+            "type": "string"
           }
         },
-        "$schema": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "title",
-        "slug",
-        "shortDescription",
-        "heroTitle",
-        "heroDescription",
-        "order",
-        "showOnHome",
-        "isActive",
-        "mode",
-        "image",
-        "placeholderLabel",
-        "seoTitle",
-        "seoDescription"
-      ],
-      "additionalProperties": false
+        "required": [
+          "type",
+          "order"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    "$schema": {
+      "type": "string"
     }
   },
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "required": [
+    "title",
+    "slug",
+    "shortDescription",
+    "heroTitle",
+    "heroDescription",
+    "order",
+    "showOnHome",
+    "isActive",
+    "mode",
+    "image",
+    "placeholderLabel",
+    "seoTitle",
+    "seoDescription"
+  ],
+  "additionalProperties": false
 }

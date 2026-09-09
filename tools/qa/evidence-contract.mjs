@@ -496,6 +496,32 @@ export function validateAdminActionEvidence(report, options = {}) {
   if (report?.evidence?.credentialsPersisted) issues.push('admin-actions:credentials-persisted');
   if (report?.evidence?.releaseActionsExecuted) issues.push('admin-actions:release-executed');
   if (report?.evidence?.browserSafety?.mode !== 'admin-no-release') issues.push('admin-actions:browser-safety');
+  const navigationDialogs = Array.isArray(report?.evidence?.browserSafety?.navigationDialogs)
+    ? report.evidence.browserSafety.navigationDialogs
+    : [];
+  const baselineResets = Array.isArray(report?.evidence?.baselineResets) ? report.evidence.baselineResets : null;
+  const resetDialogs = baselineResets?.flatMap((reset) => Array.isArray(reset?.dialogs) ? reset.dialogs : []) || [];
+  const resetPreflightValid = baselineResets?.every((reset) => {
+    const preflight = reset?.preflight || {};
+    const dialogs = Array.isArray(reset?.dialogs) ? reset.dialogs : [];
+    const evidencedDurableState = preflight.mediaQueueRunning !== true
+      && Number(preflight.pendingMediaQueues || 0) > 0
+      && Number(preflight.durableMediaQueues || 0) > 0
+      && Number(preflight.volatileMediaQueues || 0) === 0;
+    const expectedDialogCount = preflight.acceptBeforeUnload === true ? 1 : 0;
+    return dialogs.length === expectedDialogCount
+      && dialogs.every((dialog) => dialog?.accepted === true
+        && dialog.type === 'beforeunload'
+        && evidencedDurableState);
+  }) === true;
+  if (report?.evidence?.resetEvidenceValid !== true || !baselineResets || !resetPreflightValid
+    || report?.evidence?.dialogAudit?.drained !== true
+    || report?.evidence?.dialogAudit?.error
+    || Number(report?.evidence?.dialogAudit?.unexpected || 0) !== 0
+    || navigationDialogs.some((dialog) => dialog?.accepted !== true || dialog.type !== 'beforeunload')
+    || JSON.stringify(navigationDialogs) !== JSON.stringify(resetDialogs)) {
+    issues.push('admin-actions:reset-evidence');
+  }
   if (report?.evidence?.releaseMutationAttempts?.length) issues.push('admin-actions:release-attempted');
   if (requireIsolatedMutations && (!report?.evidence?.isolatedMutations || !report?.evidence?.isolationProof?.valid
     || !report.evidence.isolationProof.publishIntercepted || !report.evidence.isolationProof.sourceWritesDisposable)) {
@@ -634,6 +660,24 @@ export function validateVisualEditorAcceptanceEvidence(report, options = {}) {
     issues.push('visual-acceptance:aggregate-counts');
   }
   const evidence = (id) => byId.get(id)?.evidence || {};
+  if (byId.has('reload-recovery')) {
+    const recovery = evidence('reload-recovery');
+    const navigation = recovery.recoveryNavigation || {};
+    const dialogs = Array.isArray(navigation.dialogs) ? navigation.dialogs : [];
+    if (recovery.beforeUnloadDialogAccepted !== true
+      || navigation.allowed !== true
+      || navigation.storedMediaQueue?.intentVersion !== 2
+      || !navigation.storedMediaQueue?.baselineFingerprint
+      || navigation.preflight?.running !== false
+      || Number(navigation.preflight?.pending || 0) < 1
+      || Number(navigation.preflight?.durable || 0) < 1
+      || Number(navigation.preflight?.volatile || 0) !== 0
+      || dialogs.length !== 1
+      || dialogs[0]?.type !== 'beforeunload'
+      || dialogs[0]?.accepted !== true) {
+      issues.push('visual-acceptance:reload-recovery-contract');
+    }
+  }
   const conflict = evidence('two-tab-conflict');
   if (conflict.silentOverwriteBlocked !== true || conflict.serverConflictStatus !== 409
     || !conflict.mine?.title || !conflict.theirs?.title || !conflict.base?.title
@@ -723,6 +767,9 @@ export function validateVisualEditorAcceptanceEvidence(report, options = {}) {
     const cover = projectMedia.explicitAssignments?.cover || {};
     const hero = projectMedia.explicitAssignments?.hero || {};
     const explicitRows = projectMedia.explicitAssignments?.rows || {};
+    const cleanGallery = projectMedia.cleanExistingGallery || {};
+    const mediaCas = projectMedia.mediaCasConflict || {};
+    const emptyRemoval = projectMedia.emptyRemoval || {};
     const defaultRolesValid = Array.isArray(projectMedia.defaultRoleRows)
       && projectMedia.defaultRoleRows.length === 2
       && projectMedia.defaultRoleRows.every((row) => exactArray(row?.roles, ['gallery']));
@@ -732,7 +779,7 @@ export function validateVisualEditorAcceptanceEvidence(report, options = {}) {
       || binding.tool !== 'gallery' || binding.role !== 'missing-project-media'
       || original.status !== 200 || original.archiveCoverMedia !== '' || original.detailHeroMedia !== ''
       || !Array.isArray(original.publicGallery) || original.publicGallery.length
-      || !defaultRolesValid || Number(projectMedia.firstStageRequestCount || 0) !== 2
+      || !defaultRolesValid || projectMedia.doubleSubmitAttempted !== true || Number(projectMedia.firstStageRequestCount || 0) !== 2
       || !Array.isArray(projectMedia.firstStageRequests) || projectMedia.firstStageRequests.length !== 2
       || projectMedia.firstStageRequests.some((request) => request?.method !== 'POST' || !String(request?.url?.pathname || '').endsWith('/media/staging'))
       || uploadedPaths.length !== 2 || new Set(uploadedPaths).size !== 2 || uploadedPaths.some((value) => !String(value).startsWith('/'))
@@ -740,6 +787,49 @@ export function validateVisualEditorAcceptanceEvidence(report, options = {}) {
       || firstDraft.archiveCoverMedia !== original.archiveCoverMedia
       || firstDraft.detailHeroMedia !== original.detailHeroMedia
       || Number(firstDraft.rawGalleryCount) !== Number(original.rawGalleryCount) + 2
+      || cleanGallery.recoveryRow !== null
+      || cleanGallery.state?.dirty !== false
+      || Number(cleanGallery.state?.pending || 0) !== 0
+      || Number(cleanGallery.state?.durable || 0) !== 0
+      || Number(cleanGallery.state?.volatile || 0) !== 0
+      || !Array.isArray(cleanGallery.navigationDialogs) || cleanGallery.navigationDialogs.length
+      || mediaCas.silentOverwriteBlocked !== true || mediaCas.controlsFrozen !== true
+      || mediaCas.conflictSurvivedReopen !== true || mediaCas.cleanup?.clean !== true
+      || mediaCas.mine?.minePresent !== true || mediaCas.mine?.queueTokenPresent !== true || Number(mediaCas.mine?.queueRevision || 0) < 1
+      || mediaCas.peerWrite?.minePresent !== false || mediaCas.peerWrite?.theirsPresent !== true || mediaCas.peerWrite?.queueTokenChanged !== true
+      || Number(mediaCas.peerWrite?.queueRevision || 0) <= Number(mediaCas.mine?.queueRevision || 0)
+      || mediaCas.durableAfterConflict?.queueTokenPresent !== true
+      || mediaCas.durableAfterConflict?.minePresent !== false || mediaCas.durableAfterConflict?.theirsPresent !== true
+      || Number(mediaCas.durableAfterConflict?.queueRevision || 0) !== Number(mediaCas.peerWrite?.queueRevision || -1)
+      || mediaCas.thirdPeerWrite?.thirdPresent !== true
+      || Number(mediaCas.thirdPeerWrite?.queueRevision || 0) <= Number(mediaCas.peerWrite?.queueRevision || 0)
+      || mediaCas.mineRecovery?.minePresent !== true || mediaCas.mineRecovery?.queueTokenPresent !== true
+      || mediaCas.mineRecovery?.conflictForKey !== mediaCas.mine?.key
+      || mediaCas.conflictRecoveryAfterCleanup !== null || mediaCas.reloadAllowed !== true
+      || mediaCas.reloadPreflight?.running !== false
+      || Number(mediaCas.reloadPreflight?.pending || 0) < 1 || Number(mediaCas.reloadPreflight?.durable || 0) < 1
+      || Number(mediaCas.reloadPreflight?.volatile || 0) < 1
+      || !Array.isArray(mediaCas.recoveryDialogs) || mediaCas.recoveryDialogs.length !== 1
+      || mediaCas.recoveryDialogs[0]?.type !== 'beforeunload' || mediaCas.recoveryDialogs[0]?.accepted !== true
+      || Number(mediaCas.conflict?.controls || 0) < 1 || mediaCas.conflict?.disabled !== mediaCas.conflict?.controls
+      || Number(mediaCas.reopened?.controls || 0) < 1 || mediaCas.reopened?.disabled !== mediaCas.reopened?.controls
+      || mediaCas.reopened?.latestPeerVisible !== true
+      || emptyRemoval.queue?.itemCount !== 0 || emptyRemoval.queue?.intentVersion !== 2
+      || emptyRemoval.queue?.baselineFingerprintPresent !== true
+      || emptyRemoval.state?.dirty !== true
+      || Number(emptyRemoval.state?.pending || 0) < 1
+      || Number(emptyRemoval.state?.durable || 0) < 1
+      || Number(emptyRemoval.state?.volatile || 0) !== 0
+      || emptyRemoval.reloadAllowed !== true
+      || !Array.isArray(emptyRemoval.recoveryDialogs) || emptyRemoval.recoveryDialogs.length !== 1
+      || emptyRemoval.recoveryDialogs[0]?.type !== 'beforeunload' || emptyRemoval.recoveryDialogs[0]?.accepted !== true
+      || Number(emptyRemoval.reopened?.rows) !== 0 || emptyRemoval.reopened?.dirty !== true
+      || Number(emptyRemoval.reopened?.pending || 0) < 1
+      || Number(emptyRemoval.reopened?.durable || 0) < 1
+      || Number(emptyRemoval.reopened?.volatile || 0) !== 0
+      || Number(emptyRemoval.resetToCurrent?.rows || 0) !== Number(original.rawGalleryCount) + 2
+      || emptyRemoval.resetToCurrent?.dirty !== 'false' || emptyRemoval.resetToCurrent?.pending !== '0'
+      || emptyRemoval.resetRecoveryRow !== null
       || cover.available !== true || cover.role !== 'cover' || cover.path !== uploadedPaths[0]
       || hero.available !== true || hero.role !== 'hero' || hero.path !== uploadedPaths[1]
       || explicitRows.cover?.pathname !== uploadedPaths[0] || !explicitRows.cover?.roles?.includes('cover')

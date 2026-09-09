@@ -1,160 +1,291 @@
 {
-  "$ref": "#/definitions/projects",
-  "definitions": {
-    "projects": {
-      "type": "object",
-      "properties": {
-        "title": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string"
+    },
+    "workType": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "shortCategory": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "task": {
+      "type": "string"
+    },
+    "locationLabel": {
+      "type": "string"
+    },
+    "workTypes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "scope": {
+      "type": "string"
+    },
+    "result": {
+      "type": "string"
+    },
+    "materials": {
+      "anyOf": [
+        {
           "type": "string"
         },
-        "slug": {
-          "type": "string"
-        },
-        "city": {
-          "type": "string"
-        },
-        "region": {
-          "type": "string"
-        },
-        "workType": {
-          "type": "string"
-        },
-        "category": {
-          "type": "string"
-        },
-        "shortCategory": {
-          "type": "string"
-        },
-        "summary": {
-          "type": "string"
-        },
-        "task": {
-          "type": "string"
-        },
-        "locationLabel": {
-          "type": "string"
-        },
-        "workTypes": {
+        {
           "type": "array",
           "items": {
             "type": "string"
           }
-        },
-        "scope": {
+        }
+      ]
+    },
+    "features": {
+      "anyOf": [
+        {
           "type": "string"
         },
-        "result": {
-          "type": "string"
-        },
-        "materials": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ]
-        },
-        "features": {
-          "$ref": "#/definitions/projects/properties/materials"
-        },
-        "clientVisibility": {
-          "type": "string"
-        },
-        "shortDescription": {
-          "type": "string"
-        },
-        "whatWasDone": {
-          "type": "string"
-        },
-        "image": {
-          "type": "string"
-        },
-        "coverImage": {
-          "type": "string"
-        },
-        "gallery": {
+        {
           "type": "array",
           "items": {
-            "anyOf": [
-              {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "clientVisibility": {
+      "type": "string"
+    },
+    "shortDescription": {
+      "type": "string"
+    },
+    "whatWasDone": {
+      "type": "string"
+    },
+    "image": {
+      "type": "string"
+    },
+    "coverImage": {
+      "type": "string"
+    },
+    "gallery": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "src": {
                 "type": "string"
               },
-              {
-                "type": "object",
-                "properties": {
-                  "src": {
-                    "type": "string"
-                  },
-                  "image": {
-                    "type": "string"
-                  },
-                  "url": {
-                    "type": "string"
-                  },
-                  "alt": {
-                    "type": "string"
-                  },
-                  "caption": {
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": true
+              "image": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "alt": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "string"
               }
-            ]
+            },
+            "additionalProperties": {}
           }
-        },
-        "images": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/projects/properties/gallery/items"
+        ]
+      }
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "src": {
+                "type": "string"
+              },
+              "image": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "alt": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": {}
           }
+        ]
+      }
+    },
+    "captions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "placeholderLabel": {
+      "type": "string"
+    },
+    "order": {
+      "type": "number"
+    },
+    "isActive": {
+      "type": "boolean"
+    },
+    "year": {
+      "type": "number"
+    },
+    "presentation": {
+      "type": "object",
+      "properties": {
+        "archiveCoverMedia": {
+          "type": "string"
         },
-        "captions": {
+        "detailHeroMedia": {
+          "type": "string"
+        },
+        "publicGallery": {
           "type": "array",
           "items": {
             "type": "string"
           }
         },
-        "placeholderLabel": {
+        "archiveCoverPosition": {
           "type": "string"
         },
-        "order": {
-          "type": "number"
+        "archiveCoverOrientation": {
+          "type": "string",
+          "enum": [
+            "landscape",
+            "portrait"
+          ]
         },
-        "isActive": {
-          "type": "boolean"
-        },
-        "year": {
-          "type": "number"
-        },
-        "seoTitle": {
+        "detailHeroPosition": {
           "type": "string"
         },
-        "seoDescription": {
-          "type": "string"
+        "relatedDirections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "href": {
+                "type": "string"
+              },
+              "context": {
+                "type": "string"
+              },
+              "order": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "href",
+              "context",
+              "order"
+            ],
+            "additionalProperties": false
+          }
         },
-        "$schema": {
-          "type": "string"
+        "altOverrides": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "mediaRoles": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "metalworks",
+                "construction",
+                "construction-building",
+                "landscaping",
+                "finished-result",
+                "process",
+                "proof",
+                "hero",
+                "excluded"
+              ]
+            }
+          }
         }
       },
       "required": [
-        "title",
-        "slug",
-        "city",
-        "shortDescription",
-        "whatWasDone",
-        "order",
-        "isActive",
-        "seoTitle",
-        "seoDescription"
+        "publicGallery",
+        "archiveCoverPosition",
+        "archiveCoverOrientation",
+        "detailHeroPosition",
+        "relatedDirections"
       ],
       "additionalProperties": false
+    },
+    "seoTitle": {
+      "type": "string"
+    },
+    "seoDescription": {
+      "type": "string"
+    },
+    "$schema": {
+      "type": "string"
     }
   },
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "required": [
+    "title",
+    "slug",
+    "city",
+    "shortDescription",
+    "whatWasDone",
+    "order",
+    "isActive",
+    "seoTitle",
+    "seoDescription"
+  ],
+  "additionalProperties": false
 }

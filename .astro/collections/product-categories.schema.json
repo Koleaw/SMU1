@@ -1,247 +1,298 @@
 {
-  "$ref": "#/definitions/product-categories",
-  "definitions": {
-    "product-categories": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "parentSectionSlug": {
+      "type": "string"
+    },
+    "shortDescription": {
+      "type": "string"
+    },
+    "heroTitle": {
+      "type": "string"
+    },
+    "heroDescription": {
+      "type": "string"
+    },
+    "heroTitleStyle": {
       "type": "object",
       "properties": {
-        "title": {
-          "type": "string"
-        },
-        "slug": {
-          "type": "string"
-        },
-        "parentSectionSlug": {
-          "type": "string"
-        },
-        "shortDescription": {
-          "type": "string"
-        },
-        "heroTitle": {
-          "type": "string"
-        },
-        "heroDescription": {
-          "type": "string"
-        },
-        "heroTitleStyle": {
-          "type": "object",
-          "properties": {
-            "fontSize": {
-              "type": "string",
-              "enum": [
-                "small",
-                "base",
-                "large",
-                "xl",
-                "2xl"
-              ]
-            },
-            "fontWeight": {
-              "type": "string",
-              "enum": [
-                "normal",
-                "medium",
-                "semibold",
-                "bold"
-              ]
-            },
-            "italic": {
-              "type": "boolean"
-            },
-            "align": {
-              "type": "string",
-              "enum": [
-                "left",
-                "center",
-                "right"
-              ]
-            },
-            "lineHeight": {
-              "type": "string",
-              "enum": [
-                "compact",
-                "normal",
-                "relaxed"
-              ]
-            },
-            "color": {
-              "type": "string",
-              "enum": [
-                "primary",
-                "secondary",
-                "white",
-                "accent"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "heroDescriptionStyle": {
-          "$ref": "#/definitions/product-categories/properties/heroTitleStyle"
-        },
-        "heroLayout": {
-          "type": "object",
-          "properties": {
-            "width": {
-              "type": "string",
-              "enum": [
-                "narrow",
-                "medium",
-                "wide",
-                "full"
-              ]
-            },
-            "widthPercent": {
-              "type": "number",
-              "minimum": 30,
-              "maximum": 100
-            },
-            "maxWidth": {
-              "type": "number",
-              "minimum": 280,
-              "maximum": 1200
-            },
-            "position": {
-              "type": "string",
-              "enum": [
-                "left",
-                "center",
-                "right"
-              ]
-            },
-            "padding": {
-              "type": "string",
-              "enum": [
-                "compact",
-                "normal",
-                "large"
-              ]
-            },
-            "verticalPadding": {
-              "type": "string",
-              "enum": [
-                "compact",
-                "normal",
-                "large"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "order": {
-          "type": "number"
-        },
-        "showInSectionGrid": {
-          "type": "boolean"
-        },
-        "isActive": {
-          "type": "boolean"
-        },
-        "image": {
-          "type": "string"
-        },
-        "imageView": {
-          "type": "object",
-          "properties": {
-            "fit": {
-              "type": "string",
-              "enum": [
-                "cover",
-                "contain"
-              ]
-            },
-            "positionX": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 100
-            },
-            "positionY": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 100
-            },
-            "scale": {
-              "type": "number",
-              "minimum": 1,
-              "maximum": 3
-            }
-          },
-          "required": [
-            "fit",
-            "positionX",
-            "positionY",
-            "scale"
-          ],
-          "additionalProperties": false
-        },
-        "gallery": {
-          "type": "array",
-          "items": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "src": {
-                    "type": "string"
-                  },
-                  "alt": {
-                    "type": "string"
-                  },
-                  "caption": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "src"
-                ],
-                "additionalProperties": false
-              }
-            ]
-          }
-        },
-        "galleryIntro": {
-          "type": "string"
-        },
-        "placeholderLabel": {
-          "type": "string"
-        },
-        "mode": {
+        "fontSize": {
           "type": "string",
           "enum": [
-            "catalog-list",
-            "custom-list"
+            "small",
+            "base",
+            "large",
+            "xl",
+            "2xl"
           ]
         },
-        "seoTitle": {
-          "type": "string"
+        "fontWeight": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "medium",
+            "semibold",
+            "bold"
+          ]
         },
-        "seoDescription": {
-          "type": "string"
+        "italic": {
+          "type": "boolean"
         },
-        "$schema": {
-          "type": "string"
+        "align": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        "lineHeight": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "relaxed"
+          ]
+        },
+        "color": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "secondary",
+            "white",
+            "accent"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "heroDescriptionStyle": {
+      "type": "object",
+      "properties": {
+        "fontSize": {
+          "type": "string",
+          "enum": [
+            "small",
+            "base",
+            "large",
+            "xl",
+            "2xl"
+          ]
+        },
+        "fontWeight": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "medium",
+            "semibold",
+            "bold"
+          ]
+        },
+        "italic": {
+          "type": "boolean"
+        },
+        "align": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        "lineHeight": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "relaxed"
+          ]
+        },
+        "color": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "secondary",
+            "white",
+            "accent"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "heroLayout": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "string",
+          "enum": [
+            "narrow",
+            "medium",
+            "wide",
+            "full"
+          ]
+        },
+        "widthPercent": {
+          "type": "number",
+          "minimum": 30,
+          "maximum": 100
+        },
+        "maxWidth": {
+          "type": "number",
+          "minimum": 280,
+          "maximum": 1200
+        },
+        "position": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        "padding": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "large"
+          ]
+        },
+        "verticalPadding": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "large"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "order": {
+      "type": "number"
+    },
+    "showInSectionGrid": {
+      "type": "boolean"
+    },
+    "isActive": {
+      "type": "boolean"
+    },
+    "image": {
+      "type": "string"
+    },
+    "imageView": {
+      "type": "object",
+      "properties": {
+        "fit": {
+          "type": "string",
+          "enum": [
+            "cover",
+            "contain"
+          ]
+        },
+        "positionX": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "positionY": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "scale": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3
         }
       },
       "required": [
-        "title",
-        "slug",
-        "parentSectionSlug",
-        "shortDescription",
-        "heroTitle",
-        "heroDescription",
-        "order",
-        "showInSectionGrid",
-        "isActive",
-        "image",
-        "placeholderLabel",
-        "mode",
-        "seoTitle",
-        "seoDescription"
+        "fit",
+        "positionX",
+        "positionY",
+        "scale"
       ],
       "additionalProperties": false
+    },
+    "gallery": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "src": {
+                "type": "string"
+              },
+              "alt": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "string"
+              },
+              "order": {
+                "type": "number"
+              },
+              "isActive": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "src"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "galleryIntro": {
+      "type": "string"
+    },
+    "placeholderLabel": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "catalog-list",
+        "custom-list"
+      ]
+    },
+    "seoTitle": {
+      "type": "string"
+    },
+    "seoDescription": {
+      "type": "string"
+    },
+    "$schema": {
+      "type": "string"
     }
   },
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "required": [
+    "title",
+    "slug",
+    "parentSectionSlug",
+    "shortDescription",
+    "heroTitle",
+    "heroDescription",
+    "order",
+    "showInSectionGrid",
+    "isActive",
+    "image",
+    "placeholderLabel",
+    "mode",
+    "seoTitle",
+    "seoDescription"
+  ],
+  "additionalProperties": false
 }

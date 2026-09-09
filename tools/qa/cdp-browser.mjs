@@ -147,6 +147,10 @@ export class CdpBrowser {
     this.safetyMode = safetyMode;
     this.commandTimeoutMs = commandTimeoutMs;
     this.safetyIntercepts = [];
+    this.navigationDialogs = [];
+    this.activeDialogContext = null;
+    this.backgroundDialogTasks = [];
+    this.backgroundDialogFailures = [];
     this.child = null;
     this.profileDir = '';
     this.debugPort = 0;
@@ -215,6 +219,25 @@ export class CdpBrowser {
     await Promise.all([
       this.send('Page.enable'), this.send('Runtime.enable'), this.send('Network.enable'), this.send('Log.enable')
     ]);
+    this.on('Page.javascriptDialogOpening', (dialog) => {
+      const context = this.activeDialogContext;
+      const type = String(dialog?.type || 'unknown');
+      const accepted = Boolean(context && type === 'beforeunload' && context.beforeUnloadPolicy === 'accept-qa-reset');
+      this.navigationDialogs.push({
+        type,
+        accepted,
+        reason: accepted ? 'qa-baseline-reset' : 'unexpected-navigation-dialog'
+      });
+      const failure = accepted ? null : new Error(`Unexpected JavaScript ${type} dialog blocked navigation.`);
+      if (context && failure && !context.failure) context.failure = failure;
+      else if (!context && failure) this.backgroundDialogFailures.push(failure);
+      const task = this.send('Page.handleJavaScriptDialog', { accept: accepted }).catch((error) => {
+        if (context && !context.failure) context.failure = error;
+        else if (!context) this.backgroundDialogFailures.push(error);
+      });
+      if (context) context.tasks.push(task);
+      else this.backgroundDialogTasks.push(task);
+    });
     await this.send('Network.setBlockedURLs', { urls: [
       '*mc.yandex.ru*', '*google-analytics.com*', '*googletagmanager.com*', '*formspree.io*', '*api.web3forms.com*'
     ] });
@@ -263,7 +286,8 @@ export class CdpBrowser {
       mode: this.safetyMode,
       analyticsAndFormPattern: ANALYTICS_OR_FORM_URL.source,
       adminReleasePattern: ADMIN_RELEASE_URL.source,
-      intercepted: this.safetyIntercepts.slice()
+      intercepted: this.safetyIntercepts.slice(),
+      navigationDialogs: this.navigationDialogs.slice()
     };
   }
 
@@ -295,18 +319,41 @@ export class CdpBrowser {
     });
   }
 
-  once(method, timeoutMs = 20_000) {
-    return new Promise((resolve, reject) => {
-      const remove = this.on(method, (params) => {
+  waitForEvent(method, timeoutMs = 20_000) {
+    let cancel = () => {};
+    const promise = new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (callback, value) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timeout);
         remove();
-        resolve(params);
+        callback(value);
+      };
+      const remove = this.on(method, (params) => {
+        finish(resolve, params);
       });
       const timeout = setTimeout(() => {
-        remove();
-        reject(new Error(`Timed out waiting for ${method}.`));
+        finish(reject, new Error(`Timed out waiting for ${method}.`));
       }, timeoutMs);
+      cancel = () => finish(resolve, null);
     });
+    return { promise, cancel: () => cancel() };
+  }
+
+  once(method, timeoutMs = 20_000) {
+    return this.waitForEvent(method, timeoutMs).promise;
+  }
+
+  async drainBackgroundDialogs() {
+    while (this.backgroundDialogTasks.length) {
+      const tasks = this.backgroundDialogTasks.splice(0);
+      await Promise.all(tasks);
+      await delay(0);
+    }
+    const failures = this.backgroundDialogFailures.splice(0);
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) throw new AggregateError(failures, 'Multiple unexpected background JavaScript dialogs were observed.');
   }
 
   async evaluate(expression, { awaitPromise = true } = {}) {
@@ -332,24 +379,59 @@ export class CdpBrowser {
     ] });
   }
 
-  async navigate(url, { waitAfterMs = 40, scriptExecutionDisabled = false, waitForFonts = true } = {}) {
-    const ready = this.once('Page.domContentEventFired', 20_000).catch(() => null);
-    const navigation = await this.send('Page.navigate', { url });
-    if (navigation.errorText) throw new Error(`Navigation failed for ${url}: ${navigation.errorText}`);
-    await ready;
-    const deadline = Date.now() + 5_000;
-    while (Date.now() < deadline) {
-      if (await this.evaluate("document.readyState !== 'loading'", { awaitPromise: !scriptExecutionDisabled }).catch(() => false)) break;
-      await delay(40);
+  async navigate(url, {
+    waitAfterMs = 40,
+    scriptExecutionDisabled = false,
+    waitForFonts = true,
+    beforeUnloadPolicy = 'fail'
+  } = {}) {
+    if (!['fail', 'accept-qa-reset'].includes(beforeUnloadPolicy)) {
+      throw new Error(`Unsupported beforeUnloadPolicy: ${beforeUnloadPolicy}`);
     }
-    if (!scriptExecutionDisabled) {
-      await this.evaluate(`(async () => {
-        if (${waitForFonts ? 'true' : 'false'} && document.fonts?.ready) await Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 900))]);
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        return true;
-      })()`);
+    if (this.activeDialogContext) throw new Error('Concurrent CDP navigation is not supported.');
+    await this.drainBackgroundDialogs();
+    const dialogContext = { beforeUnloadPolicy, tasks: [], failure: null };
+    this.activeDialogContext = dialogContext;
+    const readyWaiter = this.waitForEvent('Page.domContentEventFired', 20_000);
+    const ready = readyWaiter.promise.catch(() => null);
+    let navigation = null;
+    let navigationFailure = null;
+    try {
+      navigation = await this.send('Page.navigate', { url });
+      await Promise.all(dialogContext.tasks);
+      if (dialogContext.failure) throw dialogContext.failure;
+      if (navigation.errorText) throw new Error(`Navigation failed for ${url}: ${navigation.errorText}`);
+      await ready;
+      const deadline = Date.now() + 5_000;
+      while (Date.now() < deadline) {
+        if (await this.evaluate("document.readyState !== 'loading'", { awaitPromise: !scriptExecutionDisabled }).catch(() => false)) break;
+        await delay(40);
+      }
+      if (!scriptExecutionDisabled) {
+        await this.evaluate(`(async () => {
+          if (${waitForFonts ? 'true' : 'false'} && document.fonts?.ready) await Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 900))]);
+          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          return true;
+        })()`);
+      }
+      if (waitAfterMs) await delay(waitAfterMs);
+    } catch (error) {
+      navigationFailure = error;
+    } finally {
+      await this.send('Runtime.evaluate', { expression: 'void 0', returnByValue: true }, { timeoutMs: 1_500 }).catch((error) => {
+        if (!navigationFailure && !dialogContext.failure) navigationFailure = error;
+      });
+      await delay(0);
+      this.activeDialogContext = null;
+      readyWaiter.cancel();
+      await ready;
+      await Promise.all(dialogContext.tasks);
+      await this.drainBackgroundDialogs().catch((error) => {
+        if (!navigationFailure && !dialogContext.failure) navigationFailure = error;
+      });
     }
-    if (waitAfterMs) await delay(waitAfterMs);
+    if (dialogContext.failure) throw dialogContext.failure;
+    if (navigationFailure) throw navigationFailure;
     return navigation;
   }
 

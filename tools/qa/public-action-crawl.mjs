@@ -1078,6 +1078,21 @@ try {
     }
   }
 
+  let finalDialogDrainError = null;
+  await browser.send('Runtime.evaluate', { expression: 'void 0', returnByValue: true }, { timeoutMs: 1_500 }).catch((error) => {
+    finalDialogDrainError = error;
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await browser.drainBackgroundDialogs().catch((error) => {
+    finalDialogDrainError ||= error;
+  });
+  const browserSafety = browser.safetyEvidence();
+  const unexpectedNavigationDialogs = browserSafety.navigationDialogs.slice();
+  const dialogAudit = {
+    finalDrainPassed: finalDialogDrainError === null,
+    unexpectedCount: unexpectedNavigationDialogs.length,
+    passed: finalDialogDrainError === null && unexpectedNavigationDialogs.length === 0
+  };
   const failedActions = routeResults.filter((result) => result.status === 'fail');
   const failedNoJs = noJsResults.filter((result) => result.status === 'fail');
   const output = {
@@ -1086,9 +1101,10 @@ try {
     evidence: {
       sourceSHA: git('rev-parse', 'HEAD'), branch: git('branch', '--show-current') || '(detached)', dirty: sourceWorkingTreeDirty(root),
       origin, basePath,
-      browserSafety: browser.safetyEvidence(),
+      browserSafety,
+      dialogAudit,
       emulation: { reducedMotion: true, deviceScaleFactor: 1 },
-      analyticsAndLeadSubmissionBlocked: browser.safetyEvidence().mode === 'public-read-only',
+      analyticsAndLeadSubmissionBlocked: browserSafety.mode === 'public-read-only',
       distFreshness,
       distFingerprintSHA256: distFingerprint.aggregate,
       htmlFileHashes: distFingerprint.entries,
@@ -1134,6 +1150,8 @@ try {
       unknownNoJsPassed: unknownNoJsResult?.status === 'pass',
       publicArtifactIsolation: artifactIsolation.clean,
       publicArtifactLeaks: artifactIsolation.leaks.length,
+      unexpectedNavigationDialogs: unexpectedNavigationDialogs.length,
+      dialogDrainPassed: dialogAudit.finalDrainPassed,
       noJsPassed: noJsResults.length - failedNoJs.length,
       noJsFailed: failedNoJs.length,
       noJsRequired: options.noJsEveryRoute ? routesToCrawl.length : 0
@@ -1145,6 +1163,7 @@ try {
   if (options.json) process.stdout.write(`${JSON.stringify(output)}\n`);
   else process.stdout.write(`${JSON.stringify({ manifest: output.manifest, aggregate: output.aggregate, output: options.output }, null, 2)}\n`);
   if (!artifactIsolation.clean || failedActions.length || failedNoJs.length
+    || !dialogAudit.passed
     || publicLifecycleSemantics.some((result) => result.status === 'fail')
     || unknownResults.some((result) => result.status === 'fail') || unknownNoJsResult?.status === 'fail') process.exitCode = 1;
 } finally {

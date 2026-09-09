@@ -944,8 +944,7 @@ function createTelemetry(browser, origin) {
     events.push({ scenario: currentScenario, atMs: elapsed(), kind: `console-${event.type}`, text: message });
   });
   browser.on('Page.javascriptDialogOpening', (event) => {
-    dialogs.push({ scenario: currentScenario, atMs: elapsed(), type: event.type, message: redactDiagnostic(event.message), accepted: true });
-    browser.send('Page.handleJavaScriptDialog', { accept: true }).catch(() => {});
+    dialogs.push({ scenario: currentScenario, atMs: elapsed(), type: String(event.type || 'unknown') });
   });
 
   return {
@@ -1030,6 +1029,9 @@ async function runAcceptance(options, bundle) {
     if (unexpectedNetwork.length) issues.push(`network-errors:${unexpectedNetwork.length}`);
     const releaseMutations = slices.requests.filter((request) => request.releaseMutation);
     if (releaseMutations.length) issues.push(`release-mutations:${releaseMutations.length}`);
+    const allowedDialogs = new Set(returned.allowedDialogs || []);
+    const unexpectedDialogs = slices.dialogs.filter((dialog) => !allowedDialogs.has(dialog.type));
+    if (unexpectedDialogs.length) issues.push(`unexpected-dialogs:${unexpectedDialogs.length}`);
     const durationMs = rounded(performance.now() - started);
     scenarios.push({
       id, title, status: issues.length ? 'fail' : 'pass', durationMs,
@@ -1824,7 +1826,36 @@ async function runAcceptance(options, bundle) {
         'persisted product draft',
         '(row) => ({ key: row.key, slug: row.slug, baseRevision: row.baseRevision, title: row.content?.title || "" })'
       );
-      await browser.navigate(`${options.origin}/admin/`, { waitAfterMs: 120 });
+      const storedMediaQueue = await waitForIndexedRecord(
+        browser,
+        'media-queues',
+        `(row) => row.slug === ${json(bundle.profile.noPhotoProduct.slug)} && row.items?.length === 20`,
+        'pending media queue before explicit recovery reload',
+        '(row) => ({ key: row.key, itemCount: row.items.length, intentVersion: row.intentVersion, baselineFingerprint: row.baselineFingerprint || "" })'
+      );
+      const recoveryPreflight = await browser.evaluate(`(() => {
+        const app = document.querySelector('#veApp');
+        return {
+          dirty: app?.dataset.mediaQueueDirty === 'true',
+          running: app?.dataset.mediaQueueRunning === 'true',
+          pending: Number(app?.dataset.pendingMediaQueues || 0),
+          durable: Number(app?.dataset.durableMediaQueues || 0),
+          volatile: Number(app?.dataset.volatileMediaQueues || 0)
+        };
+      })()`);
+      const allowRecoveryReset = Boolean(storedMediaQueue?.itemCount === 20
+        && storedMediaQueue?.intentVersion === 2
+        && Boolean(storedMediaQueue?.baselineFingerprint)
+        && recoveryPreflight.pending > 0
+        && recoveryPreflight.durable > 0
+        && recoveryPreflight.volatile === 0
+        && recoveryPreflight.running === false);
+      const dialogIndex = browser.safetyEvidence().navigationDialogs.length;
+      await browser.navigate(`${options.origin}/admin/`, {
+        waitAfterMs: 120,
+        beforeUnloadPolicy: allowRecoveryReset ? 'accept-qa-reset' : 'fail'
+      });
+      const recoveryDialogs = browser.safetyEvidence().navigationDialogs.slice(dialogIndex);
       await loginIfNeeded(browser, options);
       await waitForCanvas(browser, '/');
       const product = await openPage(browser, bundle.profile.product);
@@ -1845,12 +1876,18 @@ async function runAcceptance(options, bundle) {
       return {
         issues: [
           ...(!storedDraft ? ['draft-not-checkpointed-before-reload'] : []),
+          ...(!allowRecoveryReset ? ['media-recovery-reset-without-explicit-preflight'] : []),
+          ...(recoveryDialogs.length !== 1
+            || recoveryDialogs[0]?.type !== 'beforeunload'
+            || recoveryDialogs[0]?.accepted !== true ? ['media-recovery-dialog-policy'] : []),
           ...(!titleMatches ? ['title-draft-not-restored'] : []),
           ...(!restoredDescription.includes(state.productDescription?.marker || '') ? ['long-text-draft-not-restored'] : []),
           ...(!queueMatches ? ['media-queue-order-not-restored'] : [])
         ],
+        allowedDialogs: ['beforeunload'],
         evidence: {
-          beforeUnloadDialogAccepted: telemetry.dialogs.some((entry) => entry.scenario === 'reload-recovery' && entry.type === 'beforeunload'),
+          beforeUnloadDialogAccepted: recoveryDialogs.some((entry) => entry.type === 'beforeunload' && entry.accepted),
+          recoveryNavigation: { preflight: recoveryPreflight, storedMediaQueue, allowed: allowRecoveryReset, dialogs: recoveryDialogs },
           storedDraft: storedDraft ? { key: storedDraft.key, slug: storedDraft.slug, baseRevision: storedDraft.baseRevision } : null,
           product, restoredTitle, expectedTitle: state.productTitle?.committed, restoredDescriptionMarker: state.productDescription?.marker,
           noPhoto, restoredQueue, expectedQueue: state.queueOrder, queueMatches
@@ -2103,7 +2140,7 @@ async function runAcceptance(options, bundle) {
 
     await scenario('project-media-role-independence', 'A project bulk upload stays gallery-only until archive and detail roles are assigned independently', async ({ latency }) => {
       const navigation = await openPage(browser, bundle.profile.project);
-      const mediaBinding = await findBinding(browser, {
+      let mediaBinding = await findBinding(browser, {
         ownerCollection: 'projects', fieldPath: 'gallery', tool: 'gallery', role: 'missing-project-media'
       });
       const projectSlug = bundle.profile.project.slug;
@@ -2158,7 +2195,13 @@ async function runAcceptance(options, bundle) {
       })()`, { label: 'two gallery-only project upload rows' });
       const firstStageRequestIndex = telemetry.requests.length;
       const firstStageStarted = performance.now();
-      await clickShell(browser, SELECTORS.mediaConfirm);
+      const doubleSubmitAttempted = await browser.evaluate(`(() => {
+        const button = document.querySelector(${json(SELECTORS.mediaConfirm)});
+        if (!button || button.disabled) return false;
+        button.click();
+        button.click();
+        return true;
+      })()`);
       await waitFor(browser, `!document.querySelector('#veMediaDialog')?.open`, {
         timeoutMs: 90_000,
         intervalMs: 100,
@@ -2195,6 +2238,282 @@ async function runAcceptance(options, bundle) {
         timeoutMs: 12_000,
         label: 'project media queue reopened from browser draft'
       });
+      const cleanRecoveryRow = await browser.evaluate(indexedRecordExpression(
+        'media-queues',
+        `(row) => row.slug === ${json(projectSlug)}`,
+        '(row) => ({ key: row.key, itemCount: row.items?.length || 0 })'
+      ));
+      const cleanOpenState = await browser.evaluate(`(() => {
+        const app = document.querySelector('#veApp');
+        return {
+          dirty: app?.dataset.mediaQueueDirty === 'true',
+          pending: Number(app?.dataset.pendingMediaQueues || 0),
+          durable: Number(app?.dataset.durableMediaQueues || 0),
+          volatile: Number(app?.dataset.volatileMediaQueues || 0)
+        };
+      })()`);
+      await browser.evaluate(`(() => { document.querySelector('#veMediaDialog')?.close('clean-navigation-check'); return true; })()`);
+      const cleanDialogIndex = browser.safetyEvidence().navigationDialogs.length;
+      await browser.navigate(`${options.origin}/admin/`, { waitAfterMs: 120 });
+      const cleanNavigationDialogs = browser.safetyEvidence().navigationDialogs.slice(cleanDialogIndex);
+      await loginIfNeeded(browser, options);
+      await waitForCanvas(browser, '/');
+      await openPage(browser, bundle.profile.project);
+      mediaBinding = await findBinding(browser, {
+        ownerCollection: 'projects', fieldPath: 'gallery', tool: 'gallery', role: 'missing-project-media'
+      });
+      await clickBinding(browser, mediaBinding.binding.bindingId);
+      const currentMediaCount = Number(original.rawGalleryCount) + 2;
+      await waitFor(browser, `document.querySelector('#veMediaDialog')?.open
+        && document.querySelectorAll('#veMediaBody .ve-media-row').length === ${currentMediaCount}`, {
+        timeoutMs: 12_000,
+        label: 'clean project gallery after ordinary navigation'
+      });
+      const clickQueueReset = () => browser.evaluate(`(() => {
+        const button = Array.from(document.querySelectorAll('#veMediaBody button')).find((item) => /^(?:Отменить изменения очереди|Подтвердить отмену очереди)$/u.test(item.textContent?.trim() || ''));
+        button?.click();
+        return button?.textContent?.trim() || '';
+      })()`);
+      const casMineMarker = `H6-media-mine-${Date.now()}`;
+      const casTheirsMarker = `H6-media-theirs-${Date.now()}`;
+      const firstAltBeforeCas = await browser.evaluate(`document.querySelector('#veMediaBody .ve-media-row input[aria-label^="Alt фотографии"]')?.value || ''`);
+      await browser.evaluate(`(() => {
+        const input = document.querySelector('#veMediaBody .ve-media-row input[aria-label^="Alt фотографии"]');
+        if (!input) return false;
+        input.value = ${json(casMineMarker)};
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+      })()`);
+      const casMineQueue = await waitForIndexedRecord(
+        browser,
+        'media-queues',
+        `(row) => row.slug === ${json(projectSlug)} && row.items?.some((item) => item.alt === ${json(casMineMarker)}) && row.queueRevision > 0`,
+        'main-tab media queue revision',
+        '(row) => ({ key: row.key, queueRevision: row.queueRevision, queueTokenPresent: Boolean(row.queueToken), minePresent: row.items.some((item) => item.alt.includes("H6-media-mine-")) })'
+      );
+      const casPeerWrite = await browser.evaluate(`(async () => {
+        const request = indexedDB.open('smu1-admin-h6');
+        const database = await new Promise((resolve, reject) => {
+          request.addEventListener('success', () => resolve(request.result), { once: true });
+          request.addEventListener('error', () => reject(request.error), { once: true });
+        });
+        try {
+          const tx = database.transaction('media-queues', 'readwrite');
+          const store = tx.objectStore('media-queues');
+          const rowsRequest = store.getAll();
+          const rows = await new Promise((resolve, reject) => {
+            rowsRequest.addEventListener('success', () => resolve(rowsRequest.result || []), { once: true });
+            rowsRequest.addEventListener('error', () => reject(rowsRequest.error), { once: true });
+          });
+          const row = rows.find((candidate) => candidate.slug === ${json(projectSlug)});
+          if (!row) throw new Error('Peer media queue row is missing.');
+          const previousToken = row.queueToken || '';
+          row.items[0].alt = ${json(firstAltBeforeCas)};
+          row.items[row.items.length - 1].caption = ${json(casTheirsMarker)};
+          row.queueRevision = Number(row.queueRevision || 1) + 1;
+          row.queueToken = crypto.randomUUID();
+          row.updatedAt = new Date().toISOString();
+          store.put(row);
+          await new Promise((resolve, reject) => {
+            tx.addEventListener('complete', resolve, { once: true });
+            tx.addEventListener('abort', () => reject(tx.error), { once: true });
+            tx.addEventListener('error', () => reject(tx.error), { once: true });
+          });
+          return { queueRevision: row.queueRevision, queueTokenChanged: Boolean(previousToken && row.queueToken !== previousToken), minePresent: row.items.some((item) => item.alt === ${json(casMineMarker)}), theirsPresent: row.items.some((item) => item.caption === ${json(casTheirsMarker)}) };
+        } finally { database.close(); }
+      })()`);
+      await browser.evaluate(`(() => {
+        const input = document.querySelector('#veMediaBody .ve-media-row input[aria-label^="Подпись фотографии"]');
+        if (!input) return false;
+        input.value = ${json(`${casMineMarker}-after-peer`)};
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+      })()`);
+      const casConflict = await waitFor(browser, `(() => {
+        const body = document.querySelector('#veMediaBody');
+        const text = body?.textContent?.replace(/\\s+/gu, ' ').trim() || '';
+        const controls = Array.from(body?.querySelectorAll('.ve-media-dropzone, .ve-media-row__remove, .ve-media-row input, .ve-media-row select') || []);
+        return text.includes('Очередь фотографий изменена в другой вкладке')
+          ? { text, controls: controls.length, disabled: controls.filter((control) => control.disabled).length }
+          : null;
+      })()`, { timeoutMs: 12_000, label: 'two-tab media queue CAS conflict' });
+      const casDurableAfterConflict = await browser.evaluate(indexedRecordExpression(
+        'media-queues',
+        `(row) => row.slug === ${json(projectSlug)}`,
+        `(row) => ({ queueRevision: row.queueRevision, queueTokenPresent: Boolean(row.queueToken), minePresent: row.items.some((item) => item.alt === ${json(casMineMarker)}), theirsPresent: row.items.some((item) => item.caption === ${json(casTheirsMarker)}) })`
+      ));
+      const casThirdMarker = `H6-media-third-${Date.now()}`;
+      const casThirdPeerWrite = await browser.evaluate(`(async () => {
+        const request = indexedDB.open('smu1-admin-h6');
+        const database = await new Promise((resolve, reject) => {
+          request.addEventListener('success', () => resolve(request.result), { once: true });
+          request.addEventListener('error', () => reject(request.error), { once: true });
+        });
+        try {
+          const tx = database.transaction('media-queues', 'readwrite');
+          const store = tx.objectStore('media-queues');
+          const rowsRequest = store.getAll();
+          const rows = await new Promise((resolve, reject) => {
+            rowsRequest.addEventListener('success', () => resolve(rowsRequest.result || []), { once: true });
+            rowsRequest.addEventListener('error', () => reject(rowsRequest.error), { once: true });
+          });
+          const row = rows.find((candidate) => candidate.slug === ${json(projectSlug)});
+          if (!row) throw new Error('Third media queue revision is missing.');
+          row.items[row.items.length - 1].caption = ${json(casThirdMarker)};
+          row.queueRevision = Number(row.queueRevision || 1) + 1;
+          row.queueToken = crypto.randomUUID();
+          row.updatedAt = new Date().toISOString();
+          store.put(row);
+          await new Promise((resolve, reject) => {
+            tx.addEventListener('complete', resolve, { once: true });
+            tx.addEventListener('abort', () => reject(tx.error), { once: true });
+            tx.addEventListener('error', () => reject(tx.error), { once: true });
+          });
+          return { queueRevision: row.queueRevision, thirdPresent: row.items.some((item) => item.caption === ${json(casThirdMarker)}) };
+        } finally { database.close(); }
+      })()`);
+      const casMineRecovery = await waitForIndexedRecord(
+        browser,
+        'media-queues',
+        `(row) => Boolean(row.conflictForKey) && row.slug === ${json(projectSlug)} && row.items?.some((item) => item.alt === ${json(casMineMarker)})`,
+        'durable mine branch for media CAS conflict',
+        '(row) => ({ key: row.key, conflictForKey: row.conflictForKey, queueRevision: row.queueRevision, queueTokenPresent: Boolean(row.queueToken), minePresent: row.items.some((item) => item.alt.includes("H6-media-mine-")) })'
+      );
+      const casReloadPreflight = await browser.evaluate(`(() => {
+        const app = document.querySelector('#veApp');
+        return {
+          dirty: app?.dataset.mediaQueueDirty === 'true',
+          running: app?.dataset.mediaQueueRunning === 'true',
+          pending: Number(app?.dataset.pendingMediaQueues || 0),
+          durable: Number(app?.dataset.durableMediaQueues || 0),
+          volatile: Number(app?.dataset.volatileMediaQueues || 0)
+        };
+      })()`);
+      await browser.evaluate(`(() => { document.querySelector('#veMediaDialog')?.close('cas-conflict-reopen'); return true; })()`);
+      const casDialogIndex = browser.safetyEvidence().navigationDialogs.length;
+      const allowCasConflictReload = Boolean(casMineRecovery?.minePresent && casMineRecovery?.queueTokenPresent
+        && casReloadPreflight.pending > 0 && casReloadPreflight.durable > 0 && casReloadPreflight.running === false);
+      await browser.navigate(`${options.origin}/admin/`, {
+        waitAfterMs: 120,
+        beforeUnloadPolicy: allowCasConflictReload ? 'accept-qa-reset' : 'fail'
+      });
+      const casRecoveryDialogs = browser.safetyEvidence().navigationDialogs.slice(casDialogIndex);
+      await loginIfNeeded(browser, options);
+      await waitForCanvas(browser, '/');
+      await openPage(browser, bundle.profile.project);
+      mediaBinding = await findBinding(browser, {
+        ownerCollection: 'projects', fieldPath: 'gallery', tool: 'gallery', role: 'missing-project-media'
+      });
+      await clickBinding(browser, mediaBinding.binding.bindingId);
+      const casReopened = await waitFor(browser, `(() => {
+        const body = document.querySelector('#veMediaBody');
+        const text = body?.textContent?.replace(/\\s+/gu, ' ').trim() || '';
+        const controls = Array.from(body?.querySelectorAll('.ve-media-dropzone, .ve-media-row__remove, .ve-media-row input, .ve-media-row select') || []);
+        return document.querySelector('#veMediaDialog')?.open
+          && text.includes('Очередь фотографий изменена в другой вкладке')
+          && text.includes(${json(casThirdMarker)})
+          ? { controls: controls.length, disabled: controls.filter((control) => control.disabled).length, latestPeerVisible: true }
+          : null;
+      })()`, { timeoutMs: 12_000, label: 'media CAS conflict survives close and reopen' });
+      const choosePeerQueue = () => browser.evaluate(`(() => {
+        const button = Array.from(document.querySelectorAll('#veMediaBody button')).find((item) => /^(?:Использовать очередь другой вкладки|Подтвердить очередь другой вкладки)$/u.test(item.textContent?.trim() || ''));
+        button?.click();
+        return button?.textContent?.trim() || '';
+      })()`);
+      await choosePeerQueue();
+      await waitFor(browser, `Array.from(document.querySelectorAll('#veMediaBody button')).some((button) => button.textContent?.trim() === 'Подтвердить очередь другой вкладки')`, { label: 'explicit peer queue confirmation' });
+      await choosePeerQueue();
+      await waitFor(browser, `!document.querySelector('#veMediaBody')?.textContent?.includes('Очередь фотографий изменена в другой вкладке')`, { label: 'media CAS conflict resolved explicitly' });
+      await clickQueueReset();
+      await waitFor(browser, `Array.from(document.querySelectorAll('#veMediaBody button')).some((button) => button.textContent?.trim() === 'Подтвердить отмену очереди')`, { label: 'CAS fixture reset confirmation' });
+      await clickQueueReset();
+      const casCleanup = await waitFor(browser, `(() => {
+        const app = document.querySelector('#veApp');
+        return document.querySelectorAll('#veMediaBody .ve-media-row').length === ${currentMediaCount}
+          && app?.dataset.mediaQueueDirty === 'false'
+          && Number(app?.dataset.pendingMediaQueues || 0) === 0
+          ? { clean: true, pending: Number(app.dataset.pendingMediaQueues) } : null;
+      })()`, { timeoutMs: 12_000, label: 'media CAS fixture cleanup' });
+      const casConflictRecoveryAfterCleanup = await browser.evaluate(indexedRecordExpression(
+        'media-queues',
+        `(row) => Boolean(row.conflictForKey) && row.slug === ${json(projectSlug)}`,
+        '(row) => ({ key: row.key, conflictForKey: row.conflictForKey, cancelled: row.cancelled })'
+      ));
+      for (let remaining = currentMediaCount; remaining > 0; remaining -= 1) {
+        await browser.evaluate(`(() => { document.querySelector('#veMediaBody .ve-media-row__remove')?.click(); return true; })()`);
+        await waitFor(browser, `document.querySelectorAll('#veMediaBody .ve-media-row').length === ${remaining - 1}`, {
+          timeoutMs: 8_000,
+          label: `project remove-all queue step ${currentMediaCount - remaining + 1}`
+        });
+      }
+      const emptyRemovalQueue = await waitForIndexedRecord(
+        browser,
+        'media-queues',
+        `(row) => row.slug === ${json(projectSlug)} && row.intentVersion === 2 && row.items?.length === 0 && Boolean(row.baselineFingerprint)`,
+        'durable empty project removal queue',
+        '(row) => ({ key: row.key, itemCount: row.items.length, intentVersion: row.intentVersion, baselineFingerprintPresent: Boolean(row.baselineFingerprint) })'
+      );
+      const emptyRemovalState = await browser.evaluate(`(() => {
+        const app = document.querySelector('#veApp');
+        return {
+          dirty: app?.dataset.mediaQueueDirty === 'true',
+          pending: Number(app?.dataset.pendingMediaQueues || 0),
+          durable: Number(app?.dataset.durableMediaQueues || 0),
+          volatile: Number(app?.dataset.volatileMediaQueues || 0)
+        };
+      })()`);
+      await browser.evaluate(`(() => { document.querySelector('#veMediaDialog')?.close('empty-recovery-reload'); return true; })()`);
+      const emptyDialogIndex = browser.safetyEvidence().navigationDialogs.length;
+      const allowEmptyRecoveryReload = Boolean(emptyRemovalQueue?.itemCount === 0
+        && emptyRemovalQueue?.intentVersion === 2
+        && emptyRemovalQueue?.baselineFingerprintPresent === true
+        && emptyRemovalState.dirty === true
+        && emptyRemovalState.pending > 0
+        && emptyRemovalState.durable > 0
+        && emptyRemovalState.volatile === 0);
+      await browser.navigate(`${options.origin}/admin/`, {
+        waitAfterMs: 120,
+        beforeUnloadPolicy: allowEmptyRecoveryReload ? 'accept-qa-reset' : 'fail'
+      });
+      const emptyRecoveryDialogs = browser.safetyEvidence().navigationDialogs.slice(emptyDialogIndex);
+      await loginIfNeeded(browser, options);
+      await waitForCanvas(browser, '/');
+      await openPage(browser, bundle.profile.project);
+      mediaBinding = await findBinding(browser, {
+        ownerCollection: 'projects', fieldPath: 'gallery', tool: 'gallery', role: 'missing-project-media'
+      });
+      await clickBinding(browser, mediaBinding.binding.bindingId);
+      const emptyRecoveredState = await waitFor(browser, `(() => {
+        const app = document.querySelector('#veApp');
+        const rows = document.querySelectorAll('#veMediaBody .ve-media-row').length;
+        return document.querySelector('#veMediaDialog')?.open && rows === 0
+          ? {
+              rows,
+              dirty: app?.dataset.mediaQueueDirty === 'true',
+              pending: Number(app?.dataset.pendingMediaQueues || 0),
+              durable: Number(app?.dataset.durableMediaQueues || 0),
+              volatile: Number(app?.dataset.volatileMediaQueues || 0)
+            }
+          : null;
+      })()`, { timeoutMs: 12_000, label: 'empty project removal queue restored after reload' });
+      await clickQueueReset();
+      await waitFor(browser, `Array.from(document.querySelectorAll('#veMediaBody button')).some((button) => button.textContent?.trim() === 'Подтвердить отмену очереди')`, {
+        label: 'explicit queue reset confirmation'
+      });
+      await clickQueueReset();
+      const resetToCurrent = await waitFor(browser, `(() => {
+        const app = document.querySelector('#veApp');
+        const rows = document.querySelectorAll('#veMediaBody .ve-media-row').length;
+        return rows === ${currentMediaCount}
+          && app?.dataset.mediaQueueDirty === 'false'
+          && Number(app?.dataset.pendingMediaQueues || 0) === 0
+          ? { rows, dirty: app.dataset.mediaQueueDirty, pending: app.dataset.pendingMediaQueues } : null;
+      })()`, { timeoutMs: 12_000, label: 'project queue reset to current gallery' });
+      const resetRecoveryRow = await browser.evaluate(indexedRecordExpression(
+        'media-queues',
+        `(row) => row.slug === ${json(projectSlug)}`,
+        '(row) => ({ key: row.key, itemCount: row.items?.length || 0 })'
+      ));
       const assignRole = (canonicalPath, role) => browser.evaluate(`(() => {
         const row = Array.from(document.querySelectorAll('#veMediaBody .ve-media-row')).find((candidate) => {
           const image = candidate.querySelector('.ve-media-row__thumb img');
@@ -2283,9 +2602,36 @@ async function runAcceptance(options, bundle) {
       return {
         issues: [
           ...(defaultRoleRows.some((row) => JSON.stringify(row.roles) !== JSON.stringify(['gallery'])) ? ['new-project-media-not-gallery-only'] : []),
-          ...(firstStageRequests.length !== 2 ? [`project-stage-request-count:${firstStageRequests.length}`] : []),
+          ...(!doubleSubmitAttempted || firstStageRequests.length !== 2 ? [`project-stage-request-count:${firstStageRequests.length}`] : []),
           ...(firstDraft.archiveCoverMedia !== original.archiveCoverMedia || firstDraft.detailHeroMedia !== original.detailHeroMedia ? ['first-upload-assigned-presentation-role'] : []),
           ...(firstDraft.rawGalleryCount !== original.rawGalleryCount + 2 ? ['first-upload-raw-pool-incomplete'] : []),
+          ...(cleanRecoveryRow ? ['clean-existing-gallery-created-recovery'] : []),
+          ...(cleanOpenState.dirty || cleanOpenState.pending || cleanOpenState.durable || cleanOpenState.volatile ? ['clean-existing-gallery-marked-dirty'] : []),
+          ...(cleanNavigationDialogs.length ? ['clean-existing-gallery-blocked-navigation'] : []),
+          ...(!casMineQueue?.minePresent || !casMineQueue?.queueTokenPresent || Number(casMineQueue?.queueRevision || 0) < 1
+            || casPeerWrite?.minePresent !== false || casPeerWrite?.theirsPresent !== true || casPeerWrite?.queueTokenChanged !== true
+            || Number(casPeerWrite?.queueRevision || 0) <= Number(casMineQueue?.queueRevision || 0)
+            ? ['media-cas-peer-fixture-failed'] : []),
+          ...(casConflict.controls < 1 || casConflict.disabled !== casConflict.controls
+            || !casDurableAfterConflict?.queueTokenPresent || casDurableAfterConflict?.minePresent !== false || casDurableAfterConflict?.theirsPresent !== true
+            || Number(casDurableAfterConflict?.queueRevision || 0) !== Number(casPeerWrite?.queueRevision || -1)
+            ? ['media-cas-conflict-not-fail-closed'] : []),
+          ...(!allowCasConflictReload || casRecoveryDialogs.length !== 1
+            || casRecoveryDialogs[0]?.type !== 'beforeunload' || casRecoveryDialogs[0]?.accepted !== true
+            || casReopened.controls < 1 || casReopened.disabled !== casReopened.controls || casCleanup.clean !== true
+            || casConflictRecoveryAfterCleanup
+            || casReopened.latestPeerVisible !== true || casThirdPeerWrite?.thirdPresent !== true
+            || Number(casThirdPeerWrite?.queueRevision || 0) <= Number(casPeerWrite?.queueRevision || 0)
+            ? ['media-cas-conflict-reopen-or-cleanup-failed'] : []),
+          ...(emptyRemovalQueue?.itemCount !== 0 || emptyRemovalQueue?.intentVersion !== 2 || emptyRemovalQueue?.baselineFingerprintPresent !== true ? ['empty-removal-queue-not-durable'] : []),
+          ...(!emptyRemovalState.dirty || emptyRemovalState.pending < 1 || emptyRemovalState.durable < 1 || emptyRemovalState.volatile !== 0 ? ['empty-removal-state-not-durable'] : []),
+          ...(!allowEmptyRecoveryReload
+            || emptyRecoveryDialogs.length !== 1
+            || emptyRecoveryDialogs[0]?.type !== 'beforeunload'
+            || emptyRecoveryDialogs[0]?.accepted !== true ? ['empty-removal-reload-policy'] : []),
+          ...(emptyRecoveredState.rows !== 0 || !emptyRecoveredState.dirty || emptyRecoveredState.pending < 1
+            || emptyRecoveredState.durable < 1 || emptyRecoveredState.volatile !== 0 ? ['empty-removal-not-restored'] : []),
+          ...(resetToCurrent.rows !== currentMediaCount || resetToCurrent.dirty !== 'false' || resetToCurrent.pending !== '0' || resetRecoveryRow ? ['empty-removal-reset-failed'] : []),
           ...(!coverAssignment.available || !heroAssignment.available ? ['project-role-controls-missing'] : []),
           ...(secondDraft.archiveCoverMedia === secondDraft.detailHeroMedia
             || secondDraft.archiveCoverMedia !== uploadedPaths[0]
@@ -2293,15 +2639,44 @@ async function runAcceptance(options, bundle) {
           ...(!canonicalUnchanged || !recoveryCleared?.cleared ? ['project-role-scenario-not-recovered'] : []),
           ...(saveOrBuildRequests.length ? ['project-media-triggered-save-or-build'] : [])
         ],
+        allowedDialogs: ['beforeunload'],
         evidence: {
           navigation,
           binding: mediaBinding.binding,
           original,
           defaultRoleRows,
           firstStageRequestCount: firstStageRequests.length,
+          doubleSubmitAttempted,
           firstStageRequests,
           uploadedPaths,
           firstDraft,
+          cleanExistingGallery: { recoveryRow: cleanRecoveryRow, state: cleanOpenState, navigationDialogs: cleanNavigationDialogs },
+          mediaCasConflict: {
+            mine: casMineQueue,
+            peerWrite: casPeerWrite,
+            conflict: casConflict,
+            durableAfterConflict: casDurableAfterConflict,
+            thirdPeerWrite: casThirdPeerWrite,
+            mineRecovery: casMineRecovery,
+            reloadPreflight: casReloadPreflight,
+            reloadAllowed: allowCasConflictReload,
+            recoveryDialogs: casRecoveryDialogs,
+            reopened: casReopened,
+            cleanup: casCleanup,
+            conflictRecoveryAfterCleanup: casConflictRecoveryAfterCleanup,
+            silentOverwriteBlocked: casDurableAfterConflict?.minePresent === false && casDurableAfterConflict?.theirsPresent === true,
+            controlsFrozen: casConflict.controls > 0 && casConflict.disabled === casConflict.controls,
+            conflictSurvivedReopen: casReopened.controls > 0 && casReopened.disabled === casReopened.controls
+          },
+          emptyRemoval: {
+            queue: emptyRemovalQueue,
+            state: emptyRemovalState,
+            reloadAllowed: allowEmptyRecoveryReload,
+            recoveryDialogs: emptyRecoveryDialogs,
+            reopened: emptyRecoveredState,
+            resetToCurrent,
+            resetRecoveryRow
+          },
           explicitAssignments: { cover: coverAssignment, hero: heroAssignment, rows: explicitRoleRows },
           secondDraft,
           recoveryCleared,
@@ -2713,7 +3088,14 @@ async function runAcceptance(options, bundle) {
     const boundaryNetworkErrors = telemetry.requests.filter((request) => ['bootstrap', 'final-boundary'].includes(request.scenario)
       && request.failed && !isBenignBrowserCancellation(request)
       && !rawSafety.intercepted.some((entry) => sanitizeRequestUrl(entry.url).pathname === request.url.pathname));
-    const boundaryFailed = boundaryErrors.length > 0 || boundaryHttpErrors.length > 0 || boundaryNetworkErrors.length > 0;
+    const recoveryNavigationDialogs = [
+      ...(scenarios.find((scenario) => scenario.id === 'reload-recovery')?.evidence?.recoveryNavigation?.dialogs || []),
+      ...(scenarios.find((scenario) => scenario.id === 'project-media-role-independence')?.evidence?.mediaCasConflict?.recoveryDialogs || []),
+      ...(scenarios.find((scenario) => scenario.id === 'project-media-role-independence')?.evidence?.emptyRemoval?.recoveryDialogs || [])
+    ];
+    const navigationDialogFailed = JSON.stringify(rawSafety.navigationDialogs) !== JSON.stringify(recoveryNavigationDialogs)
+      || rawSafety.navigationDialogs.some((dialog) => dialog.type !== 'beforeunload' || !dialog.accepted);
+    const boundaryFailed = boundaryErrors.length > 0 || boundaryHttpErrors.length > 0 || boundaryNetworkErrors.length > 0 || navigationDialogFailed;
     const releaseFailed = releaseMutationRequests.length > 0 || releaseIntercepts.length > 0;
     const failedIds = [
       ...failedScenarios.map((entry) => entry.id),
@@ -2757,7 +3139,9 @@ async function runAcceptance(options, bundle) {
           status: boundaryFailed ? 'fail' : 'pass',
           errors: boundaryErrors,
           httpErrors: boundaryHttpErrors,
-          networkErrors: boundaryNetworkErrors
+          networkErrors: boundaryNetworkErrors,
+          navigationDialogs: rawSafety.navigationDialogs,
+          navigationDialogFailed
         },
         latencyP95Ms: percentile95(allLatency)
       }

@@ -74,6 +74,7 @@ const sanitizeObservedUrl = (value) => {
 const browser = await new CdpBrowser({ headful: options.headful, safetyMode: 'admin-no-release' }).start();
 const current = { actionKey: '', mode: '' };
 const events = [];
+const baselineResets = [];
 const requests = [];
 browser.on('Runtime.exceptionThrown', ({ exceptionDetails }) => events.push({ ...current, kind: 'runtime-exception', text: exceptionDetails?.exception?.description || exceptionDetails?.text || '' }));
 browser.on('Runtime.consoleAPICalled', ({ type, args }) => {
@@ -251,8 +252,40 @@ const waitForAdminHomeCanvas = async ({ timeoutMs = 20_000 } = {}) => {
   };
 };
 
-const restoreAdminHome = async () => {
-  await browser.navigate(`${parsedOrigin.origin}/admin/`, { waitAfterMs: 100 });
+const restoreAdminHome = async ({ actionKey = current.actionKey || 'unspecified', afterMode = current.mode || 'unspecified' } = {}) => {
+  const preflight = await browser.evaluate(`(() => {
+    const app = document.querySelector('#veApp');
+    const pendingMediaQueues = Number(app?.dataset.pendingMediaQueues || 0);
+    const durableMediaQueues = Number(app?.dataset.durableMediaQueues || 0);
+    const volatileMediaQueues = Number(app?.dataset.volatileMediaQueues || 0);
+    return {
+      mediaQueueDirty: app?.dataset.mediaQueueDirty === 'true',
+      mediaQueueRunning: app?.dataset.mediaQueueRunning === 'true',
+      pendingMediaQueues: Number.isFinite(pendingMediaQueues) ? pendingMediaQueues : 0,
+      durableMediaQueues: Number.isFinite(durableMediaQueues) ? durableMediaQueues : 0,
+      volatileMediaQueues: Number.isFinite(volatileMediaQueues) ? volatileMediaQueues : 0
+    };
+  })()`).catch(() => ({
+    mediaQueueDirty: false, mediaQueueRunning: false, pendingMediaQueues: 0,
+    durableMediaQueues: 0, volatileMediaQueues: 0
+  }));
+  preflight.acceptBeforeUnload = Boolean(!preflight.mediaQueueRunning
+    && preflight.pendingMediaQueues > 0
+    && preflight.durableMediaQueues > 0
+    && preflight.volatileMediaQueues === 0);
+  const dialogIndex = browser.safetyEvidence().navigationDialogs.length;
+  try {
+    await browser.navigate(`${parsedOrigin.origin}/admin/`, {
+      waitAfterMs: 100,
+      beforeUnloadPolicy: preflight.acceptBeforeUnload ? 'accept-qa-reset' : 'fail'
+    });
+  } finally {
+    const dialogs = browser.safetyEvidence().navigationDialogs.slice(dialogIndex);
+    baselineResets.push({ actionKey, afterMode, preflight, dialogs });
+    if (dialogs.some((dialog) => dialog.accepted && !preflight.acceptBeforeUnload)) {
+      throw new Error(`QA baseline reset accepted beforeunload without explicit dirty media evidence for ${actionKey}.`);
+    }
+  }
   const login = await loginIfNeeded();
   if (login.attempted && !login.success) throw new Error('Synthetic admin login did not restore the editor shell.');
   const wait = await waitForAdminHomeCanvas();
@@ -567,10 +600,10 @@ try {
       }
       const policy = classifyAdminAction(action, { isolatedMutations: options.isolatedMutations });
       const result = { key, action, policy: policy.policy, executions: [], status: 'pass' };
-      if (verboseProgress) progress(`action ${key}: ${policy.policy}`);
+      if (verboseProgress) progress(`action ${key}: ${policy.policy} (${String(action.name || action.domId || action.tag).slice(0, 120)})`);
       if (policy.execute && action.visible && !action.disabled) {
         for (const operation of ['click', 'keyboard']) {
-          if (operation === 'keyboard') await restoreAdminHome();
+          if (operation === 'keyboard') await restoreAdminHome({ actionKey: key, afterMode: 'click' });
           current.actionKey = key;
           current.mode = operation;
           const eventIndex = events.length;
@@ -618,7 +651,27 @@ try {
     counts[result.policy] = (counts[result.policy] || 0) + 1;
     return counts;
   }, {});
+  let dialogDrainError = '';
+  try {
+    await browser.send('Runtime.evaluate', { expression: '0', returnByValue: true });
+    await new Promise((resolve) => setImmediate(resolve));
+    await browser.drainBackgroundDialogs();
+  } catch (error) {
+    dialogDrainError = error?.message || String(error);
+    events.push({ ...current, kind: 'unexpected-browser-dialog', text: dialogDrainError });
+  }
   const rawBrowserSafety = browser.safetyEvidence();
+  const acceptedNavigationDialogs = rawBrowserSafety.navigationDialogs.filter((dialog) => dialog.accepted).length;
+  const evidencedAcceptedDialogs = baselineResets.reduce((count, reset) => count + reset.dialogs.filter((dialog) => dialog.accepted).length, 0);
+  const resetEvidenceValid = !dialogDrainError
+    && acceptedNavigationDialogs === evidencedAcceptedDialogs
+    && baselineResets.every((reset) => {
+      const expected = reset.preflight.acceptBeforeUnload ? 1 : 0;
+      return reset.dialogs.length === expected
+        && reset.dialogs.every((dialog) => dialog.type === 'beforeunload'
+          && dialog.accepted === true
+          && reset.preflight.acceptBeforeUnload);
+    });
   const browserSafety = {
     ...rawBrowserSafety,
     intercepted: rawBrowserSafety.intercepted.map((entry) => ({ ...entry, url: sanitizeObservedUrl(entry.url) }))
@@ -643,6 +696,9 @@ try {
       releaseActionsExecuted: releaseMutationAttempts.length > 0,
       releaseMutationAttempts,
       browserSafety,
+      dialogAudit: { drained: !dialogDrainError, error: dialogDrainError, unexpected: rawBrowserSafety.navigationDialogs.length - evidencedAcceptedDialogs },
+      baselineResets,
+      resetEvidenceValid,
       login,
       canvas,
       navigationAcceptance
@@ -667,7 +723,7 @@ try {
   progress(`registered ${output.aggregate.actions} actions; report: ${path.relative(root, options.output)}`);
   if (options.json) process.stdout.write(`${JSON.stringify(output)}\n`);
   else process.stdout.write(`${JSON.stringify({ aggregate: output.aggregate, output: options.output }, null, 2)}\n`);
-  if (!navigatorReconciliation.exact || output.aggregate.failed || output.aggregate.canvasRoutesFailed || navigationAcceptance.status !== 'pass') process.exitCode = 1;
+  if (!navigatorReconciliation.exact || output.aggregate.failed || output.aggregate.canvasRoutesFailed || navigationAcceptance.status !== 'pass' || !resetEvidenceValid) process.exitCode = 1;
 } finally {
   await browser.close();
 }

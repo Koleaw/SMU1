@@ -1,74 +1,175 @@
 {
-  "$ref": "#/definitions/products",
-  "definitions": {
-    "products": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "productCategorySlug": {
+      "type": "string"
+    },
+    "sku": {
+      "type": "string"
+    },
+    "presentationType": {
+      "default": "standard",
+      "type": "string",
+      "enum": [
+        "standard",
+        "premium"
+      ]
+    },
+    "shortDescription": {
+      "type": "string"
+    },
+    "leadText": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "solutionKicker": {
+      "type": "string"
+    },
+    "applicationItems": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "executionVariants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "materials": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "colors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dimensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "order": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "priceMode": {
+      "type": "string",
+      "enum": [
+        "from",
+        "exact",
+        "on_request",
+        "none"
+      ]
+    },
+    "priceFrom": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "currency": {
+      "type": "string"
+    },
+    "image": {
+      "type": "string"
+    },
+    "imageView": {
       "type": "object",
       "properties": {
-        "title": {
-          "type": "string"
-        },
-        "slug": {
-          "type": "string"
-        },
-        "productCategorySlug": {
-          "type": "string"
-        },
-        "sku": {
-          "type": "string"
-        },
-        "presentationType": {
+        "fit": {
           "type": "string",
           "enum": [
-            "standard",
-            "premium"
-          ],
-          "default": "standard"
+            "cover",
+            "contain"
+          ]
         },
-        "shortDescription": {
-          "type": "string"
+        "positionX": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
         },
-        "leadText": {
-          "type": "string"
+        "positionY": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
         },
-        "description": {
-          "type": "string"
-        },
-        "solutionKicker": {
-          "type": "string"
-        },
-        "applicationItems": {
-          "type": "array",
-          "items": {
+        "scale": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3
+        }
+      },
+      "required": [
+        "fit",
+        "positionX",
+        "positionY",
+        "scale"
+      ],
+      "additionalProperties": false
+    },
+    "gallery": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
             "type": "string"
-          }
-        },
-        "executionVariants": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "materials": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "colors": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "dimensions": {
-          "type": "array",
-          "items": {
+          },
+          {
             "type": "object",
             "properties": {
-              "label": {
+              "src": {
                 "type": "string"
               },
-              "value": {
+              "alt": {
+                "type": "string"
+              },
+              "caption": {
                 "type": "string"
               },
               "order": {
@@ -79,248 +180,180 @@
               }
             },
             "required": [
-              "label",
-              "value"
+              "src"
             ],
             "additionalProperties": false
           }
-        },
-        "features": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "priceMode": {
+        ]
+      }
+    },
+    "placeholderLabel": {
+      "type": "string"
+    },
+    "customizationItems": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "showDeliveryBlock": {
+      "type": "boolean"
+    },
+    "deliveryText": {
+      "type": "string"
+    },
+    "relatedProductSlugs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "showCustomProjectBlock": {
+      "type": "boolean"
+    },
+    "customProjectTitle": {
+      "type": "string"
+    },
+    "customProjectText": {
+      "type": "string"
+    },
+    "descriptionTextStyle": {
+      "type": "object",
+      "properties": {
+        "fontSize": {
           "type": "string",
           "enum": [
-            "from",
-            "on_request",
-            "none"
+            "small",
+            "base",
+            "large",
+            "xl",
+            "2xl"
           ]
         },
-        "priceFrom": {
-          "type": [
-            "number",
-            "null"
+        "fontWeight": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "medium",
+            "semibold",
+            "bold"
           ]
         },
-        "currency": {
-          "type": "string"
-        },
-        "image": {
-          "type": "string"
-        },
-        "imageView": {
-          "type": "object",
-          "properties": {
-            "fit": {
-              "type": "string",
-              "enum": [
-                "cover",
-                "contain"
-              ]
-            },
-            "positionX": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 100
-            },
-            "positionY": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 100
-            },
-            "scale": {
-              "type": "number",
-              "minimum": 1,
-              "maximum": 3
-            }
-          },
-          "required": [
-            "fit",
-            "positionX",
-            "positionY",
-            "scale"
-          ],
-          "additionalProperties": false
-        },
-        "gallery": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "placeholderLabel": {
-          "type": "string"
-        },
-        "customizationItems": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "showDeliveryBlock": {
+        "italic": {
           "type": "boolean"
         },
-        "deliveryText": {
-          "type": "string"
+        "align": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
         },
-        "relatedProductSlugs": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+        "lineHeight": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "relaxed"
+          ]
         },
-        "showCustomProjectBlock": {
-          "type": "boolean"
-        },
-        "customProjectTitle": {
-          "type": "string"
-        },
-        "customProjectText": {
-          "type": "string"
-        },
-        "descriptionTextStyle": {
-          "type": "object",
-          "properties": {
-            "fontSize": {
-              "type": "string",
-              "enum": [
-                "small",
-                "base",
-                "large",
-                "xl",
-                "2xl"
-              ]
-            },
-            "fontWeight": {
-              "type": "string",
-              "enum": [
-                "normal",
-                "medium",
-                "semibold",
-                "bold"
-              ]
-            },
-            "italic": {
-              "type": "boolean"
-            },
-            "align": {
-              "type": "string",
-              "enum": [
-                "left",
-                "center",
-                "right"
-              ]
-            },
-            "lineHeight": {
-              "type": "string",
-              "enum": [
-                "compact",
-                "normal",
-                "relaxed"
-              ]
-            },
-            "color": {
-              "type": "string",
-              "enum": [
-                "primary",
-                "secondary",
-                "white",
-                "accent"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "descriptionLayout": {
-          "type": "object",
-          "properties": {
-            "width": {
-              "type": "string",
-              "enum": [
-                "narrow",
-                "medium",
-                "wide",
-                "full"
-              ]
-            },
-            "widthPercent": {
-              "type": "number",
-              "minimum": 30,
-              "maximum": 100
-            },
-            "maxWidth": {
-              "type": "number",
-              "minimum": 280,
-              "maximum": 1200
-            },
-            "position": {
-              "type": "string",
-              "enum": [
-                "left",
-                "center",
-                "right"
-              ]
-            },
-            "padding": {
-              "type": "string",
-              "enum": [
-                "compact",
-                "normal",
-                "large"
-              ]
-            },
-            "verticalPadding": {
-              "type": "string",
-              "enum": [
-                "compact",
-                "normal",
-                "large"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "order": {
-          "type": "number"
-        },
-        "isActive": {
-          "type": "boolean"
-        },
-        "showInCatalog": {
-          "type": "boolean"
-        },
-        "seoTitle": {
-          "type": "string"
-        },
-        "seoDescription": {
-          "type": "string"
-        },
-        "$schema": {
-          "type": "string"
+        "color": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "secondary",
+            "white",
+            "accent"
+          ]
         }
       },
-      "required": [
-        "title",
-        "slug",
-        "productCategorySlug",
-        "shortDescription",
-        "leadText",
-        "priceMode",
-        "priceFrom",
-        "currency",
-        "image",
-        "placeholderLabel",
-        "order",
-        "isActive",
-        "showInCatalog",
-        "seoTitle",
-        "seoDescription"
-      ],
       "additionalProperties": false
+    },
+    "descriptionLayout": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "string",
+          "enum": [
+            "narrow",
+            "medium",
+            "wide",
+            "full"
+          ]
+        },
+        "widthPercent": {
+          "type": "number",
+          "minimum": 30,
+          "maximum": 100
+        },
+        "maxWidth": {
+          "type": "number",
+          "minimum": 280,
+          "maximum": 1200
+        },
+        "position": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        "padding": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "large"
+          ]
+        },
+        "verticalPadding": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "large"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "order": {
+      "type": "number"
+    },
+    "isActive": {
+      "type": "boolean"
+    },
+    "showInCatalog": {
+      "type": "boolean"
+    },
+    "seoTitle": {
+      "type": "string"
+    },
+    "seoDescription": {
+      "type": "string"
+    },
+    "$schema": {
+      "type": "string"
     }
   },
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "required": [
+    "title",
+    "slug",
+    "productCategorySlug",
+    "shortDescription",
+    "leadText",
+    "priceMode",
+    "priceFrom",
+    "currency",
+    "image",
+    "placeholderLabel",
+    "order",
+    "isActive",
+    "showInCatalog",
+    "seoTitle",
+    "seoDescription"
+  ],
+  "additionalProperties": false
 }

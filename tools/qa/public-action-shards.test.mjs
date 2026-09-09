@@ -15,7 +15,8 @@ const baseEvidence = {
   dirty: false,
   origin: 'http://127.0.0.1:40001',
   basePath: '/',
-  browserSafety: { mode: 'public-read-only', intercepted: [] },
+  browserSafety: { mode: 'public-read-only', intercepted: [], navigationDialogs: [] },
+  dialogAudit: { finalDrainPassed: true, unexpectedCount: 0, passed: true },
   emulation: { reducedMotion: true, deviceScaleFactor: 1 },
   analyticsAndLeadSubmissionBlocked: true,
   distFreshness: { fresh: true },
@@ -176,6 +177,16 @@ test('merger accepts only a complete concrete shard set and produces verifier-co
   assert.deepEqual(merged.publicLifecycleSemantics.map((result) => result.id), ['home-video', 'cookie-notice', 'contacts-map']);
   assert.equal(merged.evidence.shards.length, 2);
   assert.deepEqual(merged.evidence.shards.map((item) => item.sourceFile), ['shard-1.json', 'shard-2.json']);
+  assert.deepEqual(merged.evidence.browserSafety.navigationDialogs, []);
+  assert.deepEqual(merged.evidence.dialogAudit, {
+    workers: [
+      { index: 1, finalDrainPassed: true, unexpectedCount: 0, passed: true },
+      { index: 2, finalDrainPassed: true, unexpectedCount: 0, passed: true }
+    ],
+    finalDrainPassed: true,
+    unexpectedCount: 0,
+    passed: true
+  });
   assert.equal(validatePublicActionEvidence(merged, { authoritativeRoutes: routes }).ok, true);
   const brokenMapTerminal = structuredClone(merged);
   brokenMapTerminal.publicLifecycleSemantics.find((result) => result.id === 'contacts-map').evidence.terminal.focusTarget = 'other';
@@ -191,4 +202,15 @@ test('merger accepts only a complete concrete shard set and produces verifier-co
   const missingLifecycle = structuredClone(reports);
   missingLifecycle[0].publicLifecycleSemantics.pop();
   assert.throws(() => mergePublicActionShards(missingLifecycle), /public lifecycle semantics is missing/u);
+
+  const dialogReports = structuredClone(reports);
+  dialogReports[0].evidence.browserSafety.navigationDialogs.push({ type: 'alert', accepted: false, reason: 'unexpected-navigation-dialog' });
+  dialogReports[0].evidence.dialogAudit = { finalDrainPassed: true, unexpectedCount: 1, passed: false };
+  dialogReports[1].evidence.browserSafety.navigationDialogs.push({ type: 'confirm', accepted: false, reason: 'unexpected-navigation-dialog' });
+  dialogReports[1].evidence.dialogAudit = { finalDrainPassed: true, unexpectedCount: 1, passed: false };
+  const dialogMerged = mergePublicActionShards(dialogReports);
+  assert.deepEqual(dialogMerged.evidence.browserSafety.navigationDialogs.map((dialog) => dialog.type), ['alert', 'confirm']);
+  assert.equal(dialogMerged.evidence.dialogAudit.unexpectedCount, 2);
+  assert.equal(dialogMerged.evidence.dialogAudit.passed, false);
+  assert.equal(dialogMerged.aggregate.unexpectedNavigationDialogs, 2);
 });

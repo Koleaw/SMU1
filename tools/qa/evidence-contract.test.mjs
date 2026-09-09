@@ -240,7 +240,10 @@ test('admin action evidence rejects generic execution of release controls', () =
         srcOriginPath: 'http://127.0.0.1:4321/', locationOriginPath: 'http://127.0.0.1:4321/',
         queryKeys: ['__smu1_editor', 'editorMode', 'editorRevision', 'editorSession']
       },
-      releaseMutationAttempts: [], browserSafety: { mode: 'admin-no-release', intercepted: [] },
+      releaseMutationAttempts: [],
+      browserSafety: { mode: 'admin-no-release', intercepted: [], navigationDialogs: [] },
+      dialogAudit: { drained: true, error: '', unexpected: 0 },
+      baselineResets: [], resetEvidenceValid: true,
       navigationAcceptance: { status: 'pass', click: { mode: 'click' }, keyboard: { mode: 'keyboard-enter' } }
     },
     actionResults: [{
@@ -260,6 +263,17 @@ test('admin action evidence rejects generic execution of release controls', () =
     aggregate: { discoveredContexts: ['shell', 'iframe-home'] }
   };
   assert.equal(validateAdminActionEvidence(report, { authoritativeRoutes: ['/'] }).ok, true);
+  const unsafeReset = structuredClone(report);
+  unsafeReset.evidence.browserSafety.navigationDialogs = [{ type: 'beforeunload', accepted: true, reason: 'qa-baseline-reset' }];
+  unsafeReset.evidence.baselineResets = [{
+    actionKey: 'shell:media', afterMode: 'click',
+    preflight: {
+      mediaQueueDirty: false, mediaQueueRunning: false, pendingMediaQueues: 1,
+      durableMediaQueues: 0, volatileMediaQueues: 1, acceptBeforeUnload: true
+    },
+    dialogs: [{ type: 'beforeunload', accepted: true, reason: 'qa-baseline-reset' }]
+  }];
+  assert.match(validateAdminActionEvidence(unsafeReset, { authoritativeRoutes: ['/'] }).issues.join('\n'), /reset-evidence/u);
   const leakedSession = structuredClone(report);
   leakedSession.evidence.canvas.editorSession = '6e978464-ea27-49de-92d4-44cb175166e8';
   leakedSession.evidence.canvas.location = 'http://127.0.0.1:4321/?editorSession=6e978464-ea27-49de-92d4-44cb175166e8';
@@ -286,6 +300,15 @@ test('visual editor acceptance fails closed unless every required editor scenari
   const authoritativeImpactRoutes = buildExpectedRouteModel().routes.map((route) => route.pathname)
     .sort((left, right) => left.localeCompare(right, 'en'));
   const evidenceById = {
+    'reload-recovery': {
+      beforeUnloadDialogAccepted: true,
+      recoveryNavigation: {
+        allowed: true,
+        preflight: { dirty: true, running: false, pending: 1, durable: 1, volatile: 0 },
+        storedMediaQueue: { itemCount: 20, intentVersion: 2, baselineFingerprint: '[{"path":"/uploads/one.jpg"}]' },
+        dialogs: [{ type: 'beforeunload', accepted: true, reason: 'qa-recovery-reset' }]
+      }
+    },
     'link-label-href-independent': {
       navigation: { selectedRoute: '/' },
       binding: {
@@ -329,6 +352,7 @@ test('visual editor acceptance fails closed unless every required editor scenari
         { name: 'two.jpg', roles: ['gallery'] }
       ],
       firstStageRequestCount: 2,
+      doubleSubmitAttempted: true,
       firstStageRequests: [
         { method: 'POST', url: { pathname: '/api/admin/media/staging' } },
         { method: 'POST', url: { pathname: '/api/admin/media/staging' } }
@@ -337,6 +361,37 @@ test('visual editor acceptance fails closed unless every required editor scenari
       firstDraft: {
         rawGalleryCount: 4, publicGallery: ['/uploads/one.jpg', '/uploads/two.jpg'],
         archiveCoverMedia: '', detailHeroMedia: '', stagedCount: 2
+      },
+      cleanExistingGallery: {
+        recoveryRow: null,
+        state: { dirty: false, pending: 0, durable: 0, volatile: 0 },
+        navigationDialogs: []
+      },
+      mediaCasConflict: {
+        mine: { key: 'repo::projects::slug::gallery', queueRevision: 1, queueTokenPresent: true, minePresent: true },
+        peerWrite: { queueRevision: 2, queueTokenChanged: true, minePresent: false, theirsPresent: true },
+        conflict: { controls: 9, disabled: 9 },
+        durableAfterConflict: { queueRevision: 2, queueTokenPresent: true, minePresent: false, theirsPresent: true },
+        thirdPeerWrite: { queueRevision: 3, thirdPresent: true },
+        mineRecovery: { conflictForKey: 'repo::projects::slug::gallery', queueRevision: 1, queueTokenPresent: true, minePresent: true },
+        reloadPreflight: { dirty: true, running: false, pending: 1, durable: 1, volatile: 1 },
+        reloadAllowed: true,
+        recoveryDialogs: [{ type: 'beforeunload', accepted: true, reason: 'qa-recovery-reset' }],
+        reopened: { controls: 9, disabled: 9, latestPeerVisible: true },
+        cleanup: { clean: true, pending: 0 },
+        conflictRecoveryAfterCleanup: null,
+        silentOverwriteBlocked: true,
+        controlsFrozen: true,
+        conflictSurvivedReopen: true
+      },
+      emptyRemoval: {
+        queue: { itemCount: 0, intentVersion: 2, baselineFingerprintPresent: true },
+        state: { dirty: true, pending: 1, durable: 1, volatile: 0 },
+        reloadAllowed: true,
+        recoveryDialogs: [{ type: 'beforeunload', accepted: true, reason: 'qa-recovery-reset' }],
+        reopened: { rows: 0, dirty: true, pending: 1, durable: 1, volatile: 0 },
+        resetToCurrent: { rows: 4, dirty: 'false', pending: '0' },
+        resetRecoveryRow: null
       },
       explicitAssignments: {
         cover: { available: true, path: '/uploads/one.jpg', role: 'cover' },
@@ -480,6 +535,9 @@ test('visual editor acceptance fails closed unless every required editor scenari
   const weakened = structuredClone(report);
   weakened.scenarios.find((scenario) => scenario.id === 'failed-exact-after-save').evidence.previewBlocked = false;
   assert.match(validateVisualEditorAcceptanceEvidence(weakened).issues.join('\n'), /failed-exact-contract/u);
+  const missingRecoveryDialog = structuredClone(report);
+  missingRecoveryDialog.scenarios.find((scenario) => scenario.id === 'reload-recovery').evidence.recoveryNavigation.dialogs = [];
+  assert.match(validateVisualEditorAcceptanceEvidence(missingRecoveryDialog).issues.join('\n'), /reload-recovery-contract/u);
   const staleBorrowedMedia = structuredClone(report);
   staleBorrowedMedia.scenarios.find((scenario) => scenario.id === 'borrowed-relation-media-live-projection').evidence.liveImageChanged = false;
   assert.match(validateVisualEditorAcceptanceEvidence(staleBorrowedMedia).issues.join('\n'), /borrowed-relation-media-contract/u);

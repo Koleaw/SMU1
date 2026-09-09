@@ -1,86 +1,1585 @@
 {
-  "$ref": "#/definitions/site-settings",
-  "definitions": {
-    "site-settings": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "companyName": {
+      "type": "string"
+    },
+    "companyShortName": {
+      "type": "string"
+    },
+    "inn": {
+      "type": "string"
+    },
+    "kpp": {
+      "type": "string"
+    },
+    "ogrn": {
+      "type": "string"
+    },
+    "registrationDate": {
+      "type": "string"
+    },
+    "legalAddress": {
+      "type": "string"
+    },
+    "phonePrimary": {
+      "type": "string"
+    },
+    "phoneSecondary": {
+      "type": "string"
+    },
+    "telegram": {
+      "type": "string"
+    },
+    "telegramLabel": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "regions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "vacanciesEmptyTitle": {
+      "type": "string"
+    },
+    "vacanciesEmptyText": {
+      "type": "string"
+    },
+    "contactsPage": {
       "type": "object",
       "properties": {
-        "companyName": {
+        "eyebrow": {
           "type": "string"
         },
-        "companyShortName": {
+        "title": {
           "type": "string"
         },
-        "inn": {
+        "description": {
           "type": "string"
         },
-        "kpp": {
+        "briefEyebrow": {
           "type": "string"
         },
-        "ogrn": {
+        "briefTitle": {
           "type": "string"
         },
-        "registrationDate": {
+        "briefDescription": {
           "type": "string"
         },
-        "legalAddress": {
+        "ctaEyebrow": {
           "type": "string"
         },
-        "phonePrimary": {
+        "ctaTitle": {
           "type": "string"
         },
-        "phoneSecondary": {
+        "primaryLabel": {
           "type": "string"
         },
-        "telegram": {
+        "secondaryLabel": {
+          "type": "string"
+        },
+        "seoTitle": {
+          "type": "string"
+        },
+        "seoDescription": {
+          "type": "string"
+        },
+        "shellCtaLabel": {
+          "type": "string"
+        },
+        "homeBreadcrumbLabel": {
+          "type": "string"
+        },
+        "breadcrumbLabel": {
+          "type": "string"
+        },
+        "primaryPhoneLabel": {
+          "type": "string"
+        },
+        "secondaryPhoneLabel": {
+          "type": "string"
+        },
+        "telegramCardLabel": {
+          "type": "string"
+        },
+        "emailCardLabel": {
+          "type": "string"
+        },
+        "addressEyebrow": {
+          "type": "string"
+        },
+        "addressDescription": {
+          "type": "string"
+        },
+        "regionsLabel": {
+          "type": "string"
+        },
+        "ratingTitle": {
+          "type": "string"
+        },
+        "mapLinkLabel": {
+          "type": "string"
+        },
+        "requisitesEyebrow": {
+          "type": "string"
+        },
+        "innLabel": {
+          "type": "string"
+        },
+        "kppLabel": {
+          "type": "string"
+        },
+        "ogrnLabel": {
+          "type": "string"
+        },
+        "aboutLabel": {
+          "type": "string"
+        },
+        "vacanciesLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title",
+        "description",
+        "homeBreadcrumbLabel",
+        "breadcrumbLabel",
+        "primaryPhoneLabel",
+        "secondaryPhoneLabel",
+        "telegramCardLabel",
+        "emailCardLabel",
+        "addressEyebrow",
+        "addressDescription",
+        "regionsLabel",
+        "ratingTitle",
+        "mapLinkLabel",
+        "requisitesEyebrow",
+        "innLabel",
+        "kppLabel",
+        "ogrnLabel",
+        "aboutLabel",
+        "vacanciesLabel"
+      ],
+      "additionalProperties": false
+    },
+    "vacanciesPage": {
+      "type": "object",
+      "properties": {
+        "eyebrow": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "briefEyebrow": {
+          "type": "string"
+        },
+        "briefTitle": {
+          "type": "string"
+        },
+        "briefDescription": {
+          "type": "string"
+        },
+        "ctaEyebrow": {
+          "type": "string"
+        },
+        "ctaTitle": {
+          "type": "string"
+        },
+        "primaryLabel": {
+          "type": "string"
+        },
+        "secondaryLabel": {
+          "type": "string"
+        },
+        "seoTitle": {
+          "type": "string"
+        },
+        "seoDescription": {
+          "type": "string"
+        },
+        "shellCtaLabel": {
+          "type": "string"
+        },
+        "homeBreadcrumbLabel": {
+          "type": "string"
+        },
+        "breadcrumbLabel": {
+          "type": "string"
+        },
+        "cityLabel": {
+          "type": "string"
+        },
+        "employmentTypeLabel": {
+          "type": "string"
+        },
+        "salaryLabel": {
+          "type": "string"
+        },
+        "openPositionLabel": {
+          "type": "string"
+        },
+        "emptyEyebrow": {
+          "type": "string"
+        },
+        "relatedEyebrow": {
+          "type": "string"
+        },
+        "relatedCompanyLabel": {
+          "type": "string"
+        },
+        "relatedContactsLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title",
+        "description",
+        "homeBreadcrumbLabel",
+        "breadcrumbLabel",
+        "cityLabel",
+        "employmentTypeLabel",
+        "salaryLabel",
+        "openPositionLabel",
+        "emptyEyebrow",
+        "relatedEyebrow",
+        "relatedCompanyLabel",
+        "relatedContactsLabel"
+      ],
+      "additionalProperties": false
+    },
+    "vacancyDetailPage": {
+      "type": "object",
+      "properties": {
+        "eyebrow": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "briefEyebrow": {
+          "type": "string"
+        },
+        "briefTitle": {
+          "type": "string"
+        },
+        "briefDescription": {
+          "type": "string"
+        },
+        "ctaEyebrow": {
+          "type": "string"
+        },
+        "ctaTitle": {
+          "type": "string"
+        },
+        "primaryLabel": {
+          "type": "string"
+        },
+        "secondaryLabel": {
+          "type": "string"
+        },
+        "seoTitle": {
+          "type": "string"
+        },
+        "seoDescription": {
+          "type": "string"
+        },
+        "shellCtaLabel": {
+          "type": "string"
+        },
+        "homeBreadcrumbLabel": {
+          "type": "string"
+        },
+        "archiveBreadcrumbLabel": {
+          "type": "string"
+        },
+        "responsibilitiesLabel": {
+          "type": "string"
+        },
+        "requirementsLabel": {
+          "type": "string"
+        },
+        "conditionsLabel": {
+          "type": "string"
+        },
+        "cityLabel": {
+          "type": "string"
+        },
+        "employmentTypeLabel": {
+          "type": "string"
+        },
+        "salaryLabel": {
+          "type": "string"
+        },
+        "emailChannelLabel": {
+          "type": "string"
+        },
+        "phoneChannelLabel": {
+          "type": "string"
+        },
+        "telegramChannelLabel": {
+          "type": "string"
+        },
+        "relatedEyebrow": {
+          "type": "string"
+        },
+        "relatedCompanyLabel": {
+          "type": "string"
+        },
+        "relatedContactsLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title",
+        "description",
+        "homeBreadcrumbLabel",
+        "archiveBreadcrumbLabel",
+        "responsibilitiesLabel",
+        "requirementsLabel",
+        "conditionsLabel",
+        "cityLabel",
+        "employmentTypeLabel",
+        "salaryLabel",
+        "emailChannelLabel",
+        "phoneChannelLabel",
+        "telegramChannelLabel",
+        "relatedEyebrow",
+        "relatedCompanyLabel",
+        "relatedContactsLabel"
+      ],
+      "additionalProperties": false
+    },
+    "companyPage": {
+      "type": "object",
+      "properties": {
+        "homeBreadcrumbLabel": {
+          "type": "string"
+        },
+        "breadcrumbLabel": {
+          "type": "string"
+        },
+        "companyLabel": {
+          "type": "string"
+        },
+        "cityLabel": {
+          "type": "string"
+        },
+        "registrationLabel": {
+          "type": "string"
+        },
+        "regionsLabel": {
+          "type": "string"
+        },
+        "contactsLabel": {
+          "type": "string"
+        },
+        "privacyLabel": {
+          "type": "string"
+        },
+        "innLabel": {
+          "type": "string"
+        },
+        "kppLabel": {
+          "type": "string"
+        },
+        "ogrnLabel": {
+          "type": "string"
+        },
+        "registrationDateLabel": {
+          "type": "string"
+        },
+        "legalAddressLabel": {
+          "type": "string"
+        },
+        "contactAddressLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "homeBreadcrumbLabel",
+        "breadcrumbLabel",
+        "companyLabel",
+        "cityLabel",
+        "registrationLabel",
+        "regionsLabel",
+        "contactsLabel",
+        "privacyLabel",
+        "innLabel",
+        "kppLabel",
+        "ogrnLabel",
+        "registrationDateLabel",
+        "legalAddressLabel",
+        "contactAddressLabel"
+      ],
+      "additionalProperties": false
+    },
+    "notFoundPage": {
+      "type": "object",
+      "properties": {
+        "eyebrow": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "briefEyebrow": {
+          "type": "string"
+        },
+        "briefTitle": {
+          "type": "string"
+        },
+        "briefDescription": {
+          "type": "string"
+        },
+        "ctaEyebrow": {
+          "type": "string"
+        },
+        "ctaTitle": {
+          "type": "string"
+        },
+        "primaryLabel": {
+          "type": "string"
+        },
+        "secondaryLabel": {
+          "type": "string"
+        },
+        "seoTitle": {
+          "type": "string"
+        },
+        "seoDescription": {
+          "type": "string"
+        },
+        "shellCtaLabel": {
+          "type": "string"
+        },
+        "primaryHref": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^\\/(?!\\/)[^\\s\\\\]*$"
+        },
+        "secondaryHref": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^\\/(?!\\/)[^\\s\\\\]*$"
+        },
+        "phoneLabel": {
           "type": "string"
         },
         "telegramLabel": {
           "type": "string"
         },
-        "email": {
-          "type": "string"
-        },
-        "city": {
-          "type": "string"
-        },
-        "address": {
-          "type": "string"
-        },
-        "regions": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "vacanciesEmptyTitle": {
-          "type": "string"
-        },
-        "vacanciesEmptyText": {
-          "type": "string"
-        },
-        "$schema": {
+        "emailLabel": {
           "type": "string"
         }
       },
       "required": [
-        "companyName",
-        "companyShortName",
-        "inn",
-        "kpp",
-        "ogrn",
-        "registrationDate",
-        "legalAddress",
-        "phonePrimary",
-        "phoneSecondary",
-        "telegram",
-        "email",
-        "city",
-        "address",
-        "vacanciesEmptyTitle",
-        "vacanciesEmptyText"
+        "eyebrow",
+        "title",
+        "description",
+        "seoTitle",
+        "seoDescription",
+        "shellCtaLabel",
+        "primaryHref",
+        "secondaryHref",
+        "phoneLabel",
+        "telegramLabel",
+        "emailLabel"
       ],
       "additionalProperties": false
+    },
+    "privacyPolicy": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "seoTitle": {
+          "type": "string"
+        },
+        "seoDescription": {
+          "type": "string"
+        },
+        "documentLabel": {
+          "type": "string"
+        },
+        "documentDescription": {
+          "type": "string"
+        },
+        "revisionDate": {
+          "type": "string"
+        },
+        "confirmedAgainstGlobalAt": {
+          "type": "string"
+        },
+        "operatorHeading": {
+          "type": "string"
+        },
+        "operatorFullName": {
+          "type": "string"
+        },
+        "homeBreadcrumbLabel": {
+          "type": "string"
+        },
+        "shellCtaLabel": {
+          "type": "string"
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "heading": {
+                "type": "string"
+              },
+              "blocks": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string",
+                          "const": "paragraph"
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "order": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "text",
+                        "order"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string",
+                          "const": "list"
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "order": {
+                                "type": "number"
+                              },
+                              "isActive": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "label",
+                              "order"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "order": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "items",
+                        "order"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "order": {
+                "type": "number"
+              },
+              "isActive": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "heading",
+              "blocks",
+              "order"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "title",
+        "seoTitle",
+        "seoDescription",
+        "documentLabel",
+        "documentDescription",
+        "revisionDate",
+        "confirmedAgainstGlobalAt",
+        "operatorHeading",
+        "operatorFullName",
+        "homeBreadcrumbLabel",
+        "shellCtaLabel",
+        "sections"
+      ],
+      "additionalProperties": false
+    },
+    "brandLogo": {
+      "type": "string"
+    },
+    "footerDisclaimer": {
+      "type": "string"
+    },
+    "copyrightLabel": {
+      "type": "string"
+    },
+    "shellLabels": {
+      "type": "object",
+      "properties": {
+        "productsGroup": {
+          "type": "string"
+        },
+        "productsMenuEyebrow": {
+          "type": "string"
+        },
+        "companyMenu": {
+          "type": "string"
+        },
+        "workAndCompanyGroup": {
+          "type": "string"
+        },
+        "directionsGroup": {
+          "type": "string"
+        },
+        "directContactGroup": {
+          "type": "string"
+        },
+        "secondaryPhoneSuffix": {
+          "type": "string"
+        },
+        "telegramSuffix": {
+          "type": "string"
+        },
+        "defaultCtaLabel": {
+          "type": "string"
+        },
+        "catalogRequestCtaLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "productsGroup",
+        "productsMenuEyebrow",
+        "companyMenu",
+        "workAndCompanyGroup",
+        "directionsGroup",
+        "directContactGroup",
+        "secondaryPhoneSuffix",
+        "telegramSuffix",
+        "defaultCtaLabel",
+        "catalogRequestCtaLabel"
+      ],
+      "additionalProperties": false
+    },
+    "cookieNotice": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "privacyLabel": {
+          "type": "string"
+        },
+        "privacyHref": {
+          "type": "string"
+        },
+        "acceptLabel": {
+          "type": "string"
+        },
+        "settingsLabel": {
+          "type": "string"
+        },
+        "dialogTitle": {
+          "type": "string"
+        },
+        "dialogDescription": {
+          "type": "string"
+        },
+        "closeLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "message",
+        "privacyLabel",
+        "privacyHref",
+        "acceptLabel",
+        "settingsLabel",
+        "dialogTitle",
+        "dialogDescription",
+        "closeLabel"
+      ],
+      "additionalProperties": false
+    },
+    "productUi": {
+      "type": "object",
+      "properties": {
+        "cardPremiumLabel": {
+          "type": "string"
+        },
+        "cardMaterialsMissingLabel": {
+          "type": "string"
+        },
+        "cardCtaLabel": {
+          "type": "string"
+        },
+        "standardHeroPrimaryLabel": {
+          "type": "string"
+        },
+        "standardHeroSecondaryLabel": {
+          "type": "string"
+        },
+        "standardContactEyebrow": {
+          "type": "string"
+        },
+        "standardContactPrimaryLabel": {
+          "type": "string"
+        },
+        "standardContactSecondaryLabel": {
+          "type": "string"
+        },
+        "standardDefaultCustomTitle": {
+          "type": "string"
+        },
+        "standardDefaultRegularTitle": {
+          "type": "string"
+        },
+        "standardDefaultDescription": {
+          "type": "string"
+        },
+        "standardPriceLabel": {
+          "type": "string"
+        },
+        "standardSectionNavLabel": {
+          "type": "string"
+        },
+        "standardNavOverviewLabel": {
+          "type": "string"
+        },
+        "standardNavDescriptionLabel": {
+          "type": "string"
+        },
+        "standardNavSpecificationsLabel": {
+          "type": "string"
+        },
+        "standardNavDeliveryLabel": {
+          "type": "string"
+        },
+        "standardNavRelatedLabel": {
+          "type": "string"
+        },
+        "standardNavContactLabel": {
+          "type": "string"
+        },
+        "standardDescriptionEyebrow": {
+          "type": "string"
+        },
+        "standardDescriptionTitle": {
+          "type": "string"
+        },
+        "standardSpecificationsEyebrow": {
+          "type": "string"
+        },
+        "standardSpecificationsTitle": {
+          "type": "string"
+        },
+        "standardMaterialsEyebrow": {
+          "type": "string"
+        },
+        "standardMaterialsTitle": {
+          "type": "string"
+        },
+        "standardColorsEyebrow": {
+          "type": "string"
+        },
+        "standardColorsTitle": {
+          "type": "string"
+        },
+        "standardCustomizationEyebrow": {
+          "type": "string"
+        },
+        "standardCustomizationTitle": {
+          "type": "string"
+        },
+        "standardDeliveryEyebrow": {
+          "type": "string"
+        },
+        "standardDeliveryTitle": {
+          "type": "string"
+        },
+        "standardDeliveryLinkLabel": {
+          "type": "string"
+        },
+        "standardRelatedEyebrow": {
+          "type": "string"
+        },
+        "standardRelatedCategoryTitle": {
+          "type": "string"
+        },
+        "standardRelatedSectionTitle": {
+          "type": "string"
+        },
+        "standardRelatedLinkLabel": {
+          "type": "string"
+        },
+        "premiumHeroPrimaryLabel": {
+          "type": "string"
+        },
+        "premiumHeroSecondaryLabel": {
+          "type": "string"
+        },
+        "premiumContactEyebrow": {
+          "type": "string"
+        },
+        "premiumContactPrimaryLabel": {
+          "type": "string"
+        },
+        "premiumContactSecondaryLabel": {
+          "type": "string"
+        },
+        "premiumDefaultTitle": {
+          "type": "string"
+        },
+        "premiumDefaultDescription": {
+          "type": "string"
+        },
+        "premiumDefaultSolutionKicker": {
+          "type": "string"
+        },
+        "premiumPriceLabel": {
+          "type": "string"
+        },
+        "premiumSectionNavLabel": {
+          "type": "string"
+        },
+        "premiumNavSolutionLabel": {
+          "type": "string"
+        },
+        "premiumNavApplicationsLabel": {
+          "type": "string"
+        },
+        "premiumNavGalleryLabel": {
+          "type": "string"
+        },
+        "premiumNavAdaptationLabel": {
+          "type": "string"
+        },
+        "premiumNavVariantsLabel": {
+          "type": "string"
+        },
+        "premiumNavTechnicalLabel": {
+          "type": "string"
+        },
+        "premiumNavDeliveryLabel": {
+          "type": "string"
+        },
+        "premiumNavRelatedLabel": {
+          "type": "string"
+        },
+        "premiumNavContactLabel": {
+          "type": "string"
+        },
+        "premiumSolutionEyebrow": {
+          "type": "string"
+        },
+        "premiumApplicationsEyebrow": {
+          "type": "string"
+        },
+        "premiumApplicationsTitle": {
+          "type": "string"
+        },
+        "premiumGalleryEyebrow": {
+          "type": "string"
+        },
+        "premiumGalleryTitle": {
+          "type": "string"
+        },
+        "premiumAdaptationEyebrow": {
+          "type": "string"
+        },
+        "premiumAdaptationTitle": {
+          "type": "string"
+        },
+        "premiumVariantsEyebrow": {
+          "type": "string"
+        },
+        "premiumVariantsTitle": {
+          "type": "string"
+        },
+        "premiumTechnicalEyebrow": {
+          "type": "string"
+        },
+        "premiumTechnicalTitle": {
+          "type": "string"
+        },
+        "premiumSpecificationsTitle": {
+          "type": "string"
+        },
+        "premiumMaterialsTitle": {
+          "type": "string"
+        },
+        "premiumColorsTitle": {
+          "type": "string"
+        },
+        "premiumDeliveryEyebrow": {
+          "type": "string"
+        },
+        "premiumDeliveryTitle": {
+          "type": "string"
+        },
+        "premiumRelatedEyebrow": {
+          "type": "string"
+        },
+        "premiumRelatedTitle": {
+          "type": "string"
+        },
+        "premiumRelatedLinkLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cardPremiumLabel",
+        "cardMaterialsMissingLabel",
+        "cardCtaLabel",
+        "standardHeroPrimaryLabel",
+        "standardHeroSecondaryLabel",
+        "standardContactEyebrow",
+        "standardContactPrimaryLabel",
+        "standardContactSecondaryLabel",
+        "standardDefaultCustomTitle",
+        "standardDefaultRegularTitle",
+        "standardDefaultDescription",
+        "standardPriceLabel",
+        "standardSectionNavLabel",
+        "standardNavOverviewLabel",
+        "standardNavDescriptionLabel",
+        "standardNavSpecificationsLabel",
+        "standardNavDeliveryLabel",
+        "standardNavRelatedLabel",
+        "standardNavContactLabel",
+        "standardDescriptionEyebrow",
+        "standardDescriptionTitle",
+        "standardSpecificationsEyebrow",
+        "standardSpecificationsTitle",
+        "standardMaterialsEyebrow",
+        "standardMaterialsTitle",
+        "standardColorsEyebrow",
+        "standardColorsTitle",
+        "standardCustomizationEyebrow",
+        "standardCustomizationTitle",
+        "standardDeliveryEyebrow",
+        "standardDeliveryTitle",
+        "standardDeliveryLinkLabel",
+        "standardRelatedEyebrow",
+        "standardRelatedCategoryTitle",
+        "standardRelatedSectionTitle",
+        "standardRelatedLinkLabel",
+        "premiumHeroPrimaryLabel",
+        "premiumHeroSecondaryLabel",
+        "premiumContactEyebrow",
+        "premiumContactPrimaryLabel",
+        "premiumContactSecondaryLabel",
+        "premiumDefaultTitle",
+        "premiumDefaultDescription",
+        "premiumDefaultSolutionKicker",
+        "premiumPriceLabel",
+        "premiumSectionNavLabel",
+        "premiumNavSolutionLabel",
+        "premiumNavApplicationsLabel",
+        "premiumNavGalleryLabel",
+        "premiumNavAdaptationLabel",
+        "premiumNavVariantsLabel",
+        "premiumNavTechnicalLabel",
+        "premiumNavDeliveryLabel",
+        "premiumNavRelatedLabel",
+        "premiumNavContactLabel",
+        "premiumSolutionEyebrow",
+        "premiumApplicationsEyebrow",
+        "premiumApplicationsTitle",
+        "premiumGalleryEyebrow",
+        "premiumGalleryTitle",
+        "premiumAdaptationEyebrow",
+        "premiumAdaptationTitle",
+        "premiumVariantsEyebrow",
+        "premiumVariantsTitle",
+        "premiumTechnicalEyebrow",
+        "premiumTechnicalTitle",
+        "premiumSpecificationsTitle",
+        "premiumMaterialsTitle",
+        "premiumColorsTitle",
+        "premiumDeliveryEyebrow",
+        "premiumDeliveryTitle",
+        "premiumRelatedEyebrow",
+        "premiumRelatedTitle",
+        "premiumRelatedLinkLabel"
+      ],
+      "additionalProperties": false
+    },
+    "projectUi": {
+      "type": "object",
+      "properties": {
+        "homeBreadcrumbLabel": {
+          "type": "string"
+        },
+        "archiveBreadcrumbLabel": {
+          "type": "string"
+        },
+        "archiveCardCtaLabel": {
+          "type": "string"
+        },
+        "detailDefaultEyebrow": {
+          "type": "string"
+        },
+        "detailArchiveBackLabel": {
+          "type": "string"
+        },
+        "detailSectionNavLabel": {
+          "type": "string"
+        },
+        "detailNavOverviewLabel": {
+          "type": "string"
+        },
+        "detailNavWorkLabel": {
+          "type": "string"
+        },
+        "detailNavFactsLabel": {
+          "type": "string"
+        },
+        "detailNavGalleryLabel": {
+          "type": "string"
+        },
+        "detailNavDirectionsLabel": {
+          "type": "string"
+        },
+        "detailNavContactLabel": {
+          "type": "string"
+        },
+        "detailWorkTitle": {
+          "type": "string"
+        },
+        "detailFactsEyebrow": {
+          "type": "string"
+        },
+        "detailFactsTitle": {
+          "type": "string"
+        },
+        "detailFactSummaryLabel": {
+          "type": "string"
+        },
+        "detailFactTaskLabel": {
+          "type": "string"
+        },
+        "detailFactWorkTypesLabel": {
+          "type": "string"
+        },
+        "detailFactScopeLabel": {
+          "type": "string"
+        },
+        "detailFactMaterialsLabel": {
+          "type": "string"
+        },
+        "detailFactFeaturesLabel": {
+          "type": "string"
+        },
+        "detailGalleryEyebrow": {
+          "type": "string"
+        },
+        "detailGalleryTitle": {
+          "type": "string"
+        },
+        "detailDirectionsEyebrow": {
+          "type": "string"
+        },
+        "detailDirectionsTitle": {
+          "type": "string"
+        },
+        "detailPreviousLabel": {
+          "type": "string"
+        },
+        "detailNextLabel": {
+          "type": "string"
+        },
+        "detailContactEyebrow": {
+          "type": "string"
+        },
+        "detailContactTitle": {
+          "type": "string"
+        },
+        "detailContactDescription": {
+          "type": "string"
+        },
+        "detailContactPrimaryLabel": {
+          "type": "string"
+        },
+        "detailContactSecondaryLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "homeBreadcrumbLabel",
+        "archiveBreadcrumbLabel",
+        "archiveCardCtaLabel",
+        "detailDefaultEyebrow",
+        "detailArchiveBackLabel",
+        "detailSectionNavLabel",
+        "detailNavOverviewLabel",
+        "detailNavWorkLabel",
+        "detailNavFactsLabel",
+        "detailNavGalleryLabel",
+        "detailNavDirectionsLabel",
+        "detailNavContactLabel",
+        "detailWorkTitle",
+        "detailFactsEyebrow",
+        "detailFactsTitle",
+        "detailFactSummaryLabel",
+        "detailFactTaskLabel",
+        "detailFactWorkTypesLabel",
+        "detailFactScopeLabel",
+        "detailFactMaterialsLabel",
+        "detailFactFeaturesLabel",
+        "detailGalleryEyebrow",
+        "detailGalleryTitle",
+        "detailDirectionsEyebrow",
+        "detailDirectionsTitle",
+        "detailPreviousLabel",
+        "detailNextLabel",
+        "detailContactEyebrow",
+        "detailContactTitle",
+        "detailContactDescription",
+        "detailContactPrimaryLabel",
+        "detailContactSecondaryLabel"
+      ],
+      "additionalProperties": false
+    },
+    "catalogUi": {
+      "type": "object",
+      "properties": {
+        "shared": {
+          "type": "object",
+          "properties": {
+            "homeBreadcrumbLabel": {
+              "type": "string"
+            },
+            "phoneChannelLabel": {
+              "type": "string"
+            },
+            "telegramChannelLabel": {
+              "type": "string"
+            },
+            "emailChannelLabel": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "homeBreadcrumbLabel",
+            "phoneChannelLabel",
+            "telegramChannelLabel",
+            "emailChannelLabel"
+          ],
+          "additionalProperties": false
+        },
+        "card": {
+          "type": "object",
+          "properties": {
+            "productCountOne": {
+              "type": "string"
+            },
+            "productCountFew": {
+              "type": "string"
+            },
+            "productCountMany": {
+              "type": "string"
+            },
+            "sparseLabel": {
+              "type": "string"
+            },
+            "minimalLabel": {
+              "type": "string"
+            },
+            "emptyMediaLabel": {
+              "type": "string"
+            },
+            "ctaLabel": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "productCountOne",
+            "productCountFew",
+            "productCountMany",
+            "sparseLabel",
+            "minimalLabel",
+            "emptyMediaLabel",
+            "ctaLabel"
+          ],
+          "additionalProperties": false
+        },
+        "hub": {
+          "type": "object",
+          "properties": {
+            "heroKicker": {
+              "type": "string"
+            },
+            "heroPrimaryLabel": {
+              "type": "string"
+            },
+            "heroSecondaryLabel": {
+              "type": "string"
+            },
+            "categoryCountSuffix": {
+              "type": "string"
+            },
+            "gridEyebrow": {
+              "type": "string"
+            },
+            "gridTitle": {
+              "type": "string"
+            },
+            "gridDescription": {
+              "type": "string"
+            },
+            "emptyTitle": {
+              "type": "string"
+            },
+            "emptyDescription": {
+              "type": "string"
+            },
+            "customEyebrow": {
+              "type": "string"
+            },
+            "customDefaultTitle": {
+              "type": "string"
+            },
+            "customDefaultDescription": {
+              "type": "string"
+            },
+            "customLinkLabel": {
+              "type": "string"
+            },
+            "contactEyebrow": {
+              "type": "string"
+            },
+            "contactDefaultTitle": {
+              "type": "string"
+            },
+            "contactDefaultDescription": {
+              "type": "string"
+            },
+            "contactPrimaryLabel": {
+              "type": "string"
+            },
+            "contactSecondaryLabel": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "heroKicker",
+            "heroPrimaryLabel",
+            "heroSecondaryLabel",
+            "categoryCountSuffix",
+            "gridEyebrow",
+            "gridTitle",
+            "gridDescription",
+            "emptyTitle",
+            "emptyDescription",
+            "customEyebrow",
+            "customDefaultTitle",
+            "customDefaultDescription",
+            "customLinkLabel",
+            "contactEyebrow",
+            "contactDefaultTitle",
+            "contactDefaultDescription",
+            "contactPrimaryLabel",
+            "contactSecondaryLabel"
+          ],
+          "additionalProperties": false
+        },
+        "category": {
+          "type": "object",
+          "properties": {
+            "heroKicker": {
+              "type": "string"
+            },
+            "productCountOne": {
+              "type": "string"
+            },
+            "productCountFew": {
+              "type": "string"
+            },
+            "productCountMany": {
+              "type": "string"
+            },
+            "sparseCountLabel": {
+              "type": "string"
+            },
+            "heroProductsPrimaryLabel": {
+              "type": "string"
+            },
+            "heroSparsePrimaryLabel": {
+              "type": "string"
+            },
+            "heroProductsSecondaryLabel": {
+              "type": "string"
+            },
+            "heroSparseSecondaryPrefix": {
+              "type": "string"
+            },
+            "sectionNavLabel": {
+              "type": "string"
+            },
+            "navProductsLabel": {
+              "type": "string"
+            },
+            "navExamplesLabel": {
+              "type": "string"
+            },
+            "navCustomLabel": {
+              "type": "string"
+            },
+            "navContactLabel": {
+              "type": "string"
+            },
+            "listEyebrow": {
+              "type": "string"
+            },
+            "listTitle": {
+              "type": "string"
+            },
+            "listDescription": {
+              "type": "string"
+            },
+            "galleryEyebrow": {
+              "type": "string"
+            },
+            "galleryTitle": {
+              "type": "string"
+            },
+            "customEyebrow": {
+              "type": "string"
+            },
+            "customTitle": {
+              "type": "string"
+            },
+            "customDescription": {
+              "type": "string"
+            },
+            "customLinkLabel": {
+              "type": "string"
+            },
+            "contactEyebrow": {
+              "type": "string"
+            },
+            "contactTitle": {
+              "type": "string"
+            },
+            "contactDefaultDescription": {
+              "type": "string"
+            },
+            "contactPrimaryLabel": {
+              "type": "string"
+            },
+            "contactSecondaryLabel": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "heroKicker",
+            "productCountOne",
+            "productCountFew",
+            "productCountMany",
+            "sparseCountLabel",
+            "heroProductsPrimaryLabel",
+            "heroSparsePrimaryLabel",
+            "heroProductsSecondaryLabel",
+            "heroSparseSecondaryPrefix",
+            "sectionNavLabel",
+            "navProductsLabel",
+            "navExamplesLabel",
+            "navCustomLabel",
+            "navContactLabel",
+            "listEyebrow",
+            "listTitle",
+            "listDescription",
+            "galleryEyebrow",
+            "galleryTitle",
+            "customEyebrow",
+            "customTitle",
+            "customDescription",
+            "customLinkLabel",
+            "contactEyebrow",
+            "contactTitle",
+            "contactDefaultDescription",
+            "contactPrimaryLabel",
+            "contactSecondaryLabel"
+          ],
+          "additionalProperties": false
+        },
+        "sparse": {
+          "type": "object",
+          "properties": {
+            "galleryTitle": {
+              "type": "string"
+            },
+            "eyebrow": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "materialsLabel": {
+              "type": "string"
+            },
+            "materials": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "order": {
+                    "type": "number"
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label",
+                  "order"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "sectionLinkPrefix": {
+              "type": "string"
+            },
+            "contactEyebrow": {
+              "type": "string"
+            },
+            "contactTitle": {
+              "type": "string"
+            },
+            "contactDefaultDescription": {
+              "type": "string"
+            },
+            "contactPrimaryLabel": {
+              "type": "string"
+            },
+            "contactSecondaryLabel": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "galleryTitle",
+            "eyebrow",
+            "title",
+            "summary",
+            "materialsLabel",
+            "materials",
+            "sectionLinkPrefix",
+            "contactEyebrow",
+            "contactTitle",
+            "contactDefaultDescription",
+            "contactPrimaryLabel",
+            "contactSecondaryLabel"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "shared",
+        "card",
+        "hub",
+        "category",
+        "sparse"
+      ],
+      "additionalProperties": false
+    },
+    "$schema": {
+      "type": "string"
     }
   },
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "required": [
+    "companyName",
+    "companyShortName",
+    "inn",
+    "kpp",
+    "ogrn",
+    "registrationDate",
+    "legalAddress",
+    "phonePrimary",
+    "phoneSecondary",
+    "telegram",
+    "email",
+    "city",
+    "address",
+    "vacanciesEmptyTitle",
+    "vacanciesEmptyText"
+  ],
+  "additionalProperties": false
 }

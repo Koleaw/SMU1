@@ -13,6 +13,7 @@ import {
   restoreInlineGestureCheckpoint
 } from '../state/inline-gesture.mjs';
 import { createMediaQueueStore } from '../state/media-queue-store.mjs';
+import { mediaQueueFingerprint, mediaQueueIsDirty } from '../state/media-queue-intent.mjs';
 import {
   addDirectionRelation,
   directionTargetKey,
@@ -1044,8 +1045,24 @@ export async function startVisualEditor() {
     activeMedia: null,
     mediaScheduler: null,
     mediaQueue: [],
+    mediaInitialFingerprint: '[]',
     mediaInitialCount: 0,
     mediaBatchId: '',
+    mediaQueueDirty: false,
+    pendingMediaQueueKeys: new Set(),
+    durableMediaQueueKeys: new Set(),
+    legacyMediaQueueKeys: new Set(),
+    mediaQueueRevisionByKey: new Map(),
+    mediaQueueTokenByKey: new Map(),
+    mediaQueueBlockedKeys: new Set(),
+    mediaQueueConflictRecoveryByKey: new Map(),
+    mediaPersistChain: Promise.resolve(),
+    inMemoryMediaQueues: new Map(),
+    mediaQueueConflict: null,
+    mediaConfirmInFlight: false,
+    mediaConflictResolutionInFlight: false,
+    mediaOpenRequest: 0,
+    mediaQueueResetArmed: false,
     mediaObjectUrls: new Set(),
     dragBinding: null,
     inlineGesture: null,
@@ -4297,6 +4314,113 @@ export async function startVisualEditor() {
     return { repoIdentity: REPO_IDENTITY, collection: record.collection, slug: record.slug, fieldPath: binding.fieldPath };
   }
 
+  function syncMediaQueueState() {
+    app.dataset.mediaQueueDirty = String(state.mediaQueueDirty);
+    app.dataset.mediaQueueRunning = String(Boolean(state.mediaScheduler?.isRunning()));
+    app.dataset.pendingMediaQueues = String(state.pendingMediaQueueKeys.size);
+    app.dataset.durableMediaQueues = String(state.durableMediaQueueKeys.size);
+    app.dataset.volatileMediaQueues = String(state.inMemoryMediaQueues.size);
+    app.dataset.legacyMediaQueues = String(state.legacyMediaQueueKeys.size);
+  }
+
+  function mediaQueueVersion(key) {
+    return {
+      expectedRevision: state.mediaQueueRevisionByKey.get(key) || 0,
+      expectedToken: state.mediaQueueTokenByKey.get(key) || ''
+    };
+  }
+
+  function acknowledgeMediaQueueVersion(key, rowOrError) {
+    const revision = Number(rowOrError?.queueRevision ?? rowOrError?.actualRevision ?? 0);
+    const token = String(rowOrError?.queueToken ?? rowOrError?.actualToken ?? '');
+    state.mediaQueueRevisionByKey.set(key, revision);
+    state.mediaQueueTokenByKey.set(key, token);
+  }
+
+  function clearMediaQueueVersion(key) {
+    state.mediaQueueRevisionByKey.delete(key);
+    state.mediaQueueTokenByKey.delete(key);
+  }
+
+  function mediaConflictIdentity(identity) {
+    return { ...identity, fieldPath: `${identity.fieldPath}::conflict::${tabId}` };
+  }
+
+  function mediaConflictCandidates(canonicalKey) {
+    const candidates = state.mediaQueueConflictRecoveryByKey.get(canonicalKey);
+    return Array.isArray(candidates) ? candidates : (candidates ? [candidates] : []);
+  }
+
+  function rememberMediaConflictCandidate(canonicalKey, candidate) {
+    const candidates = mediaConflictCandidates(canonicalKey)
+      .filter((row) => row.key !== candidate.key);
+    state.mediaQueueConflictRecoveryByKey.set(canonicalKey, [candidate, ...candidates]);
+    return candidate;
+  }
+
+  async function persistMediaConflictCandidate(identity, canonicalKey, payload) {
+    const candidates = mediaConflictCandidates(canonicalKey);
+    const current = candidates.find((row) => row.conflictOwner === tabId) || candidates[0] || null;
+    const conflictIdentity = current
+      ? {
+          repoIdentity: current.repoIdentity,
+          collection: current.collection,
+          slug: current.slug,
+          fieldPath: current.fieldPath
+        }
+      : mediaConflictIdentity(identity);
+    try {
+      const stored = await mediaQueueStore.compareAndSwap({
+        ...payload,
+        ...conflictIdentity,
+        conflictForKey: canonicalKey,
+        conflictOwner: current?.conflictOwner || tabId
+      }, {
+        expectedRevision: current?.queueRevision || 0,
+        expectedToken: current?.queueToken || ''
+      });
+      return rememberMediaConflictCandidate(canonicalKey, stored);
+    } catch (error) {
+      if (error?.code === 'MEDIA_QUEUE_CONFLICT' && error.current?.conflictForKey === canonicalKey) {
+        rememberMediaConflictCandidate(canonicalKey, error.current);
+      }
+      throw error;
+    }
+  }
+
+  async function clearMediaConflictCandidate(canonicalKey) {
+    const candidates = mediaConflictCandidates(canonicalKey);
+    if (!candidates.length) return;
+    for (const candidate of candidates) {
+      try {
+        const tombstone = await mediaQueueStore.compareAndSwap({ ...candidate, cancelled: true, items: [] }, {
+          expectedRevision: candidate.queueRevision,
+          expectedToken: candidate.queueToken
+        });
+        rememberMediaConflictCandidate(canonicalKey, tombstone);
+        await mediaQueueStore.compareAndDelete(tombstone, {
+          expectedRevision: tombstone.queueRevision,
+          expectedToken: tombstone.queueToken
+        });
+      } catch (error) {
+        if (error?.code === 'MEDIA_QUEUE_CONFLICT' && error.current?.conflictForKey === canonicalKey) {
+          rememberMediaConflictCandidate(canonicalKey, error.current);
+        }
+        throw error;
+      }
+      const remaining = mediaConflictCandidates(canonicalKey).filter((row) => row.key !== candidate.key);
+      if (remaining.length) state.mediaQueueConflictRecoveryByKey.set(canonicalKey, remaining);
+      else state.mediaQueueConflictRecoveryByKey.delete(canonicalKey);
+    }
+  }
+
+  function refreshMediaQueueDirty() {
+    state.mediaQueueResetArmed = false;
+    state.mediaQueueDirty = mediaQueueIsDirty(state.mediaQueue, state.mediaInitialFingerprint);
+    syncMediaQueueState();
+    return state.mediaQueueDirty;
+  }
+
   function revokeMediaUrls() {
     for (const url of state.mediaObjectUrls) URL.revokeObjectURL(url);
     state.mediaObjectUrls.clear();
@@ -4320,16 +4444,163 @@ export async function startVisualEditor() {
     });
   }
 
-  async function persistMediaQueue() {
+  function persistMediaQueue({ throwOnFailure = false } = {}) {
     const active = state.activeMedia;
-    if (!active) return;
-    try {
-      await mediaQueueStore.put({
-        ...mediaIdentity(active.binding, active.record),
-        batchId: state.mediaBatchId,
-        items: state.mediaQueue
+    if (!active) return Promise.resolve();
+    const identity = mediaIdentity(active.binding, active.record);
+    const key = mediaQueueStore.keyOf(identity);
+    const dirty = refreshMediaQueueDirty();
+    const payload = {
+      ...identity,
+      batchId: state.mediaBatchId,
+      intentVersion: 2,
+      baselineFingerprint: state.mediaQueueConflict?.recoveredBaselineFingerprint ?? state.mediaInitialFingerprint,
+      baseQueueRevision: state.mediaQueueRevisionByKey.get(key) || 0,
+      baseQueueToken: state.mediaQueueTokenByKey.get(key) || '',
+      cancelled: !dirty,
+      items: dirty ? structuredClone(state.mediaQueue) : []
+    };
+    if (state.mediaQueueBlockedKeys.has(key)) {
+      const priorConflict = state.inMemoryMediaQueues.get(key)?.writeConflict;
+      payload.writeConflict = priorConflict || (state.mediaQueueConflict?.kind === 'recovery-write'
+        ? {
+            actualRevision: state.mediaQueueConflict.actualRevision,
+            actualToken: state.mediaQueueConflict.actualToken || '',
+            current: state.mediaQueueConflict.theirs ? structuredClone(state.mediaQueueConflict.theirs) : null
+          }
+        : null);
+      state.pendingMediaQueueKeys.add(key);
+      state.inMemoryMediaQueues.set(key, payload);
+      syncMediaQueueState();
+      state.mediaPersistChain = state.mediaPersistChain.catch(() => {}).then(async () => {
+        try {
+          const candidate = await persistMediaConflictCandidate(identity, key, payload);
+          if (state.inMemoryMediaQueues.get(key) === payload && payload.writeConflict) {
+            payload.writeConflict.mineDurable = true;
+            payload.writeConflict.mineRecoveryKey = candidate.key;
+          }
+        } catch (error) {
+          notifications.toast(`Вашу конфликтующую очередь не удалось записать для аварийного восстановления: ${error.message}`, 'error', 0);
+        }
       });
-    } catch (error) { notifications.toast(`Очередь не удалось сохранить для восстановления: ${error.message}`, 'warning', 0); }
+      return state.mediaPersistChain;
+    }
+    state.pendingMediaQueueKeys.add(key);
+    state.durableMediaQueueKeys.delete(key);
+    state.inMemoryMediaQueues.set(key, payload);
+    syncMediaQueueState();
+    const operation = async () => {
+      if (state.mediaQueueBlockedKeys.has(key)) return;
+      try {
+        const expectedVersion = mediaQueueVersion(key);
+        payload.baseQueueRevision = expectedVersion.expectedRevision;
+        payload.baseQueueToken = expectedVersion.expectedToken;
+        const stored = await mediaQueueStore.compareAndSwap(payload, expectedVersion);
+        acknowledgeMediaQueueVersion(key, stored);
+        if (payload.cancelled) {
+          const stillLatest = state.inMemoryMediaQueues.get(key) === payload;
+          if (stillLatest) {
+            state.inMemoryMediaQueues.delete(key);
+            state.pendingMediaQueueKeys.delete(key);
+            state.durableMediaQueueKeys.delete(key);
+            state.legacyMediaQueueKeys.delete(key);
+          }
+          syncMediaQueueState();
+          try {
+            await mediaQueueStore.compareAndDelete(identity, {
+              expectedRevision: stored.queueRevision,
+              expectedToken: stored.queueToken
+            });
+            if (state.mediaQueueRevisionByKey.get(key) === stored.queueRevision
+              && state.mediaQueueTokenByKey.get(key) === stored.queueToken) clearMediaQueueVersion(key);
+          } catch (error) {
+            if (error?.code === 'MEDIA_QUEUE_CONFLICT') {
+              const latestPayload = state.inMemoryMediaQueues.get(key) || payload;
+              latestPayload.writeConflict = {
+                actualRevision: error.actualRevision,
+                actualToken: error.actualToken,
+                current: error.current ? structuredClone(error.current) : null
+              };
+              state.inMemoryMediaQueues.set(key, latestPayload);
+              try {
+                const candidate = await persistMediaConflictCandidate(identity, key, latestPayload);
+                latestPayload.writeConflict.mineDurable = true;
+                latestPayload.writeConflict.mineRecoveryKey = candidate.key;
+              } catch (candidateError) {
+                notifications.toast(`Вашу конфликтующую очередь не удалось записать для аварийного восстановления: ${candidateError.message}`, 'error', 0);
+              }
+              acknowledgeMediaQueueVersion(key, error);
+              state.mediaQueueBlockedKeys.add(key);
+              state.pendingMediaQueueKeys.add(key);
+              if (error.current?.cancelled !== true) {
+                state.durableMediaQueueKeys.add(key);
+              }
+              if (state.activeMedia && mediaQueueStore.keyOf(mediaIdentity(state.activeMedia.binding, state.activeMedia.record)) === key) {
+                state.mediaQueueConflict = {
+                  kind: 'recovery-write',
+                  recoveredBaselineFingerprint: payload.baselineFingerprint,
+                  currentBaselineFingerprint: error.current?.baselineFingerprint || state.mediaInitialFingerprint,
+                  theirs: error.current ? structuredClone(error.current) : null,
+                  actualRevision: error.actualRevision,
+                  actualToken: error.actualToken,
+                  mineDurable: latestPayload.writeConflict.mineDurable === true
+                };
+                renderMediaQueue();
+              }
+              syncMediaQueueState();
+            }
+            notifications.toast('Отменённая recovery-очередь безопасно помечена, но служебную запись не удалось очистить.', 'warning', 0);
+          }
+          return;
+        }
+        if (state.inMemoryMediaQueues.get(key) === payload) state.inMemoryMediaQueues.delete(key);
+        state.pendingMediaQueueKeys.add(key);
+        state.durableMediaQueueKeys.add(key);
+        state.legacyMediaQueueKeys.delete(key);
+        syncMediaQueueState();
+      } catch (error) {
+        if (error?.code === 'MEDIA_QUEUE_CONFLICT') {
+          const latestPayload = state.inMemoryMediaQueues.get(key) || payload;
+          latestPayload.writeConflict = {
+            actualRevision: error.actualRevision,
+            actualToken: error.actualToken,
+            current: error.current ? structuredClone(error.current) : null
+          };
+          state.inMemoryMediaQueues.set(key, latestPayload);
+          try {
+            const candidate = await persistMediaConflictCandidate(identity, key, latestPayload);
+            latestPayload.writeConflict.mineDurable = true;
+            latestPayload.writeConflict.mineRecoveryKey = candidate.key;
+          } catch (candidateError) {
+            notifications.toast(`Вашу конфликтующую очередь не удалось записать для аварийного восстановления: ${candidateError.message}`, 'error', 0);
+          }
+          acknowledgeMediaQueueVersion(key, error);
+          state.mediaQueueBlockedKeys.add(key);
+          state.pendingMediaQueueKeys.add(key);
+          if (error.current?.cancelled !== true && error.actualRevision > 0) state.durableMediaQueueKeys.add(key);
+          else state.durableMediaQueueKeys.delete(key);
+          if (state.activeMedia && mediaQueueStore.keyOf(mediaIdentity(state.activeMedia.binding, state.activeMedia.record)) === key) {
+            state.mediaQueueConflict = {
+              kind: 'recovery-write',
+              recoveredBaselineFingerprint: latestPayload.baselineFingerprint,
+              currentBaselineFingerprint: error.current?.baselineFingerprint || state.mediaInitialFingerprint,
+              theirs: error.current ? structuredClone(error.current) : null,
+              actualRevision: error.actualRevision,
+              actualToken: error.actualToken,
+              mineDurable: latestPayload.writeConflict.mineDurable === true
+            };
+            renderMediaQueue();
+          }
+          syncMediaQueueState();
+          notifications.toast('Очередь фотографий изменилась в другой вкладке. Обе версии сохранены, выберите одну явно.', 'warning', 0);
+          return;
+        }
+        notifications.toast(`Очередь не удалось сохранить для восстановления: ${error.message}`, 'warning', 0);
+        if (throwOnFailure) throw error;
+      }
+    };
+    state.mediaPersistChain = state.mediaPersistChain.catch(() => {}).then(operation);
+    return state.mediaPersistChain;
   }
 
   async function addMediaFiles(fileList) {
@@ -4355,6 +4626,7 @@ export async function startVisualEditor() {
       });
     }
     if (files.length > accepted.length) notifications.toast('Добавлены первые 50 файлов. Остальные не попали в очередь.', 'warning');
+    refreshMediaQueueDirty();
     await persistMediaQueue();
     renderMediaQueue();
   }
@@ -4363,9 +4635,227 @@ export async function startVisualEditor() {
     if (from < 0 || to < 0 || from >= state.mediaQueue.length || to >= state.mediaQueue.length || from === to) return;
     const [item] = state.mediaQueue.splice(from, 1);
     state.mediaQueue.splice(to, 0, item);
+    refreshMediaQueueDirty();
     void persistMediaQueue();
     renderMediaQueue();
     notifications.announce(`Фотография перемещена на позицию ${to + 1}.`);
+  }
+
+  async function resolveMediaQueueConflict(choice) {
+    const active = state.activeMedia;
+    const conflict = state.mediaQueueConflict;
+    if (!active || !conflict || !['recovery', 'current'].includes(choice)) return;
+    if (conflict.confirmChoice !== choice) {
+      conflict.confirmChoice = choice;
+      renderMediaQueue();
+      return;
+    }
+    if (state.mediaConflictResolutionInFlight) return;
+    state.mediaConflictResolutionInFlight = true;
+    renderMediaQueue();
+    try {
+    const identity = mediaIdentity(active.binding, active.record);
+    const key = mediaQueueStore.keyOf(identity);
+    const currentQueue = existingMediaQueue(active.binding, active.record);
+    if (conflict.kind === 'recovery-write') {
+      await state.mediaPersistChain.catch(() => {});
+      if (choice === 'current') {
+        let theirs = conflict.theirs;
+        try {
+          if (theirs) {
+            theirs = await mediaQueueStore.compareAndSwap(theirs, {
+              expectedRevision: conflict.actualRevision,
+              expectedToken: conflict.actualToken || theirs.queueToken || ''
+            });
+            acknowledgeMediaQueueVersion(key, theirs);
+          } else {
+            await mediaQueueStore.compareAndDelete(identity, {
+              expectedRevision: conflict.actualRevision || 0,
+              expectedToken: conflict.actualToken || ''
+            });
+            clearMediaQueueVersion(key);
+          }
+        } catch (error) {
+          if (error?.code !== 'MEDIA_QUEUE_CONFLICT') throw error;
+          acknowledgeMediaQueueVersion(key, error);
+          conflict.theirs = error.current ? structuredClone(error.current) : null;
+          conflict.actualRevision = error.actualRevision;
+          conflict.actualToken = error.actualToken;
+          conflict.currentBaselineFingerprint = error.current?.baselineFingerprint || state.mediaInitialFingerprint;
+          conflict.confirmChoice = '';
+          const localPayload = state.inMemoryMediaQueues.get(key);
+          if (localPayload) localPayload.writeConflict = {
+            actualRevision: error.actualRevision,
+            actualToken: error.actualToken,
+            current: error.current ? structuredClone(error.current) : null
+          };
+          renderMediaQueue();
+          notifications.toast('Очередь другой вкладки снова изменилась. Проверьте новую версию и подтвердите выбор ещё раз.', 'warning', 0);
+          return;
+        }
+        await clearMediaConflictCandidate(key);
+        await Promise.all(state.mediaQueue.filter((item) => item.lease).map((item) => api.cancelStagedMedia({
+          batchId: item.lease.batchId,
+          leaseId: item.lease.leaseId
+        }).catch(() => {})));
+        state.inMemoryMediaQueues.delete(key);
+        state.mediaQueueBlockedKeys.delete(key);
+        if (theirs && theirs.cancelled !== true) {
+          state.mediaBatchId = theirs.batchId || state.mediaBatchId;
+          state.mediaQueue = (theirs.items || []).map((item) => ({
+            ...item,
+            file: item.file && !(item.file instanceof File)
+              ? new File([item.file], item.name || 'photo.jpg', { type: item.type || item.file.type || 'application/octet-stream' })
+              : item.file
+          }));
+          state.pendingMediaQueueKeys.add(key);
+          state.durableMediaQueueKeys.add(key);
+          state.mediaInitialFingerprint = mediaQueueFingerprint(currentQueue);
+          state.mediaInitialCount = currentQueue.length;
+          state.mediaQueueConflict = theirs.intentVersion < 2 || !theirs.baselineFingerprint
+            || theirs.baselineFingerprint !== state.mediaInitialFingerprint
+            ? {
+                recoveredBaselineFingerprint: theirs.baselineFingerprint || '',
+                currentBaselineFingerprint: state.mediaInitialFingerprint
+              }
+            : null;
+          refreshMediaQueueDirty();
+        } else {
+          state.mediaQueue = currentQueue;
+          state.mediaInitialFingerprint = mediaQueueFingerprint(currentQueue);
+          state.mediaInitialCount = currentQueue.length;
+          state.mediaQueueConflict = null;
+          state.mediaQueueDirty = false;
+          state.pendingMediaQueueKeys.delete(key);
+          state.durableMediaQueueKeys.delete(key);
+        }
+        syncMediaQueueState();
+        notifications.toast('Открыта recovery-очередь из другой вкладки. Ваша версия отменена.', 'success');
+      } else {
+        state.mediaQueueBlockedKeys.delete(key);
+        state.mediaQueueConflict = null;
+        try {
+          await persistMediaQueue({ throwOnFailure: true });
+        } catch (error) {
+          state.mediaQueueBlockedKeys.add(key);
+          conflict.confirmChoice = '';
+          state.mediaQueueConflict = conflict;
+          throw error;
+        }
+        if (state.mediaQueueConflict) return;
+        await clearMediaConflictCandidate(key);
+        notifications.toast('Ваша recovery-очередь выбрана и сохранена вместо версии другой вкладки.', 'warning', 0);
+      }
+      renderMediaQueue();
+      return;
+    }
+    if (choice === 'current') {
+      await state.mediaPersistChain.catch(() => {});
+      try {
+        await mediaQueueStore.compareAndDelete(identity, {
+          ...mediaQueueVersion(key)
+        });
+      } catch (error) {
+        if (error?.code === 'MEDIA_QUEUE_CONFLICT') {
+          acknowledgeMediaQueueVersion(key, error);
+          state.mediaQueueBlockedKeys.add(key);
+          state.mediaQueueConflict = {
+            kind: 'recovery-write', recoveredBaselineFingerprint: state.mediaInitialFingerprint,
+            currentBaselineFingerprint: error.current?.baselineFingerprint || state.mediaInitialFingerprint,
+            theirs: error.current ? structuredClone(error.current) : null,
+            actualRevision: error.actualRevision,
+            actualToken: error.actualToken
+          };
+          renderMediaQueue();
+        }
+        notifications.toast(`Recovery-очередь не отменена: ${error.message}`, 'error', 0);
+        return;
+      }
+      await Promise.all(state.mediaQueue.filter((item) => item.lease).map((item) => api.cancelStagedMedia({
+        batchId: item.lease.batchId,
+        leaseId: item.lease.leaseId
+      }).catch(() => {})));
+      state.pendingMediaQueueKeys.delete(key);
+      state.durableMediaQueueKeys.delete(key);
+      state.legacyMediaQueueKeys.delete(key);
+      state.inMemoryMediaQueues.delete(key);
+      clearMediaQueueVersion(key);
+      state.mediaQueueBlockedKeys.delete(key);
+      state.mediaQueue = currentQueue;
+      state.mediaInitialFingerprint = mediaQueueFingerprint(currentQueue);
+      state.mediaInitialCount = currentQueue.length;
+      state.mediaQueueConflict = null;
+      state.mediaQueueDirty = false;
+      syncMediaQueueState();
+      notifications.toast('Recovery-очередь отменена. Открыта текущая галерея.', 'success');
+    } else {
+      state.mediaInitialFingerprint = mediaQueueFingerprint(currentQueue);
+      state.mediaInitialCount = currentQueue.length;
+      state.mediaQueueConflict = null;
+      state.mediaQueueBlockedKeys.delete(key);
+      refreshMediaQueueDirty();
+      await persistMediaQueue();
+      notifications.toast('Recovery-очередь выбрана явно. Проверьте порядок и нажмите «Применить очередь».', 'warning', 0);
+    }
+    renderMediaQueue();
+    } catch (error) {
+      notifications.toast(`Конфликт очереди не разрешён: ${error.message}`, 'error', 0);
+    } finally {
+      state.mediaConflictResolutionInFlight = false;
+      if (state.activeMedia) renderMediaQueue();
+    }
+  }
+
+  async function resetMediaQueueToCurrent() {
+    const active = state.activeMedia;
+    if (!active || state.mediaScheduler?.isRunning()) return;
+    if (!state.mediaQueueResetArmed) {
+      state.mediaQueueResetArmed = true;
+      renderMediaQueue();
+      return;
+    }
+    const identity = mediaIdentity(active.binding, active.record);
+    const key = mediaQueueStore.keyOf(identity);
+    await state.mediaPersistChain.catch(() => {});
+    try {
+      await mediaQueueStore.compareAndDelete(identity, {
+        ...mediaQueueVersion(key)
+      });
+    } catch (error) {
+      if (error?.code === 'MEDIA_QUEUE_CONFLICT') {
+        acknowledgeMediaQueueVersion(key, error);
+        state.mediaQueueBlockedKeys.add(key);
+        state.mediaQueueConflict = {
+          kind: 'recovery-write', recoveredBaselineFingerprint: state.mediaInitialFingerprint,
+          currentBaselineFingerprint: error.current?.baselineFingerprint || state.mediaInitialFingerprint,
+          theirs: error.current ? structuredClone(error.current) : null,
+          actualRevision: error.actualRevision,
+          actualToken: error.actualToken
+        };
+        renderMediaQueue();
+      }
+      notifications.toast(`Изменения очереди не отменены: ${error.message}`, 'error', 0);
+      return;
+    }
+    await Promise.all(state.mediaQueue.filter((item) => item.lease).map((item) => api.cancelStagedMedia({
+      batchId: item.lease.batchId,
+      leaseId: item.lease.leaseId
+    }).catch(() => {})));
+    state.pendingMediaQueueKeys.delete(key);
+    state.durableMediaQueueKeys.delete(key);
+    state.legacyMediaQueueKeys.delete(key);
+    state.inMemoryMediaQueues.delete(key);
+    clearMediaQueueVersion(key);
+    state.mediaQueueBlockedKeys.delete(key);
+    state.mediaQueue = existingMediaQueue(active.binding, active.record);
+    state.mediaInitialFingerprint = mediaQueueFingerprint(state.mediaQueue);
+    state.mediaInitialCount = state.mediaQueue.length;
+    state.mediaQueueDirty = false;
+    state.mediaQueueConflict = null;
+    state.mediaQueueResetArmed = false;
+    syncMediaQueueState();
+    renderMediaQueue();
+    notifications.toast('Изменения очереди отменены. Текущая галерея восстановлена.', 'success');
   }
 
   function mediaRoleOptions(binding, record) {
@@ -4440,20 +4930,87 @@ export async function startVisualEditor() {
   function renderMediaQueue() {
     revokeMediaUrls();
     mediaBody.replaceChildren();
+    const conflictLocked = Boolean(state.mediaQueueConflict);
+    if (state.mediaQueueConflict) {
+      const warning = document.createElement('div');
+      warning.className = 've-field-error';
+      warning.setAttribute('role', 'alert');
+      const message = document.createElement('p');
+      const queueWriteConflict = state.mediaQueueConflict.kind === 'recovery-write';
+      const theirCount = queueWriteConflict
+        ? Number(state.mediaQueueConflict.theirs?.items?.length || 0)
+        : existingMediaQueue(state.activeMedia.binding, state.activeMedia.record).length;
+      message.textContent = queueWriteConflict
+        ? `Очередь фотографий изменена в другой вкладке. Ваша версия: ${state.mediaQueue.length}; версия другой вкладки: ${theirCount}; база: ${state.mediaInitialCount}. Структурный список не объединяется автоматически.${state.mediaQueueConflict.mineDurable ? ' Обе версии сохранены для аварийного восстановления.' : ' Ваша версия пока хранится в этой вкладке — не закрывайте редактор до выбора.'}`
+        : `Галерея изменилась после создания recovery-очереди. В recovery: ${state.mediaQueue.length}; в текущей галерее: ${theirCount}. Выберите версию явно.`;
+      let comparison = null;
+      if (queueWriteConflict) {
+        comparison = document.createElement('details');
+        const summary = document.createElement('summary');
+        summary.textContent = 'Сравнить мою версию, другую вкладку и базу';
+        const describe = (label, items) => {
+          const block = document.createElement('div');
+          const title = document.createElement('strong');
+          title.textContent = `${label} · ${items.length}`;
+          const list = document.createElement('ol');
+          list.replaceChildren(...items.map((item) => {
+            const row = document.createElement('li');
+            row.textContent = [item.name || item.canonicalPath || 'Фотография', item.alt, item.caption].filter(Boolean).join(' · ');
+            return row;
+          }));
+          block.append(title, list);
+          return block;
+        };
+        comparison.append(
+          summary,
+          describe('Моя очередь', state.mediaQueue),
+          describe('Другая вкладка', state.mediaQueueConflict.theirs?.items || []),
+          describe('База', existingMediaQueue(state.activeMedia.binding, state.activeMedia.record))
+        );
+      }
+      const actions = document.createElement('span');
+      actions.className = 've-publish-step__actions';
+      const recovery = document.createElement('button');
+      recovery.type = 'button'; recovery.className = 've-button';
+      recovery.disabled = state.mediaConflictResolutionInFlight;
+      recovery.textContent = state.mediaQueueConflict.confirmChoice === 'recovery'
+        ? (queueWriteConflict ? 'Подтвердить мою очередь' : 'Подтвердить замену текущей галереи')
+        : (queueWriteConflict ? 'Использовать мою очередь' : 'Использовать recovery');
+      recovery.addEventListener('click', () => void resolveMediaQueueConflict('recovery'));
+      const current = document.createElement('button');
+      current.type = 'button'; current.className = 've-button';
+      current.disabled = state.mediaConflictResolutionInFlight;
+      current.textContent = state.mediaQueueConflict.confirmChoice === 'current'
+        ? (queueWriteConflict ? 'Подтвердить очередь другой вкладки' : 'Подтвердить отмену recovery')
+        : (queueWriteConflict ? 'Использовать очередь другой вкладки' : 'Оставить текущую галерею');
+      current.addEventListener('click', () => void resolveMediaQueueConflict('current'));
+      const cancel = document.createElement('button');
+      cancel.type = 'button'; cancel.className = 've-button'; cancel.textContent = 'Не выбирать сейчас';
+      cancel.disabled = state.mediaConflictResolutionInFlight;
+      cancel.hidden = !state.mediaQueueConflict.confirmChoice;
+      cancel.addEventListener('click', () => { state.mediaQueueConflict.confirmChoice = ''; renderMediaQueue(); });
+      actions.append(recovery, current, cancel);
+      warning.append(message);
+      if (comparison) warning.append(comparison);
+      warning.append(actions);
+      mediaBody.append(warning);
+    }
     const picker = document.createElement('input');
     picker.type = 'file';
     picker.accept = '.jpg,.jpeg,.png,.webp';
     picker.multiple = true;
     picker.hidden = true;
+    picker.disabled = conflictLocked;
     picker.addEventListener('change', () => { void addMediaFiles(picker.files || []); picker.value = ''; });
     const dropzone = document.createElement('button');
     dropzone.type = 'button';
     dropzone.className = 've-media-dropzone';
+    dropzone.disabled = conflictLocked;
     dropzone.innerHTML = '<span><strong>Перетащите фотографии сюда</strong>или выберите до 50 файлов · JPEG, PNG, WebP · до 10 МБ каждый</span>';
     dropzone.addEventListener('click', () => picker.click());
     for (const type of ['dragenter', 'dragover']) dropzone.addEventListener(type, (event) => { event.preventDefault(); dropzone.dataset.over = 'true'; });
     for (const type of ['dragleave', 'drop']) dropzone.addEventListener(type, (event) => { event.preventDefault(); delete dropzone.dataset.over; });
-    dropzone.addEventListener('drop', (event) => void addMediaFiles(event.dataTransfer?.files || []));
+    dropzone.addEventListener('drop', (event) => { if (!conflictLocked) void addMediaFiles(event.dataTransfer?.files || []); });
     mediaBody.append(picker, dropzone);
     const queue = document.createElement('div');
     queue.className = 've-media-queue';
@@ -4465,7 +5022,8 @@ export async function startVisualEditor() {
       number.type = 'button';
       number.className = 've-media-row__number';
       number.textContent = String(index + 1);
-      number.draggable = true;
+      number.draggable = !conflictLocked;
+      number.disabled = conflictLocked;
       number.title = 'Перетащить · Alt + стрелки';
       number.addEventListener('dragstart', (event) => { event.dataTransfer.setData('text/plain', item.clientId); row.dataset.dragging = 'true'; });
       number.addEventListener('dragend', () => delete row.dataset.dragging);
@@ -4507,12 +5065,14 @@ export async function startVisualEditor() {
       alt.value = item.alt || '';
       alt.placeholder = 'Alt — что изображено';
       alt.setAttribute('aria-label', `Alt фотографии ${index + 1}`);
-      alt.addEventListener('input', () => { item.alt = alt.value; void persistMediaQueue(); });
+      alt.disabled = conflictLocked;
+      alt.addEventListener('input', () => { item.alt = alt.value; refreshMediaQueueDirty(); void persistMediaQueue(); });
       const caption = document.createElement('input');
       caption.value = item.caption || '';
       caption.placeholder = 'Подпись (необязательно)';
       caption.setAttribute('aria-label', `Подпись фотографии ${index + 1}`);
-      caption.addEventListener('input', () => { item.caption = caption.value; void persistMediaQueue(); });
+      caption.disabled = conflictLocked;
+      caption.addEventListener('input', () => { item.caption = caption.value; refreshMediaQueueDirty(); void persistMediaQueue(); });
       textFields.append(alt, caption);
       copy.append(textFields);
       const status = document.createElement('span');
@@ -4526,7 +5086,8 @@ export async function startVisualEditor() {
         duplicateAction.setAttribute('aria-label', `Что сделать с дубликатом ${index + 1}`);
         duplicateAction.innerHTML = '<option value="reuse">Использовать копию</option><option value="replace">Заменить элемент</option><option value="skip">Пропустить</option>';
         duplicateAction.value = item.duplicateAction || 'reuse';
-        duplicateAction.addEventListener('change', () => { item.duplicateAction = duplicateAction.value; void persistMediaQueue(); });
+        duplicateAction.disabled = conflictLocked;
+        duplicateAction.addEventListener('change', () => { item.duplicateAction = duplicateAction.value; refreshMediaQueueDirty(); void persistMediaQueue(); });
         copy.append(duplicateAction);
       }
       const role = document.createElement('fieldset');
@@ -4542,6 +5103,7 @@ export async function startVisualEditor() {
         input.type = 'checkbox';
         input.value = value;
         input.checked = item.roles.includes(value);
+        input.disabled = conflictLocked;
         input.addEventListener('change', () => {
           let next = new Set(mediaItemRoles(item));
           if (input.checked) next.add(value); else next.delete(value);
@@ -4559,6 +5121,7 @@ export async function startVisualEditor() {
           item.roles = [...next].filter((entryRole) => allowed.has(entryRole));
           item.role = item.roles[0];
           item.roleChanged = true;
+          refreshMediaQueueDirty();
           void persistMediaQueue();
           renderMediaQueue();
         });
@@ -4569,10 +5132,12 @@ export async function startVisualEditor() {
       remove.type = 'button';
       remove.className = 've-media-row__remove';
       remove.textContent = '×';
+      remove.disabled = conflictLocked;
       remove.setAttribute('aria-label', `Убрать ${item.name}`);
       remove.addEventListener('click', async () => {
         if (item.lease) await api.cancelStagedMedia({ batchId: item.lease.batchId, leaseId: item.lease.leaseId }).catch(() => {});
         state.mediaQueue.splice(index, 1);
+        refreshMediaQueueDirty();
         await persistMediaQueue();
         renderMediaQueue();
       });
@@ -4586,19 +5151,24 @@ export async function startVisualEditor() {
     const actionGroup = document.createElement('div');
     actionGroup.className = 've-publish-step__actions';
     const reverse = document.createElement('button');
-    reverse.type = 'button'; reverse.className = 've-button'; reverse.textContent = 'Обратный порядок'; reverse.disabled = state.mediaQueue.length < 2;
-    reverse.addEventListener('click', () => { state.mediaQueue.reverse(); void persistMediaQueue(); renderMediaQueue(); });
+    reverse.type = 'button'; reverse.className = 've-button'; reverse.textContent = 'Обратный порядок'; reverse.disabled = conflictLocked || state.mediaQueue.length < 2;
+    reverse.addEventListener('click', () => { state.mediaQueue.reverse(); refreshMediaQueueDirty(); void persistMediaQueue(); renderMediaQueue(); });
     const retry = document.createElement('button');
-    retry.type = 'button'; retry.className = 've-button'; retry.textContent = 'Повторить ошибки'; retry.disabled = !state.mediaQueue.some((item) => item.status === 'error');
+    retry.type = 'button'; retry.className = 've-button'; retry.textContent = 'Повторить ошибки'; retry.disabled = conflictLocked || !state.mediaQueue.some((item) => item.status === 'error');
     retry.addEventListener('click', () => void retryFailedMedia());
     const cancel = document.createElement('button');
     cancel.type = 'button'; cancel.className = 've-button'; cancel.textContent = 'Отменить загрузку'; cancel.hidden = !state.mediaScheduler?.isRunning();
     cancel.addEventListener('click', () => state.mediaScheduler?.cancel());
-    actionGroup.append(reverse, retry, cancel);
+    const reset = document.createElement('button');
+    reset.type = 'button'; reset.className = 've-button';
+    reset.textContent = state.mediaQueueResetArmed ? 'Подтвердить отмену очереди' : 'Отменить изменения очереди';
+    reset.hidden = !state.mediaQueueDirty || Boolean(state.mediaQueueConflict) || Boolean(state.mediaScheduler?.isRunning());
+    reset.addEventListener('click', () => void resetMediaQueueToCurrent());
+    actionGroup.append(reverse, retry, cancel, reset);
     actions.append(actionGroup);
     mediaBody.append(actions);
     const actionable = state.mediaInitialCount > 0 || state.mediaQueue.some((item) => item.existing || (!item.error && !mediaItemRoles(item).includes('excluded')));
-    mediaConfirm.disabled = !actionable || state.mediaScheduler?.isRunning();
+    mediaConfirm.disabled = state.mediaConfirmInFlight || !actionable || !state.mediaQueueDirty || state.mediaScheduler?.isRunning() || Boolean(state.mediaQueueConflict);
     mediaConfirm.textContent = state.mediaScheduler?.isRunning() ? 'Проверяем и загружаем…' : `Применить очередь (${state.mediaQueue.filter((item) => !item.error && !mediaItemRoles(item).includes('excluded')).length})`;
   }
 
@@ -4607,22 +5177,154 @@ export async function startVisualEditor() {
       notifications.toast('Сначала завершите или отмените текущую загрузку.', 'warning');
       return;
     }
+    const openRequest = ++state.mediaOpenRequest;
+    await state.mediaPersistChain.catch(() => {});
+    if (openRequest !== state.mediaOpenRequest) return;
+    const identity = mediaIdentity(binding, record);
+    const key = mediaQueueStore.keyOf(identity);
+    const baseline = existingMediaQueue(binding, record);
+    const baselineFingerprint = mediaQueueFingerprint(baseline);
+    let durableRestored;
+    try {
+      durableRestored = await mediaQueueStore.get(identity);
+    } catch (error) {
+      notifications.toast(`Recovery-очередь не прочитана: ${error.message}. Редактирование галереи заблокировано, чтобы не потерять сохранённые данные.`, 'error', 0);
+      return;
+    }
+    const durableConflictCandidate = mediaConflictCandidates(key)[0] || null;
+    const volatileRestored = state.inMemoryMediaQueues.get(key)
+      || (durableConflictCandidate ? structuredClone(durableConflictCandidate) : null);
+    if (durableConflictCandidate && !volatileRestored.writeConflict) {
+      volatileRestored.writeConflict = {
+        actualRevision: durableRestored?.queueRevision || 0,
+        actualToken: durableRestored?.queueToken || '',
+        current: durableRestored ? structuredClone(durableRestored) : null,
+        mineDurable: true,
+        mineRecoveryKey: durableConflictCandidate.key
+      };
+      state.inMemoryMediaQueues.set(key, volatileRestored);
+    }
+    if (!volatileRestored) state.mediaQueueBlockedKeys.delete(key);
+    const actualRevision = durableRestored?.queueRevision || 0;
+    const actualToken = durableRestored?.queueToken || '';
+    const volatileMarkerStale = volatileRestored?.writeConflict
+      && (Number(volatileRestored.writeConflict.actualRevision || 0) !== actualRevision
+        || String(volatileRestored.writeConflict.actualToken || '') !== actualToken);
+    const volatileBaseStale = volatileRestored && !volatileRestored.writeConflict
+      && (Number(volatileRestored.baseQueueRevision || 0) !== actualRevision
+        || String(volatileRestored.baseQueueToken || '') !== actualToken);
+    if (volatileRestored && (volatileMarkerStale || volatileBaseStale)) {
+      const previousMarker = volatileRestored.writeConflict || {};
+      volatileRestored.writeConflict = {
+        actualRevision,
+        actualToken,
+        current: durableRestored ? structuredClone(durableRestored) : null,
+        mineDurable: previousMarker.mineDurable === true || Boolean(durableConflictCandidate),
+        mineRecoveryKey: previousMarker.mineRecoveryKey || durableConflictCandidate?.key || ''
+      };
+      state.mediaQueueBlockedKeys.add(key);
+    }
+    acknowledgeMediaQueueVersion(key, durableRestored || { queueRevision: 0, queueToken: '' });
+    if (durableRestored?.cancelled && !volatileRestored) {
+      try {
+        await mediaQueueStore.compareAndDelete(identity, {
+          expectedRevision: durableRestored.queueRevision,
+          expectedToken: durableRestored.queueToken
+        });
+        durableRestored = null;
+        clearMediaQueueVersion(key);
+        state.pendingMediaQueueKeys.delete(key);
+        state.durableMediaQueueKeys.delete(key);
+        state.legacyMediaQueueKeys.delete(key);
+        state.mediaQueueBlockedKeys.delete(key);
+      } catch (error) {
+        if (error?.code === 'MEDIA_QUEUE_CONFLICT') {
+          durableRestored = error.current?.cancelled === true ? null : error.current;
+          acknowledgeMediaQueueVersion(key, error);
+        }
+      }
+    }
+    const restored = volatileRestored?.cancelled && !volatileRestored?.writeConflict
+      ? null
+      : (volatileRestored || durableRestored);
+    if (openRequest !== state.mediaOpenRequest) return;
     state.mediaScheduler = null;
+    state.mediaQueueConflict = null;
+    state.mediaQueueResetArmed = false;
     state.activeMedia = { binding, record };
     state.mediaBatchId = `batch-${crypto.randomUUID()}`;
-    state.mediaQueue = [];
-    const restored = await mediaQueueStore.get(mediaIdentity(binding, record)).catch(() => null);
-    if (restored?.items?.length) {
+    state.mediaInitialFingerprint = baselineFingerprint;
+    state.mediaInitialCount = baseline.length;
+    if (restored) {
+      if (!volatileRestored && durableRestored?.intentVersion >= 2) state.durableMediaQueueKeys.add(key);
       state.mediaBatchId = restored.batchId || state.mediaBatchId;
-      state.mediaQueue = restored.items.map((item) => ({
+      state.mediaQueue = (restored.cancelled ? baseline : restored.items).map((item) => ({
         ...item,
         file: item.file && !(item.file instanceof File)
           ? new File([item.file], item.name || 'photo.jpg', { type: item.type || item.file.type || 'application/octet-stream' })
           : item.file
       }));
-      notifications.toast(`Восстановлена незавершённая очередь: ${restored.items.length} файлов.`, 'success');
-    } else state.mediaQueue = existingMediaQueue(binding, record);
-    state.mediaInitialCount = state.mediaQueue.filter((item) => item.existing).length;
+      if (volatileRestored?.writeConflict) {
+        state.mediaQueueBlockedKeys.add(key);
+        state.mediaQueueConflict = {
+          kind: 'recovery-write',
+          recoveredBaselineFingerprint: restored.baselineFingerprint ?? state.mediaInitialFingerprint,
+          currentBaselineFingerprint: volatileRestored.writeConflict.current?.baselineFingerprint || state.mediaInitialFingerprint,
+          theirs: volatileRestored.writeConflict.current ? structuredClone(volatileRestored.writeConflict.current) : durableRestored,
+          actualRevision: volatileRestored.writeConflict.actualRevision,
+          actualToken: volatileRestored.writeConflict.actualToken,
+          mineDurable: volatileRestored.writeConflict.mineDurable === true
+        };
+      }
+      if (!state.mediaQueueConflict && mediaQueueFingerprint(state.mediaQueue) === state.mediaInitialFingerprint) {
+        let cleared = false;
+        try {
+          await mediaQueueStore.compareAndDelete(identity, {
+            ...mediaQueueVersion(key)
+          });
+          cleared = true;
+        } catch (error) {
+          if (error?.code === 'MEDIA_QUEUE_CONFLICT') {
+            acknowledgeMediaQueueVersion(key, error);
+            state.mediaQueueBlockedKeys.add(key);
+            state.mediaQueueConflict = {
+              kind: 'recovery-write',
+              recoveredBaselineFingerprint: restored.baselineFingerprint ?? state.mediaInitialFingerprint,
+              currentBaselineFingerprint: error.current?.baselineFingerprint || state.mediaInitialFingerprint,
+              theirs: error.current ? structuredClone(error.current) : null,
+              actualRevision: error.actualRevision,
+              actualToken: error.actualToken
+            };
+          }
+        }
+        if (cleared) {
+          state.pendingMediaQueueKeys.delete(key);
+          state.durableMediaQueueKeys.delete(key);
+          state.legacyMediaQueueKeys.delete(key);
+          state.inMemoryMediaQueues.delete(key);
+          clearMediaQueueVersion(key);
+          state.mediaQueueBlockedKeys.delete(key);
+        } else {
+          state.pendingMediaQueueKeys.add(key);
+          if (durableRestored) state.durableMediaQueueKeys.add(key);
+          notifications.toast('Лишнюю recovery-очередь не удалось очистить. Она сохранена и будет предложена снова.', 'warning', 0);
+        }
+        if (!state.mediaQueueConflict) state.mediaQueue = baseline;
+      } else {
+        if (!state.mediaQueueConflict && (restored.intentVersion < 2 || !restored.baselineFingerprint
+          || restored.baselineFingerprint !== state.mediaInitialFingerprint)) {
+          state.mediaQueueConflict = {
+            recoveredBaselineFingerprint: restored.baselineFingerprint || '',
+            currentBaselineFingerprint: state.mediaInitialFingerprint
+          };
+          notifications.toast('Галерея изменилась после создания recovery-очереди. Очередь сохранена, применение заблокировано до разрешения конфликта.', 'warning', 0);
+        }
+        state.pendingMediaQueueKeys.add(key);
+        notifications.toast(`Восстановлена незавершённая очередь: ${restored.items.length} файлов.`, 'success');
+      }
+    } else state.mediaQueue = baseline;
+    refreshMediaQueueDirty();
+    if (volatileRestored?.cancelled) void persistMediaQueue();
     const affected = affectedRoutesForBinding(binding);
     mediaSubtitle.textContent = `Источник: ${record.history.snapshot().value.title || record.slug} · ${record.collection} · ${fieldLabel(binding.fieldPath)}. ${affected.length ? `Используется на: ${affected.join(', ')}.` : 'Используется только здесь.'} Порядок очереди станет порядком публикации.`;
     renderMediaQueue();
@@ -4648,11 +5350,14 @@ export async function startVisualEditor() {
           row.privateMetadata = progress.result.validation?.privateMetadata || null;
           if (progress.result.reused) row.status = 'reused';
         }
+        refreshMediaQueueDirty();
         void persistMediaQueue();
         renderMediaQueue();
       }
     });
-    return state.mediaScheduler.start(items.map((item, index) => ({ ...item, originalIndex: index })));
+    const scheduled = state.mediaScheduler.start(items.map((item, index) => ({ ...item, originalIndex: index })));
+    syncMediaQueueState();
+    return scheduled.finally(syncMediaQueueState);
   }
 
   async function retryFailedMedia() {
@@ -4668,10 +5373,38 @@ export async function startVisualEditor() {
 
   async function confirmMedia() {
     const active = state.activeMedia;
-    if (!active || state.mediaScheduler?.isRunning()) return;
+    if (!active || state.mediaScheduler?.isRunning() || state.mediaConfirmInFlight) return;
+    state.mediaConfirmInFlight = true;
+    renderMediaQueue();
+    try {
+    const activeKey = recordKey(active.record.collection, active.record.slug);
+    const currentBaselineFingerprint = mediaQueueFingerprint(existingMediaQueue(active.binding, active.record));
+    if (state.remoteConflicts.has(activeKey) || currentBaselineFingerprint !== state.mediaInitialFingerprint) {
+      state.mediaQueueConflict = {
+        recoveredBaselineFingerprint: state.mediaInitialFingerprint,
+        currentBaselineFingerprint
+      };
+      notifications.toast('Галерея изменилась в другой вкладке. Применение recovery-очереди заблокировано.', 'warning', 0);
+      renderMediaQueue();
+      return;
+    }
+    if (state.mediaQueueConflict || !refreshMediaQueueDirty()) return;
     const uploadItems = state.mediaQueue.filter((item) => item.file && !item.lease && !item.error && !mediaItemRoles(item).includes('excluded'));
     try {
       if (uploadItems.length) await stageMediaItems(uploadItems);
+      const stagedBaselineFingerprint = mediaQueueFingerprint(existingMediaQueue(active.binding, active.record));
+      if (state.remoteConflicts.has(activeKey) || stagedBaselineFingerprint !== state.mediaInitialFingerprint) {
+        state.mediaQueueConflict = {
+          recoveredBaselineFingerprint: state.mediaInitialFingerprint,
+          currentBaselineFingerprint: stagedBaselineFingerprint
+        };
+        await persistMediaQueue();
+        notifications.toast('Галерея изменилась в другой вкладке во время проверки файлов. Загрузка сохранена в recovery, применение заблокировано.', 'warning', 0);
+        renderMediaQueue();
+        return;
+      }
+      await persistMediaQueue();
+      if (state.mediaQueueConflict) return;
       const failed = state.mediaQueue.filter((item) => item.status === 'error' || item.error);
       if (failed.length) {
         notifications.toast(`${failed.length} файлов требуют внимания. Успешные элементы сохранены в очереди; повторите только ошибки.`, 'error', 0);
@@ -4710,19 +5443,52 @@ export async function startVisualEditor() {
         if (binding.heroPath) content = setAtPath(content, binding.heroPath, selected.find((item) => mediaItemRoles(item).includes('hero'))?.canonicalPath || selected.find((item) => mediaItemRoles(item).includes('hero'))?.lease?.canonicalPath || '');
         if (binding.archivePath) content = setAtPath(content, binding.archivePath, selected.find((item) => mediaItemRoles(item).includes('archive'))?.canonicalPath || selected.find((item) => mediaItemRoles(item).includes('archive'))?.lease?.canonicalPath || '');
       }
-      record.stagedMedia = [...(record.stagedMedia || []), ...selected.map((item) => item.lease).filter(Boolean)];
+      const nextStagedMedia = [...(record.stagedMedia || []), ...selected.map((item) => item.lease).filter(Boolean)];
+      await draftStore.put({ repoIdentity: REPO_IDENTITY, collection: record.collection, slug: record.slug, baseRevision: record.revision, schemaVersion: record.schemaVersion, content, stagedMedia: nextStagedMedia });
+      record.stagedMedia = nextStagedMedia;
       record.history.commit(content, { label: `Добавить фотографии: ${selected.length}`, force: true });
-      await draftStore.put({ repoIdentity: REPO_IDENTITY, collection: record.collection, slug: record.slug, baseRevision: record.revision, schemaVersion: record.schemaVersion, content, stagedMedia: record.stagedMedia });
-      await mediaQueueStore.delete(mediaIdentity(binding, record));
+      const identity = mediaIdentity(binding, record);
+      await state.mediaPersistChain.catch(() => {});
+      const key = mediaQueueStore.keyOf(identity);
+      let recoveryCleared = false;
+      try {
+        await mediaQueueStore.compareAndDelete(identity, {
+          ...mediaQueueVersion(key)
+        });
+        recoveryCleared = true;
+      } catch (error) {
+        if (error?.code !== 'MEDIA_QUEUE_CONFLICT') throw error;
+        acknowledgeMediaQueueVersion(key, error);
+        state.pendingMediaQueueKeys.add(key);
+        if (error.current?.cancelled !== true) state.durableMediaQueueKeys.add(key);
+        notifications.toast('Фотографии применены к черновику. Recovery-очередь другой вкладки сохранена отдельно и не была перезаписана.', 'warning', 0);
+      }
+      if (recoveryCleared) {
+        state.pendingMediaQueueKeys.delete(key);
+        state.durableMediaQueueKeys.delete(key);
+        state.legacyMediaQueueKeys.delete(key);
+        state.inMemoryMediaQueues.delete(key);
+        clearMediaQueueVersion(key);
+        state.mediaQueueBlockedKeys.delete(key);
+      }
       state.mediaQueue = [];
+      state.mediaInitialFingerprint = '[]';
       state.mediaInitialCount = 0;
+      state.mediaQueueDirty = false;
+      state.mediaQueueConflict = null;
+      state.mediaQueueResetArmed = false;
       state.mediaScheduler = null;
+      syncMediaQueueState();
       mediaDialog.close('confirmed');
       notifications.toast(`Фотографии добавлены в браузерный черновик: ${selected.length}. Нажмите «Сохранить», чтобы записать их атомарно.`, 'success');
       projectDraftToFrame();
     } catch (error) {
       notifications.toast(error.message || 'Не удалось подготовить фотографии.', 'error', 0);
       renderMediaQueue();
+    }
+    } finally {
+      state.mediaConfirmInFlight = false;
+      if (state.activeMedia) renderMediaQueue();
     }
   }
 
@@ -4854,6 +5620,39 @@ export async function startVisualEditor() {
     frame.tabIndex = -1;
     setHumanStatus('saved');
     await Promise.all([loadSummaries(), mediaQueueStore.cleanup({ repoIdentity: REPO_IDENTITY }).catch(() => {})]);
+    let pendingMediaQueues = await mediaQueueStore.list(REPO_IDENTITY).catch(() => []);
+    const cancelledMediaQueues = pendingMediaQueues.filter((queue) => queue.cancelled === true);
+    await Promise.all(cancelledMediaQueues.map((queue) => mediaQueueStore.compareAndDelete(queue, {
+      expectedRevision: queue.queueRevision,
+      expectedToken: queue.queueToken
+    }).catch(() => {})));
+    if (cancelledMediaQueues.length) pendingMediaQueues = await mediaQueueStore.list(REPO_IDENTITY).catch(() => pendingMediaQueues);
+    const conflictMediaQueues = pendingMediaQueues.filter((queue) => queue.conflictForKey && queue.cancelled !== true);
+    state.mediaQueueConflictRecoveryByKey = new Map();
+    for (const queue of conflictMediaQueues) {
+      const existing = mediaConflictCandidates(queue.conflictForKey);
+      state.mediaQueueConflictRecoveryByKey.set(queue.conflictForKey, [...existing, queue]);
+    }
+    const canonicalMediaQueues = pendingMediaQueues.filter((queue) => !queue.conflictForKey);
+    const currentMediaQueues = canonicalMediaQueues.filter((queue) => queue.intentVersion >= 2 && queue.cancelled !== true);
+    const volatileVersions = [...state.inMemoryMediaQueues.entries()].map(([key, queue]) => [key, {
+      revision: Number(queue.writeConflict?.actualRevision ?? queue.baseQueueRevision ?? 0),
+      token: String(queue.writeConflict?.actualToken ?? queue.baseQueueToken ?? '')
+    }]);
+    state.mediaQueueRevisionByKey = new Map(volatileVersions.map(([key, version]) => [key, version.revision]));
+    state.mediaQueueTokenByKey = new Map(volatileVersions.map(([key, version]) => [key, version.token]));
+    for (const queue of canonicalMediaQueues) acknowledgeMediaQueueVersion(queue.key, queue);
+    state.durableMediaQueueKeys = new Set([
+      ...currentMediaQueues.map((queue) => queue.key),
+      ...conflictMediaQueues.map((queue) => queue.conflictForKey)
+    ]);
+    state.legacyMediaQueueKeys = new Set(canonicalMediaQueues.filter((queue) => queue.intentVersion < 2 && queue.cancelled !== true).map((queue) => queue.key));
+    state.pendingMediaQueueKeys = new Set([
+      ...currentMediaQueues.map((queue) => queue.key),
+      ...conflictMediaQueues.map((queue) => queue.conflictForKey),
+      ...[...state.inMemoryMediaQueues.entries()].filter(([, queue]) => queue.cancelled !== true).map(([key]) => key)
+    ]);
+    syncMediaQueueState();
     const initialRoute = normalizeRoute(root.dataset.initialRoute || '/');
     const initialPage = state.pageByRoute.get(initialRoute) || state.pageByRoute.get('/') || state.pages[0];
     await openPage(initialPage);
@@ -4960,8 +5759,10 @@ export async function startVisualEditor() {
   }));
   for (const button of root.querySelectorAll('[data-dialog-close]')) button.addEventListener('click', () => {
     const dialog = button.closest('dialog');
-    if (dialog === mediaDialog && state.mediaScheduler?.isRunning()) {
-      notifications.toast('Дождитесь завершения текущих файлов или нажмите «Отменить загрузку» внутри очереди.', 'warning');
+    if (dialog === mediaDialog && (state.mediaScheduler?.isRunning() || state.mediaConflictResolutionInFlight)) {
+      notifications.toast(state.mediaConflictResolutionInFlight
+        ? 'Дождитесь завершения выбора версии очереди фотографий.'
+        : 'Дождитесь завершения текущих файлов или нажмите «Отменить загрузку» внутри очереди.', 'warning');
       return;
     }
     dialog?.close('cancelled');
@@ -5009,13 +5810,26 @@ export async function startVisualEditor() {
     required(root, '#veChangesToggle').setAttribute('aria-expanded', String(!open));
   });
   mediaConfirm.addEventListener('click', () => void confirmMedia());
-  mediaDialog.addEventListener('cancel', (event) => { if (state.mediaScheduler?.isRunning()) event.preventDefault(); });
+  mediaDialog.addEventListener('cancel', (event) => {
+    if (state.mediaScheduler?.isRunning() || state.mediaConflictResolutionInFlight) event.preventDefault();
+  });
   mediaDialog.addEventListener('close', () => {
+    if (state.mediaConflictResolutionInFlight) {
+      queueMicrotask(() => {
+        if (!mediaDialog.open && state.activeMedia) restoreFocusDialog(mediaDialog, document.activeElement);
+      });
+      return;
+    }
     revokeMediaUrls();
-    if (state.mediaQueue.length) void persistMediaQueue();
+    if (state.mediaQueueDirty) void persistMediaQueue();
     state.mediaScheduler = null;
+    state.mediaInitialFingerprint = '[]';
     state.mediaInitialCount = 0;
     state.activeMedia = null;
+    state.mediaQueueDirty = false;
+    state.mediaQueueConflict = null;
+    state.mediaQueueResetArmed = false;
+    syncMediaQueueState();
   });
   window.addEventListener('message', handleBridgeMessage);
   window.addEventListener('resize', debounce(() => postToFrame('request-geometry'), 80));
@@ -5037,7 +5851,7 @@ export async function startVisualEditor() {
     if (!modifier && event.key.toLowerCase() === 'e' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) setMode(state.mode === 'edit' ? 'preview' : 'edit');
   });
   window.addEventListener('beforeunload', (event) => {
-    if (!state.mediaQueue.length && !state.mediaScheduler?.isRunning()) return;
+    if (!state.mediaQueueDirty && !state.pendingMediaQueueKeys.size && !state.mediaScheduler?.isRunning()) return;
     event.preventDefault();
     event.returnValue = '';
   });
@@ -5048,6 +5862,13 @@ export async function startVisualEditor() {
       const key = recordKey(update.collection, update.slug);
       const record = state.records.get(key);
       if (!record) continue;
+      if (state.activeMedia?.record === record && state.mediaQueueDirty) {
+        state.mediaQueueConflict = {
+          recoveredBaselineFingerprint: state.mediaInitialFingerprint,
+          currentBaselineFingerprint: 'remote-update-pending'
+        };
+        renderMediaQueue();
+      }
       if (record.history.snapshot().dirty) {
         state.remoteConflicts.set(key, { mine: record.history.snapshot().value, base: record.loadedContent, currentRevision: update.revision });
         notifications.toast(`«${record.history.snapshot().value.title || record.slug}» сохранён в другой вкладке. Ваш черновик не будет перезаписан.`, 'warning', 0);

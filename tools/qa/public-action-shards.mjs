@@ -146,6 +146,27 @@ export function mergePublicActionShards(reports, {
   const failedRoutes = routeResults.filter((result) => result.status === 'fail').length;
   const failedNoJs = noJsResults.filter((result) => result.status === 'fail').length;
   const intercepted = ordered.flatMap((report) => report.evidence?.browserSafety?.intercepted || []);
+  const navigationDialogs = ordered.flatMap((report) => report.evidence?.browserSafety?.navigationDialogs || []);
+  const workerDialogAudits = ordered.map((report, index) => {
+    const observedCount = (report.evidence?.browserSafety?.navigationDialogs || []).length;
+    const reportedCount = Number(report.evidence?.dialogAudit?.unexpectedCount || 0);
+    const finalDrainPassed = report.evidence?.dialogAudit?.finalDrainPassed === true;
+    return {
+      index: index + 1,
+      finalDrainPassed,
+      unexpectedCount: observedCount,
+      passed: report.evidence?.dialogAudit?.passed === true
+        && finalDrainPassed
+        && reportedCount === observedCount
+        && observedCount === 0
+    };
+  });
+  const dialogAudit = {
+    workers: workerDialogAudits,
+    finalDrainPassed: workerDialogAudits.every((audit) => audit.finalDrainPassed),
+    unexpectedCount: navigationDialogs.length,
+    passed: workerDialogAudits.every((audit) => audit.passed) && navigationDialogs.length === 0
+  };
   const shardEvidence = ordered.map((report, index) => ({
     index: index + 1,
     total,
@@ -169,8 +190,10 @@ export function mergePublicActionShards(reports, {
         ...first.evidence.browserSafety,
         mode: 'public-read-only',
         intercepted,
+        navigationDialogs,
         workers: shardEvidence.map((item) => ({ index: item.index, origin: item.origin }))
       },
+      dialogAudit,
       analyticsAndLeadSubmissionBlocked: ordered.every((report) => report.evidence?.analyticsAndLeadSubmissionBlocked === true)
     },
     manifest: {
@@ -210,6 +233,8 @@ export function mergePublicActionShards(reports, {
       unknownNoJsPassed: unknownNoJs[0].status === 'pass',
       publicArtifactIsolation: first.evidence?.artifactIsolation?.clean === true,
       publicArtifactLeaks: first.evidence?.artifactIsolation?.leaks?.length || 0,
+      unexpectedNavigationDialogs: navigationDialogs.length,
+      dialogDrainPassed: dialogAudit.finalDrainPassed,
       noJsPassed: noJsResults.length - failedNoJs,
       noJsFailed: failedNoJs,
       noJsRequired: expected.length
@@ -236,6 +261,7 @@ async function main() {
   await mkdir(path.dirname(output), { recursive: true });
   await writeFile(output, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
   process.stdout.write(`${JSON.stringify({ output, manifest: merged.manifest, aggregate: merged.aggregate }, null, 2)}\n`);
+  if (merged.evidence?.dialogAudit?.passed !== true) process.exitCode = 1;
 }
 
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
