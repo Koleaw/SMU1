@@ -1,0 +1,4 @@
+# Vite emits these ?url modules as raw bytes. Keep their content hashes stable
+# between existing workspaces and fresh Windows/Linux exact-build checkouts.
+/src/scripts/public-search.mjs text eol=lf
+/src/scripts/public-search-dialog.mjs text eol=lf
