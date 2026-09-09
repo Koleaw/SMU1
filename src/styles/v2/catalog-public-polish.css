@@ -83,6 +83,7 @@
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='standard-product'].catalog-v2--standard-no-media .v2-product-summary__actions { grid-column: 2; }
 }
 @media (min-width: 761px) and (max-width: 980px) {
+  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='category']:not(.catalog-v2--fence-direction) .v2-catalog-hero--isolated .v2-catalog-hero__media img { object-position: center !important; }
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root] .v2-product-grid[data-catalog-grid-count='3'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {

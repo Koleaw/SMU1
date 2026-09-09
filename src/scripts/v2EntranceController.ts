@@ -931,11 +931,15 @@ const initializeEntranceRoot = async (root: HTMLElement) => {
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const settleForPreferenceChange = () => {
+      const nextProfile = detectMotionProfile();
+      // NetworkInformation also emits change for RTT/downlink measurements.
+      // Only an actual motion preference change should interrupt the entrance.
+      if (html.dataset.v2MotionProfile === nextProfile) return;
       if (!entranceTerminal) completeEntrance();
       clearCollection(scrollTimers, scrollFrames);
       observer?.disconnect();
       settleAllScrollGroups();
-      html.dataset.v2MotionProfile = detectMotionProfile();
+      html.dataset.v2MotionProfile = nextProfile;
     };
     reducedMotion.addEventListener('change', settleForPreferenceChange, { signal });
     getConnection()?.addEventListener?.('change', settleForPreferenceChange, { signal });
