@@ -4041,6 +4041,8 @@ const responsiveHeaderTypographyAudit = async () => {
       h1 = width <= 760 ? clampPx(25, .07, 32) : clampPx(28, .03, 44);
     } else if (routeKind === 'career-detail' && width <= 760) {
       h1 = clampPx(24, .068, 30);
+    } else if (routeKind === 'project-detail' && width <= 760) {
+      h1 = clampPx(30, .095, 42);
     }
     const h2 = breakpoint === 'desktop'
       ? clampPx(44, .0325, 62)

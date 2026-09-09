@@ -120,6 +120,10 @@
 }
 
 @media (max-width: 760px) {
+  :root[data-v2-public-route='true'] .catalog-v2[data-catalog-v2-root] .engineering-direction-v2--metalworks #contact h2 {
+    font-size: clamp(26px, 8vw, 34px);
+  }
+
   .catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction'] [data-direction-v2-root]
     .immersive-direction-hero--product-final .immersive-direction-hero__copy {
     grid-column: 1 / -1;

@@ -152,6 +152,7 @@
   :root[data-v2-public-route='true'] .home-v2-body .practical-v2.practical-v2--vacancy .practical-vacancy__hero h1 { font-size: clamp(24px, 6.8vw, 30px); hyphens: auto; overflow-wrap: normal !important; }
   :root[data-v2-public-route='true'] .home-v2-body .practical-v2.practical-v2--legal .practical-legal__document h1 { font-size: clamp(25px, 7vw, 32px); }
   :root[data-v2-public-route='true'] .home-v2-body .practical-legal__document :is(p, li) { font-size: 16px; }
+  :root[data-v2-public-route='true'] .home-v2-body .projects-v2 .v2-project-detail .v2-project-detail__hero h1 { font-size: clamp(30px, 9.5vw, 42px); hyphens: none; }
   :root[data-v2-public-route='true'] .home-v2-body .v2-project-detail__direction-grid > a { min-height: 126px; }
   :root[data-v2-public-route='true'] .home-v2-body .v2-project-detail__work { padding-block: 52px; }
   :root[data-v2-public-route='true'] .home-v2-body .v2-project-gallery__stage { height: 400px; height: min(110vw, 460px); }
