@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { classifyAdminAction } from './action-crawl-core.mjs';
+import { adminControlPostcondition, findAdminActionElement, isExpectedIsolatedPublishStatus } from './admin-action-state.mjs';
 import {
   ADMIN_EDITOR_REVISION_PATTERN_SOURCE,
   ADMIN_EDITOR_SESSION_PATTERN_SOURCE,
@@ -76,17 +77,45 @@ const current = { actionKey: '', mode: '' };
 const events = [];
 const baselineResets = [];
 const requests = [];
+const requestMethods = new Map();
+const statusProbes = new Map();
+const pendingStatusBodies = new Set();
+const expectedStatusResponses = [];
 browser.on('Runtime.exceptionThrown', ({ exceptionDetails }) => events.push({ ...current, kind: 'runtime-exception', text: exceptionDetails?.exception?.description || exceptionDetails?.text || '' }));
 browser.on('Runtime.consoleAPICalled', ({ type, args }) => {
   if (['error', 'assert'].includes(type)) events.push({ ...current, kind: `console-${type}`, text: args?.map((item) => item.value ?? item.description ?? '').join(' ') || '' });
 });
-browser.on('Network.responseReceived', ({ response, type }) => {
+browser.on('Network.responseReceived', ({ response, type, requestId }) => {
   const url = sanitizeObservedUrl(response.url);
   const expectedNotFoundCanvas = response.status === 404 && current.actionKey === 'canvas-route:/404.html'
     && ['/404', '/404.html'].includes(url.pathname);
-  if (response.status >= 400 && !expectedNotFoundCanvas) events.push({ ...current, kind: 'http-response', status: response.status, url, resourceType: type });
+  if (response.status >= 400 && !expectedNotFoundCanvas) {
+    const event = { ...current, kind: 'http-response', status: response.status, url, resourceType: type };
+    if (isolationProof?.valid && response.status === 403 && requestMethods.get(requestId) === 'GET'
+      && url.origin === parsedOrigin.origin && url.pathname === '/api/admin/publish/status' && !url.queryKeys.length) {
+      statusProbes.set(requestId, { event, responseUrl: response.url });
+    } else events.push(event);
+  }
 });
-browser.on('Network.requestWillBeSent', ({ request, type }) => {
+browser.on('Network.loadingFinished', ({ requestId }) => {
+  const probe = statusProbes.get(requestId);
+  if (!probe) return;
+  statusProbes.delete(requestId);
+  const pending = browser.send('Network.getResponseBody', { requestId }).then((body) => {
+    const payload = JSON.parse(body.base64Encoded ? Buffer.from(body.body, 'base64').toString('utf8') : body.body);
+    if (isExpectedIsolatedPublishStatus({ method: 'GET', status: probe.event.status,
+      origin: parsedOrigin.origin, url: probe.responseUrl, code: payload.code, isolated: isolationProof?.valid })) {
+      expectedStatusResponses.push({ ...probe.event, method: 'GET', code: payload.code });
+    } else events.push(probe.event);
+  }).catch(() => events.push(probe.event)).finally(() => pendingStatusBodies.delete(pending));
+  pendingStatusBodies.add(pending);
+});
+browser.on('Network.loadingFailed', ({ requestId }) => {
+  const probe = statusProbes.get(requestId);
+  if (probe) { events.push(probe.event); statusProbes.delete(requestId); }
+});
+browser.on('Network.requestWillBeSent', ({ request, type, requestId }) => {
+  requestMethods.set(requestId, String(request.method || 'GET').toUpperCase());
   const url = sanitizeObservedUrl(request.url);
   if (url.origin === parsedOrigin.origin) requests.push({ ...current, method: request.method, url, resourceType: type });
 });
@@ -103,6 +132,7 @@ const inventoryExpression = `(() => {
       context: contextName, id, domId: element.id || '', tag: element.tagName.toLowerCase(), role: element.getAttribute('role') || '',
       classes: Array.from(element.classList),
       containerId: element.parentElement?.closest('[id]')?.id || '',
+      ancestorRoute: element.closest('[data-route]')?.getAttribute('data-route') || '',
       name: clean(element.getAttribute('aria-label') || element.title || element.textContent || element.value),
       href: element.getAttribute('href') || '', type: element.type || '', visible: visible(element),
       disabled: Boolean(element.disabled || element.getAttribute('aria-disabled') === 'true'), tabIndex: element.tabIndex,
@@ -122,7 +152,7 @@ const actionExpression = (action) => `(() => {
     ? 'null'
     : `Array.from(document.querySelectorAll('iframe')).find((frame, index) => 'iframe-' + (frame.id || index + 1) === ${JSON.stringify(action.context)})`};
   const documentValue = ${action.context === 'shell' ? 'document' : 'frameValue?.contentDocument'};
-  const element = documentValue?.querySelector('[data-h6-admin-action-id="${action.id}"]');
+  const element = (${findAdminActionElement.toString()})(documentValue, ${JSON.stringify(action)});
   if (!element) return { found: false };
   const visible = (() => { const style = element.ownerDocument.defaultView.getComputedStyle(element); const rect = element.getBoundingClientRect(); return style.display !== 'none' && style.visibility !== 'hidden' && !element.hidden && rect.width > 0 && rect.height > 0; })();
   if (!visible || element.disabled || element.getAttribute('aria-disabled') === 'true') return { found: true, executable: false };
@@ -144,7 +174,7 @@ const actionStateExpression = (action) => `(() => {
   const documentValue = ${action.context === 'shell'
     ? 'document'
     : `Array.from(document.querySelectorAll('iframe')).find((frame, index) => 'iframe-' + (frame.id || index + 1) === ${JSON.stringify(action.context)})?.contentDocument`};
-  const element = documentValue?.querySelector('[data-h6-admin-action-id="${action.id}"]');
+  const element = (${findAdminActionElement.toString()})(documentValue, ${JSON.stringify(action)});
   if (!element) return null;
   return JSON.stringify({
     className: element.className, expanded: element.getAttribute('aria-expanded'), pressed: element.getAttribute('aria-pressed'), selected: element.getAttribute('aria-selected'),
@@ -384,10 +414,10 @@ const runNavigationAcceptance = async (homePath) => {
 
 const ensureAdminActionExecutable = async (action) => {
   let prepared = await browser.evaluate(actionExpression(action));
-  if (prepared?.executable) return { prepared, restored: false, opener: null };
+  if (prepared?.executable && prepared.active) return { prepared, restored: false, opener: null };
   await restoreAdminHome();
   prepared = await browser.evaluate(actionExpression(action));
-  if (prepared?.executable) return { prepared, restored: true, opener: null };
+  if (prepared?.executable && prepared.active) return { prepared, restored: true, opener: null };
   const candidates = (await browser.evaluate(inventoryExpression)).filter((candidate) => {
     const policy = classifyAdminAction(candidate, { isolatedMutations: false });
     return `${candidate.context}:${candidate.id}` !== `${action.context}:${action.id}`
@@ -395,12 +425,12 @@ const ensureAdminActionExecutable = async (action) => {
   });
   for (const candidate of candidates) {
     const opener = await browser.evaluate(actionExpression(candidate));
-    if (!opener?.executable) continue;
+    if (!opener?.executable || !opener.active) continue;
     await browser.dispatchClick(opener.point);
     await new Promise((resolve) => setTimeout(resolve, 45));
     await browser.evaluate(inventoryExpression);
     prepared = await browser.evaluate(actionExpression(action));
-    if (prepared?.executable) return { prepared, restored: true, opener: { key: `${candidate.context}:${candidate.id}`, name: candidate.name } };
+    if (prepared?.executable && prepared.active) return { prepared, restored: true, opener: { key: `${candidate.context}:${candidate.id}`, name: candidate.name } };
     await restoreAdminHome();
   }
   return { prepared, restored: true, opener: null };
@@ -603,14 +633,33 @@ try {
       if (verboseProgress) progress(`action ${key}: ${policy.policy} (${String(action.name || action.domId || action.tag).slice(0, 120)})`);
       if (policy.execute && action.visible && !action.disabled) {
         for (const operation of ['click', 'keyboard']) {
-          if (operation === 'keyboard') await restoreAdminHome({ actionKey: key, afterMode: 'click' });
+          await restoreAdminHome({ actionKey: key, afterMode: operation === 'keyboard' ? 'click' : 'previous-action' });
           current.actionKey = key;
           current.mode = operation;
           const eventIndex = events.length;
           const requestIndex = requests.length;
           const preparation = await ensureAdminActionExecutable(action);
+          // A selected mode/filter is intentionally idempotent. Establish a
+          // different real UI state first so both activations prove a change.
+          const selection = await browser.evaluate(`(() => {
+            const action = ${JSON.stringify(action)};
+            const element = (${findAdminActionElement.toString()})(document, action);
+            const attribute = ['data-viewport', 'data-mode', 'data-filter', 'data-settings-tab'].find(name => element?.hasAttribute(name));
+            if (!attribute || element.getAttribute('aria-pressed') !== 'true') return null;
+            const peer = Array.from(element.parentElement.querySelectorAll('button')).find(candidate => candidate !== element && candidate.hasAttribute(attribute) && !candidate.disabled);
+            if (!peer) return null;
+            peer.scrollIntoView({ block: 'center', behavior: 'instant' });
+            const rect = peer.getBoundingClientRect();
+            return { attribute, value: peer.getAttribute(attribute), point: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } };
+          })()`);
+          if (selection) {
+            await browser.dispatchClick(selection.point);
+            await new Promise(resolve => setTimeout(resolve, 45));
+            preparation.prepared = await browser.evaluate(actionExpression(action));
+            preparation.selectionBaseline = { attribute: selection.attribute, value: selection.value };
+          }
           const execution = preparation.prepared || { found: false, executable: false };
-          execution.preparation = { restored: preparation.restored, opener: preparation.opener };
+          execution.preparation = { restored: preparation.restored, opener: preparation.opener, selectionBaseline: preparation.selectionBaseline || null };
           if (execution?.executable) {
             if (operation === 'click') await browser.dispatchClick(execution.point);
             else await browser.dispatchKey('Enter', { code: 'Enter' });
@@ -627,7 +676,7 @@ try {
           execution.unexpectedMutationRequests = policy.policy === 'safe-ui-action'
             ? execution.requests.filter((request) => !['GET', 'HEAD', 'OPTIONS'].includes(request.method))
             : [];
-          const postcondition = Boolean(execution.observableChange || execution.requests.length);
+          const postcondition = adminControlPostcondition(action, execution.before, execution.after, execution.requests.length);
           execution.postcondition = postcondition;
           execution.status = executionEvents.length || !execution?.found || !execution?.executable || !execution.active
             || (policy.policy === 'safe-ui-action' && (!postcondition || execution.unexpectedMutationRequests.length))
@@ -645,6 +694,8 @@ try {
             : 'State inventoried; execution is not applicable in this state.';
       }
       actionResults.push(result);
+      if (result.status === 'fail') progress(`action failed ${key} (${String(action.name).slice(0,100)}): ${JSON.stringify(result.executions.filter(item => item.status === 'fail').map(item => ({ operation: item.operation, found: item.found, active: item.active, executable: item.executable, postcondition: item.postcondition, events: item.events })))}`);
+      if (actionResults.length % 50 === 0) progress(`checked ${actionResults.length} registered admin controls`);
     }
   }
   const policies = actionResults.reduce((counts, result) => {
@@ -661,6 +712,8 @@ try {
     events.push({ ...current, kind: 'unexpected-browser-dialog', text: dialogDrainError });
   }
   const rawBrowserSafety = browser.safetyEvidence();
+  await Promise.all([...pendingStatusBodies]);
+  for (const probe of statusProbes.values()) events.push(probe.event);
   const acceptedNavigationDialogs = rawBrowserSafety.navigationDialogs.filter((dialog) => dialog.accepted).length;
   const evidencedAcceptedDialogs = baselineResets.reduce((count, reset) => count + reset.dialogs.filter((dialog) => dialog.accepted).length, 0);
   const resetEvidenceValid = !dialogDrainError
@@ -696,6 +749,7 @@ try {
       releaseActionsExecuted: releaseMutationAttempts.length > 0,
       releaseMutationAttempts,
       browserSafety,
+      expectedStatusResponses,
       dialogAudit: { drained: !dialogDrainError, error: dialogDrainError, unexpected: rawBrowserSafety.navigationDialogs.length - evidencedAcceptedDialogs },
       baselineResets,
       resetEvidenceValid,
@@ -723,7 +777,7 @@ try {
   progress(`registered ${output.aggregate.actions} actions; report: ${path.relative(root, options.output)}`);
   if (options.json) process.stdout.write(`${JSON.stringify(output)}\n`);
   else process.stdout.write(`${JSON.stringify({ aggregate: output.aggregate, output: options.output }, null, 2)}\n`);
-  if (!navigatorReconciliation.exact || output.aggregate.failed || output.aggregate.canvasRoutesFailed || navigationAcceptance.status !== 'pass' || !resetEvidenceValid) process.exitCode = 1;
+  if (!navigatorReconciliation.exact || output.aggregate.failed || output.aggregate.canvasRoutesFailed || events.length || navigationAcceptance.status !== 'pass' || !resetEvidenceValid) process.exitCode = 1;
 } finally {
   await browser.close();
 }

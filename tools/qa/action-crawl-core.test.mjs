@@ -35,6 +35,12 @@ test('admin mutation actions require an explicitly isolated fixture', () => {
   assert.deepEqual(classifyAdminAction({ tag: 'button', type: 'button', visible: true, name: 'Изменённые', dataActions: ['data-filter'] }), {
     policy: 'safe-ui-action', execute: true
   });
+  assert.deepEqual(classifyAdminAction({ tag: 'button', type: 'button', visible: true, name: 'Просмотр', dataAttributes: { 'data-mode': 'preview' } }), {
+    policy: 'safe-ui-action', execute: true
+  });
+  assert.deepEqual(classifyAdminAction({ tag: 'button', type: 'button', visible: true, name: 'Запустить', dataAttributes: { 'data-mode': 'preview', 'data-action': 'publish-preview' } }), {
+    policy: 'release-intercept-required', execute: false
+  });
 });
 
 test('contact protocols are validated without launching external applications', () => {

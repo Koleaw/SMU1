@@ -59,6 +59,10 @@ export function classifyAdminAction(action, { isolatedMutations = false } = {}) 
   if (action.domId === 'vePublish' || /^публикация$/iu.test(String(action.name || '').trim())) {
     return { policy: 'safe-ui-action', execute: true };
   }
+  if (action.tag === 'button' && ['edit', 'preview'].includes(action.dataAttributes?.['data-mode'])
+    && !Object.hasOwn(action.dataAttributes || {}, 'data-action')) {
+    return { policy: 'safe-ui-action', execute: true };
+  }
   if (RELEASE_LABEL.test(label)) return { policy: 'release-intercept-required', execute: false };
   if (action.tag === 'input' && String(action.type || '').toLowerCase() === 'file') {
     return { policy: 'requires-file-fixture', execute: false };

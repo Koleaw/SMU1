@@ -1316,6 +1316,7 @@ export async function startVisualEditor() {
     });
     wrapper.tabIndex = 0;
     wrapper.addEventListener('keydown', (event) => {
+      if (event.target !== wrapper) return;
       if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); void openPage(page); }
     });
     return wrapper;
