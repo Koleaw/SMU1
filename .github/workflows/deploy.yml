@@ -542,7 +542,7 @@ jobs:
   resume-evidence:
     if: inputs.resume_evidence_run != '' && inputs.deploy_target == 'test' && github.ref_name != 'main' && github.ref_name != 'master'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: read
       actions: read
@@ -611,7 +611,30 @@ jobs:
           BASE_PATH: ${{ steps.reconcile.outputs.base_path }}
         run: node tools/qa/public-action-cache.mjs seal
         working-directory: site
-      - name: Refresh only reports whose artifact identity preceded tracked SVG overlays
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        id: resumed-media
+        if: steps.reconcile.outputs.artifact_recheck == 'true'
+        with:
+          path: site/public/_media/h5
+          key: ${{ runner.os }}-h5-resumed-source-${{ steps.original.outputs.source_sha }}
+      - name: Restore H5 prerequisites from the validated artifact and prepare only missing derivatives
+        if: steps.reconcile.outputs.artifact_recheck == 'true'
+        run: |
+          mkdir -p public/_media/h5
+          cp -a dist/_media/h5/. public/_media/h5/
+          node tools/performance/prepare-media.mjs
+          tar -xmf .admin-runtime/ci/validated-build.tar dist
+        working-directory: site
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        if: steps.reconcile.outputs.artifact_recheck == 'true' && steps.resumed-media.outputs.cache-hit != 'true'
+        with:
+          path: site/public/_media/h5
+          key: ${{ runner.os }}-h5-resumed-source-${{ steps.original.outputs.source_sha }}
+      - name: Check H5 budgets on the unchanged crawled artifact
+        if: steps.reconcile.outputs.artifact_recheck == 'true'
+        run: npm run qa:performance
+        working-directory: site
+      - name: Refresh route passport for the exact crawled artifact
         if: steps.reconcile.outputs.artifact_recheck == 'true'
         env:
           BASE_PATH: ${{ steps.reconcile.outputs.base_path }}
@@ -619,12 +642,15 @@ jobs:
           SITE_URL: https://koleaw.github.io
           TEST_SITE_URL: https://koleaw.github.io
         run: |
-          node tools/performance/prepare-media.mjs
-          tar -xmf .admin-runtime/ci/validated-build.tar dist
           cp .admin-runtime/h6-qa/route-passport.json .admin-runtime/h6-qa/original-route-passport.json
-          cp .admin-runtime/h6-qa/media-privacy-chain.json .admin-runtime/h6-qa/original-media-privacy-chain.json
-          npm run qa:performance
           npm run qa:h6:route-passport
+        working-directory: site
+      - name: Refresh privacy evidence for the exact crawled artifact
+        if: steps.reconcile.outputs.artifact_recheck == 'true'
+        env:
+          BASE_PATH: ${{ steps.reconcile.outputs.base_path }}
+        run: |
+          cp .admin-runtime/h6-qa/media-privacy-chain.json .admin-runtime/h6-qa/original-media-privacy-chain.json
           npm run qa:h6:media-privacy
         working-directory: site
       - name: Validate every report against the exact original checkout with the reviewed reconciliation contract

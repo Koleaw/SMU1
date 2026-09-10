@@ -58,6 +58,7 @@ test('CI retains independent failed stages and gates publishing on complete evid
   assert.match(jobs['resume-evidence'], /node \.\.\/qa-tools\/tools\/qa\/verify-h6-evidence\.mjs\s+working-directory: site/u);
   assert.match(jobs['resume-evidence'], /steps\.reconcile\.outputs\.artifact_recheck == 'true'/u);
   assert.match(jobs['resume-evidence'], /node tools\/performance\/prepare-media\.mjs\s+tar -xmf \.admin-runtime\/ci\/validated-build\.tar dist/u);
+  assert.match(jobs['resume-evidence'], /cp -a dist\/_media\/h5\/\. public\/_media\/h5\/\s+node tools\/performance\/prepare-media\.mjs/u);
   assert.match(jobs['resume-evidence'], /npm run qa:performance[\s\S]*npm run qa:h6:route-passport[\s\S]*npm run qa:h6:media-privacy/u);
   for (const name of ['public-inputs','public-actions','public-evidence','release']) assert.match(jobs[name], /node tools\/qa\/restore-ci-artifact\.mjs/u);
   assert.doesNotMatch(jobs['resume-evidence'], /run: npm run build|public-action-crawl\.mjs|--stage=actions|--stage=acceptance/u);
