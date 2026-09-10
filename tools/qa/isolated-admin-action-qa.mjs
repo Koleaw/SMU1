@@ -120,9 +120,6 @@ try {
     'ADMIN_TEST_MODE=true',
     'ADMIN_TEST_FAULTS_ENABLED=true',
     'ADMIN_TEST_EXACT_MODE=deterministic',
-    // Let the UI join the server-scheduled exact run before its terminal result,
-    // as it does with a real build. An instant synthetic failure invites a retry.
-    'ADMIN_TEST_EXACT_DELAY_MS=5000',
     'PRODUCTION_DEPLOY_ENABLED=false',
     'ADMIN_ALLOW_PRODUCTION_PUBLISH=false',
     ''

@@ -1439,10 +1439,13 @@ await localPreview.initialize();
 
 const deterministicExactRunner = testFaultsEnabled && process.env.ADMIN_TEST_EXACT_MODE === 'deterministic'
   ? async ({ snapshot }) => {
-      const delayMs = Math.max(0, Math.min(5_000, Number(process.env.ADMIN_TEST_EXACT_DELAY_MS || 60)));
+      // Capture the fault at start: a later request must affect the next run.
+      const failThisRun = testFaults.nextExactFailure;
+      testFaults.nextExactFailure = false;
+      // Only the injected failure needs time for the UI to join the scheduled run.
+      const delayMs = Math.max(failThisRun ? 5_000 : 0, Math.min(5_000, Number(process.env.ADMIN_TEST_EXACT_DELAY_MS || 60)));
       await new Promise((resolve) => setTimeout(resolve, delayMs));
-      if (testFaults.nextExactFailure) {
-        testFaults.nextExactFailure = false;
+      if (failThisRun) {
         throw new ExactValidationError('EXACT_TEST_INJECTED_FAILURE', 'Изолированная QA-проверка воспроизвела отказ exact build.', {
           status: 422,
           details: { synthetic: true }

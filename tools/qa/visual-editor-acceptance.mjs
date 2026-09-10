@@ -1629,7 +1629,7 @@ async function runAcceptance(options, bundle) {
             const bound = Array.from(frame?.contentDocument?.querySelectorAll('[data-smu1-binding]') || [])
               .map((item) => { try { return JSON.parse(item.getAttribute('data-smu1-binding') || 'null'); } catch { return null; } })
               .find((binding) => binding?.bindingId === element.dataset.bindingId);
-            return bound?.tool === 'reorder-item';
+            return bound?.tool === 'reorder-item' && String(bound.stableItemId || bound.recordSlug || '') === ${json(before[1])};
           } catch { return false; }
         });
         if (!source || !target) return { dispatched: false, indicator: false };
@@ -2025,6 +2025,8 @@ async function runAcceptance(options, bundle) {
         const failed = rows.filter((row) => row.dataset.status === 'error');
         const ready = rows.filter((row) => ['uploaded', 'reused'].includes(row.dataset.status));
         return rows.length === 21 && failed.length === 1 && ready.length === 20
+          && document.querySelector('#veMediaConfirm')?.disabled === false
+          && document.querySelector('#veApp')?.dataset.mediaQueueRunning !== 'true'
           ? { failedName: failed[0].querySelector('strong')?.textContent?.trim() || '', ready: ready.length }
           : null;
       })()`, { timeoutMs: 90_000, intervalMs: 100, label: '20 successful stages and one isolated failure' });
@@ -2523,9 +2525,7 @@ async function runAcceptance(options, bundle) {
       ));
       const assignRole = (canonicalPath, role) => browser.evaluate(`(() => {
         const row = Array.from(document.querySelectorAll('#veMediaBody .ve-media-row')).find((candidate) => {
-          const image = candidate.querySelector('.ve-media-row__thumb img');
-          if (!image) return false;
-          try { return new URL(image.src, location.href).pathname === ${json(canonicalPath)}; } catch { return false; }
+          return candidate.dataset.canonicalPath === ${json(canonicalPath)};
         });
         const control = row?.querySelector('.ve-media-role-picker input[value="' + CSS.escape(${json(role)}) + '"]');
         if (!control) return { available: false, path: ${json(canonicalPath)}, role: ${json(role)} };
@@ -2539,11 +2539,8 @@ async function runAcceptance(options, bundle) {
       const heroAssignment = await assignRole(uploadedPaths[1], 'hero');
       const explicitRoleRows = await waitFor(browser, `(() => {
         const rows = Array.from(document.querySelectorAll('#veMediaBody .ve-media-row')).map((row) => {
-          const image = row.querySelector('.ve-media-row__thumb img');
-          let pathname = '';
-          try { pathname = image ? new URL(image.src, location.href).pathname : ''; } catch {}
           return {
-            pathname,
+            pathname: row.dataset.canonicalPath || '',
             roles: Array.from(row.querySelectorAll('.ve-media-role-picker input:checked')).map((input) => input.value).sort()
           };
         });

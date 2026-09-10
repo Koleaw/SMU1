@@ -4910,7 +4910,8 @@ export async function startVisualEditor() {
         caption: typeof raw === 'object' ? raw.caption || existing?.caption || '' : existing?.caption || '',
         role: nextRole, roles: originalRoles, originalRoles, roleChanged: false,
         status: 'uploaded', error: '', canonicalPath: path,
-        lease: (record.stagedMedia || []).find((item) => item.canonicalPath === path) || null,
+        // These leases belong to the record draft, not this temporary queue.
+        lease: null,
         existing: true
       });
     };
@@ -5031,6 +5032,7 @@ export async function startVisualEditor() {
       const row = document.createElement('article');
       row.className = 've-media-row';
       row.dataset.status = item.error ? 'error' : item.status;
+      row.dataset.canonicalPath = item.canonicalPath || item.lease?.canonicalPath || '';
       const number = document.createElement('button');
       number.type = 'button';
       number.className = 've-media-row__number';
@@ -5066,7 +5068,7 @@ export async function startVisualEditor() {
         const image = document.createElement('img');
         image.src = item.lease
           ? api.stagedMediaPreviewUrl({ batchId: item.lease.batchId, leaseId: item.lease.leaseId })
-          : item.canonicalPath;
+          : canvasMediaItem(state.activeMedia.record, item.canonicalPath)?.src || item.canonicalPath;
         image.alt = '';
         thumb.append(image);
       }
