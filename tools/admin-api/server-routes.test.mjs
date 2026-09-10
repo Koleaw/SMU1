@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import {
   resolveProductImportEnvelope,
   validateProductContentForWrite
@@ -566,9 +567,45 @@ test('Pages workflow deploys only an exact candidate-preview pair from preview',
   assert.match(source, /develop is check-only; only preview may update GitHub Pages/u);
   assert.match(source, /elif \[ "\$\{GITHUB_REF_NAME\}" = "preview" \]; then[\s\S]{0,160}deploy_kind="test"/u);
   assert.doesNotMatch(source, /"preview" \] \|\| \[ "\$\{GITHUB_REF_NAME\}" = "develop"/u);
-  assert.equal((source.match(/git ls-remote --refs origin refs\/heads\/v4-product-final-candidate/gu) || []).length, 2);
-  assert.equal((source.match(/"\$candidate_sha" != "\$preview_sha"/gu) || []).length, 2);
-  assert.equal((source.match(/"\$preview_sha" != "\$GITHUB_SHA"/gu) || []).length, 2);
+  const { jobs } = parseYaml(source);
+  const gatedActions = [
+    ['release', 'Verify exact candidate and preview ref pair', 'actions/upload-pages-artifact'],
+    ['deploy-test', 'Reconcile exact refs immediately before Pages deployment', 'actions/deploy-pages'],
+    ['resume-evidence', 'Require exact candidate and preview before Pages upload', 'actions/upload-pages-artifact', '${{ steps.original.outputs.source_sha }}'],
+    ['deploy-resumed-preview', 'Reconcile exact refs immediately before Pages deployment', 'actions/deploy-pages', '${{ needs.resume-evidence.outputs.source_sha }}']
+  ];
+  for (const [jobName, gateName, actionName, originalSha] of gatedActions) {
+    const steps = jobs[jobName]?.steps;
+    assert.ok(Array.isArray(steps), `${jobName} must keep its independently guarded job`);
+    const gateIndex = steps.findIndex((step) => step.name === gateName);
+    const actionIndex = steps.findIndex((step) => step.uses?.startsWith(`${actionName}@`));
+    assert.ok(gateIndex >= 0 && actionIndex > gateIndex, `${jobName} must reconcile live refs before ${actionName}`);
+    const gate = steps[gateIndex];
+    assert.match(gate.run, /candidate_sha="\$\(git ls-remote --refs origin refs\/heads\/v4-product-final-candidate\b/u, `${jobName}: candidate must be read from origin`);
+    assert.match(gate.run, /preview_sha="\$\(git ls-remote --refs origin refs\/heads\/preview\b/u, `${jobName}: preview must be read from origin`);
+    assert.doesNotMatch(gate.run, /continue-on-error|\|\|\s*(?:true|:)|exit\s+0/u, `${jobName}: ref validation must fail closed`);
+    assert.ok([undefined, false].includes(gate['continue-on-error']), `${jobName}: a failed ref check must stop the job`);
+    if (originalSha) {
+      assert.equal(gate.env?.TESTED_SHA, originalSha, `${jobName}: resume must use the successful original run's source`);
+      assert.match(gate.run, /^\s*test "\$candidate_sha" = "\$TESTED_SHA" && test "\$preview_sha" = "\$TESTED_SHA"\s*$/mu, `${jobName}: both refs must equal the original tested SHA`);
+      assert.doesNotMatch(gate.run, /\$GITHUB_SHA/u, `${jobName}: tooling SHA cannot replace the original tested source`);
+      assert.equal(gate.if, undefined, `${jobName}: resumed ref verification must be unconditional`);
+    } else {
+      assert.equal(gate.if, steps[actionIndex].if, `${jobName}: ref verification must run whenever the Pages action runs`);
+      assert.match(gate.run, /if \[ -z "\$candidate_sha" \] \|\| \[ -z "\$preview_sha" \]; then(?:(?!\bfi\b)[\s\S])*exit 1\s+fi/u, `${jobName}: missing refs must stop deployment`);
+      assert.match(gate.run, /if \[ "\$candidate_sha" != "\$preview_sha" \] \|\| \[ "\$preview_sha" != "\$GITHUB_SHA" \]; then(?:(?!\bfi\b)[\s\S])*exit 1\s+fi/u, `${jobName}: mismatched refs or tested SHA must stop deployment`);
+    }
+  }
+  // Every Pages upload/deploy path must belong to the independently checked jobs above.
+  for (const actionName of ['actions/upload-pages-artifact', 'actions/deploy-pages']) {
+    const actualJobs = Object.entries(jobs).filter(([, job]) => job.steps?.some((step) => step.uses?.startsWith(`${actionName}@`))).map(([name]) => name).sort();
+    const expectedJobs = gatedActions.filter(([, , action]) => action === actionName).map(([name]) => name).sort();
+    assert.deepEqual(actualJobs, expectedJobs, `${actionName} must not gain an unguarded job`);
+  }
+  assert.deepEqual(jobs['deploy-test'].needs, ['build', 'release']);
+  assert.equal(jobs['deploy-resumed-preview'].needs, 'resume-evidence');
+  assert.equal(jobs['deploy-resumed-preview'].if, "needs.resume-evidence.result == 'success'");
+  assert.equal(jobs['resume-evidence'].outputs.source_sha, '${{ steps.original.outputs.source_sha }}');
   assert.match(source, /deploy-test:\s*\n\s*if: needs\.build\.outputs\.deploy_kind == 'test'/u);
   assert.match(source, /permissions:\s*\{\}/u);
   assert.match(source, /build:[\s\S]{0,100}permissions:\s*\n\s*contents:\s*read/u);
