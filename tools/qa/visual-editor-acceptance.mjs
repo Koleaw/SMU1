@@ -364,7 +364,7 @@ async function waitFor(browser, expression, { timeoutMs = 20_000, intervalMs = 4
 }
 
 async function clickShell(browser, selector) {
-  return clickWhenReady(browser, selector);
+  return clickWhenReady(browser, selector, { dismissToasts: true });
 }
 
 async function setControlValue(browser, selector, value, { event = 'input' } = {}) {
@@ -697,6 +697,7 @@ async function findBinding(browser, filter) {
       } catch { return []; }
     }).filter((row) => row.binding
       && (!${json(filter.ownerCollection || '')} || (row.binding.ownerCollection || row.binding.owner?.collection) === ${json(filter.ownerCollection || '')})
+      && (!${json(filter.ownerSlug || '')} || (row.binding.recordSlug || row.binding.owner?.slug) === ${json(filter.ownerSlug || '')})
       && (!${json(filter.fieldPath || '')} || row.binding.fieldPath === ${json(filter.fieldPath || '')})
       && (!${json(filter.tool || '')} || row.binding.tool === ${json(filter.tool || '')})
       && (!${json(filter.role || '')} || row.binding.role === ${json(filter.role || '')}));
@@ -773,7 +774,7 @@ async function clickBinding(browser, bindingId, controlKey = 'target') {
     return Boolean(element);
   })()`);
   const selector = `#veOverlay [data-binding-id="${bindingId.replace(/["\\]/gu, '\\$&')}"][data-control-key="${controlKey}"]`;
-  return clickWhenReady(browser, selector, { scroll: false });
+  return clickWhenReady(browser, selector, { dismissToasts: true });
 }
 
 async function projectedBindingText(browser, bindingId) {
@@ -993,7 +994,15 @@ async function runAcceptance(options, bundle) {
       returned = await callback({
         latency(label, milliseconds) { latencySamples.push({ label, milliseconds: rounded(milliseconds) }); }
       }) || {};
-    } catch (error) { thrown = error; }
+    } catch (error) {
+      thrown = error;
+      const failureScreenshot = path.join(path.dirname(options.output), `${id}-failure.png`);
+      const capture = await browser.send('Page.captureScreenshot', { format: 'png' }).catch(() => null);
+      if (capture?.data) {
+        await mkdir(path.dirname(failureScreenshot), { recursive: true });
+        await writeFile(failureScreenshot, Buffer.from(capture.data, 'base64'));
+      }
+    }
     finally {
       if (id === 'two-tab-conflict') {
         await browser.evaluate(`(() => { window.__h6AcceptancePeer?.close?.(); window.__h6AcceptancePeer = null; return true; })()`).catch(() => {});
@@ -1062,6 +1071,10 @@ async function runAcceptance(options, bundle) {
     // scenarios mutate the disposable corpus. This keeps every failure proof
     // independent from the bulk uploader while still using the real UI/API.
     await runRequiredResilienceScenarios();
+    // Keep earlier failed assertions in the report while preventing an injected
+    // fault from contaminating the following, independent editing scenarios.
+    const clearedFaults = await testFaultControl(browser, { clearFaults: true });
+    if (clearedFaults.status !== 200 || clearedFaults.payload?.faultsCleared !== true) throw new Error('Resilience fault cleanup failed.');
 
     await scenario('borrowed-relation-media-live-projection', 'Borrowed project media retargets live with shared provenance and draft recovery', async ({ latency }) => {
       const route = '/o-nas/';
@@ -2058,9 +2071,14 @@ async function runAcceptance(options, bundle) {
       );
       const liveProjection = await waitFor(browser, `(() => {
         const frame = document.querySelector('#veFrame');
-        const root = frame?.contentDocument?.querySelector('[data-smu1-binding-id="' + CSS.escape(${json(mediaBinding.binding.bindingId)}) + '"]');
+        const root = Array.from(frame?.contentDocument?.querySelectorAll('[data-smu1-binding]') || []).find(element => {
+          try { const binding = JSON.parse(element.dataset.smu1Binding); return binding.ownerCollection === 'products'
+            && binding.recordSlug === ${json(bundle.profile.noPhotoProduct.slug)} && binding.fieldPath === 'gallery' && binding.tool === 'gallery'; }
+          catch { return false; }
+        });
         const images = Array.from(root?.querySelectorAll('img') || []).filter((image) => !image.hidden && image.getAttribute('src'));
-        return images.length ? { count: images.length, stagedPreview: images.some((image) => image.src.includes('/media/staging/')) } : null;
+        return images.length && images.some(image => image.complete && image.naturalWidth > 0)
+          ? { count: images.length, stagedPreview: images.some((image) => image.src.includes('/media/staging/')) } : null;
       })()`, { timeoutMs: 8_000, label: 'live media projection on formerly empty product' });
 
       const beforeSaveEvidence = await browser.evaluate(`(() => {
@@ -2126,10 +2144,15 @@ async function runAcceptance(options, bundle) {
 
     await scenario('project-media-role-independence', 'A project bulk upload stays gallery-only until archive and detail roles are assigned independently', async ({ latency }) => {
       const navigation = await openPage(browser, bundle.profile.project);
-      let mediaBinding = await findBinding(browser, {
-        ownerCollection: 'projects', fieldPath: 'gallery', tool: 'gallery', role: 'missing-project-media'
-      });
       const projectSlug = bundle.profile.project.slug;
+      const currentMediaBinding = () => findBinding(browser, {
+        ownerCollection: 'projects', ownerSlug: projectSlug, fieldPath: 'gallery', tool: 'gallery'
+      });
+      let mediaBinding = await currentMediaBinding();
+      const clickProjectMedia = async () => {
+        mediaBinding = await currentMediaBinding();
+        await clickBinding(browser, mediaBinding.binding.bindingId);
+      };
       const original = await browser.evaluate(`(async () => {
         const response = await fetch('/api/admin/content/projects/' + encodeURIComponent(${json(projectSlug)}), {
           credentials: 'include', cache: 'no-store'
@@ -2150,7 +2173,7 @@ async function runAcceptance(options, bundle) {
         throw new Error('The project role fixture must start as a text-only public project with no assigned presentation media.');
       }
 
-      await clickBinding(browser, mediaBinding.binding.bindingId);
+      await clickProjectMedia();
       await waitFor(browser, `document.querySelector('#veMediaDialog')?.open
         && document.querySelectorAll('#veMediaBody .ve-media-row').length === ${Number(original.rawGalleryCount)}`, {
         timeoutMs: 12_000,
@@ -2218,7 +2241,7 @@ async function runAcceptance(options, bundle) {
       const uploadedPaths = [...new Set(firstDraft.publicGallery || [])];
       if (uploadedPaths.length !== 2) throw new Error('The first project batch did not produce two distinct public-gallery paths.');
 
-      await clickBinding(browser, mediaBinding.binding.bindingId);
+      await clickProjectMedia();
       await waitFor(browser, `document.querySelector('#veMediaDialog')?.open
         && document.querySelectorAll('#veMediaBody .ve-media-row').length === ${Number(original.rawGalleryCount) + 2}`, {
         timeoutMs: 12_000,
@@ -2245,10 +2268,7 @@ async function runAcceptance(options, bundle) {
       await loginIfNeeded(browser, options);
       await waitForCanvas(browser, '/');
       await openPage(browser, bundle.profile.project);
-      mediaBinding = await findBinding(browser, {
-        ownerCollection: 'projects', fieldPath: 'gallery', tool: 'gallery', role: 'missing-project-media'
-      });
-      await clickBinding(browser, mediaBinding.binding.bindingId);
+      await clickProjectMedia();
       const currentMediaCount = Number(original.rawGalleryCount) + 2;
       await waitFor(browser, `document.querySelector('#veMediaDialog')?.open
         && document.querySelectorAll('#veMediaBody .ve-media-row').length === ${currentMediaCount}`, {
@@ -2387,10 +2407,7 @@ async function runAcceptance(options, bundle) {
       await loginIfNeeded(browser, options);
       await waitForCanvas(browser, '/');
       await openPage(browser, bundle.profile.project);
-      mediaBinding = await findBinding(browser, {
-        ownerCollection: 'projects', fieldPath: 'gallery', tool: 'gallery', role: 'missing-project-media'
-      });
-      await clickBinding(browser, mediaBinding.binding.bindingId);
+      await clickProjectMedia();
       const casReopened = await waitFor(browser, `(() => {
         const body = document.querySelector('#veMediaBody');
         const text = body?.textContent?.replace(/\\s+/gu, ' ').trim() || '';
@@ -2465,10 +2482,7 @@ async function runAcceptance(options, bundle) {
       await loginIfNeeded(browser, options);
       await waitForCanvas(browser, '/');
       await openPage(browser, bundle.profile.project);
-      mediaBinding = await findBinding(browser, {
-        ownerCollection: 'projects', fieldPath: 'gallery', tool: 'gallery', role: 'missing-project-media'
-      });
-      await clickBinding(browser, mediaBinding.binding.bindingId);
+      await clickProjectMedia();
       const emptyRecoveredState = await waitFor(browser, `(() => {
         const app = document.querySelector('#veApp');
         const rows = document.querySelectorAll('#veMediaBody .ve-media-row').length;
@@ -2932,6 +2946,13 @@ async function runAcceptance(options, bundle) {
     });
 
     await scenario('failed-exact-after-save', 'A successful local Save survives an exact-build failure and keeps preview blocked', async ({ latency }) => {
+      await waitFor(browser, `(async () => {
+        const recoveryClientId = localStorage.getItem('smu1-admin:recovery-client') || '';
+        const response = await fetch('/api/admin/validation/status', { credentials: 'include', cache: 'no-store',
+          headers: { 'X-Admin-Recovery-Client-Id': recoveryClientId } });
+        const payload = await response.json();
+        return response.ok && Array.isArray(payload.runs) && payload.runs.every(run => !['queued', 'running'].includes(run.status));
+      })()`, { timeoutMs: 20_000, label: 'preceding exact runs finish before fault injection' });
       const armed = await testFaultControl(browser, { nextExactFailure: true, nextBackupFailure: true });
       const beforeSaveEvidence = await browser.evaluate(`(() => {
         const key = Object.keys(localStorage).find((entry) => entry.endsWith(':last-save-evidence'));

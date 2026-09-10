@@ -1063,7 +1063,7 @@ export async function startVisualEditor() {
     mediaConflictResolutionInFlight: false,
     mediaOpenRequest: 0,
     mediaQueueResetArmed: false,
-    mediaObjectUrls: new Set(),
+    mediaObjectUrls: new Map(),
     dragBinding: null,
     inlineGesture: null,
     remoteConflicts: new Map(),
@@ -4422,9 +4422,12 @@ export async function startVisualEditor() {
     return state.mediaQueueDirty;
   }
 
-  function revokeMediaUrls() {
-    for (const url of state.mediaObjectUrls) URL.revokeObjectURL(url);
-    state.mediaObjectUrls.clear();
+  function revokeMediaUrls(keepFiles = new Set()) {
+    for (const [file, url] of state.mediaObjectUrls) {
+      if (keepFiles.has(file)) continue;
+      URL.revokeObjectURL(url);
+      state.mediaObjectUrls.delete(file);
+    }
   }
 
   function preflightMedia(file) {
@@ -4929,8 +4932,10 @@ export async function startVisualEditor() {
   }
 
   function renderMediaQueue() {
-    revokeMediaUrls();
     mediaBody.replaceChildren();
+    // A progress/reorder repaint must not revoke URLs whose image requests are
+    // still decoding. Keep one URL per File until it leaves the queue/dialog.
+    revokeMediaUrls(new Set(state.mediaQueue.map((item) => item.file).filter(Boolean)));
     const conflictLocked = Boolean(state.mediaQueueConflict);
     if (state.mediaQueueConflict) {
       const warning = document.createElement('div');
@@ -5043,9 +5048,9 @@ export async function startVisualEditor() {
       });
       const thumb = document.createElement('span');
       thumb.className = 've-media-row__thumb';
-      if (item.file) {
-        const objectUrl = URL.createObjectURL(item.file);
-        state.mediaObjectUrls.add(objectUrl);
+      if (item.file && item.width && item.height) {
+        const objectUrl = state.mediaObjectUrls.get(item.file) || URL.createObjectURL(item.file);
+        state.mediaObjectUrls.set(item.file, objectUrl);
         const image = document.createElement('img');
         image.src = objectUrl;
         image.alt = '';

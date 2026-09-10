@@ -2,7 +2,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // CDP dispatches coordinates without Playwright's actionability checks. Wait for
 // layout/scroll handlers and a stable, unobstructed target before dispatching once.
-export async function clickWhenReady(browser, selector, { scroll = true, timeoutMs = 8000 } = {}) {
+export async function clickWhenReady(browser, selector, { scroll = true, timeoutMs = 8000, dismissToasts = false } = {}) {
   const deadline = Date.now() + timeoutMs;
   let last = null;
   while (Date.now() < deadline) {
@@ -20,16 +20,23 @@ export async function clickWhenReady(browser, selector, { scroll = true, timeout
       if (['x', 'y', 'width', 'height'].some(key => Math.abs(rect[key] - before[key]) > 0.25)) return { ready: false, reason: 'moving' };
       const left = Math.max(0, rect.left), right = Math.min(innerWidth, rect.right);
       const top = Math.max(0, rect.top), bottom = Math.min(innerHeight, rect.bottom);
-      if (right <= left || bottom <= top) return { ready: false, reason: 'outside-viewport' };
+      if (right <= left || bottom <= top) return { ready: false, reason: 'outside-viewport', rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }, viewport: { width: innerWidth, height: innerHeight }, scroll: { x: scrollX, y: scrollY } };
       const x = (left + right) / 2, y = (top + bottom) / 2;
       const hit = document.elementFromPoint(x, y);
-      if (hit !== element && !element.contains(hit)) return { ready: false, reason: 'covered', hit: hit?.id || hit?.tagName || '' };
+      if (hit !== element && !element.contains(hit)) {
+        const toast = hit?.closest('#veToastRegion .ve-toast');
+        if (toast) toast.dataset.acceptanceDismiss = 'true';
+        return { ready: false, reason: 'covered', hit: hit?.id || hit?.tagName || '', toast: Boolean(toast) };
+      }
       return { ready: true, x, y };
     })()`);
     if (last?.ready) {
       const point = { x: last.x, y: last.y };
       await browser.dispatchClick(point);
       return point;
+    }
+    if (dismissToasts && last?.toast) {
+      await clickWhenReady(browser, '#veToastRegion [data-acceptance-dismiss="true"]', { timeoutMs: 2000, scroll: false });
     }
     await sleep(40);
   }
