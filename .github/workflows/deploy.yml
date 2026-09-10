@@ -13,6 +13,11 @@ on:
         options:
           - test
           - production
+      resume_evidence_run:
+        description: 'Resume only reconciliation/deploy from a completed preview run with every browser job successful'
+        required: false
+        default: ''
+        type: string
 
 permissions: {}
 
@@ -22,6 +27,7 @@ concurrency:
 
 jobs:
   build:
+    if: inputs.resume_evidence_run == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
@@ -259,6 +265,7 @@ jobs:
           retention-days: 14
 
   admin-actions:
+    if: inputs.resume_evidence_run == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -283,6 +290,7 @@ jobs:
           retention-days: 14
 
   admin-acceptance:
+    if: inputs.resume_evidence_run == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -528,5 +536,134 @@ jobs:
             exit 1
           fi
 
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+
+  resume-evidence:
+    if: inputs.resume_evidence_run != '' && inputs.deploy_target == 'test' && github.ref_name != 'main' && github.ref_name != 'master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      source_sha: ${{ steps.original.outputs.source_sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: qa-tools
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+          cache-dependency-path: qa-tools/package-lock.json
+      - run: npm ci
+        working-directory: qa-tools
+      - name: Check reconciliation and exact-run contracts
+        run: node --test tools/qa/public-action-shards.test.mjs tools/qa/resume-preview-evidence.test.mjs
+        working-directory: qa-tools
+      - id: original
+        name: Require the unchanged candidate, preview and every successful original browser job
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ORIGINAL_RUN: ${{ inputs.resume_evidence_run }}
+        run: node qa-tools/tools/qa/resume-preview-evidence.mjs resolve --run-id="$ORIGINAL_RUN"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: site
+          ref: ${{ steps.original.outputs.source_sha }}
+      - name: Preserve the original source identity and share unchanged dependencies
+        run: |
+          git -C site switch -c preview
+          ln -s ../qa-tools/node_modules site/node_modules
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: validated-build-${{ steps.original.outputs.source_sha }}
+          path: site/.admin-runtime/ci
+          run-id: ${{ inputs.resume_evidence_run }}
+          github-token: ${{ github.token }}
+      - run: tar -xmf .admin-runtime/ci/validated-build.tar
+        working-directory: site
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: admin-*-${{ steps.original.outputs.source_sha }}
+          path: site/.admin-runtime/h6-qa
+          merge-multiple: true
+          run-id: ${{ inputs.resume_evidence_run }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: public-shard-*-${{ steps.original.outputs.source_sha }}
+          path: site/.admin-runtime/h6-qa/public-action-shards
+          merge-multiple: true
+          run-id: ${{ inputs.resume_evidence_run }}
+          github-token: ${{ github.token }}
+      - id: reconcile
+        name: Reconcile all immutable original shards, preserving their SHA and individual clocks
+        env:
+          ORIGINAL_RUN: ${{ inputs.resume_evidence_run }}
+          TESTED_SHA: ${{ steps.original.outputs.source_sha }}
+        run: node qa-tools/tools/qa/resume-preview-evidence.mjs reconcile --site=site --tooling=qa-tools --run-id="$ORIGINAL_RUN"
+      - id: seal
+        name: Recompute original artifact, harness and actual runtime identity
+        env:
+          BASE_PATH: ${{ steps.reconcile.outputs.base_path }}
+        run: node tools/qa/public-action-cache.mjs seal
+        working-directory: site
+      - name: Run every original release-evidence validator on the original checkout
+        run: npm run qa:h6:verify-evidence
+        working-directory: site
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: site/.admin-runtime/h6-qa/public-action-cache/stored
+          key: ${{ steps.seal.outputs.cache_key }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: reconciled-evidence-${{ steps.original.outputs.source_sha }}
+          path: site/.admin-runtime/h6-qa
+          include-hidden-files: true
+          overwrite: true
+          retention-days: 14
+      - name: Write identity for the actual tested source
+        env:
+          TESTED_SHA: ${{ steps.original.outputs.source_sha }}
+        run: node tools/release/artifact-identity.mjs --dist dist --tested-sha "$TESTED_SHA"
+        working-directory: site
+      - name: Require exact candidate and preview before Pages upload
+        env:
+          TESTED_SHA: ${{ steps.original.outputs.source_sha }}
+        run: |
+          candidate_sha="$(git ls-remote --refs origin refs/heads/v4-product-final-candidate | awk '{print $1}')"
+          preview_sha="$(git ls-remote --refs origin refs/heads/preview | awk '{print $1}')"
+          test "$candidate_sha" = "$TESTED_SHA" && test "$preview_sha" = "$TESTED_SHA"
+        working-directory: site
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: site/dist
+
+  deploy-resumed-preview:
+    needs: resume-evidence
+    if: needs.resume-evidence.result == 'success'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.resume-evidence.outputs.source_sha }}
+      - name: Reconcile exact refs immediately before Pages deployment
+        env:
+          TESTED_SHA: ${{ needs.resume-evidence.outputs.source_sha }}
+        run: |
+          candidate_sha="$(git ls-remote --refs origin refs/heads/v4-product-final-candidate | awk '{print $1}')"
+          preview_sha="$(git ls-remote --refs origin refs/heads/preview | awk '{print $1}')"
+          test "$candidate_sha" = "$TESTED_SHA" && test "$preview_sha" = "$TESTED_SHA"
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

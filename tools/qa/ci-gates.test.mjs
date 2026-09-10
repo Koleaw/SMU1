@@ -33,7 +33,8 @@ test('CI retains independent failed stages and gates publishing on complete evid
   const workflow = await fs.readFile(new URL('../../.github/workflows/deploy.yml', import.meta.url), 'utf8');
   const jobSource = workflow.slice(workflow.indexOf('\njobs:') + 7);
   const jobs = Object.fromEntries([...jobSource.matchAll(/^  ([a-z-]+):\r?\n([\s\S]*?)(?=^  [a-z-]+:\r?$|(?![\s\S]))/gmu)].map(match=>[match[1],match[2]]));
-  assert.deepEqual(Object.keys(jobs), ['build','admin-actions','admin-acceptance','public-inputs','public-actions','public-evidence','release','deploy-test']);
+  assert.deepEqual(Object.keys(jobs), ['build','admin-actions','admin-acceptance','public-inputs','public-actions','public-evidence','release','deploy-test','resume-evidence','deploy-resumed-preview']);
+  for (const name of ['build','admin-actions','admin-acceptance']) assert.match(jobs[name], /if: inputs\.resume_evidence_run == ''/u);
   assert.match(jobs['admin-actions'], /--stage=actions/u);
   assert.match(jobs['admin-acceptance'], /--stage=acceptance/u);
   assert.doesNotMatch(jobs['admin-actions'], /^    needs:/mu);
@@ -51,6 +52,15 @@ test('CI retains independent failed stages and gates publishing on complete evid
   assert.match(jobs.release, /needs: \[build, admin-actions, admin-acceptance, public-evidence\]/u);
   assert.match(jobs.release, /npm run qa:h6:verify-evidence/u);
   assert.match(jobs['deploy-test'], /needs: \[build, release\]/u);
+  assert.match(jobs['resume-evidence'], /inputs\.deploy_target == 'test'[\s\S]*github\.ref_name != 'main'[\s\S]*github\.ref_name != 'master'/u);
+  assert.match(jobs['resume-evidence'], /resume-preview-evidence\.mjs resolve/u);
+  assert.match(jobs['resume-evidence'], /resume-preview-evidence\.mjs reconcile/u);
+  assert.match(jobs['resume-evidence'], /npm run qa:h6:verify-evidence\s+working-directory: site/u);
+  assert.doesNotMatch(jobs['resume-evidence'], /run: npm run build|public-action-crawl\.mjs|--stage=actions|--stage=acceptance/u);
+  assert.match(jobs['deploy-resumed-preview'], /needs: resume-evidence/u);
+  for (const name of ['resume-evidence', 'deploy-resumed-preview']) {
+    assert.match(jobs[name], /test "\$candidate_sha" = "\$TESTED_SHA" && test "\$preview_sha" = "\$TESTED_SHA"/u);
+  }
   assert.doesNotMatch(workflow, /continue-on-error: true|--allow-stale-dist|--allow-deferred-admin-actions|--no-js=off/u);
   assert.doesNotMatch(workflow, /run: tar -xmf validated-build\.tar/u, 'generated archives stay in the ignored runtime directory');
 });

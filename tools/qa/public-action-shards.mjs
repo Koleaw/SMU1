@@ -100,7 +100,7 @@ export function mergePublicActionShards(reports, {
     ['branch', (report) => report.evidence?.branch],
     ['source dirty state', (report) => report.evidence?.dirty],
     ['base path', (report) => report.evidence?.basePath],
-    ['dist freshness', (report) => report.evidence?.distFreshness],
+    ['freshness inventory', (report) => [report.evidence?.distFreshness?.sourceFiles, report.evidence?.distFreshness?.htmlFiles]],
     ['production HTML fingerprint', (report) => [report.evidence?.distFingerprintSHA256, report.evidence?.htmlFileHashes]],
     ['full artifact fingerprint', (report) => [report.evidence?.artifactFingerprintSHA256, report.evidence?.artifactFileHashes]],
     ['artifact size', (report) => [report.evidence?.artifactFileCount, report.evidence?.artifactBytes]],
@@ -109,6 +109,19 @@ export function mergePublicActionShards(reports, {
     ['safety boundary', (report) => report.evidence?.analyticsAndLeadSubmissionBlocked]
   ];
   for (const [label, selector] of identityFields) requireSame(ordered, selector, label);
+  // Each runner checks freshness against its own checkout and extraction time.
+  // File contents must agree above; filesystem clock values cannot agree across hosts.
+  for (const [index, report] of ordered.entries()) {
+    const freshness = report.evidence?.distFreshness;
+    if (freshness?.fresh !== true) throw new Error(`Shard ${index + 1} has stale dist.`);
+    if (freshness.latestSourceMtime || freshness.oldestHtmlMtime) {
+      const sourceTime = Date.parse(freshness.latestSourceMtime);
+      const artifactTime = Date.parse(freshness.oldestHtmlMtime);
+      if (!Number.isFinite(sourceTime) || !Number.isFinite(artifactTime) || artifactTime < sourceTime) {
+        throw new Error(`Shard ${index + 1} has invalid dist freshness clocks.`);
+      }
+    }
+  }
   if (ordered.some((report) => report.evidence?.browserSafety?.mode !== 'public-read-only')) {
     throw new Error('Every shard must use the public-read-only browser safety boundary.');
   }
@@ -173,6 +186,7 @@ export function mergePublicActionShards(reports, {
     total,
     sourceFile: sourceFileByReport.get(report),
     generatedAt: report.generatedAt,
+    distFreshness: structuredClone(report.evidence.distFreshness),
     origin: report.evidence?.origin,
     assignedRoutes: report.manifest.shard.assignedRoutes.length,
     routeViewportPairs: report.routeResults?.length || 0,

@@ -272,3 +272,28 @@ test('public evidence is reusable only for identical inputs, with original prove
   assert.equal(validateEvidenceIdentity(reports, { currentEvidence, publicActionsReuse: checked }).ok, true);
   assert.equal(validateEvidenceIdentity(reports, { currentEvidence, publicActionsReuse: { ...checked, reportFingerprint: '0'.repeat(64) } }).ok, false);
 });
+
+test('separate runners keep their own checked freshness clocks without losing artifact equality', () => {
+  const reports = [shardReport(1), shardReport(2)];
+  reports.forEach((report, index) => {
+    report.evidence.distFreshness = { fresh: true, sourceFiles: 100, htmlFiles: 229,
+      latestSourceMtime: `2026-09-10T12:0${index}:00.000Z`, oldestHtmlMtime: `2026-09-10T12:0${index}:30.000Z` };
+  });
+  const original = structuredClone(reports);
+  const merged = mergePublicActionShards(reports);
+  assert.deepEqual(reports, original, 'raw reports remain unmodified');
+  assert.deepEqual(merged.evidence.shards.map(shard => shard.distFreshness), reports.map(report => report.evidence.distFreshness));
+  assert.equal(validatePublicActionEvidence(merged, { authoritativeRoutes: routes }).ok, true);
+  for (const mutate of [
+    value => { value.fresh = false; },
+    value => { value.oldestHtmlMtime = '2026-09-10T11:00:00.000Z'; },
+    value => { value.latestSourceMtime = 'invalid'; },
+    value => { value.htmlFiles = 228; }
+  ]) {
+    const invalid = structuredClone(reports); mutate(invalid[1].evidence.distFreshness);
+    assert.throws(() => mergePublicActionShards(invalid), /freshness|stale dist/);
+  }
+  const changedArtifact = structuredClone(reports);
+  changedArtifact[1].evidence.artifactFileHashes[0][1] = 'c'.repeat(64);
+  assert.throws(() => mergePublicActionShards(changedArtifact), /full artifact fingerprint/);
+});
