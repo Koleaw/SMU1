@@ -9,6 +9,7 @@ import {
   isAdminHomeCanvasReady
 } from './admin-canvas-contract.mjs';
 import { CdpBrowser } from './cdp-browser.mjs';
+import { clickWhenReady } from './actionable-click.mjs';
 import { sourceWorkingTreeDirty } from './git-evidence.mjs';
 import { buildExpectedRouteModel, reconcileRouteSets } from './route-passport-model.mjs';
 
@@ -537,16 +538,10 @@ const runCanvasRouteAudit = async () => {
       let contextual = { applicable: descriptor.routeClass !== 'alias', opened: false, controls: 0, escapeClosed: false };
       if (descriptor.routeClass !== 'alias' && snapshot?.overlayPoint) {
         for (let attempt = 0; attempt < 2 && !contextual.opened; attempt += 1) {
-          const clickPoint = await browser.evaluate(`(() => {
-            const bindingId = ${JSON.stringify(snapshot.overlayPoint.bindingId || '')};
-            const item = Array.from(document.querySelectorAll('.ve-overlay-target'))
-              .find((candidate) => candidate.dataset.bindingId === bindingId);
-            if (!item) return null;
-            const rect = item.getBoundingClientRect();
-            return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-          })()`);
-          if (!clickPoint) break;
-          await browser.dispatchClick(clickPoint);
+          // A visible overlay can extend beyond the clipped canvas. Its full
+          // rectangle's centre may be outside the browser, or over a child.
+          // Dispatch only into the stable, hit-tested visible portion.
+          await clickWhenReady(browser, `.ve-overlay-target[data-binding-id=${JSON.stringify(snapshot.overlayPoint.bindingId || '')}]`, { scroll: false });
           const inspectorDeadline = Date.now() + 2_500;
           while (Date.now() < inspectorDeadline) {
             contextual = await browser.evaluate(`(() => {
@@ -602,11 +597,11 @@ const runCanvasRouteAudit = async () => {
         issues,
         status: issues.length ? 'fail' : 'pass'
       });
-      if (verboseProgress) progress(`canvas route ${descriptor.pathname}: ${issues.length
+      if (verboseProgress || issues.length) progress(`canvas route ${descriptor.pathname}: ${issues.length
         ? `fail (${issues.join(', ')}; tool=${snapshot?.overlayPoint?.tool || 'none'}; contextual=${JSON.stringify(contextual)})`
         : 'pass'}`);
     } catch (error) {
-      if (verboseProgress) progress(`canvas route ${descriptor.pathname}: exception (${String(error)})`);
+      progress(`canvas route ${descriptor.pathname}: exception (${String(error)})`);
       results.push({
         route: descriptor.pathname,
         routeClass: descriptor.routeClass,

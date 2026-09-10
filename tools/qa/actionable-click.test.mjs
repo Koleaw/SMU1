@@ -23,6 +23,12 @@ test('coordinate clicks wait for motion, visibility and hit-testing, then activa
     await browser.evaluate('target.hidden=true');
     await assert.rejects(clickWhenReady(browser, '#target', { timeoutMs: 150 }), /unavailable/);
     assert.equal(await browser.evaluate('window.count'), 1);
+    await browser.evaluate(`target.hidden=false; target.style.cssText='position:fixed;top:85vh;left:70vw;width:50vw;height:50vh';`);
+    const clippedPoint = await clickWhenReady(browser, '#target', { scroll: false });
+    const clipped = await browser.evaluate('({width:innerWidth,height:innerHeight,rect:target.getBoundingClientRect().toJSON(),count:window.count})');
+    assert.ok(clipped.rect.top + clipped.rect.height / 2 > clipped.height, 'full centre is outside the viewport');
+    assert.ok(clippedPoint.x < clipped.width && clippedPoint.y < clipped.height, 'native click stays in the visible intersection');
+    assert.equal(clipped.count, 2);
   } finally {
     await browser.close(); await server.close();
     // mkdtemp returned this exact owned test directory.

@@ -227,13 +227,13 @@ jobs:
           SITE_URL: ${{ steps.deploy-meta.outputs.effective_site_url }}
           TEST_SITE_URL: ${{ steps.deploy-meta.outputs.test_site_url }}
 
+      - name: Run isolated visual-editor actions, media promotion and recovery acceptance
+        run: npm run qa:h6:admin-actions
+
       - name: Crawl every public action in four deterministic shards
         run: npm run qa:h6:public-actions
         env:
           BASE_PATH: ${{ steps.deploy-meta.outputs.base_path }}
-
-      - name: Run isolated visual-editor actions, media promotion and recovery acceptance
-        run: npm run qa:h6:admin-actions
 
       - name: Prove GPS metadata removal through canonical, H5 and deploy artifact
         run: npm run qa:h6:media-privacy
