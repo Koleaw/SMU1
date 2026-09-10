@@ -49,12 +49,22 @@ export async function exercisePublicSearch(browser, { extended = false } = {}) {
       check('submit-focuses-result', await focused('[data-search-results] a'));
       await fill('лавочка радиус');
       check('russian-synonym', await browser.evaluate(`document.querySelector('[data-search-results] strong')?.textContent === 'Скамья Радиус'`));
+      await fill('Контур');
+      check('description-matches-collapsed', await browser.evaluate(`(() => { const group = document.querySelector('[data-search-descriptions]'); return group?.tagName === 'DETAILS' && !group.open && [...group.querySelectorAll('a')].some((a) => a.textContent.includes('Вазон Овал') && a.querySelector('mark')?.textContent.toLowerCase() === 'контуром'); })()`));
+      await click('[data-search-descriptions] summary');
+      check('description-group-expands', await browser.evaluate(`document.querySelector('[data-search-descriptions]')?.open`));
+      await fill('Овал');
+      check('oval-title-primary', await browser.evaluate(`document.querySelector('[data-search-results] strong')?.textContent === 'Вазон Овал'`));
+      await fill('скамья без спинки');
+      check('characteristic-query', await browser.evaluate(`!!document.querySelector('[data-search-results] a')`));
+      await fill('деревянными');
+      check('description-only-results-immediate', await browser.evaluate(`(() => { const group = document.querySelector('[data-search-descriptions]'); return group?.tagName === 'SECTION' && !!group.querySelector('a mark')?.getClientRects().length; })()`));
       await fill('несуществующееизделие92831');
       check('no-results', await browser.evaluate(`!document.querySelector('[data-search-results] a') && document.querySelector('[data-search-status]').textContent.includes('Ничего не найдено')`));
       await click('[data-search-clear]');
       check('clear-query-and-focus', await browser.evaluate(`document.querySelector('[data-search-input]').value === '' && document.activeElement === document.querySelector('[data-search-input]')`));
       await click('[data-search-suggestions] button');
-      check('suggestion-results', await browser.evaluate(`document.querySelectorAll('[data-search-results] a').length === 12`));
+      check('suggestion-results', await browser.evaluate(`[...document.querySelectorAll('[data-search-results] a')].filter((a) => a.getClientRects().length).length === 12`));
       await click('[data-search-more]');
       check('more-results-and-focus', await browser.evaluate(`document.querySelectorAll('[data-search-results] a').length > 12 && document.activeElement === document.querySelectorAll('[data-search-results] a')[12]`));
     }

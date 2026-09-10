@@ -17,6 +17,7 @@ interface Props {
   headerCtaBinding?: Record<string, string>;
   headerMobileCtaBinding?: Record<string, string>;
   mobileCtaBinding?: Record<string, string>;
+  blockingStylesheetUrls?: string[];
 }
 
 const {
@@ -33,7 +34,7 @@ const {
 ---
 
 <CatalogV2Layout
-  blockingStylesheetUrls={[directionPolishUrl]}
+  blockingStylesheetUrls={[directionPolishUrl, ...(Astro.props.blockingStylesheetUrls ?? [])]}
   title={title}
   description={description}
   canonicalPath={canonicalPath}

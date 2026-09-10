@@ -1120,6 +1120,46 @@ test('project and product relation projections preserve keyed bindings in Chromi
     }
 
     await navigateCanvas('/ulichnaya-mebel/kacheli/kacheli-pergola/');
+    // Use the production canvas and cascade: inline objectFit alone cannot
+    // override the hero rules that read the authored --v2-media-* properties.
+    const cropBaseline = await browser.evaluate(`(() => {
+      const image = document.querySelector('.v2-premium-product-hero__media img[data-smu1-binding-id]');
+      const binding = JSON.parse(image?.getAttribute('data-smu1-binding') || 'null');
+      return {
+        bindingId: image?.getAttribute('data-smu1-binding-id') || '',
+        tool: binding?.tool || '',
+        responsive: image ? {
+          src: image.getAttribute('src'), srcset: image.getAttribute('srcset'),
+          sources: Array.from(image.closest('picture')?.querySelectorAll('source') || [])
+            .map((source) => source.getAttribute('srcset'))
+        } : null
+      };
+    })()`);
+    assert.ok(cropBaseline.bindingId, 'premium hero exposes the actual crop binding');
+    assert.equal(cropBaseline.tool, 'crop');
+    for (const [index, crop] of [
+      { fit: 'contain', positionX: 17, positionY: 68, scale: 1.2 },
+      { fit: 'cover', positionX: 50, positionY: 50, scale: 1 }
+    ].entries()) {
+      await postProjection(cropBaseline.bindingId, { __smu1CropProjection: true, ...crop }, 3900 + index);
+      const projectedCrop = await browser.evaluate(`(() => {
+        const image = document.querySelector('.v2-premium-product-hero__media img[data-smu1-binding-id]');
+        const computed = getComputedStyle(image);
+        return {
+          fit: computed.objectFit, position: computed.objectPosition,
+          scale: new DOMMatrixReadOnly(computed.transform).a,
+          responsive: {
+            src: image.getAttribute('src'), srcset: image.getAttribute('srcset'),
+            sources: Array.from(image.closest('picture')?.querySelectorAll('source') || [])
+              .map((source) => source.getAttribute('srcset'))
+          }
+        };
+      })()`);
+      assert.equal(projectedCrop.fit, crop.fit, 'live fit wins the production CSS cascade');
+      assert.equal(projectedCrop.position, `${crop.positionX}% ${crop.positionY}%`);
+      assert.ok(Math.abs(projectedCrop.scale - crop.scale) < 0.001, 'live scale reaches the image');
+      assert.deepEqual(projectedCrop.responsive, cropBaseline.responsive, 'crop preserves H5 responsive sources');
+    }
     const premiumBaseline = await browser.evaluate(`(() => {
       const grid = document.querySelector('.v2-premium-related .v2-product-grid--related[data-smu1-binding-id]');
       if (!(grid instanceof HTMLElement)) return { error: 'missing premium related grid', path: location.pathname };

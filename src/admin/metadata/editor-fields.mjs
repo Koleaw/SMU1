@@ -386,7 +386,7 @@ export const EDITOR_GROUPS = Object.freeze({
   ]),
 
   jobs: Object.freeze([
-    group('main', 'Вакансия', [text('title', 'Должность', { required: true }), text('city', 'Город', { required: true }), text('employmentType', 'Занятость', { required: true }), text('salary', 'Зарплата', { required: true }), area('shortDescription', 'Краткое описание', { required: true }), list('responsibilities', 'Обязанности'), list('requirements', 'Требования'), list('conditions', 'Условия')]),
+    group('main', 'Вакансия', [text('title', 'Должность', { required: true }), text('city', 'Город', { required: true }), text('employmentType', 'Занятость', { required: true }), text('salary', 'Зарплата', { required: true }), area('shortDescription', 'Краткое описание', { required: true, hint: 'Можно написать несколько абзацев о работе: переносы строк сохраняются на странице вакансии. Обязанности, требования и условия заполните отдельными списками ниже. HTML не нужен.' }), list('responsibilities', 'Обязанности'), list('requirements', 'Требования'), list('conditions', 'Условия')]),
     group('visibility', 'Состояние материала', [toggle('isActive', 'Показывать вакансию')]),
     group('seo', 'Поиск', SEO_FIELDS),
     group('advanced', 'Адрес и порядок', ADVANCED_COMMON, { advanced: true, collapsible: true })

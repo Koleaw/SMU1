@@ -102,3 +102,9 @@ const globalBinding = (fieldPath: string, tool = 'short-text') => adminBinding(A
     </div>
   </nav>
 </article>
+
+<style>
+  /* The existing editor textarea accepts a complete introduction, including
+     paragraphs. Astro escapes the text; line breaks never become HTML. */
+  .practical-vacancy .practical-hero__lead { white-space: pre-line; }
+</style>

@@ -942,6 +942,26 @@ const TRACE_BOOTSTRAP = `(() => {
   const key = ${JSON.stringify(TRACE_KEY)};
   const doc = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
   window.__smu1H4LayoutShift = 0;
+  window.__smu1EntryAxisFrames = [];
+  const sampleEntryAxis = () => {
+    const entry = document.querySelector('[data-v2-entry-root]');
+    const axis = entry?.querySelector('[data-v2-entry-axis]');
+    const state = entry?.getAttribute('data-v2-entry-state');
+    if (axis && ['armed', 'logo', 'waiting'].includes(state)) {
+      const style = getComputedStyle(axis);
+      const rect = axis.getBoundingClientRect();
+      const viewport = innerWidth;
+      window.__smu1EntryAxisFrames.push({
+        at: performance.now(), state,
+        scale: style.transform === 'none' ? 1 : new DOMMatrix(style.transform).a,
+        opacity: Number(style.opacity), centerDelta: Math.abs((rect.left + rect.right) / 2 - viewport / 2),
+        canvas: getComputedStyle(document.documentElement).backgroundColor,
+        logo: Array.from(entry.querySelectorAll('svg path')).map((path) => getComputedStyle(path).fill)
+      });
+    }
+    if (performance.now() < 5000 && (!entry || ['armed', 'logo', 'waiting'].includes(state))) requestAnimationFrame(sampleEntryAxis);
+  };
+  requestAnimationFrame(sampleEntryAxis);
   let last = '';
   const push = (kind, extra = {}) => {
     try {
@@ -1428,6 +1448,15 @@ const introAudit = async (id, href) => {
     directory: 'baseline-smu1', flow: `first-entry-${id}`, activationSource: 'first-entry'
   });
   const usable = await waitUntilUsable(10_000);
+  const axisFrames = await evaluate('window.__smu1EntryAxisFrames || []');
+  const grownFrames = axisFrames.filter((frame) => frame.state === 'waiting' && frame.scale > 0);
+  record(`entry.${id}.dark-canvas-continuous-axis`, axisFrames.some((frame) => frame.scale === 0)
+    && grownFrames.length > 5 && grownFrames[0].scale < .06 && grownFrames.at(-1).scale > .99
+    && axisFrames.every((frame) => frame.canvas === 'rgb(16, 28, 42)'
+      && frame.logo.every((fill) => fill === 'rgb(245, 247, 250)'))
+    && grownFrames.every((frame, index) => frame.opacity === 1 && frame.centerDelta <= 1
+      && (!index || frame.scale >= grownFrames[index - 1].scale)),
+  { firstVisible: grownFrames[0] || null, finalVisible: grownFrames.at(-1) || null, axisFrames });
   const trace = await getTrace();
   traceEvidence.push({ flow: `first-entry-${id}`, trace });
   const lifecycle = lifecycleContract(trace, { expectedSource: 'first-entry', expectedScope: 'hero' });
@@ -3339,6 +3368,42 @@ const reducedMotionAudit = async () => {
     && lifecycle.ok && !intercepted && readTokenEvents().length === 0
     && cleanupContract(state) && Date.now() - startedAt < 1500,
   { entry, intercepted, normalFlash, lifecycle, tokenEvents: readTokenEvents(), elapsedMs: Date.now() - startedAt, state });
+
+  // Reuse this reduced-motion session: after a downward scroll the header's
+  // scroll state may be hidden while reduced-motion CSS keeps it visible.
+  await navigateHref(hrefFor('/navesy-i-kozyrki/'));
+  await waitUntilUsable(1500);
+  const sectionScroll = await evaluate(`(() => {
+    const gallery = document.querySelector('#direction-gallery');
+    if (!(gallery instanceof HTMLElement)) return { found: false };
+    const requestedScroll = Math.ceil(scrollY + gallery.getBoundingClientRect().bottom + 32);
+    window.scrollTo({ top: requestedScroll, behavior: 'instant' });
+    return { found: true, requestedScroll };
+  })()`);
+  await settle(160);
+  const sectionGeometry = await evaluate(`(() => {
+    const header = document.querySelector('.hv2-header');
+    const nav = document.querySelector('[data-v2-section-nav]');
+    const gallery = document.querySelector('#direction-gallery');
+    if (!(header instanceof HTMLElement) || !(nav instanceof HTMLElement) || !(gallery instanceof HTMLElement)) return { found: false };
+    const headerRect = header.getBoundingClientRect();
+    const navRect = nav.getBoundingClientRect();
+    return {
+      found: true, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      viewport: { width: innerWidth, height: innerHeight }, scrollY,
+      headerHiddenState: header.classList.contains('is-hidden'),
+      headerTop: headerRect.top, headerBottom: headerRect.bottom,
+      navTop: navRect.top, navBottom: navRect.bottom, navHeight: navRect.height,
+      galleryBottom: gallery.getBoundingClientRect().bottom
+    };
+  })()`);
+  record('accessibility.reduced-motion-section-nav-clears-visible-header', sectionScroll.found
+    && sectionGeometry.found && sectionGeometry.reduced && sectionGeometry.scrollY > 0
+    && sectionGeometry.galleryBottom <= sectionGeometry.headerBottom
+    && sectionGeometry.headerTop >= -1 && sectionGeometry.headerBottom > 0
+    && sectionGeometry.navHeight > 0 && sectionGeometry.navTop >= sectionGeometry.headerBottom - 1
+    && sectionGeometry.navBottom <= sectionGeometry.viewport.height,
+  { sectionScroll, sectionGeometry });
   await setReducedMotion(false);
 };
 
@@ -3847,6 +3912,7 @@ const responsiveHeaderTypographyAudit = async () => {
     const telegram = header?.querySelector('.hv2-header__telegram');
     const telegramLabel = telegram?.querySelector('.hv2-header__telegram-label');
     const cta = header?.querySelector('.hv2-button--header');
+    const search = header?.querySelector('[data-search-open]');
     const menu = header?.querySelector('[data-hv2-mobile-open]');
     const main = document.querySelector('main');
     const h1 = main?.querySelector('h1,[data-v2-entrance-role="title-primary"]');
@@ -3969,12 +4035,15 @@ const responsiveHeaderTypographyAudit = async () => {
         brand: rectMetric(brand),
         brandImage: rectMetric(brandImage),
         nav: rectMetric(navLink),
+        navItems: Array.from(header.querySelectorAll('.hv2-header__nav-group > a, .hv2-header__nav-group > .hv2-dropdown'))
+          .map(rectMetric).filter((item) => item && item.display !== 'none' && item.width > 0 && item.height > 0),
         actions: rectMetric(actions),
         phone: rectMetric(phone),
         telegram: rectMetric(telegram),
         telegramLabel: rectMetric(telegramLabel),
         telegramText: textRangeMetric(telegramLabel),
         cta: rectMetric(cta),
+        search: rectMetric(search),
         menu: rectMetric(menu),
         background: headerStyle.backgroundColor,
         borderBottomWidth: headerStyle.borderBottomWidth,
@@ -4100,14 +4169,29 @@ const responsiveHeaderTypographyAudit = async () => {
       const fullNavVisible = Boolean(initial.header?.nav
         && initial.header.nav.display !== 'none'
         && initial.header.nav.width > 0 && initial.header.nav.height > 0);
+      const visibleControl = (control) => Boolean(control && control.display !== 'none'
+        && control.width > 0 && control.height > 0);
+      const searchGeometryOk = [initial.header, scrolled.header].every((header) => {
+        const search = header?.search;
+        return visibleControl(search) && search.width >= 44 && search.height >= 44
+          && search.left >= viewport.width / 2 && search.left + search.width <= viewport.width + 1
+          && (!visibleControl(header.menu) || search.left + search.width <= header.menu.left + 1);
+      });
+      const navGeometryOk = [initial.header, scrolled.header].every((header) => {
+        const items = [...(header?.navItems || [])].sort((left, right) => left.left - right.left);
+        return !items.length || Boolean(header?.brand && header?.search)
+          && items[0].left >= header.brand.left + header.brand.width - 1
+          && items.at(-1).left + items.at(-1).width <= header.search.left + 1
+          && items.every((item, index) => index === 0 || item.left >= items[index - 1].left + items[index - 1].width - 1);
+      });
+      const ctaGeometryOk = [initial.header?.cta, scrolled.header?.cta]
+        .every((cta) => !visibleControl(cta) || cta.height >= 44);
       const controlsOk = menuVisible
         ? initial.header.menu.height >= 44 && initial.header.menu.height <= 52
           && initial.header.menu.width >= (viewport.width <= 760 ? 44 : 87)
         : fullNavVisible && initial.header.nav.fontSize >= 12.5 && initial.header.nav.fontSize <= 15
-          && initial.header.nav.height >= 44 && initial.header.cta?.height >= 44;
-      const telegramVisible = Boolean(initial.header?.actions
-        && initial.header.actions.display !== 'none'
-        && initial.header.actions.width > 0 && initial.header.actions.height > 0);
+          && initial.header.nav.height >= 44;
+      const telegramVisible = visibleControl(initial.header?.telegram);
       const telegramGeometryOk = !telegramVisible || Boolean(
         initial.header.telegram && initial.header.telegramText && scrolled.header.telegram && scrolled.header.telegramText
         && initial.header.telegram.width >= 44 && initial.header.telegram.height >= 44
@@ -4131,7 +4215,7 @@ const responsiveHeaderTypographyAudit = async () => {
         && Math.abs(scrolled.header.rect.height - initial.header.rect.height) <= 1
         && Math.abs(initial.header.brand.width - logoExpected) <= 9
         && Math.abs(scrolled.header.brand.width - initial.header.brand.width) <= 1
-        && controlsOk && telegramGeometryOk
+        && controlsOk && searchGeometryOk && navGeometryOk && ctaGeometryOk && telegramGeometryOk
         && (viewport.width > 760 || menuVisible);
       const visualContract = (header) => {
         if (!header) return false;
@@ -4178,6 +4262,9 @@ const responsiveHeaderTypographyAudit = async () => {
         viewport: `${viewport.width}x${viewport.height}`,
         expected: { headerHeight: headerExpected, logoWidth: logoExpected, typeScale },
         headerOk,
+        searchGeometryOk,
+        navGeometryOk,
+        ctaGeometryOk,
         telegramGeometryOk,
         headerVisualOk,
         typeOk,

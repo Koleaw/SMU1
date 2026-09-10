@@ -418,7 +418,17 @@ const initializeMotionRoot = (root: HTMLElement) => {
   const deadline = waitUntil(startedAt, HARD_DEADLINE_AT).then<ReadinessOutcome>(() => ({ kind: 'deadline' }));
 
   schedule(() => setDiagnosticState(root, overlay, 'logo'), 100);
-  schedule(() => setDiagnosticState(root, overlay, 'waiting'), 650);
+  schedule(() => {
+    // Commit the collapsed line before changing its target. On a busy first
+    // paint timers can otherwise coalesce the initial and waiting states.
+    const axis = overlay.querySelector<HTMLElement>('[data-v2-entry-axis]');
+    if (axis) void getComputedStyle(axis).transform;
+    requestAnimationFrame(() => {
+      if (!cancelled && overlay.dataset.v2EntryState === 'logo') {
+        setDiagnosticState(root, overlay, 'waiting');
+      }
+    });
+  }, 650);
   // All managed fallbacks are installed; the module controller now owns both
   // the 3900ms deadline and final cleanup.
   clearHeadFailSafe();

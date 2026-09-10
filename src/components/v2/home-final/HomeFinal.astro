@@ -119,18 +119,6 @@ const globalHrefDisposition = (fieldPath: string, reason: string) => adminDispos
         <div class="hf-hero__veil"></div>
       </div>
 
-      <button
-        class="hf-hero__video-toggle"
-        type="button"
-        aria-label="Приостановить фоновое видео"
-        data-hf-video-toggle
-        data-v2-entry="control"
-        data-v2-entrance-role="support"
-        hidden
-      >
-        <span data-hf-video-toggle-label>Пауза видео</span>
-      </button>
-
       <div class="hf-shell hf-shell--editorial hf-hero__content">
         <div class="hf-hero__copy" data-hf-hero-copy data-v2-hero-scroll-copy data-v2-page-handoff="copy">
           <p class="hf-eyebrow hf-eyebrow--light" data-reveal data-v2-entry="meta" data-v2-entrance-role="context" style="--hv2-reveal-delay: 0ms" {...homeBinding('heroKicker', 'short-text')}>{copy.heroKicker}</p>
@@ -186,6 +174,18 @@ const globalHrefDisposition = (fieldPath: string, reason: string) => adminDispos
           <div class="hf-direction-rail" aria-label="Специализированные направления">
             {railDirections.map(({ id, direction, kicker }) => direction && (
               <a class="hf-direction-rail__item" href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="group" {...homeBinding('homeDirectionCards', 'reorder-item', { stableItemId: id, zoneId: 'home-directions', permissions: { edit: true, reorder: true, delete: false } })}>
+                {direction.image && <V2ResponsiveImage
+                  src={direction.image}
+                  alt=""
+                  role="card"
+                  sizes="(max-width: 359px) calc(100vw - 24px), (max-width: 760px) 42vw, (max-width: 1100px) 21vw, 16vw"
+                  loading="lazy"
+                  decoding="async"
+                  style={`object-fit:${direction.slug === 'topiarii' ? 'contain' : 'cover'};object-position:center;`}
+                  {...directionBinding(direction, 'homeImage', 'media', {
+                    role: 'home-direction-image', multiple: false, affectedRoutes: ['/']
+                  })}
+                />}
                 <span class="hf-direction-rail__copy">
                   <span class="hf-direction__meta" {...homeDirectionCardBinding(id, 'kicker')}>{kicker}</span>
                   <strong {...directionBinding(direction, 'title', 'heading')}>{direction.title}</strong>
@@ -314,15 +314,12 @@ const globalHrefDisposition = (fieldPath: string, reason: string) => adminDispos
   const initializeHomeFinalHero = (root: HTMLElement) => {
     const hero = root.querySelector<HTMLElement>('[data-hf-hero]');
     const video = root.querySelector<HTMLVideoElement>('[data-hf-hero-video]');
-    const toggle = root.querySelector<HTMLButtonElement>('[data-hf-video-toggle]');
-    const toggleLabel = root.querySelector<HTMLElement>('[data-hf-video-toggle-label]');
     const copy = root.querySelector<HTMLElement>('[data-hf-hero-copy]');
-    if (!hero || !video || !toggle || !toggleLabel || !copy) return;
+    if (!hero || !video || !copy) return;
     if (root.dataset.hfHeroReady === 'true') return;
     root.dataset.hfHeroReady = 'true';
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const mobile = window.matchMedia('(max-width: 760px)');
     initializeHomeFinalVideo(root);
 
     let ticking = false;

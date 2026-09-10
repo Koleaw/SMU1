@@ -328,15 +328,16 @@ export function validatePublicActionEvidence(report, {
       const activation = semantic?.evidence?.activation;
       const terminal = semantic?.evidence?.terminal;
       if (before?.state !== 'idle' || before?.iframeCount !== 0 || before?.placeholderVisible !== true
-        || before?.activateEnabled !== true || activation?.clicked !== true) {
+        || before?.activateVisible !== false || activation?.clicked !== false
+        || activation?.automatic !== true || activation?.trigger !== 'viewport-proximity') {
         issues.push('public-actions:lifecycle-map-deferred');
       }
       const ready = terminal?.state === 'ready' && terminal?.iframeCount > 0
         && terminal?.placeholderVisible === false && Boolean(terminal?.statusText)
-        && Boolean(terminal?.iframeTitle) && terminal?.iframeTabIndex === '0' && terminal?.focusTarget === 'iframe';
+        && Boolean(terminal?.iframeTitle) && terminal?.iframeTabIndex === '0' && terminal?.focusTarget === 'other';
       const failOpen = terminal?.state === 'error' && terminal?.iframeCount === 0
-        && terminal?.placeholderVisible === true && terminal?.activateEnabled === true
-        && Boolean(terminal?.statusText) && terminal?.focusTarget === 'activate';
+        && terminal?.placeholderVisible === true && terminal?.activateEnabled === true && terminal?.activateVisible === true
+        && Boolean(terminal?.statusText) && terminal?.focusTarget === 'other';
       if (!ready && !failOpen) issues.push('public-actions:lifecycle-map-terminal');
     }
   }

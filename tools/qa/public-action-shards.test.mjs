@@ -115,12 +115,12 @@ const lifecycleResult = (id) => {
   return {
     ...common,
     evidence: {
-      before: { state: 'idle', iframeCount: 0, placeholderVisible: true, activateEnabled: true },
-      activation: { clicked: true },
+      before: { state: 'idle', iframeCount: 0, placeholderVisible: true, activateEnabled: true, activateVisible: false },
+      activation: { clicked: false, automatic: true, trigger: 'viewport-proximity' },
       terminal: {
-        state: 'error', iframeCount: 0, placeholderVisible: true, activateEnabled: true,
+        state: 'error', iframeCount: 0, placeholderVisible: true, activateEnabled: true, activateVisible: true,
         statusText: 'Карту не удалось загрузить. Используйте ссылку ниже.',
-        iframeTitle: '', iframeTabIndex: '', focusTarget: 'activate'
+        iframeTitle: '', iframeTabIndex: '', focusTarget: 'other'
       }
     }
   };
@@ -197,8 +197,14 @@ test('merger accepts only a complete concrete shard set and produces verifier-co
   });
   assert.equal(validatePublicActionEvidence(merged, { authoritativeRoutes: routes }).ok, true);
   const brokenMapTerminal = structuredClone(merged);
-  brokenMapTerminal.publicLifecycleSemantics.find((result) => result.id === 'contacts-map').evidence.terminal.focusTarget = 'other';
+  brokenMapTerminal.publicLifecycleSemantics.find((result) => result.id === 'contacts-map').evidence.terminal.focusTarget = 'iframe';
   assert.match(validatePublicActionEvidence(brokenMapTerminal, { authoritativeRoutes: routes }).issues.join('\n'), /lifecycle-map-terminal/u);
+  const clickOnlyMap = structuredClone(merged);
+  clickOnlyMap.publicLifecycleSemantics.find((result) => result.id === 'contacts-map').evidence.activation = { clicked: true };
+  assert.match(validatePublicActionEvidence(clickOnlyMap, { authoritativeRoutes: routes }).issues.join('\n'), /lifecycle-map-deferred/u);
+  const missingMapRetry = structuredClone(merged);
+  missingMapRetry.publicLifecycleSemantics.find((result) => result.id === 'contacts-map').evidence.terminal.activateVisible = false;
+  assert.match(validatePublicActionEvidence(missingMapRetry, { authoritativeRoutes: routes }).issues.join('\n'), /lifecycle-map-terminal/u);
 
   assert.throws(() => mergePublicActionShards([reports[0], structuredClone(reports[0])]), /Duplicate public action shard/u);
   const missingPair = structuredClone(reports);

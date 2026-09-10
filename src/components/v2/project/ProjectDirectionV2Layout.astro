@@ -1,6 +1,6 @@
 ---
 import DirectionV2Layout from '../directions/DirectionV2Layout.astro';
-import '../../../styles/v2/project-direction-v2.css';
+import projectStylesheetUrl from '../../../styles/v2/project-direction-v2.css?url';
 
 interface Props {
   title: string;
@@ -15,6 +15,7 @@ const { title, description, canonicalPath, currentPath, ogImage = '', variant } 
 ---
 
 <DirectionV2Layout
+  blockingStylesheetUrls={[projectStylesheetUrl]}
   title={title}
   description={description}
   canonicalPath={canonicalPath}

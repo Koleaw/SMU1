@@ -9,7 +9,7 @@
 :root {
   --v2-entry-blue: #1759b7;
   --v2-entry-navy: #000080;
-  --v2-entry-plane: #ffffff;
+  --v2-entry-plane: #101c2a;
   --v2-entry-seam: 50%;
   --v2-entry-plane-ease: cubic-bezier(0.76, 0, 0.24, 1);
   --v2-entry-content-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -17,13 +17,15 @@
 
 /* The reserved scrollbar gutter is part of the loading canvas as well. */
 html.v2-entry-js:is([data-v2-entry-bootstrap='armed'], [data-v2-entry-bootstrap='fail-open']) {
-  background: #ffffff;
+  background: var(--v2-entry-plane);
 }
 
 .v2-entry-experience {
   position: fixed;
   z-index: 1000;
   inset: 0;
+  /* Include the reserved scrollbar gutter in the entrance canvas. */
+  width: 100vw;
   display: none;
   overflow: clip;
   isolation: isolate;
@@ -160,17 +162,18 @@ html.v2-entry-js:is([data-v2-entry-bootstrap='armed'], [data-v2-entry-bootstrap=
   left: 0;
   display: block;
   height: 2px;
-  background: color-mix(in srgb, var(--v2-entry-blue) 48%, transparent);
-  opacity: 0;
+  background: #d6e2ef;
+  opacity: 1;
   transform: translateY(-50%) scaleX(0);
   transform-origin: center;
+  transition: transform 600ms cubic-bezier(0.45, 0, 0.55, 1);
   will-change: opacity, transform;
 }
 
 .v2-entry-experience__axis::after {
   position: absolute;
   inset: 0;
-  background: var(--v2-entry-blue);
+  background: #d6e2ef;
   content: '';
 }
 
@@ -194,9 +197,9 @@ html.v2-entry-js:is([data-v2-entry-bootstrap='armed'], [data-v2-entry-bootstrap=
 .v2-entry-experience[data-v2-entry-state='waiting'] .v2-entry-experience__axis {
   opacity: 1;
   transform: translateY(-50%) scaleX(1);
-  transition:
-    opacity 160ms linear,
-    transform 600ms var(--v2-entry-content-ease);
+  /* Keep the first pixels fully visible. The former opacity ramp hid the
+   * beginning while the fast content ease had already grown half the line. */
+  transition: transform 600ms cubic-bezier(0.45, 0, 0.55, 1);
 }
 
 .v2-entry-experience[data-v2-entry-state='waiting'] .v2-entry-experience__axis::after {
@@ -251,12 +254,12 @@ html:has([data-v2-motion-root][data-v2-scroll-locked='true']) {
   overflow: hidden;
   overscroll-behavior: none;
   scrollbar-gutter: stable;
-  scrollbar-color: transparent #fff;
+  scrollbar-color: transparent var(--v2-entry-plane);
 }
 
 html.v2-entry-scroll-locked::-webkit-scrollbar,
 html.v2-entry-scroll-locked::-webkit-scrollbar-track {
-  background: #fff;
+  background: var(--v2-entry-plane);
 }
 
 html.v2-entry-scroll-locked::-webkit-scrollbar-thumb {

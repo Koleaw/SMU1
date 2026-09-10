@@ -59,7 +59,7 @@ const telegramLabel = section.contactTelegramLabel || '';
 const phoneLabel = section.contactPhoneLabel || '';
 const emailLabel = section.contactEmailLabel || '';
 const heroImageView = section.imageView
-  ? { ...section.imageView, fit: 'contain' as const }
+  ? section.imageView
   : { fit: 'contain' as const, positionX: 50, positionY: 50, scale: 1 };
 const sectionNavItems = directionSectionNavItems(Astro.url, owner, route, presentation, [
   ...(types.length > 0 ? ['direction-types'] : []),

@@ -1,7 +1,7 @@
 ---
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
-import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import V2ProjectGallery from '../projects/V2ProjectGallery.astro';
 import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
 
 interface Props {
@@ -105,32 +105,12 @@ const localOrDeclared = (attributes: Record<string, string> | undefined, fragmen
         </div>
       </header>
       <div class="engineering-proof__media" data-v2-reveal {...mediaAttributes}>
-        <figure class="engineering-proof__feature">
-          <V2ResponsiveImage
-            src={featureImage}
-            alt={`${title} — кадр 1 из ${images.length}, рабочий кадр`}
-            role="project"
-            sizes="(max-width: 760px) calc(100vw - 32px), 58vw"
-            loading="lazy"
-            decoding="async"
-          />
-        </figure>
-        {sequenceImages.length > 0 && (
-          <div class="engineering-proof__sequence" aria-label="Последовательность кадров объекта">
-            {sequenceImages.map((src, index) => (
-              <figure>
-                <V2ResponsiveImage
-                  src={src}
-                  alt={`${title} — кадр ${index + 2} из ${images.length}`}
-                  role="project"
-                  sizes="(max-width: 760px) calc(100vw - 32px), 28vw"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </figure>
-            ))}
-          </div>
-        )}
+        <V2ProjectGallery
+          images={[featureImage, ...sequenceImages].map((src, index) => ({ src, alt: title + ' — кадр ' + (index + 1), caption: '' }))}
+          title={title}
+          galleryKey="engineering-proof"
+          variant="proof"
+        />
       </div>
     </div>
   </section>

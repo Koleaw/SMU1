@@ -1,6 +1,6 @@
 ---
 import DirectionV2Layout from '../directions/DirectionV2Layout.astro';
-import '../../../styles/v2/engineering-direction-v2.css';
+import engineeringStylesheetUrl from '../../../styles/v2/engineering-direction-v2.css?url';
 
 interface Props {
   title: string;
@@ -22,6 +22,7 @@ const {
 ---
 
 <DirectionV2Layout
+  blockingStylesheetUrls={[engineeringStylesheetUrl]}
   title={title}
   description={description}
   canonicalPath={canonicalPath}

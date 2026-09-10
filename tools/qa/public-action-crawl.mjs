@@ -4,6 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { classifyPublicAction, validateContactProtocol } from './action-crawl-core.mjs';
 import { exercisePublicSearch } from './public-search-probe.mjs';
+import { evaluateGalleryViewport } from './gallery-viewport-contract.mjs';
 import { CdpBrowser, createDistServer } from './cdp-browser.mjs';
 import { PUBLIC_LIFECYCLE_SEMANTIC_IDS } from './evidence-contract.mjs';
 import { sourceWorkingTreeDirty } from './git-evidence.mjs';
@@ -569,6 +570,13 @@ const exerciseGallerySemantics = async (viewport) => {
       const image = dialog?.querySelector(${JSON.stringify(descriptor.kind === 'product' ? '[data-v2-lightbox-image]' : '[data-v2-project-lightbox-image]')});
       if (!opener || !dialog || !close || !image) return { navigation, missing: true };
       opener.focus(); opener.click(); await new Promise((resolve) => setTimeout(resolve, 100));
+      await Promise.race([image.decode().catch(() => {}), new Promise((resolve) => setTimeout(resolve, 5000))]);
+      const media = dialog.querySelector('.v2-product-lightbox__media, .v2-project-lightbox__media');
+      const bounds = (element) => {
+        if (!element) return null;
+        const { left, top, right, bottom, width, height } = element.getBoundingClientRect();
+        return { left, top, right, bottom, width, height };
+      };
       const focusable = Array.from(dialog.querySelectorAll('button:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])'))
         .filter((item) => !item.hasAttribute('hidden'));
       const first = focusable[0]; const last = focusable.at(-1);
@@ -580,7 +588,10 @@ const exerciseGallerySemantics = async (viewport) => {
         open: dialog.open,
         initialFocus,
         focusWrapped: Boolean(first && document.activeElement === first),
-        fit: getComputedStyle(image).objectFit
+        fit: getComputedStyle(image).objectFit,
+        geometry: { viewport: { width: innerWidth, height: innerHeight }, media: bounds(media),
+          picture: bounds(image.parentElement), image: bounds(image), fit: getComputedStyle(image).objectFit,
+          ready: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0 }
       };
     })()`);
     await browser.dispatchKey('Escape', { code: 'Escape', windowsVirtualKeyCode: 27 });
@@ -594,10 +605,11 @@ const exerciseGallerySemantics = async (viewport) => {
     const navigationPassed = !descriptor.multiple || Boolean(opened?.navigation
       && opened.navigation.before !== opened.navigation.afterNext
       && opened.navigation.before === opened.navigation.afterPrevious);
+    const viewportEvidence = evaluateGalleryViewport(opened?.geometry);
     const passed = navigationPassed && opened?.open === true && opened?.initialFocus === true
-      && opened?.focusWrapped === true && opened?.fit === 'contain'
+      && opened?.focusWrapped === true && opened?.fit === 'contain' && viewportEvidence.ok
       && closed?.open === false && closed?.focusReturned === true;
-    results.push({ ...descriptor, mode: 'desktop-lightbox', status: passed ? 'pass' : 'fail', opened, closed });
+    results.push({ ...descriptor, mode: 'desktop-lightbox', status: passed ? 'pass' : 'fail', opened, closed, viewportEvidence });
   }
   return { inventory, results };
 };
@@ -666,8 +678,11 @@ const executeLifecycleSemantic = async ({ id, route, run }) => {
 
 const homeVideoStateExpression = `(() => {
   const video = document.querySelector('[data-hf-hero-video]');
-  const toggle = document.querySelector('[data-hf-video-toggle]');
-  const label = document.querySelector('[data-hf-video-toggle-label]');
+  const toggle = Array.from(document.querySelectorAll('[data-hf-video-toggle]')).find((control) => {
+    const rect = control.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && getComputedStyle(control).visibility !== 'hidden';
+  });
+  const label = toggle?.querySelector('[data-hf-video-toggle-label]');
   if (!(video instanceof HTMLVideoElement) || !(toggle instanceof HTMLButtonElement)) return null;
   const controlRect = toggle.getBoundingClientRect();
   const controlStyle = getComputedStyle(toggle);
@@ -693,9 +708,24 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
   run: async () => {
     const homeUrl = `${origin}${withBase('/')}`;
     const evidence = {};
-    const clickVideoAsUser = async () => {
+    const openVideoMenu = async () => {
       const point = await browser.evaluate(`(() => {
-        const control = document.querySelector('[data-hf-video-toggle]');
+        const trigger = Array.from(document.querySelectorAll('[aria-controls="home-v2-company-menu"], [data-hv2-mobile-open]'))
+          .find((control) => control.getBoundingClientRect().width > 0 && getComputedStyle(control).visibility !== 'hidden');
+        if (!trigger || trigger.getAttribute('aria-expanded') === 'true') return null;
+        const rect = trigger.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      })()`);
+      if (point) await browser.dispatchClick(point);
+      await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state?.controlReady ? state : null; })()`, {
+        label: 'Home video control in the ordinary site menu'
+      });
+    };
+    const clickVideoAsUser = async () => {
+      await openVideoMenu();
+      const point = await browser.evaluate(`(() => {
+        const control = Array.from(document.querySelectorAll('[data-hf-video-toggle]'))
+          .find((item) => item.getBoundingClientRect().width > 0 && getComputedStyle(item).visibility !== 'hidden');
         if (!(control instanceof HTMLButtonElement) || control.hidden || control.disabled) return null;
         control.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
         const rect = control.getBoundingClientRect();
@@ -740,23 +770,24 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
       context.actionId = 'lifecycle:home-video:normal-motion';
       await browser.navigate(homeUrl);
       await settleInteractiveSurface();
+      await openVideoMenu();
       await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state?.controlReady && state?.sourceLoaded ? state : null; })()`, {
         timeoutMs: 12_000,
         label: 'normal-motion Home video control'
       });
       let playing = await browser.evaluate(homeVideoStateExpression);
       if (playing?.paused) {
-        await clickLifecycleControl('[data-hf-video-toggle]');
+        await clickVideoAsUser();
       }
       playing = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused && state.readyState >= 2 ? state : null; })()`, {
         timeoutMs: 12_000,
         label: 'Home video playback'
       });
-      await clickLifecycleControl('[data-hf-video-toggle]');
+      await clickVideoAsUser();
       const paused = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state?.paused ? state : null; })()`, {
         label: 'Home video pause'
       });
-      await clickLifecycleControl('[data-hf-video-toggle]');
+      await clickVideoAsUser();
       const resumed = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused ? state : null; })()`, {
         label: 'Home video resume'
       });
@@ -781,6 +812,7 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
       context.actionId = 'lifecycle:home-video:reduced-motion';
       await browser.navigate(homeUrl);
       await settleInteractiveSurface();
+      await openVideoMenu();
       await delay(700);
       const reduced = await browser.evaluate(homeVideoStateExpression);
       evidence.reducedMotion = {
@@ -813,6 +845,7 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
       context.actionId = 'lifecycle:home-video:save-data';
       await browser.navigate(homeUrl);
       await settleInteractiveSurface();
+      await openVideoMenu();
       await delay(700);
       const saveData = await browser.evaluate(homeVideoStateExpression);
       evidence.saveData = {
@@ -906,6 +939,7 @@ const mapStateExpression = `(() => {
     iframeCount: root?.querySelectorAll('iframe').length || 0,
     placeholderVisible: Boolean(placeholder && !placeholder.hasAttribute('hidden')),
     activateEnabled: Boolean(activate && !activate.disabled),
+    activateVisible: Boolean(activate && !activate.hidden),
     statusText: status?.textContent?.replace(/\\s+/gu, ' ').trim() || '',
     iframeTitle: frame?.getAttribute('title') || '',
     iframeTabIndex: frame?.getAttribute('tabindex') || '',
@@ -917,7 +951,9 @@ const exerciseContactsMapLifecycle = () => executeLifecycleSemantic({
   route: '/kontakty/',
   run: async () => {
     const contactsUrl = `${origin}${withBase('/kontakty/')}`;
-    await browser.setViewport(REQUIRED_VIEWPORTS[0]);
+    // On a wide short contact page the map can already be near the viewport.
+    // Use the phone layout to establish the offscreen deferred state first.
+    await browser.setViewport(REQUIRED_VIEWPORTS.find((viewport) => viewport.mobile));
     await browser.emulateMedia({ reducedMotion: true });
     await browser.send('Network.setBlockedURLs', { urls: [...DEFAULT_BLOCKED_PUBLIC_URLS, '*api-maps.yandex.ru*'] });
     try {
@@ -926,19 +962,19 @@ const exerciseContactsMapLifecycle = () => executeLifecycleSemantic({
       await browser.navigate(contactsUrl);
       await settleInteractiveSurface();
       const before = await waitForBrowserValue(`(() => { const state = (${mapStateExpression}); return state.present && state.state === 'idle' ? state : null; })()`, { label: 'deferred Contacts map' });
-      context.actionId = 'lifecycle:contacts-map:activate';
-      await clickLifecycleControl('[data-v2-map-activate]');
+      context.actionId = 'lifecycle:contacts-map:approach';
+      await browser.evaluate(`document.querySelector('[data-v2-yandex-map]').scrollIntoView({ block: 'center' })`);
       const terminal = await waitForBrowserValue(`(() => { const state = (${mapStateExpression}); return state && (state.state === 'ready' || state.state === 'error') ? state : null; })()`, {
         timeoutMs: 8_000,
         label: 'Contacts map terminal state'
       });
-      const evidence = { before, activation: { clicked: true }, terminal };
+      const evidence = { before, activation: { automatic: true, trigger: 'viewport-proximity', clicked: false }, terminal };
       const ready = terminal.state === 'ready' && terminal.iframeCount > 0 && !terminal.placeholderVisible
-        && Boolean(terminal.statusText) && Boolean(terminal.iframeTitle) && terminal.iframeTabIndex === '0' && terminal.focusTarget === 'iframe';
+        && Boolean(terminal.statusText) && Boolean(terminal.iframeTitle) && terminal.iframeTabIndex === '0' && terminal.focusTarget === 'other';
       const failOpen = terminal.state === 'error' && terminal.iframeCount === 0 && terminal.placeholderVisible
-        && terminal.activateEnabled && Boolean(terminal.statusText) && terminal.focusTarget === 'activate';
+        && terminal.activateEnabled && terminal.activateVisible && Boolean(terminal.statusText) && terminal.focusTarget === 'other';
       const issues = [];
-      if (before.iframeCount !== 0 || !before.placeholderVisible || !before.activateEnabled) issues.push('not-deferred-before-activation');
+      if (before.iframeCount !== 0 || !before.placeholderVisible || before.activateVisible) issues.push('not-deferred-before-proximity');
       if (!ready && !failOpen) issues.push('missing-ready-or-fail-open-terminal');
       return { evidence, issues };
     } finally {

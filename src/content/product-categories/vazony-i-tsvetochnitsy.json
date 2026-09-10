@@ -14,7 +14,7 @@
   "seoTitle": "Вазоны и цветочницы — СМУ-1",
   "seoDescription": "Вазоны и цветочницы для общественных и коммерческих территорий.",
   "imageView": {
-    "fit": "cover",
+    "fit": "contain",
     "positionX": 29,
     "positionY": 50,
     "scale": 1

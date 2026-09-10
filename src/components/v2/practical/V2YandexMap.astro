@@ -1,5 +1,6 @@
 ---
 import yandex from '../../../data/yandex.json';
+import settings from '../../../content/site-settings/global.json';
 
 interface Props {
   title: string;
@@ -20,8 +21,11 @@ const editorAttributes = Astro.props.editorAttributes ?? {};
   {...editorAttributes}
 >
   <div class="practical-yandex-map__placeholder" data-v2-map-placeholder hidden>
-    <p>Интерактивная карта загружается по запросу.</p>
-    <button type="button" data-v2-map-activate>Показать карту</button>
+    <svg width="32" height="40" viewBox="0 0 32 40" aria-hidden="true"><path d="M16 1C7.7 1 1 7.7 1 16c0 11 15 23 15 23s15-12 15-23C31 7.7 24.3 1 16 1Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="5" fill="currentColor"/></svg>
+    <strong>{settings.companyShortName}</strong>
+    <p>{settings.address}</p>
+    <p data-v2-map-message>Карта появится автоматически.</p>
+    <button type="button" data-v2-map-activate hidden>Повторить загрузку</button>
   </div>
   <span class="practical-yandex-map__status" role="status" aria-live="polite" data-v2-map-status></span>
   <noscript>Адрес и ссылка «Открыть в Яндекс Картах» доступны рядом с картой.</noscript>
@@ -37,22 +41,28 @@ const editorAttributes = Astro.props.editorAttributes ?? {};
       const activateButton = map.querySelector('[data-v2-map-activate]');
       const placeholder = map.querySelector('[data-v2-map-placeholder]');
       const status = map.querySelector('[data-v2-map-status]');
+      const message = map.querySelector('[data-v2-map-message]');
       placeholder?.removeAttribute('hidden');
       map.dataset.v2MapState = 'idle';
       let started = false;
       let observer;
+      let proximityObserver;
       let timeoutId = 0;
       let script;
-      const failOpen = (message) => {
+      const watchedFrames = new WeakSet();
+      const failOpen = (text) => {
         started = false;
         observer?.disconnect();
         window.clearTimeout(timeoutId);
         script?.remove();
+        map.querySelectorAll('iframe').forEach((frame) => frame.remove());
         map.dataset.v2MapState = 'error';
-        if (status) status.textContent = message;
+        placeholder?.removeAttribute('hidden');
+        if (status) status.textContent = text;
+        if (message) message.textContent = text;
         if (activateButton) {
           activateButton.disabled = false;
-          activateButton.focus({ preventScroll: true });
+          activateButton.hidden = false;
         }
       };
       const labelFrames = () => {
@@ -60,34 +70,47 @@ const editorAttributes = Astro.props.editorAttributes ?? {};
         frames.forEach((frame) => {
           frame.setAttribute('title', title);
           frame.setAttribute('tabindex', '0');
+          if (watchedFrames.has(frame)) return;
+          watchedFrames.add(frame);
+          // Inserting the iframe only starts its request. Keep the reserved
+          // placeholder and timeout until the provider document actually loads.
+          frame.addEventListener('load', () => {
+            if (map.dataset.v2MapState !== 'loading' || !frame.isConnected
+              || !frame.getAttribute('src') || frame.src === 'about:blank') return;
+            observer?.disconnect();
+            window.clearTimeout(timeoutId);
+            if (status) status.textContent = 'Карта загружена.';
+            placeholder?.setAttribute('hidden', '');
+            map.dataset.v2MapState = 'ready';
+          });
+          frame.addEventListener('error', () => {
+            if (map.dataset.v2MapState === 'loading' && frame.isConnected) failOpen('Карту не удалось загрузить. Используйте ссылку ниже.');
+          }, { once: true });
         });
-        if (frames.length > 0) {
-          observer?.disconnect();
-          window.clearTimeout(timeoutId);
-          if (status) status.textContent = 'Карта загружена.';
-          placeholder?.setAttribute('hidden', '');
-          map.dataset.v2MapState = 'ready';
-          window.requestAnimationFrame(() => frames[0]?.focus({ preventScroll: true }));
-        }
         return frames.length > 0;
       };
       const activate = () => {
         if (started || !constructorSrc) return;
         started = true;
+        proximityObserver?.disconnect();
+        window.removeEventListener('scroll', checkProximity);
+        window.removeEventListener('resize', checkProximity);
         map.dataset.v2MapState = 'loading';
         if (status) status.textContent = 'Загружаем карту…';
+        if (message) message.textContent = 'Загружаем карту…';
         if (activateButton) activateButton.disabled = true;
         script = document.createElement('script');
         script.async = true;
         script.setAttribute('charset', 'utf-8');
-        script.src = constructorSrc;
-        observer = new MutationObserver(() => {
-          if (!labelFrames()) return;
-          observer.disconnect();
-        });
+        const source = new URL(constructorSrc);
+        // Preserve the owner's saved map; disable wheel zoom so an automatic
+        // embed cannot interrupt ordinary page scrolling over the contact block.
+        source.searchParams.set('scroll', 'false');
+        script.src = source.toString();
+        observer = new MutationObserver(labelFrames);
         observer.observe(map, { childList: true, subtree: true });
         timeoutId = window.setTimeout(() => {
-          if (labelFrames()) return;
+          if (map.dataset.v2MapState === 'ready') return;
           failOpen('Карту не удалось загрузить. Используйте ссылку ниже.');
         }, 15000);
         script.addEventListener('error', () => {
@@ -96,12 +119,43 @@ const editorAttributes = Astro.props.editorAttributes ?? {};
         map.append(script);
       };
 
+      const checkProximity = () => {
+        const bounds = map.getBoundingClientRect();
+        if (bounds.top <= window.innerHeight + 200 && bounds.bottom >= -200) activate();
+      };
+
       activateButton?.addEventListener('click', activate);
+      if (constructorSrc) {
+        if ('IntersectionObserver' in window) {
+          proximityObserver = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) activate();
+          }, { rootMargin: '200px 0px' });
+          proximityObserver.observe(map);
+        } else {
+          window.addEventListener('scroll', checkProximity, { passive: true });
+          window.addEventListener('resize', checkProximity, { passive: true });
+          checkProximity();
+        }
+      }
       if (!constructorSrc && activateButton) {
         activateButton.disabled = true;
         map.dataset.v2MapState = 'error';
         if (status) status.textContent = 'Интерактивная карта временно недоступна. Используйте ссылку ниже.';
+        if (message) message.textContent = 'Интерактивная карта временно недоступна. Используйте ссылку ниже.';
       }
     });
   })();
 </script>
+
+<style>
+  .practical-yandex-map { background: #253b40; color: #faf8f1; }
+  .practical-yandex-map__placeholder { gap: 10px; }
+  .practical-yandex-map__placeholder p { color: #dedfd9; max-width: 32ch; }
+  .practical-yandex-map__placeholder strong { font-size: 1.3rem; }
+  .practical-yandex-map__placeholder svg { margin-bottom: 6px; color: #d4b68a; }
+  .practical-yandex-map__placeholder [data-v2-map-message] { font-size: .875rem; }
+  .practical-yandex-map__placeholder button { border-color: #d4b68a; background: #d4b68a; color: #172c31; }
+  .practical-yandex-map__placeholder button[hidden] { display: none; }
+  .practical-yandex-map__placeholder button:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+  .practical-yandex-map noscript { color: #faf8f1; }
+</style>

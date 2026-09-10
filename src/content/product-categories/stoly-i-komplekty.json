@@ -14,7 +14,7 @@
   "seoTitle": "Столы и комплекты",
   "seoDescription": "Описание страницы.",
   "imageView": {
-    "fit": "cover",
+    "fit": "contain",
     "positionX": 50,
     "positionY": 60,
     "scale": 1

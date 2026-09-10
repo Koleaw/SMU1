@@ -3,7 +3,7 @@ import PublicV2Layout from '../../layouts/PublicV2Layout.astro';
 import HomeV2Header from './home-v2/HomeV2Header.astro';
 import HomeV2Footer from './home-v2/HomeV2Footer.astro';
 import V2PaletteSwitch from './V2PaletteSwitch.astro';
-import { getV2Scope } from '../../utils/v2Routes';
+import { getV2Scope, productionV2Path } from '../../utils/v2Routes';
 import catalogStylesheetUrl from '../../styles/v2/catalog-v2.css?url';
 import productFinalStylesheetUrl from '../../styles/v2/product-final-stage-a.css?url';
 import catalogPolishStylesheetUrl from '../../styles/v2/catalog-public-polish.css?url';
@@ -81,6 +81,16 @@ const productFinalEnabled = productFinalPrototype === 'hub'
   || productFinalPrototype === 'direction'
   || productFinalPrototype === 'custom';
 const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
+const themePath = productionV2Path(currentPath);
+// Categories and products inherit their direction through the canonical hierarchy.
+const directionTheme = /(?:^|\/)topiarii(?:\/|$)/.test(themePath) ? 'topiary'
+  : /(?:^|\/)(?:navesy|navesy-i-kozyrki)(?:\/|$)/.test(themePath) ? 'canopies'
+  : themePath.startsWith('/ulichnaya-mebel/') ? 'furniture'
+  : themePath.startsWith('/ograzhdeniya-i-zabory/') ? 'fences'
+  : themePath.startsWith('/metallokonstruktsii-dlya-biznesa/') ? 'metal'
+  : themePath.startsWith('/blagoustroystvo-territoriy/') ? 'landscape'
+  : themePath.startsWith('/stroitelstvo-i-remonty/') ? 'construction'
+  : undefined;
 ---
 
 <PublicV2Layout
@@ -103,6 +113,7 @@ const resolvedHeaderMode = productFinalEnabled ? 'overlay' : headerMode;
     class:list={['home-v2', 'catalog-v2', rootClass]}
     data-catalog-v2-root
     data-product-final-prototype={productFinalPrototype}
+    data-direction-theme={directionTheme}
   >
     <a class="v2-skip-link" href="#main-content" {...adminDisposition(Astro.url, {
       kind: 'template-fixed',

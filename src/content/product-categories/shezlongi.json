@@ -14,7 +14,7 @@
   "seoTitle": "Шезлонги",
   "seoDescription": "Описание страницы.",
   "imageView": {
-    "fit": "cover",
+    "fit": "contain",
     "positionX": 29.33960523888582,
     "positionY": 33.7797984762841,
     "scale": 1

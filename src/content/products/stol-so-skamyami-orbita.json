@@ -62,7 +62,7 @@
     "/uploads/chatgpt-image-23-2026-12-30-28-1779535939641.png"
   ],
   "imageView": {
-    "fit": "cover",
+    "fit": "contain",
     "positionX": 50,
     "positionY": 59,
     "scale": 1

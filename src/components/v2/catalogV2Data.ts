@@ -167,7 +167,7 @@ export const formatProductPrice = (product: Pick<ProductData, 'priceMode' | 'pri
 
 export const imageViewStyle = (view?: { fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; scale?: number }) => {
   const safe = { fit: 'cover', positionX: 50, positionY: 50, scale: 1, ...(view || {}) };
-  return `object-fit:${safe.fit};object-position:${safe.positionX}% ${safe.positionY}%;transform:scale(${safe.scale});transform-origin:center;`;
+  return `--v2-media-fit:${safe.fit};--v2-media-x:${safe.positionX}%;--v2-media-y:${safe.positionY}%;--v2-media-scale:${safe.scale};object-fit:${safe.fit};object-position:${safe.positionX}% ${safe.positionY}%;transform:scale(${safe.scale});transform-origin:center;`;
 };
 
 export const cleanTextItems = (items: unknown) => {

@@ -14,7 +14,7 @@
   "seoTitle": "Беседки и перголы — СМУ-1",
   "seoDescription": "Беседки и перголы для зон отдыха, дворов и коммерческих пространств.",
   "imageView": {
-    "fit": "cover",
+    "fit": "contain",
     "positionX": 50,
     "positionY": 50,
     "scale": 1

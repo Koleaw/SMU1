@@ -15,8 +15,13 @@ test('Home exposes exact direction kicker/image fields and distinct responsive p
   assert.match(source, /homeBinding\(`homeDirectionCards\[\$\{index\}\]\.\$\{field\}`/u);
   assert.equal((source.match(/homeDirectionCardBinding\([^\n]+, 'kicker'\)/gu) || []).length, 3,
     'feature, rail and wide direction kickers use their stable home card field');
-  assert.equal((source.match(/directionBinding\([^\n]+, 'homeImage', 'media'/gu) || []).length, 2,
-    'feature and wide direction images bind to the borrowed direction homeImage field');
+  assert.equal((source.match(/directionBinding\([^\n]+, 'homeImage', 'media'/gu) || []).length, 3,
+    'feature, rail and wide direction images bind to the borrowed direction homeImage field');
+  const rail = source.match(/<div class="hf-direction-rail"[\s\S]*?<\/div>/u)?.[0] || '';
+  assert.match(rail, /<V2ResponsiveImage[\s\S]*?src=\{direction\.image\}[\s\S]*?role="card"[\s\S]*?loading="lazy"/u,
+    'specialized direction cards render their responsive media lazily');
+  assert.match(rail, /directionBinding\(direction, 'homeImage', 'media'/u,
+    'specialized direction photos remain replaceable through their saved homeImage field');
 });
 
 test('construction and landscaping proof occurrences retain their project owners and field paths', async () => {

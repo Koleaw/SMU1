@@ -14,7 +14,7 @@
   "seoTitle": "Урны — СМУ-1",
   "seoDescription": "Урны для общественных пространств и коммерческих территорий.",
   "imageView": {
-    "fit": "cover",
+    "fit": "contain",
     "positionX": 50,
     "positionY": 50,
     "scale": 1

@@ -93,7 +93,9 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
     {robotsContent && <meta name="robots" content={robotsContent} />}
-    <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
+    <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg?v=20260911')} />
+    <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48" href={withBase('/assets/brand/favicon.ico?v=20260911')} />
+    <link rel="apple-touch-icon" sizes="180x180" href={withBase('/assets/brand/apple-touch-icon.png?v=20260911')} />
     {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
     <meta property="og:type" content="website" />
     <meta property="og:title" content={pageTitle} />

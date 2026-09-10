@@ -2,7 +2,7 @@
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import type { V2ProjectMedia } from '../mediaRoleAdapter';
-import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import V2ProjectGallery from '../projects/V2ProjectGallery.astro';
 import { adminBinding, adminDisposition } from '../../../admin/bindings/adminBinding';
 
 interface ProjectEditorSource {
@@ -132,34 +132,12 @@ const localOrDeclared = (attributes: Record<string, string> | undefined, fragmen
 
     <article class="project-proof__featured">
       <div class="project-proof__media" data-v2-reveal {...mediaAttributes}>
-        <figure class="project-proof__feature" data-v2-media>
-          <V2ResponsiveImage
-            src={featureImage.src}
-            alt={featureImage.alt || featured.title}
-            role="project"
-            sizes="(max-width: 760px) calc(100vw - 32px), 58vw"
-            loading="lazy"
-            decoding="async"
-            data-v2-image
-          />
-        </figure>
-        {sequence.length > 0 && (
-          <div class="project-proof__sequence">
-            {sequence.map((image) => (
-              <figure data-v2-media>
-                <V2ResponsiveImage
-                  src={image.src}
-                  alt={image.alt || featured.title}
-                  role="project"
-                  sizes="(max-width: 760px) calc(100vw - 32px), 32vw"
-                  loading="lazy"
-                  decoding="async"
-                  data-v2-image
-                />
-              </figure>
-            ))}
-          </div>
-        )}
+        <V2ProjectGallery
+          images={[featureImage, ...sequence]}
+          title={featured.title}
+          galleryKey="construction-proof"
+          variant="proof"
+        />
       </div>
       <div class="project-proof__story" data-v2-reveal>
         <p class="project-proof__meta" {...metaDisposition(featured)}>{meta(featured)}</p>

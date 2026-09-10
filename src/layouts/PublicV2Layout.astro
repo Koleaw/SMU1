@@ -9,6 +9,7 @@ import entranceV2Url from '../styles/v2/entrance-v2.css?url';
 import finalArtDirectionUrl from '../styles/v2/final-art-direction-v2.css?url';
 import h4ScaleV2Url from '../styles/v2/h4-scale-v2.css?url';
 import publicPolishUrl from '../styles/v2/public-polish.css?url';
+import ownerDirectionsUrl from '../styles/v2/owner-directions.css?url';
 import CookieBanner from '../components/CookieBanner.astro';
 import V2EntryExperience from '../components/v2/motion/V2EntryExperience.astro';
 import V2PageTransition from '../components/v2/motion/V2PageTransition.astro';
@@ -134,6 +135,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
 >
   <head>
     <meta charset="UTF-8" />
+    {isEntryEnabled && <style is:inline>html { background-color: #101c2a; }</style>}
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content={robotsContent} />
     <meta name="description" content={pageDescription} />
@@ -297,6 +299,15 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       })();
     </script>
     {isEntryEnabled && (
+      <style is:inline>
+        /* This canvas is available before external CSS and the first body paint. */
+        html.v2-entry-js[data-v2-entry-bootstrap='armed'],
+        html.v2-entry-js[data-v2-entry-bootstrap='armed'] body {
+          background-color: #101c2a;
+        }
+      </style>
+    )}
+    {isEntryEnabled && (
       <script is:inline define:vars={{ entrySessionKey }}>
         (() => {
           const root = document.documentElement;
@@ -381,7 +392,9 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
         rel="stylesheet"
       />
     </noscript>
-    <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg')} />
+    <link rel="icon" type="image/svg+xml" href={withBase('/assets/brand/favicon.svg?v=20260911')} />
+    <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48" href={withBase('/assets/brand/favicon.ico?v=20260911')} />
+    <link rel="apple-touch-icon" sizes="180x180" href={withBase('/assets/brand/apple-touch-icon.png?v=20260911')} />
     <link rel="preload" href={finalArtDirectionStylesheetUrl} as="style" />
     <title>{pageTitle}</title>
     {!isSearchExcluded && (
@@ -454,6 +467,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       <link rel="stylesheet" href={stylesheetUrl(href)} data-v2-route-styles />
     ))}
     {isProduction && <link rel="stylesheet" href={stylesheetUrl(publicPolishUrl)} />}
+    {isProduction && <link rel="stylesheet" href={stylesheetUrl(ownerDirectionsUrl)} />}
     {isEditorCanvas && (
       <style is:inline set:html={editorCanvasAffordancesCss} data-smu1-editor-canvas-styles />
     )}
@@ -1875,6 +1889,10 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
               element.style.setProperty('--v2-image-source-x', `${positionX}%`);
               element.style.setProperty('--v2-image-source-y', `${positionY}%`);
               element.style.setProperty('--v2-image-source-scale', String(scale));
+              element.style.setProperty('--v2-media-fit', fit);
+              element.style.setProperty('--v2-media-x', `${positionX}%`);
+              element.style.setProperty('--v2-media-y', `${positionY}%`);
+              element.style.setProperty('--v2-media-scale', String(scale));
               element.style.objectFit = fit;
               element.style.objectPosition = `${positionX}% ${positionY}%`;
               element.style.transform = `scale(${scale})`;

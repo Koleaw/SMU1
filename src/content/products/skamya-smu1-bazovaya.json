@@ -16,7 +16,7 @@
   "seoTitle": "Скамья СМУ-1 Базовая",
   "seoDescription": "Скамья СМУ-1 Базовая: типовое решение для парков и дворовых территорий.",
   "imageView": {
-    "fit": "cover",
+    "fit": "contain",
     "positionX": 50.95465393794749,
     "positionY": 90,
     "scale": 1

@@ -1,6 +1,6 @@
 ---
 import CatalogV2Layout from '../CatalogV2Layout.astro';
-import '../../../styles/v2/practical-v2.css';
+import practicalStylesheetUrl from '../../../styles/v2/practical-v2.css?url';
 
 interface Props {
   title: string;
@@ -33,6 +33,7 @@ const {
 ---
 
 <CatalogV2Layout
+  blockingStylesheetUrls={[practicalStylesheetUrl]}
   title={title}
   description={description}
   canonicalPath={canonicalPath}

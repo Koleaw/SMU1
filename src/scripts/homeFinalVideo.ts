@@ -2,9 +2,8 @@
 export const initializeHomeFinalVideo = (root: HTMLElement) => {
   const hero = root.querySelector<HTMLElement>('[data-hf-hero]');
   const video = root.querySelector<HTMLVideoElement>('[data-hf-hero-video]');
-  const toggle = root.querySelector<HTMLButtonElement>('[data-hf-video-toggle]');
-  const label = root.querySelector<HTMLElement>('[data-hf-video-toggle-label]');
-  if (!hero || !video || !toggle || !label) return;
+  const toggles = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-hf-video-toggle]'));
+  if (!hero || !video) return;
 
   const mobile = matchMedia('(max-width: 760px)');
   const narrow = matchMedia('(max-width: 359px)');
@@ -20,6 +19,7 @@ export const initializeHomeFinalVideo = (root: HTMLElement) => {
   let status: 'idle' | 'loading' | 'playing' | 'error' = 'idle';
   let resumeOnVisible = false;
   let baselineFallback = false;
+  let inViewport = hero.getBoundingClientRect().bottom > 0 && hero.getBoundingClientRect().top < innerHeight;
 
   const preferredSource = () => (mobile.matches || baselineFallback ? video.dataset.hfMobileSrc : video.dataset.hfDesktopSrc) || '';
   const autoplayAllowed = () => !reduced.matches && !connection?.saveData
@@ -30,17 +30,20 @@ export const initializeHomeFinalVideo = (root: HTMLElement) => {
     const playing = status === 'playing';
     hero.classList.toggle('is-video-playing', playing);
     hero.dataset.hfVideoState = status;
-    toggle.hidden = !preferredSource();
-    toggle.disabled = false;
-    toggle.removeAttribute('aria-hidden');
-    toggle.setAttribute('aria-pressed', String(playing));
-    toggle.setAttribute('aria-busy', String(status === 'loading'));
-    label.textContent = playing ? 'Пауза видео' : status === 'loading' ? 'Отменить загрузку'
-      : status === 'error' ? 'Повторить видео' : 'Включить видео';
-    toggle.setAttribute('aria-label', playing ? 'Приостановить фоновое видео'
-      : status === 'loading' ? 'Отменить загрузку фонового видео'
-      : status === 'error' ? 'Видео недоступно. Повторить загрузку' : 'Включить фоновое видео');
-    toggle.title = status === 'error' ? 'Не удалось воспроизвести видео. Показана фотография производства.' : '';
+    toggles.forEach((toggle) => {
+      const label = toggle.querySelector<HTMLElement>('[data-hf-video-toggle-label]');
+      toggle.hidden = !preferredSource();
+      toggle.disabled = false;
+      toggle.removeAttribute('aria-hidden');
+      toggle.setAttribute('aria-pressed', String(playing));
+      toggle.setAttribute('aria-busy', String(status === 'loading'));
+      if (label) label.textContent = playing ? 'Пауза видео' : status === 'loading' ? 'Отменить загрузку'
+        : status === 'error' ? 'Повторить видео' : 'Включить видео';
+      toggle.setAttribute('aria-label', playing ? 'Приостановить фоновое видео'
+        : status === 'loading' ? 'Отменить загрузку фонового видео'
+        : status === 'error' ? 'Видео недоступно. Повторить загрузку' : 'Включить фоновое видео');
+      toggle.title = status === 'error' ? 'Не удалось воспроизвести видео. Показана фотография производства.' : '';
+    });
   };
   const unload = () => {
     generation += 1;
@@ -59,7 +62,7 @@ export const initializeHomeFinalVideo = (root: HTMLElement) => {
   };
   const play = () => {
     const nextSource = preferredSource();
-    if (!nextSource || document.hidden) return;
+    if (!nextSource || document.hidden || !inViewport) return;
     // H.264 MP4 is the existing portable source. A missing decoder keeps the
     // poster and the retry action; autoplay rejection is handled separately.
     if (!video.canPlayType('video/mp4')) { fail(); return; }
@@ -91,6 +94,11 @@ export const initializeHomeFinalVideo = (root: HTMLElement) => {
   };
   const reconcile = () => {
     if (source && source !== preferredSource()) unload();
+    if (!inViewport || document.hidden) {
+      if (status === 'loading') unload();
+      else video.pause();
+      return;
+    }
     if (released && shouldPlay() && status !== 'playing' && status !== 'loading') play();
     else if (!shouldPlay()) unload();
     else render();
@@ -115,14 +123,14 @@ export const initializeHomeFinalVideo = (root: HTMLElement) => {
       if (shouldPlay()) play();
     } else fail();
   });
-  toggle.addEventListener('click', () => {
+  toggles.forEach((toggle) => toggle.addEventListener('click', () => {
     released = true;
     if (status === 'playing' || status === 'loading') {
       intent = 'pause';
       if (status === 'loading') unload();
       else { video.pause(); status = 'idle'; render(); }
     } else { intent = 'play'; play(); }
-  });
+  }));
   const release = () => {
     if (released) return;
     released = true;
@@ -145,6 +153,13 @@ export const initializeHomeFinalVideo = (root: HTMLElement) => {
     else query.addListener(reconcile);
   }
   connection?.addEventListener?.('change', reconcile);
+  if ('IntersectionObserver' in window) {
+    const visibility = new IntersectionObserver(([entry]) => {
+      inViewport = entry.isIntersecting;
+      reconcile();
+    }, { threshold: 0 });
+    visibility.observe(hero);
+  }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       resumeOnVisible = status === 'playing' || status === 'loading';

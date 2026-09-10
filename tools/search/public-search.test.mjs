@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createPublicSearchIndex } from '../../src/utils/publicSearchIndex.mjs';
-import { normalizeSearch, prepareSearch, searchPublicEntries } from '../../src/scripts/public-search.mjs';
+import { normalizeSearch, prepareSearch, searchPublicEntries, searchPublicMatches, searchSnippet } from '../../src/scripts/public-search.mjs';
 
 const collections = { productSections: 'product-sections', categories: 'product-categories', products: 'products', services: 'services', projects: 'projects' };
 const snapshot = Object.fromEntries(Object.entries(collections).map(([key, folder]) => [key, readdirSync(resolve('src/content', folder))
@@ -45,6 +45,28 @@ test('ё/е, punctuation, initials, RAL, projects and material inflections are s
 
 test('empty, stop words, unrelated and markup queries return no accidental match', () => {
   for (const query of ['', '   ', 'и для на', 'несуществующееизделие92831', '<script>alert(92831)</script>']) assert.deepEqual(find(query), []);
+});
+
+test('title matches and description-only matches are separate without changing public copy', () => {
+  const contour = searchPublicMatches(prepared, 'Контур');
+  assert.ok(contour.some((row) => row.titleOnly && row.entry.title.includes('Контур')));
+  const oval = contour.find((row) => row.entry.title === 'Вазон Овал');
+  assert.ok(oval && !oval.titleOnly);
+  assert.ok(oval.snippet.some((part) => part.match && part.text.toLowerCase() === 'контуром'));
+  assert.ok(searchPublicMatches(prepared, 'Овал')[0].titleOnly);
+  assert.ok(searchPublicMatches(prepared, 'лавочка').some((row) => row.titleOnly && /Скам/.test(row.entry.title)));
+  const characteristic = searchPublicMatches(prepared, 'скамья без спинки');
+  assert.ok(characteristic.length);
+  assert.ok(characteristic.every((row) => row.titleOnly || row.snippet.some((part) => part.match)));
+  assert.ok(searchPublicMatches(prepared, 'деревянными').some((row) => !row.titleOnly && row.snippet.some((part) => part.match)));
+});
+
+test('snippet explains late matches and preserves exact text safely as plain parts', () => {
+  const source = `${'Начало описания. '.repeat(25)}Оригинальный контуром <img onerror="alert(1)">`;
+  const parts = searchSnippet(source, 'Контур');
+  assert.equal(parts.find((part) => part.match)?.text, 'контуром');
+  assert.ok(parts.map((part) => part.text).join('').startsWith('…'));
+  assert.ok(parts.map((part) => part.text).join('').includes('<img'));
 });
 
 test('index follows public route activity, excluding inactive ancestors and draft fields', () => {

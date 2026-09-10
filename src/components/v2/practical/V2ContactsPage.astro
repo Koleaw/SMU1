@@ -23,6 +23,10 @@ for (const key of ['lang', 'scroll', 'um']) {
   if (value) mapWidgetUrl.searchParams.set(key, value);
 }
 mapWidgetUrl.searchParams.set('source', 'constructor-api');
+const routeUrl = new URL('https://yandex.ru/maps/');
+routeUrl.searchParams.set('mode', 'routes');
+routeUrl.searchParams.set('rtext', `~${settings.address}`);
+routeUrl.searchParams.set('rtt', 'auto');
 const copy = settings.contactsPage;
 const pageBinding = (fieldPath: string, tool = 'long-text') => adminBinding(Astro.url, {
   renderer: { family: 'practical', variant: 'contacts' }, owner: { collection: 'site-settings', slug: 'global' },
@@ -128,6 +132,10 @@ const routeDisposition = (fragment: string, reason: string) => adminDisposition(
           title={`Яндекс Карта: ${settings.address}`}
           editorAttributes={integrationDisposition('map', 'Провайдер и URL карты являются настройкой интеграции, а не редактируемым текстом страницы.')}
         />
+        <div class="practical-contacts__map-actions">
+        <a class="practical-contacts__route" href={routeUrl.toString()} target="_blank" rel="noopener noreferrer"
+          {...routeDisposition('map-directions', 'Маршрут строится в Яндекс Картах по адресу из настроек компании.')}
+        >Построить маршрут <span aria-hidden="true">↗</span></a>
         <a
           class="practical-contacts__map-link"
           href={mapWidgetUrl.toString()}
@@ -138,6 +146,7 @@ const routeDisposition = (fragment: string, reason: string) => adminDisposition(
         >
           <span {...pageBinding('mapLinkLabel', 'link-label')}>{copy.mapLinkLabel}</span>
         </a>
+        </div>
       </div>
     </div>
   </section>
@@ -206,3 +215,14 @@ const routeDisposition = (fragment: string, reason: string) => adminDisposition(
     </div>
   </section>
 </article>
+
+<style>
+  .practical-contacts__map { display: flex; flex-direction: column; }
+  .practical-contacts__map > :global(.practical-yandex-map) { flex: 1 0 auto; }
+  .practical-contacts__map-actions { display: flex; flex-wrap: wrap; align-items: stretch; background: #253b40; }
+  .practical-contacts__map-actions a { display: flex; flex: 1 1 15rem; align-items: center; justify-content: space-between; gap: 1rem; min-height: 58px; padding: 16px 20px; border: 0; background: transparent; color: #faf8f1; font-weight: 600; text-decoration: none; }
+  .practical-contacts__map-actions .practical-contacts__route { background: #d4b68a; color: #172c31; }
+  .practical-contacts__map-actions a:hover { text-decoration: underline; text-underline-offset: .25em; }
+  .practical-contacts__map-actions a:focus-visible { outline: 3px solid #fff; outline-offset: -5px; }
+  .practical-contacts__map-actions .practical-contacts__route:focus-visible { outline-color: #172c31; }
+</style>
