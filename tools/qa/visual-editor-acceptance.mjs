@@ -2772,7 +2772,9 @@ async function runAcceptance(options, bundle) {
       await waitFor(browser, `Boolean(document.querySelector('#veSettingsDrawer')?.open)`, { label: 'page settings drawer' });
       await clickShell(browser, SELECTORS.settingsHistory);
       await waitFor(browser, `Boolean(document.querySelector('#veSettingsBody .ve-history-item button'))`, { timeoutMs: 12_000, label: 'history restore control' });
-      await clickShell(browser, '#veSettingsBody .ve-history-item button');
+      const confirmation = await browser.confirmIsolatedAction({
+        kind: 'history-restore', origin: options.origin, disposable: bundle.proof.sourceWritesDisposable === true
+      }, () => clickShell(browser, '#veSettingsBody .ve-history-item button'));
       const beforeIds = (before.history || []).map((entry) => entry.transactionId);
       const restoreToast = await waitFor(browser, `(() => Array.from(document.querySelectorAll('#veToastRegion .ve-toast'))
         .map((node) => node.textContent || '')
@@ -2788,12 +2790,14 @@ async function runAcceptance(options, bundle) {
       })()`, { timeoutMs: 20_000, intervalMs: 100, label: 'new restore transaction' });
       state.historyRestore = { sourceTransactionId: source.transactionId, transactionId: after.added.transactionId };
       return {
+        allowedDialogs: ['confirm'],
         issues: [
           ...(after.added.transactionId === source.transactionId ? ['restore-reused-source-transaction'] : []),
           ...(after.added.metadata?.restoresTransactionId !== source.transactionId ? ['restore-source-link-missing'] : []),
           ...(!restoreToast ? ['restore-ui-confirmation-missing'] : [])
         ],
         evidence: {
+          confirmation,
           navigation,
           sourceSave,
           sourceTransactionId: source.transactionId,
@@ -2849,7 +2853,9 @@ async function runAcceptance(options, bundle) {
         const payload = await response.json();
         return { status: response.status, title: payload.content?.title || payload.title || '' };
       })()`);
-      await clickShell(browser, '#veConflictDialog [data-reload-theirs]');
+      const confirmation = await browser.confirmIsolatedAction({
+        kind: 'discard-conflicting-drafts', origin: options.origin, disposable: bundle.proof.sourceWritesDisposable === true
+      }, () => clickShell(browser, '#veConflictDialog [data-reload-theirs]'));
       await waitFor(browser, `!document.querySelector('#veConflictDialog')?.open`, { label: 'conflict resolution reload' });
       await waitForProjectedText(browser, titleBinding.binding.bindingId, theirsMarker, 'main tab reloaded theirs');
       await browser.evaluate(`(() => { window.__h6AcceptancePeer?.close?.(); window.__h6AcceptancePeer = null; return true; })()`);
@@ -2864,7 +2870,9 @@ async function runAcceptance(options, bundle) {
           ...(!silentOverwriteBlocked ? ['silent-overwrite-not-blocked'] : [])
         ],
         allowedHttpFailures: [{ pathname: '/transactions/preview', statuses: [409] }],
+        allowedDialogs: ['confirm'],
         evidence: {
+          confirmation,
           mine: { title: mineTitle, baseRevision: mineDraft.baseRevision },
           theirs: { title: peerEdit.title, transactionId: peerSave.transactionId },
           base: { title: original },
@@ -3093,8 +3101,11 @@ async function runAcceptance(options, bundle) {
       ...(scenarios.find((scenario) => scenario.id === 'project-media-role-independence')?.evidence?.mediaCasConflict?.recoveryDialogs || []),
       ...(scenarios.find((scenario) => scenario.id === 'project-media-role-independence')?.evidence?.emptyRemoval?.recoveryDialogs || [])
     ];
+    const expectedActionDialogs = ['history-restore-new-transaction', 'two-tab-conflict']
+      .map(id => scenarios.find(scenario => scenario.id === id)?.evidence?.confirmation).filter(Boolean);
     const navigationDialogFailed = JSON.stringify(rawSafety.navigationDialogs) !== JSON.stringify(recoveryNavigationDialogs)
-      || rawSafety.navigationDialogs.some((dialog) => dialog.type !== 'beforeunload' || !dialog.accepted);
+      || rawSafety.navigationDialogs.some((dialog) => dialog.type !== 'beforeunload' || !dialog.accepted)
+      || JSON.stringify(rawSafety.actionDialogs) !== JSON.stringify(expectedActionDialogs);
     const boundaryFailed = boundaryErrors.length > 0 || boundaryHttpErrors.length > 0 || boundaryNetworkErrors.length > 0 || navigationDialogFailed;
     const releaseFailed = releaseMutationRequests.length > 0 || releaseIntercepts.length > 0;
     const failedIds = [

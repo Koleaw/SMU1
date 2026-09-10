@@ -32,6 +32,12 @@ export function isExpectedIsolatedPublishStatus({ method, status, origin, url, c
 }
 
 export function adminControlPostcondition(action, before, after, requestCount) {
+  if (action.domId === 'veFullScreen') {
+    try {
+      const previous = JSON.parse(before)?.fullscreen, next = JSON.parse(after)?.fullscreen;
+      return typeof previous === 'boolean' && typeof next === 'boolean' && previous !== next;
+    } catch { return false; }
+  }
   if (action.tag === 'summary') {
     try {
       const previous = JSON.parse(before)?.detailsOpen, next = JSON.parse(after)?.detailsOpen;

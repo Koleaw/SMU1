@@ -8,6 +8,7 @@ import sharp from 'sharp';
 
 import { runAdminLauncher } from '../admin-api/launcher.mjs';
 import { validateVisualEditorAcceptanceEvidence } from './evidence-contract.mjs';
+import { buildExpectedRouteModel } from './route-passport-model.mjs';
 
 const execFileAsync = promisify(execFile);
 const sourceRoot = process.cwd();
@@ -196,8 +197,13 @@ try {
   }
   const failedMediaFile = 'h6-malformed.jpg';
   await writeFile(path.join(fixturesRoot, failedMediaFile), Buffer.from('not-a-raster-image', 'utf8'));
+  const projectRoute = buildExpectedRouteModel({ root: checkoutRoot }).routes
+    .map(route => route.pathname).filter(route => /^\/vypolnennye-obekty\/[^/]+\/$/u.test(route)).sort()[0];
+  if (!projectRoute) throw new Error('Acceptance requires a current published project route.');
+  const projectSlug = projectRoute.split('/').filter(Boolean).at(-1);
   await writeFile(path.join(fixturesRoot, 'visual-editor-acceptance.json'), `${JSON.stringify({
     schemaVersion: 1,
+    pages: { project: { query: projectSlug, slug: projectSlug, route: projectRoute } },
     isolationProof: path.relative(fixturesRoot, proofPath).replace(/\\/gu, '/'),
     mediaFiles,
     failedMediaFile,

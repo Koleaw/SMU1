@@ -486,6 +486,7 @@ test('visual editor acceptance fails closed unless every required editor scenari
       noSaveOrBuildRequested: true
     },
     'two-tab-conflict': {
+      confirmation: { type: 'confirm', accepted: true, kind: 'discard-conflicting-drafts', reason: 'qa-isolated-discard-conflicting-drafts' },
       mine: { title: 'Моя версия' }, theirs: { title: 'Сохранённая версия' }, base: { title: 'База' },
       canonical: { title: 'Сохранённая версия' }, serverConflictStatus: 409, silentOverwriteBlocked: true
     },
@@ -494,6 +495,7 @@ test('visual editor acceptance fails closed unless every required editor scenari
       exact: { diagnostics: { code: 'EXACT_TEST_INJECTED_FAILURE' } }
     },
     'history-restore-new-transaction': {
+      confirmation: { type: 'confirm', accepted: true, kind: 'history-restore', reason: 'qa-isolated-history-restore' },
       sourceTransactionId: 'tx-source', restoredTransactionId: 'tx-restored', restoresTransactionId: 'tx-source', newTransaction: true
     },
     'backup-failure-after-save': {
@@ -515,7 +517,7 @@ test('visual editor acceptance fails closed unless every required editor scenari
       sourceSHA: 'abc123', branch: 'candidate', publishIntercepted: true, sourceWritesDisposable: true,
       testFaultsEnabled: true, deterministicExact: true
     }, executionMode: 'full' },
-    safety: { mode: 'admin-no-release' },
+    safety: { mode: 'admin-no-release', actionDialogs: [evidenceById['history-restore-new-transaction'].confirmation, evidenceById['two-tab-conflict'].confirmation] },
     releaseBoundary: {
       releaseMutationRequests: [], interceptedMutationAttempts: [], mutationRequestsAttempted: 0,
       mutationRequestsReachedServer: 0, mutationRequestsExecuted: false
@@ -536,6 +538,12 @@ test('visual editor acceptance fails closed unless every required editor scenari
     }))
   };
   assert.equal(validateVisualEditorAcceptanceEvidence(report, { expectedSourceSHA: 'abc123' }).ok, true);
+  const unexpectedConfirmation = structuredClone(report);
+  unexpectedConfirmation.safety.actionDialogs.push({ type: 'confirm', accepted: true, kind: 'other' });
+  assert.match(validateVisualEditorAcceptanceEvidence(unexpectedConfirmation).issues.join('\n'), /action-confirmation-contract/u);
+  const absentConfirmation = structuredClone(report);
+  delete absentConfirmation.scenarios.find(scenario => scenario.id === 'history-restore-new-transaction').evidence.confirmation;
+  assert.match(validateVisualEditorAcceptanceEvidence(absentConfirmation).issues.join('\n'), /action-confirmation-contract/u);
   const targeted = structuredClone(report);
   targeted.input.executionMode = 'required-resilience-only';
   targeted.scenarios = targeted.scenarios.filter((scenario) => REQUIRED_RESILIENCE_VISUAL_ACCEPTANCE_SCENARIOS.includes(scenario.id));

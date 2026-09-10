@@ -161,6 +161,7 @@ const actionExpression = (action) => `(() => {
   const before = JSON.stringify({
     className: element.className, expanded: element.getAttribute('aria-expanded'), pressed: element.getAttribute('aria-pressed'), selected: element.getAttribute('aria-selected'),
     detailsOpen: element.tagName === 'SUMMARY' ? element.parentElement.open : null,
+    fullscreen: documentValue.querySelector('#veApp')?.dataset.fullscreen === 'true',
     body: documentValue.body.className, html: documentValue.documentElement.className,
     dialogs: documentValue.querySelectorAll('dialog[open],[role="dialog"]:not([hidden])').length,
     hidden: Array.from(documentValue.querySelectorAll('[hidden]')).length,
@@ -180,6 +181,7 @@ const actionStateExpression = (action) => `(() => {
   return JSON.stringify({
     className: element.className, expanded: element.getAttribute('aria-expanded'), pressed: element.getAttribute('aria-pressed'), selected: element.getAttribute('aria-selected'),
     detailsOpen: element.tagName === 'SUMMARY' ? element.parentElement.open : null,
+    fullscreen: documentValue.querySelector('#veApp')?.dataset.fullscreen === 'true',
     body: documentValue.body.className, html: documentValue.documentElement.className,
     dialogs: documentValue.querySelectorAll('dialog[open],[role="dialog"]:not([hidden])').length,
     hidden: Array.from(documentValue.querySelectorAll('[hidden]')).length,
@@ -642,6 +644,9 @@ try {
   const discovered = new Map();
   const actionResults = [];
   for (let wave = 0; wave < 3; wave += 1) {
+    // A preceding async command can briefly show the login bootstrap during
+    // reload. Inventory only the authenticated, ready Home baseline.
+    await restoreAdminHome({ actionKey: `inventory-wave:${wave}`, afterMode: 'inventory-baseline' });
     const inventory = await browser.evaluate(inventoryExpression);
     for (const action of inventory) {
       const key = `${action.context}:${action.id}`;

@@ -706,6 +706,16 @@ export function validateVisualEditorAcceptanceEvidence(report, options = {}) {
     || restore.restoredTransactionId === restore.sourceTransactionId) {
     issues.push('visual-acceptance:history-restore-contract');
   }
+  const expectedActionDialogs = [
+    { evidence: restore.confirmation, kind: 'history-restore' },
+    { evidence: conflict.confirmation, kind: 'discard-conflicting-drafts' }
+  ];
+  if (expectedActionDialogs.some(({ evidence: confirmation, kind }) => confirmation?.type !== 'confirm'
+    || confirmation.accepted !== true || confirmation.kind !== kind || confirmation.reason !== `qa-isolated-${kind}`)
+    || !Array.isArray(report?.safety?.actionDialogs)
+    || JSON.stringify(report.safety.actionDialogs) !== JSON.stringify(expectedActionDialogs.map(entry => entry.evidence))) {
+    issues.push('visual-acceptance:action-confirmation-contract');
+  }
   const backup = evidence('backup-failure-after-save');
   if (backup.backupFailureVisible !== true || backup.saveRemains !== true
     || backup.backup?.lastError?.code !== 'BACKUP_TEST_INJECTED_FAILURE') {

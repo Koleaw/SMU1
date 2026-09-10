@@ -14,6 +14,9 @@ test('public action policy never executes leads, files or external links', () =>
 });
 
 test('admin mutation actions require an explicitly isolated fixture', () => {
+  assert.deepEqual(classifyAdminAction({ tag: 'main', domId: 'veCanvas', visible: true, tabIndex: -1, name: 'Изменить и сохранить содержимое' }, { isolatedMutations: true }), {
+    policy: 'focus-state', execute: false
+  });
   const action = { tag: 'button', type: 'button', visible: true, name: 'Сохранить', dataActions: [] };
   assert.deepEqual(classifyAdminAction(action), { policy: 'requires-isolated-fixture', execute: false });
   assert.deepEqual(classifyAdminAction(action, { isolatedMutations: true }), { policy: 'isolated-mutation', execute: true });

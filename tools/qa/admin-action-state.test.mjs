@@ -18,6 +18,8 @@ test('only the evidenced insecure isolated publish-status denial is expected', (
 });
 
 test('favorite and selection evidence proves state changes, not incidental network traffic', () => {
+  assert.equal(adminControlPostcondition({ domId: 'veFullScreen' }, '{"fullscreen":false}', '{"fullscreen":true}', 0), true);
+  assert.equal(adminControlPostcondition({ domId: 'veFullScreen' }, '{"fullscreen":false}', '{"fullscreen":false}', 99), false);
   assert.equal(adminControlPostcondition({ tag: 'summary' }, '{"detailsOpen":true}', '{"detailsOpen":false}', 0), true);
   assert.equal(adminControlPostcondition({ tag: 'summary' }, '{"detailsOpen":true}', '{"detailsOpen":true}', 99), false);
   const favorite = { classes: ['ve-tree-item__favorite'] };

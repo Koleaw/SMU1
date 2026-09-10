@@ -55,6 +55,9 @@ export function classifyAdminAction(action, { isolatedMutations = false } = {}) 
   if (action.disabled) return { policy: 'disabled-state', execute: false };
   if (!action.visible) return { policy: 'hidden-state', execute: false };
   if (String(action.context || '').startsWith('iframe-')) return { policy: 'canvas-public-action-covered', execute: false };
+  if (['main', 'section', 'nav', 'header', 'footer'].includes(action.tag) && !action.role) {
+    return { policy: 'focus-state', execute: false };
+  }
   const label = `${action.name || ''} ${action.dataActions?.join(' ') || ''} ${Object.entries(action.dataAttributes || {}).map(([name, value]) => `${name}=${value}`).join(' ')}`;
   if (action.domId === 'vePublish' || /^публикация$/iu.test(String(action.name || '').trim())) {
     return { policy: 'safe-ui-action', execute: true };

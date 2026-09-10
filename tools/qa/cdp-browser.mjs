@@ -8,6 +8,10 @@ import path from 'node:path';
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const ANALYTICS_OR_FORM_URL = /(?:mc\.yandex\.ru|metrika|webvisor|google-analytics\.com|googletagmanager\.com|formspree\.io|api\.web3forms\.com)/iu;
 const ADMIN_RELEASE_URL = /\/api\/admin\/(?:publish|release|rollback|production)(?=\/|-|$|\?)/iu;
+const ISOLATED_CONFIRMATIONS = {
+  'history-restore': /^Восстановить [1-9]\d* файлов новой транзакцией\?$/u,
+  'discard-conflicting-drafts': /^Отказаться от всех перечисленных несохранённых правок\? Перед этим можно скачать их JSON\.$/u
+};
 const documentReplacementError = (error) => error?.cdpMethod === 'Runtime.evaluate'
   && /^(?:Execution context was destroyed|Cannot find context with specified id|Inspected target navigated or closed)(?:[. :].*)?$/iu
     .test(String(error.cdpMessage || ''));
@@ -154,6 +158,7 @@ export class CdpBrowser {
     this.commandTimeoutMs = commandTimeoutMs;
     this.safetyIntercepts = [];
     this.navigationDialogs = [];
+    this.actionDialogs = [];
     this.activeDialogContext = null;
     this.backgroundDialogTasks = [];
     this.backgroundDialogFailures = [];
@@ -231,12 +236,18 @@ export class CdpBrowser {
     this.on('Page.javascriptDialogOpening', (dialog) => {
       const context = this.activeDialogContext;
       const type = String(dialog?.type || 'unknown');
-      const accepted = Boolean(context && type === 'beforeunload' && context.beforeUnloadPolicy === 'accept-qa-reset');
-      this.navigationDialogs.push({
+      const expectedConfirmation = Boolean(context?.confirmation && type === 'confirm' && !context.confirmationSeen
+        && ISOLATED_CONFIRMATIONS[context.confirmation].test(String(dialog?.message || '')));
+      const accepted = expectedConfirmation || Boolean(context && type === 'beforeunload' && context.beforeUnloadPolicy === 'accept-qa-reset');
+      const evidence = {
         type,
         accepted,
-        reason: accepted ? 'qa-baseline-reset' : 'unexpected-navigation-dialog'
-      });
+        reason: expectedConfirmation ? `qa-isolated-${context.confirmation}` : accepted ? 'qa-baseline-reset' : 'unexpected-navigation-dialog'
+      };
+      if (expectedConfirmation) {
+        context.confirmationSeen = true;
+        this.actionDialogs.push({ ...evidence, kind: context.confirmation });
+      } else this.navigationDialogs.push(evidence);
       const failure = accepted ? null : new Error(`Unexpected JavaScript ${type} dialog blocked navigation.`);
       if (context && failure && !context.failure) context.failure = failure;
       else if (!context && failure) this.backgroundDialogFailures.push(failure);
@@ -296,8 +307,33 @@ export class CdpBrowser {
       analyticsAndFormPattern: ANALYTICS_OR_FORM_URL.source,
       adminReleasePattern: ADMIN_RELEASE_URL.source,
       intercepted: this.safetyIntercepts.slice(),
-      navigationDialogs: this.navigationDialogs.slice()
+      navigationDialogs: this.navigationDialogs.slice(),
+      actionDialogs: this.actionDialogs.slice()
     };
+  }
+
+  async confirmIsolatedAction({ kind, origin, disposable, timeoutMs = 5000 }, action) {
+    const parsedOrigin = new URL(origin);
+    if (this.safetyMode !== 'admin-no-release' || disposable !== true || !Object.hasOwn(ISOLATED_CONFIRMATIONS, kind)
+      || !['127.0.0.1', 'localhost', '[::1]'].includes(parsedOrigin.hostname)) {
+      throw new Error('Only a named confirmation in the disposable local admin fixture may be accepted.');
+    }
+    if (this.activeDialogContext) throw new Error('A dialog-sensitive action is already active.');
+    if (await this.evaluate('location.origin') !== parsedOrigin.origin) throw new Error('The disposable confirmation origin does not match the active document.');
+    const context = { confirmation: kind, confirmationSeen: false, beforeUnloadPolicy: 'fail', tasks: [], failure: null };
+    const dialogIndex = this.actionDialogs.length;
+    this.activeDialogContext = context;
+    try {
+      await action();
+      const deadline = Date.now() + timeoutMs;
+      while (!context.confirmationSeen && !context.failure && Date.now() < deadline) await delay(20);
+      await Promise.all(context.tasks);
+      if (context.failure) throw context.failure;
+      if (!context.confirmationSeen || this.actionDialogs.length !== dialogIndex + 1) throw new Error(`Expected exactly one isolated ${kind} confirmation.`);
+      return this.actionDialogs[dialogIndex];
+    } finally {
+      this.activeDialogContext = null;
+    }
   }
 
   send(method, params = {}, { timeoutMs = this.commandTimeoutMs } = {}) {
