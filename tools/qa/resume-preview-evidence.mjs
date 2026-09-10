@@ -34,6 +34,16 @@ export function validateReconciliationBoundary(relativeFiles) {
   }
 }
 
+export async function validateOriginalReport(report, site) {
+  const [contract, model] = await Promise.all([
+    import(pathToFileURL(path.join(site, 'tools/qa/evidence-contract.mjs')).href),
+    import(pathToFileURL(path.join(site, 'tools/qa/route-passport-model.mjs')).href)
+  ]);
+  return contract.validatePublicActionEvidence(report, {
+    authoritativeRoutes: model.buildExpectedRouteModel({ root: site }).routes.map(route => route.pathname)
+  });
+}
+
 const read = file => JSON.parse(fs.readFileSync(file, 'utf8'));
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', windowsHide: true }).trim();
@@ -91,8 +101,7 @@ async function main() {
     mergerSHA256: hash(fs.readFileSync(path.join(tooling, 'tools/qa/public-action-shards.mjs'))),
     sourceShards: buffers.map((bytes, index) => ({ index: index + 1, sha256: hash(bytes), bytes: bytes.length }))
   };
-  const originalContract = await import(pathToFileURL(path.join(site, 'tools/qa/evidence-contract.mjs')).href);
-  const checked = originalContract.validatePublicActionEvidence(report);
+  const checked = await validateOriginalReport(report, site);
   assert.equal(checked.ok, true, checked.issues.join('\n'));
   fs.writeFileSync(path.join(directory, 'public-action-crawl.json'), JSON.stringify(report));
   const basePath = read(path.join(directory, 'route-passport.json')).evidence.basePath;

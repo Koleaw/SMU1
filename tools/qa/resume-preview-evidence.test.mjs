@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateResumeRun, validateReconciliationBoundary } from './resume-preview-evidence.mjs';
+import os from 'node:os';
+import { validateResumeRun, validateReconciliationBoundary, validateOriginalReport } from './resume-preview-evidence.mjs';
 const sourceSHA = 'a'.repeat(40);
 const fixture = () => ({
   run: { status: 'completed', conclusion: 'failure', head_branch: 'preview', head_sha: sourceSHA, workflow_id: 123 },
@@ -29,4 +30,14 @@ test('resumption cannot carry an untested public, content or dependency change',
   for (const file of ['src/pages/index.astro', 'public/photo.jpg', 'content/products/model.json', 'package.json', 'package-lock.json', 'astro.config.mjs']) {
     assert.throws(() => validateReconciliationBoundary([file]), /public\/source change/);
   }
+});
+
+test('reconciliation reads authoritative content from the original checkout rather than the runner parent directory', async () => {
+  const site = process.cwd();
+  try {
+    process.chdir(os.tmpdir());
+    const checked = await validateOriginalReport({}, site);
+    assert.equal(checked.ok, false);
+    assert.ok(checked.issues.includes('public-actions:schema-version'));
+  } finally { process.chdir(site); }
 });
