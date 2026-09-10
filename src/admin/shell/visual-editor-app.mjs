@@ -1797,7 +1797,9 @@ export async function startVisualEditor() {
           })()
         };
       } else if (row.binding.tool === 'media' || row.binding.tool === 'gallery') {
-        const rawItems = Array.isArray(value) ? value : value ? [value] : [];
+        const mediaValue = record.collection === 'projects' && row.binding.fieldPath === 'gallery'
+          ? content.presentation?.publicGallery || [] : value;
+        const rawItems = Array.isArray(mediaValue) ? mediaValue : mediaValue ? [mediaValue] : [];
         const items = rawItems.map((item) => canvasMediaItem(record, item)).filter(Boolean);
         value = {
           __smu1MediaProjection: true,

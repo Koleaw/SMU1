@@ -21,14 +21,15 @@ export async function clickWhenReady(browser, selector, { scroll = true, timeout
       const left = Math.max(0, rect.left), right = Math.min(innerWidth, rect.right);
       const top = Math.max(0, rect.top), bottom = Math.min(innerHeight, rect.bottom);
       if (right <= left || bottom <= top) return { ready: false, reason: 'outside-viewport', rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }, viewport: { width: innerWidth, height: innerHeight }, scroll: { x: scrollX, y: scrollY } };
-      const x = (left + right) / 2, y = (top + bottom) / 2;
-      const hit = document.elementFromPoint(x, y);
-      if (hit !== element && !element.contains(hit)) {
-        const toast = hit?.closest('#veToastRegion .ve-toast');
-        if (toast) toast.dataset.acceptanceDismiss = 'true';
-        return { ready: false, reason: 'covered', hit: hit?.id || hit?.tagName || '', toast: Boolean(toast) };
+      let hit = null, toast = null;
+      for (const [px, py] of [[.5,.5],[.5,.2],[.2,.2],[.8,.2],[.2,.5],[.8,.5],[.2,.8],[.5,.8],[.8,.8]]) {
+        const x = left + (right-left)*px, y = top + (bottom-top)*py;
+        hit = document.elementFromPoint(x, y);
+        if (hit === element || element.contains(hit)) return { ready: true, x, y };
+        toast ||= hit?.closest('#veToastRegion .ve-toast');
       }
-      return { ready: true, x, y };
+      if (toast) toast.dataset.acceptanceDismiss = 'true';
+      return { ready: false, reason: 'covered', hit: hit?.id || hit?.getAttribute('data-binding-id') || hit?.tagName || '', toast: Boolean(toast) };
     })()`);
     if (last?.ready) {
       const point = { x: last.x, y: last.y };

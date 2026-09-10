@@ -997,7 +997,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
               delete image.dataset.smu1LiveMediaEmpty;
               image.style.removeProperty('opacity');
             }
-            image.src = item.src;
+            if (image.getAttribute('src') !== item.src) image.src = item.src;
             image.alt = item.alt || '';
             image.removeAttribute('srcset');
             image.closest('picture')?.querySelectorAll('source').forEach((source) => source.removeAttribute('srcset'));
@@ -1941,10 +1941,10 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
               const images = element instanceof HTMLImageElement
                 ? [element]
                 : Array.from(element.querySelectorAll('img'));
-              element.querySelectorAll('[data-smu1-live-media]').forEach((node) => node.remove());
               images.forEach((image, index) => {
                 const next = items[index];
-                if (!next) clearLiveImage(image);
+                if (!next && image.dataset.smu1LiveMedia === 'true') image.remove();
+                else if (!next) clearLiveImage(image);
                 else writeLiveImage(image, next);
               });
               for (const next of items.slice(images.length)) {
