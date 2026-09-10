@@ -7,6 +7,7 @@ import { exercisePublicSearch } from './public-search-probe.mjs';
 import { CdpBrowser, createDistServer } from './cdp-browser.mjs';
 import { PUBLIC_LIFECYCLE_SEMANTIC_IDS } from './evidence-contract.mjs';
 import { sourceWorkingTreeDirty } from './git-evidence.mjs';
+import { currentPublicActionInputs } from './public-action-cache.mjs';
 import { parsePublicActionShard, routesForPublicActionShard } from './public-action-shards.mjs';
 import {
   assessDistFreshness,
@@ -108,6 +109,9 @@ if (!reconciliation.exact) throw new Error(`Route manifest mismatch: ${JSON.stri
 const distFingerprint = fingerprintProductionHtml(options.distRoot, discovered);
 const artifactFiles = discoverArtifactFiles(options.distRoot);
 const artifactFingerprint = fingerprintArtifact(options.distRoot, artifactFiles);
+const publicInputs = await currentPublicActionInputs({ root, distRoot: options.distRoot, basePath });
+const expectedInputKey = option('--expected-input-key');
+if (expectedInputKey && expectedInputKey !== publicInputs.key) throw new Error('Public QA artifact, harness or runtime differs from the prepared input identity.');
 const artifactIsolation = inspectPublicArtifactIsolation(options.distRoot, artifactFiles);
 const expectedRouteSet = new Set(model.routes.map((route) => route.pathname));
 const expectedRouteByPath = new Map(model.routes.map((route) => [route.pathname, route]));
@@ -1177,6 +1181,7 @@ try {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     evidence: {
+      publicActionInputsKey: publicInputs.key,
       sourceSHA: git('rev-parse', 'HEAD'), branch: git('branch', '--show-current') || '(detached)', dirty: sourceWorkingTreeDirty(root),
       origin, basePath,
       browserSafety,

@@ -95,6 +95,7 @@ export function mergePublicActionShards(reports, {
   }
 
   const identityFields = [
+    ['public QA input identity', (report) => report.evidence?.publicActionInputsKey],
     ['source SHA', (report) => report.evidence?.sourceSHA],
     ['branch', (report) => report.evidence?.branch],
     ['source dirty state', (report) => report.evidence?.dirty],

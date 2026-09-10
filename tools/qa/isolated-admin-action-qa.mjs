@@ -19,6 +19,8 @@ const outputPath = path.resolve(sourceRoot, option('--output', '.admin-runtime/h
 const acceptanceOutputPath = path.resolve(sourceRoot, option('--acceptance-output', '.admin-runtime/h6-qa/visual-editor-acceptance.json'));
 const keepFixture = hasFlag('--keep-fixture');
 const headful = hasFlag('--headful');
+const stage = option('--stage', 'all');
+if (!['all', 'actions', 'acceptance'].includes(stage)) throw new Error('--stage must be all, actions or acceptance.');
 const qaUsername = 'h6-browser-qa';
 const qaPassword = 'H6-browser-qa-only-2026';
 
@@ -27,7 +29,7 @@ if (hasFlag('--help') || hasFlag('-h')) {
     'H6 disposable visual-editor action crawl',
     '',
     '  node tools/qa/isolated-admin-action-qa.mjs',
-    '  Options: --output=<action-json>, --acceptance-output=<acceptance-json>, --headful, --keep-fixture.',
+    '  Options: --stage=all|actions|acceptance, --output=<action-json>, --acceptance-output=<acceptance-json>, --headful, --keep-fixture.',
     '',
     'The command clones the exact current commit, uses an ignored isolated content root,',
     'starts the loopback-only editor with synthetic credentials, executes action + visual acceptance,',
@@ -63,6 +65,21 @@ const run = (command, args, { cwd, env }) => new Promise((resolve, reject) => {
     else reject(new Error(`${path.basename(command)} exited with ${code ?? signal}.`));
   });
 });
+
+// Keep the actual diagnostic report even when its process fails. A failed job
+// still blocks publication, but the next attempt no longer has to rediscover it.
+const runRecorded = async (command, args, settings, relativeReport, destination) => {
+  let failure;
+  try { await run(command, args, settings); } catch (error) { failure = error; }
+  const bytes = await readFile(path.join(settings.cwd, relativeReport)).catch(error => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (bytes) { await mkdir(path.dirname(destination), { recursive: true }); await writeFile(destination, bytes); }
+  if (failure) throw failure;
+  if (!bytes) throw new Error(`QA stage did not produce ${relativeReport}.`);
+  return JSON.parse(bytes.toString('utf8'));
+};
 
 const activeBranch = await git(sourceRoot, ['branch', '--show-current']);
 const branch = activeBranch || '(detached)';
@@ -222,113 +239,116 @@ try {
     exactObservationMs: 15000
   }, null, 2)}\n`, 'utf8');
 
-  const reportRelative = '.admin-runtime/h6-qa/admin-action-crawl.json';
-  await run(process.execPath, [
-    'tools/qa/admin-action-crawl.mjs',
-    `--origin=${origin}`,
-    '--isolated-mutations',
-    `--isolation-proof=${proofRelative}`,
-    `--output=${reportRelative}`,
-    ...(headful ? ['--headful'] : [])
-  ], {
-    cwd: checkoutRoot,
-    env: {
-      ...process.env,
-      H6_QA_ADMIN_USERNAME: qaUsername,
-      H6_QA_ADMIN_PASSWORD: qaPassword,
-      ADMIN_TEST_MODE: 'true',
-      ADMIN_TEST_FAULTS_ENABLED: 'true',
-      ADMIN_TEST_EXACT_MODE: 'deterministic',
-      ADMIN_TEST_CONTENT_ROOT: isolatedContentRoot,
-      PRODUCTION_DEPLOY_ENABLED: 'false',
-      ADMIN_ALLOW_PRODUCTION_PUBLISH: 'false'
+  let report = null, acceptance = null;
+  if (stage !== 'acceptance') {
+    const reportRelative = '.admin-runtime/h6-qa/admin-action-crawl.json';
+    report = await runRecorded(process.execPath, [
+      'tools/qa/admin-action-crawl.mjs',
+      `--origin=${origin}`,
+      '--isolated-mutations',
+      `--isolation-proof=${proofRelative}`,
+      `--output=${reportRelative}`,
+      ...(headful ? ['--headful'] : [])
+    ], {
+      cwd: checkoutRoot,
+      env: {
+        ...process.env,
+        H6_QA_ADMIN_USERNAME: qaUsername,
+        H6_QA_ADMIN_PASSWORD: qaPassword,
+        ADMIN_TEST_MODE: 'true',
+        ADMIN_TEST_FAULTS_ENABLED: 'true',
+        ADMIN_TEST_EXACT_MODE: 'deterministic',
+        ADMIN_TEST_CONTENT_ROOT: isolatedContentRoot,
+        PRODUCTION_DEPLOY_ENABLED: 'false',
+        ADMIN_ALLOW_PRODUCTION_PUBLISH: 'false'
+      }
+    }, reportRelative, outputPath);
+    if (report?.evidence?.sourceSHA !== sourceSHA || report?.evidence?.branch !== branch || report?.evidence?.dirty) {
+      throw new Error('Admin action evidence is not bound to the clean exact source revision.');
     }
-  });
+    if (report?.evidence?.releaseActionsExecuted || report?.aggregate?.failed || report?.aggregate?.canvasRoutesFailed) {
+      throw new Error('The isolated visual-editor action crawl reported a failure or a release mutation.');
+    }
+    await mkdir(path.dirname(outputPath), { recursive: true });
+    await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  }
 
-  const report = JSON.parse(await readFile(path.join(checkoutRoot, ...reportRelative.split('/')), 'utf8'));
-  if (report?.evidence?.sourceSHA !== sourceSHA || report?.evidence?.branch !== branch || report?.evidence?.dirty) {
-    throw new Error('Admin action evidence is not bound to the clean exact source revision.');
-  }
-  if (report?.evidence?.releaseActionsExecuted || report?.aggregate?.failed || report?.aggregate?.canvasRoutesFailed) {
-    throw new Error('The isolated visual-editor action crawl reported a failure or a release mutation.');
-  }
-  await mkdir(path.dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-
-  const acceptanceRelative = '.admin-runtime/h6-qa/visual-editor-acceptance.json';
-  await run(process.execPath, [
-    'tools/qa/visual-editor-acceptance.mjs',
-    `--origin=${origin}`,
-    `--fixtures=${fixturesRelative}`,
-    `--output=${acceptanceRelative}`,
-    ...(headful ? ['--headful'] : [])
-  ], {
-    cwd: checkoutRoot,
-    env: {
-      ...process.env,
-      H6_QA_ADMIN_USERNAME: qaUsername,
-      H6_QA_ADMIN_PASSWORD: qaPassword,
-      ADMIN_TEST_MODE: 'true',
-      ADMIN_TEST_FAULTS_ENABLED: 'true',
-      ADMIN_TEST_EXACT_MODE: 'deterministic',
-      ADMIN_TEST_CONTENT_ROOT: isolatedContentRoot,
-      PRODUCTION_DEPLOY_ENABLED: 'false',
-      ADMIN_ALLOW_PRODUCTION_PUBLISH: 'false'
+  if (stage !== 'actions') {
+    const acceptanceRelative = '.admin-runtime/h6-qa/visual-editor-acceptance.json';
+    acceptance = await runRecorded(process.execPath, [
+      'tools/qa/visual-editor-acceptance.mjs',
+      `--origin=${origin}`,
+      `--fixtures=${fixturesRelative}`,
+      `--output=${acceptanceRelative}`,
+      ...(headful ? ['--headful'] : [])
+    ], {
+      cwd: checkoutRoot,
+      env: {
+        ...process.env,
+        H6_QA_ADMIN_USERNAME: qaUsername,
+        H6_QA_ADMIN_PASSWORD: qaPassword,
+        ADMIN_TEST_MODE: 'true',
+        ADMIN_TEST_FAULTS_ENABLED: 'true',
+        ADMIN_TEST_EXACT_MODE: 'deterministic',
+        ADMIN_TEST_CONTENT_ROOT: isolatedContentRoot,
+        PRODUCTION_DEPLOY_ENABLED: 'false',
+        ADMIN_ALLOW_PRODUCTION_PUBLISH: 'false'
+      }
+    }, acceptanceRelative, acceptanceOutputPath);
+    const acceptedSHA = acceptance?.input?.isolation?.sourceSHA;
+    if (acceptance?.ok !== true || acceptance?.aggregate?.failed || acceptedSHA !== sourceSHA
+      || acceptance?.releaseBoundary?.releaseMutationRequests?.length) {
+      throw new Error('The isolated visual-editor acceptance reported a failure, stale source, or release mutation.');
     }
-  });
-  const acceptance = JSON.parse(await readFile(path.join(checkoutRoot, ...acceptanceRelative.split('/')), 'utf8'));
-  const acceptedSHA = acceptance?.input?.isolation?.sourceSHA;
-  if (acceptance?.ok !== true || acceptance?.aggregate?.failed || acceptedSHA !== sourceSHA
-    || acceptance?.releaseBoundary?.releaseMutationRequests?.length) {
-    throw new Error('The isolated visual-editor acceptance reported a failure, stale source, or release mutation.');
-  }
-  const promotedProductPath = path.join(isolatedContentRoot, 'products', 'konteynernaya-ploshchadka-modul.json');
-  const promotedProduct = JSON.parse(await readFile(promotedProductPath, 'utf8'));
-  const canonicalPaths = [...new Set((promotedProduct.gallery || []).map((item) => item?.src || item).filter(Boolean))];
-  if (canonicalPaths.length !== 20 || !canonicalPaths.includes(promotedProduct.image)) {
-    throw new Error('Disposable canonical product does not contain the exact 20-photo gallery and explicit cover.');
-  }
-  const uploadRoot = path.join(isolatedContentRoot, 'public', 'uploads');
-  const promotedFiles = [];
-  for (const publicPath of canonicalPaths) {
-    if (!/^\/uploads\/[a-f0-9]{64}\.(?:jpe?g|png)$/u.test(publicPath)) {
-      throw new Error(`Unsafe promoted media path in disposable content: ${publicPath}`);
+    const promotedProductPath = path.join(isolatedContentRoot, 'products', 'konteynernaya-ploshchadka-modul.json');
+    const promotedProduct = JSON.parse(await readFile(promotedProductPath, 'utf8'));
+    const canonicalPaths = [...new Set((promotedProduct.gallery || []).map((item) => item?.src || item).filter(Boolean))];
+    if (canonicalPaths.length !== 20 || !canonicalPaths.includes(promotedProduct.image)) {
+      throw new Error('Disposable canonical product does not contain the exact 20-photo gallery and explicit cover.');
     }
-    const absolute = path.resolve(isolatedContentRoot, 'public', `.${publicPath}`);
-    if (!isWithin(path.join(isolatedContentRoot, 'public'), absolute)) {
-      throw new Error(`Promoted media escaped disposable public root: ${publicPath}`);
+    const uploadRoot = path.join(isolatedContentRoot, 'public', 'uploads');
+    const promotedFiles = [];
+    for (const publicPath of canonicalPaths) {
+      if (!/^\/uploads\/[a-f0-9]{64}\.(?:jpe?g|png)$/u.test(publicPath)) {
+        throw new Error(`Unsafe promoted media path in disposable content: ${publicPath}`);
+      }
+      const absolute = path.resolve(isolatedContentRoot, 'public', `.${publicPath}`);
+      if (!isWithin(path.join(isolatedContentRoot, 'public'), absolute)) {
+        throw new Error(`Promoted media escaped disposable public root: ${publicPath}`);
+      }
+      const bytes = await readFile(absolute);
+      const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
+      if (path.basename(publicPath).split('.')[0] !== sha256) {
+        throw new Error(`Promoted filename/hash mismatch: ${publicPath}`);
+      }
+      promotedFiles.push({ path: publicPath, bytes: bytes.length, sha256 });
     }
-    const bytes = await readFile(absolute);
-    const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
-    if (path.basename(publicPath).split('.')[0] !== sha256) {
-      throw new Error(`Promoted filename/hash mismatch: ${publicPath}`);
+    const unexpectedUploads = (await readdir(uploadRoot)).filter((name) => !canonicalPaths.some((entry) => path.basename(entry) === name));
+    if (unexpectedUploads.length) throw new Error(`Disposable media promotion left unexpected files: ${unexpectedUploads.join(', ')}`);
+    acceptance.orchestratorEvidence = {
+      schemaVersion: 1,
+      disposableCanonicalMedia: true,
+      productSlug: 'konteynernaya-ploshchadka-modul',
+      galleryCount: canonicalPaths.length,
+      explicitCover: promotedProduct.image,
+      promotedFiles
+    };
+    const acceptanceContract = validateVisualEditorAcceptanceEvidence(acceptance, { expectedSourceSHA: sourceSHA });
+    if (!acceptanceContract.ok) {
+      throw new Error(`The visual-editor acceptance evidence contract failed: ${acceptanceContract.issues.join(', ')}`);
     }
-    promotedFiles.push({ path: publicPath, bytes: bytes.length, sha256 });
+    await mkdir(path.dirname(acceptanceOutputPath), { recursive: true });
+    await writeFile(acceptanceOutputPath, `${JSON.stringify(acceptance, null, 2)}\n`, 'utf8');
   }
-  const unexpectedUploads = (await readdir(uploadRoot)).filter((name) => !canonicalPaths.some((entry) => path.basename(entry) === name));
-  if (unexpectedUploads.length) throw new Error(`Disposable media promotion left unexpected files: ${unexpectedUploads.join(', ')}`);
-  acceptance.orchestratorEvidence = {
-    schemaVersion: 1,
-    disposableCanonicalMedia: true,
-    productSlug: 'konteynernaya-ploshchadka-modul',
-    galleryCount: canonicalPaths.length,
-    explicitCover: promotedProduct.image,
-    promotedFiles
-  };
-  const acceptanceContract = validateVisualEditorAcceptanceEvidence(acceptance, { expectedSourceSHA: sourceSHA });
-  if (!acceptanceContract.ok) {
-    throw new Error(`The visual-editor acceptance evidence contract failed: ${acceptanceContract.issues.join(', ')}`);
-  }
-  await mkdir(path.dirname(acceptanceOutputPath), { recursive: true });
-  await writeFile(acceptanceOutputPath, `${JSON.stringify(acceptance, null, 2)}\n`, 'utf8');
   process.stdout.write(`${JSON.stringify({
     ok: true,
+    stage,
     sourceSHA,
     branch,
     output: outputPath,
     acceptanceOutput: acceptanceOutputPath,
-    aggregate: report.aggregate,
-    acceptanceAggregate: acceptance.aggregate,
+    aggregate: report?.aggregate,
+    acceptanceAggregate: acceptance?.aggregate,
     disposable: true,
     releaseActionsExecuted: false
   }, null, 2)}\n`);

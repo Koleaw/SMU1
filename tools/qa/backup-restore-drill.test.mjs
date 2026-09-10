@@ -133,5 +133,5 @@ test('H6 evidence verifier requires backup restore and binds it to current SHA a
   assert.match(source, /backupRestore:\s*path\.resolve\([^\n]+backup-restore-drill\.json/u);
   assert.match(source, /backupRestore:\s*await readJson\(filenames\.backupRestore\)/u);
   assert.match(source, /validateBackupRestoreDrillEvidence\(reports\.backupRestore,\s*\{[\s\S]*?expectedSourceSHA:\s*currentEvidence\.sourceSHA,[\s\S]*?expectedBranch:\s*currentEvidence\.branch/u);
-  assert.match(source, /identity:\s*validateEvidenceIdentity\(reports,\s*\{\s*currentEvidence\s*\}\)/u);
+  assert.match(source, /identity:\s*validateEvidenceIdentity\(reports,\s*\{\s*currentEvidence,\s*publicActionsReuse\s*\}\)/u);
 });

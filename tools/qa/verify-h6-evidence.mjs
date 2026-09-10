@@ -18,6 +18,7 @@ import { sourceWorkingTreeDirty } from './git-evidence.mjs';
 import { validateMediaPrivacyEvidence } from './media-privacy-evidence.mjs';
 import { validateBackupRestoreDrillEvidence } from './backup-restore-drill.mjs';
 import { validateExactTargetedBuildEvidence } from './exact-targeted-build-evidence.mjs';
+import { currentPublicActionInputs, validatePublicActionReuse } from './public-action-cache.mjs';
 
 const root = process.cwd();
 const argv = process.argv.slice(2);
@@ -73,6 +74,16 @@ const currentEvidence = {
 };
 const requireEditorCoverage = !hasFlag('--allow-missing-editor-coverage');
 const requireIsolatedMutations = !hasFlag('--allow-deferred-admin-actions');
+let publicActionsReuse = null;
+const receiptFile = path.join(root, '.admin-runtime/h6-qa/public-action-reuse.json');
+try {
+  const receipt = await readJson(receiptFile);
+  publicActionsReuse = validatePublicActionReuse(reports.publicActions, receipt,
+    await currentPublicActionInputs({ root, distRoot, basePath: reports.routePassport?.evidence?.basePath }),
+    { sourceSHA: currentEvidence.sourceSHA, branch: currentEvidence.branch });
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+}
 const results = {
   routePassport: validateRoutePassportEvidence(reports.routePassport, { requireEditorCoverage }),
   publicActions: validatePublicActionEvidence(reports.publicActions),
@@ -98,7 +109,8 @@ const results = {
     expectedHtmlFileHashes: currentEvidence.htmlFileHashes,
     expectedRouteCount: productionRoutes.length
   }),
-  identity: validateEvidenceIdentity(reports, { currentEvidence })
+  ...(publicActionsReuse ? { publicActionsReuse } : {}),
+  identity: validateEvidenceIdentity(reports, { currentEvidence, publicActionsReuse })
 };
 const issues = Object.values(results).flatMap((result) => result.issues);
 process.stdout.write(`${JSON.stringify({ ok: issues.length === 0, files: filenames, results, issues }, null, 2)}\n`);

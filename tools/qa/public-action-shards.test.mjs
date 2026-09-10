@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validatePublicActionEvidence } from './evidence-contract.mjs';
+import { validatePublicActionEvidence, validateEvidenceIdentity } from './evidence-contract.mjs';
+import { createHash } from 'node:crypto';
+import { publicActionReceipt, validatePublicActionReuse } from './public-action-cache.mjs';
 import {
   mergePublicActionShards,
   parsePublicActionShard,
@@ -219,4 +221,54 @@ test('merger accepts only a complete concrete shard set and produces verifier-co
   assert.equal(dialogMerged.evidence.dialogAudit.unexpectedCount, 2);
   assert.equal(dialogMerged.evidence.dialogAudit.passed, false);
   assert.equal(dialogMerged.aggregate.unexpectedNavigationDialogs, 2);
+});
+
+test('public evidence is reusable only for identical inputs, with original provenance and every check intact', () => {
+  const report = mergePublicActionShards([shardReport(1), shardReport(2)]);
+  report.evidence.sourceSHA = 'a'.repeat(40);
+  const inputs = { schemaVersion: 1, basePath: '/', artifactFingerprintSHA256: report.evidence.artifactFingerprintSHA256,
+    artifactFileCount: report.evidence.artifactFileCount, artifactBytes: report.evidence.artifactBytes,
+    harness: [['public-test.mjs', 'test-hash']], dependencies: [['package-lock.json', 'lock-hash']],
+    runtime: { chromium: 'Chromium 151', node: '22.12.0' } };
+  const identify = inputs => ({ inputs, key: createHash('sha256').update(JSON.stringify(inputs)).digest('hex') });
+  const current = identify(inputs);
+  report.evidence.publicActionInputsKey = current.key;
+  const sourceSHA = 'b'.repeat(40), branch = 'candidate';
+  const options = { sourceSHA, branch, authoritativeRoutes: routes };
+  const before = structuredClone(report);
+  const receipt = publicActionReceipt(report, current, options);
+  const checked = validatePublicActionReuse(report, receipt, current, options);
+  assert.equal(checked.ok, true, checked.issues.join('\n'));
+  assert.deepEqual(report, before, 'reuse does not rewrite the actual tested SHA or any result');
+
+  for (const mutate of [
+    value => { value.artifactFingerprintSHA256 = 'c'.repeat(64); },
+    value => { value.harness[0][1] = 'changed-test'; },
+    value => { value.dependencies[0][1] = 'changed-lockfile'; },
+    value => { value.runtime.chromium = 'Chromium 152'; },
+    value => { value.basePath = '/SMU1'; }
+  ]) {
+    const changed = structuredClone(inputs); mutate(changed);
+    assert.equal(validatePublicActionReuse(report, receipt, identify(changed), options).ok, false);
+  }
+  for (const mutate of [
+    value => { value.evidence.dirty = true; },
+    value => { value.routeResults.pop(); },
+    value => { value.noJsResults.pop(); },
+    value => { value.routeResults[0].actionResults[0].executions[0].status = 'fail'; },
+    value => { value.evidence.publicActionInputsKey = 'd'.repeat(64); }
+  ]) {
+    const invalid = structuredClone(report); mutate(invalid);
+    const freshChecksum = { ...publicActionReceipt(invalid, current, options), ok: true };
+    assert.equal(validatePublicActionReuse(invalid, freshChecksum, current, options).ok, false, 'an updated checksum or forged ok cannot legitimize failed/incomplete evidence');
+  }
+  assert.equal(validatePublicActionReuse(report, { ...receipt, validatedSourceSHA: sourceSHA }, current, options).ok, false);
+  assert.equal(validatePublicActionReuse(report, receipt, current, { ...options, branch: 'other' }).ok, false);
+
+  const fresh = { evidence: { ...report.evidence, sourceSHA }, manifest: report.manifest };
+  const reports = { routePassport: fresh, publicActions: report, adminActions: fresh };
+  const currentEvidence = { ...fresh.evidence, dirty: false };
+  assert.equal(validateEvidenceIdentity(reports, { currentEvidence }).ok, false, 'old SHA still fails without a verified reuse proof');
+  assert.equal(validateEvidenceIdentity(reports, { currentEvidence, publicActionsReuse: checked }).ok, true);
+  assert.equal(validateEvidenceIdentity(reports, { currentEvidence, publicActionsReuse: { ...checked, reportFingerprint: '0'.repeat(64) } }).ok, false);
 });

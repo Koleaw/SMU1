@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   buildExpectedRouteModel,
   REQUIRED_VIEWPORTS,
@@ -935,9 +936,17 @@ export function validateVisualEditorAcceptanceEvidence(report, options = {}) {
   return { ok: issues.length === 0, issues, requiredScenarios: expectedScenarios.length, seenScenarios: byId.size };
 }
 
-export function validateEvidenceIdentity({ routePassport, publicActions, adminActions, visualAcceptance, backupRestore }, { currentEvidence = null } = {}) {
+export function validateEvidenceIdentity({ routePassport, publicActions, adminActions, visualAcceptance, backupRestore }, { currentEvidence = null, publicActionsReuse = null } = {}) {
   const issues = [];
-  const reports = [routePassport, publicActions, adminActions,
+  const reusedPublicActions = publicActionsReuse?.ok === true && currentEvidence
+    && publicActionsReuse.currentSourceSHA === currentEvidence.sourceSHA
+    && publicActionsReuse.validatedSourceSHA === publicActions?.evidence?.sourceSHA
+    && publicActionsReuse.branch === currentEvidence.branch
+    && publicActions?.evidence?.branch === currentEvidence.branch
+    && /^[a-f0-9]{64}$/u.test(publicActionsReuse.key || '')
+    && publicActionsReuse.reportFingerprint === createHash('sha256').update(JSON.stringify(publicActions)).digest('hex');
+  if (publicActionsReuse && !reusedPublicActions) issues.push('identity:invalid-public-actions-reuse');
+  const reports = [routePassport, ...(!reusedPublicActions ? [publicActions] : []), adminActions,
     ...(visualAcceptance ? [visualAcceptance] : []),
     ...(backupRestore ? [backupRestore] : [])];
   const sourceOf = (report) => report?.evidence?.sourceSHA || report?.input?.isolation?.sourceSHA || report?.source?.sha || '';

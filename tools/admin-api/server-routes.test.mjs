@@ -583,9 +583,9 @@ test('Pages workflow deploys only an exact candidate-preview pair from preview',
   assert.ok(uploadIndex > identityIndex, 'artifact identity must be written before Pages upload');
 
   const actionUses = [...source.matchAll(/^\s+(?:-\s+)?uses:\s*([^\s#]+)/gmu)].map((match) => match[1]);
-  assert.deepEqual(actionUses.map((action) => action.split('@')[0]), [
+  assert.deepEqual([...new Set(actionUses.map((action) => action.split('@')[0]))].sort(), [
     'actions/checkout', 'actions/setup-node', 'actions/cache/restore', 'actions/cache/save',
-    'actions/upload-pages-artifact', 'actions/checkout', 'actions/deploy-pages'
-  ]);
+    'actions/upload-artifact', 'actions/download-artifact', 'actions/upload-pages-artifact', 'actions/deploy-pages'
+  ].sort());
   for (const action of actionUses) assert.match(action, /^[^@\s]+@[a-f0-9]{40}$/u, action);
 });
