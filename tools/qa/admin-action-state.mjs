@@ -17,8 +17,10 @@ export function findAdminActionElement(documentValue, action) {
     return candidates.find((element) => attributes.every((name) => element.getAttribute(name) === action.dataAttributes[name])) || null;
   }
   const clean = (value) => String(value || '').replace(/\s+/gu, ' ').trim();
-  return candidates.find((element) => element.dataset.h6AdminActionId === action.id
-    && clean(element.getAttribute('aria-label') || element.title || element.textContent || element.value) === action.name) || null;
+  const named = candidates.filter((element) => clean(element.getAttribute('aria-label') || element.title || element.textContent || element.value) === action.name);
+  // Native summary controls have no application id. Their unique group label
+  // remains stable when newly rendered favorites shift all temporary ids.
+  return named.length === 1 ? named[0] : null;
 }
 
 export function isExpectedIsolatedPublishStatus({ method, status, origin, url, code, isolated }) {
@@ -30,6 +32,12 @@ export function isExpectedIsolatedPublishStatus({ method, status, origin, url, c
 }
 
 export function adminControlPostcondition(action, before, after, requestCount) {
+  if (action.tag === 'summary') {
+    try {
+      const previous = JSON.parse(before)?.detailsOpen, next = JSON.parse(after)?.detailsOpen;
+      return typeof previous === 'boolean' && typeof next === 'boolean' && previous !== next;
+    } catch { return false; }
+  }
   if (action.classes?.includes('ve-tree-item__favorite')) {
     try {
       const previous = JSON.parse(before)?.pressed, next = JSON.parse(after)?.pressed;

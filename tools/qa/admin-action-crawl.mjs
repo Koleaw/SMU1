@@ -160,6 +160,7 @@ const actionExpression = (action) => `(() => {
   element.focus({ preventScroll: true });
   const before = JSON.stringify({
     className: element.className, expanded: element.getAttribute('aria-expanded'), pressed: element.getAttribute('aria-pressed'), selected: element.getAttribute('aria-selected'),
+    detailsOpen: element.tagName === 'SUMMARY' ? element.parentElement.open : null,
     body: documentValue.body.className, html: documentValue.documentElement.className,
     dialogs: documentValue.querySelectorAll('dialog[open],[role="dialog"]:not([hidden])').length,
     hidden: Array.from(documentValue.querySelectorAll('[hidden]')).length,
@@ -178,6 +179,7 @@ const actionStateExpression = (action) => `(() => {
   if (!element) return null;
   return JSON.stringify({
     className: element.className, expanded: element.getAttribute('aria-expanded'), pressed: element.getAttribute('aria-pressed'), selected: element.getAttribute('aria-selected'),
+    detailsOpen: element.tagName === 'SUMMARY' ? element.parentElement.open : null,
     body: documentValue.body.className, html: documentValue.documentElement.className,
     dialogs: documentValue.querySelectorAll('dialog[open],[role="dialog"]:not([hidden])').length,
     hidden: Array.from(documentValue.querySelectorAll('[hidden]')).length,
@@ -413,9 +415,31 @@ const runNavigationAcceptance = async (homePath) => {
 };
 
 const ensureAdminActionExecutable = async (action) => {
+  const revealGroup = async () => {
+    for (let depth = 0; depth < 8; depth += 1) {
+      const summary = await browser.evaluate(`(() => {
+        const element = (${findAdminActionElement.toString()})(document, ${JSON.stringify(action)});
+        if (!element) return null;
+        const groups = [];
+        for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+          if (parent.tagName === 'DETAILS' && !parent.open && parent.querySelector(':scope > summary') !== element) groups.unshift(parent);
+        }
+        const control = groups[0]?.querySelector(':scope > summary');
+        if (!control) return null;
+        control.scrollIntoView({ block: 'center', behavior: 'instant' });
+        const rect = control.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      })()`);
+      if (!summary) return;
+      await browser.dispatchClick(summary);
+      await new Promise(resolve => setTimeout(resolve, 45));
+    }
+  };
+  await revealGroup();
   let prepared = await browser.evaluate(actionExpression(action));
   if (prepared?.executable && prepared.active) return { prepared, restored: false, opener: null };
   await restoreAdminHome();
+  await revealGroup();
   prepared = await browser.evaluate(actionExpression(action));
   if (prepared?.executable && prepared.active) return { prepared, restored: true, opener: null };
   const candidates = (await browser.evaluate(inventoryExpression)).filter((candidate) => {
@@ -632,6 +656,7 @@ try {
       const result = { key, action, policy: policy.policy, executions: [], status: 'pass' };
       if (verboseProgress) progress(`action ${key}: ${policy.policy} (${String(action.name || action.domId || action.tag).slice(0, 120)})`);
       if (policy.execute && action.visible && !action.disabled) {
+        if (!verboseProgress) progress(`checking ${key}: ${String(action.name || action.domId || action.tag).slice(0,100)}`);
         for (const operation of ['click', 'keyboard']) {
           await restoreAdminHome({ actionKey: key, afterMode: operation === 'keyboard' ? 'click' : 'previous-action' });
           current.actionKey = key;

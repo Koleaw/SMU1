@@ -18,6 +18,8 @@ test('only the evidenced insecure isolated publish-status denial is expected', (
 });
 
 test('favorite and selection evidence proves state changes, not incidental network traffic', () => {
+  assert.equal(adminControlPostcondition({ tag: 'summary' }, '{"detailsOpen":true}', '{"detailsOpen":false}', 0), true);
+  assert.equal(adminControlPostcondition({ tag: 'summary' }, '{"detailsOpen":true}', '{"detailsOpen":true}', 99), false);
   const favorite = { classes: ['ve-tree-item__favorite'] };
   const off = JSON.stringify({ pressed: 'false' }), on = JSON.stringify({ pressed: 'true' });
   assert.equal(adminControlPostcondition(favorite, off, on, 0), true);
@@ -50,6 +52,11 @@ test('admin controls survive navigator replacement and modal reset without match
     assert.equal(await browser.evaluate(expression(favorite, 'return element === document.activeElement;')), true);
     assert.equal(await browser.evaluate(expression({ ...favorite, ancestorRoute: '/missing/' }, 'return element;')), null);
     assert.equal(await browser.evaluate(expression({ tag: 'button', containerId: 'modes', dataAttributes: { 'data-mode': 'preview' } }, 'return element.textContent;')), 'Preview');
+    await browser.evaluate(`document.getElementById('tree').innerHTML = '<details><summary data-h6-admin-action-id="a900">Categories</summary><p>Content</p></details>';`);
+    const summary = { tag: 'summary', id: 'a56', containerId: 'tree', name: 'Categories' };
+    assert.equal(await browser.evaluate(expression(summary, 'return element.textContent;')), 'Categories');
+    await browser.evaluate(`document.getElementById('tree').insertAdjacentHTML('beforeend','<details><summary>Categories</summary></details>');`);
+    assert.equal(await browser.evaluate(expression(summary, 'return element;')), null, 'ambiguous labels must not silently match another control');
   } finally {
     await browser.close(); await server.close();
     await rm(root, { recursive: true, force: true });
