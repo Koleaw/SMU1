@@ -6,6 +6,7 @@ import sharp from 'sharp';
 
 import { CdpBrowser } from './cdp-browser.mjs';
 import { clickWhenReady } from './actionable-click.mjs';
+import { measureTextProjection } from './text-projection-probe.mjs';
 import { buildExpectedRouteModel } from './route-passport-model.mjs';
 import { visualAcceptanceScenarioSetIssues } from './visual-editor-scenarios.mjs';
 import { createAdminRepoIdentity, createAdminUiHealthMarker } from '../admin-api/runtime-identity.mjs';
@@ -567,6 +568,11 @@ async function openPageInPeer(browser, descriptor) {
 }
 
 async function editPeerProductTitle(browser, marker) {
+  const { targetInfo: mainTarget } = await browser.send('Target.getTargetInfo');
+  const { targetInfos } = await browser.send('Target.getTargets');
+  const peers = targetInfos.filter((target) => target.type === 'page' && target.openerId === mainTarget.targetId);
+  if (peers.length !== 1) throw new Error('The conflict scenario must have exactly one peer tab.');
+  await browser.send('Target.activateTarget', { targetId: peers[0].targetId });
   const binding = await waitFor(browser, `(() => {
     const peer = window.__h6AcceptancePeer;
     const frame = peer?.document.querySelector('#veFrame');
@@ -574,7 +580,7 @@ async function editPeerProductTitle(browser, marker) {
     for (const element of rows) {
       try {
         const value = JSON.parse(element.getAttribute('data-smu1-binding') || 'null');
-        if ((value.ownerCollection || value.owner?.collection) === 'products' && value.fieldPath === 'title' && value.tool === 'heading') {
+        if (element.tagName === 'H1' && (value.ownerCollection || value.owner?.collection) === 'products' && value.fieldPath === 'title' && value.tool === 'heading') {
           element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
           frame.contentWindow.dispatchEvent(new peer.Event('scroll'));
           return { bindingId: value.bindingId, original: element.textContent?.replace(/\\s+/gu, ' ').trim() || '' };
@@ -693,13 +699,14 @@ async function findBinding(browser, filter) {
       try {
         const binding = JSON.parse(element.getAttribute('data-smu1-binding') || 'null');
         const rect = element.getBoundingClientRect();
-        return [{ binding, rect, text: element.textContent?.replace(/\\s+/gu, ' ').trim() || '' }];
+        return [{ binding, rect, tagName: element.tagName, text: element.textContent?.replace(/\\s+/gu, ' ').trim() || '' }];
       } catch { return []; }
     }).filter((row) => row.binding
       && (!${json(filter.ownerCollection || '')} || (row.binding.ownerCollection || row.binding.owner?.collection) === ${json(filter.ownerCollection || '')})
       && (!${json(filter.ownerSlug || '')} || (row.binding.recordSlug || row.binding.owner?.slug) === ${json(filter.ownerSlug || '')})
       && (!${json(filter.fieldPath || '')} || row.binding.fieldPath === ${json(filter.fieldPath || '')})
       && (!${json(filter.tool || '')} || row.binding.tool === ${json(filter.tool || '')})
+      && (!${json(filter.tagName || '')} || row.tagName === ${json(filter.tagName || '')})
       && (!${json(filter.role || '')} || row.binding.role === ${json(filter.role || '')}));
     const unique = [...new Map(rows.map((row) => [row.binding.bindingId, row])).values()];
     const row = unique.find((candidate) => candidate.rect.width > 2 && candidate.rect.height > 2) || unique[0];
@@ -765,6 +772,9 @@ function borrowedMediaSnapshotExpression(relationBindingId) {
 }
 
 async function clickBinding(browser, bindingId, controlKey = 'target') {
+  // Opening the conflict-test peer activates that tab. Real interaction first
+  // returns to this tab, allowing its canvas geometry animation frame to run.
+  await browser.send('Page.bringToFront');
   await browser.evaluate(`(() => {
     const frame = document.querySelector('#veFrame');
     const selector = '[data-smu1-binding-id="' + CSS.escape(${json(bindingId)}) + '"]';
@@ -1448,20 +1458,22 @@ async function runAcceptance(options, bundle) {
     await scenario('product-h1-live-edit', 'Product H1 live projection, Escape, and commit', async ({ latency }) => {
       const navigation = await openPage(browser, bundle.profile.product);
       state.productNavigation = navigation;
-      const titleBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading' });
+      const titleBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading', tagName: 'H1' });
       const original = await projectedBindingText(browser, titleBinding.binding.bindingId);
       await clickBinding(browser, titleBinding.binding.bindingId);
       await waitFor(browser, `Boolean(!document.querySelector('#veInlineEditor')?.hidden && document.querySelector('#veInlineInput'))`, { label: 'H1 inline editor' });
       const feedback = [];
+      const driverWall = [];
       for (let index = 1; index <= 5; index += 1) {
         const marker = `H6-live-${index}`;
         const value = `${original} · ${marker}`;
-        const started = performance.now();
-        if (!(await setInlineText(browser, value))) throw new Error('H1 inline input rejected the gesture.');
-        await waitForProjectedText(browser, titleBinding.binding.bindingId, marker, `H1 projection ${index}`);
-        const elapsed = performance.now() - started;
+        const projection = await measureTextProjection(browser, {
+          inputSelector: '#veInlineInput', bindingId: titleBinding.binding.bindingId, value, expected: marker
+        });
+        const elapsed = projection.elapsedMs;
         latency(`h1-live-${index}`, elapsed);
         feedback.push(rounded(elapsed));
+        driverWall.push(rounded(projection.wallMs));
       }
       await browser.dispatchKey('Escape', { code: 'Escape' });
       const escaped = await waitFor(browser, `(() => {
@@ -1473,10 +1485,10 @@ async function runAcceptance(options, bundle) {
       await clickBinding(browser, titleBinding.binding.bindingId);
       await waitFor(browser, `Boolean(!document.querySelector('#veInlineEditor')?.hidden)`, { label: 'H1 commit editor' });
       const committed = `${original} · H6 acceptance ${crypto.randomBytes(3).toString('hex')}`;
-      const commitStarted = performance.now();
-      await setInlineText(browser, committed);
-      await waitForProjectedText(browser, titleBinding.binding.bindingId, committed, 'committed H1 projection');
-      latency('h1-commit-projection', performance.now() - commitStarted);
+      const commitProjection = await measureTextProjection(browser, {
+        inputSelector: '#veInlineInput', bindingId: titleBinding.binding.bindingId, value: committed, expected: committed
+      });
+      latency('h1-commit-projection', commitProjection.elapsedMs);
       await browser.dispatchKey('Enter', { code: 'Enter' });
       await waitFor(browser, `Boolean(document.querySelector('#veInlineEditor')?.hidden)`, { label: 'H1 commit close' });
       const projected = await projectedBindingText(browser, titleBinding.binding.bindingId);
@@ -1489,7 +1501,7 @@ async function runAcceptance(options, bundle) {
           ...(p95 !== null && p95 > bundle.profile.feedbackBudgetMs ? [`feedback-p95:${p95}`] : [])
         ],
         evidence: { navigation, binding: titleBinding.binding, original, committed, projected, escapeRestored: Boolean(escaped), feedbackP95Ms: p95,
-          budgetMs: bundle.profile.feedbackBudgetMs }
+          feedbackClock: commitProjection.clock, driverWallMs: driverWall, budgetMs: bundle.profile.feedbackBudgetMs }
       };
     });
 
@@ -1503,17 +1515,10 @@ async function runAcceptance(options, bundle) {
       })()`, { label: 'long-text inspector' });
       const marker = `H6-context-${crypto.randomBytes(3).toString('hex')}`;
       const next = `${inspector.value}\n\n${marker}`;
-      const started = performance.now();
-      const changed = await browser.evaluate(`(() => {
-        const textarea = document.querySelector('#veInspectorForm textarea');
-        if (!textarea) return false;
-        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(textarea, ${json(next)});
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
-        return true;
-      })()`);
-      if (!changed) throw new Error('Contextual textarea was not editable.');
-      const projected = await waitForProjectedText(browser, binding.binding.bindingId, marker, 'long-text live projection');
-      const elapsed = performance.now() - started;
+      const projection = await measureTextProjection(browser, {
+        inputSelector: '#veInspectorForm textarea', bindingId: binding.binding.bindingId, value: next, expected: marker
+      });
+      const { projected, elapsedMs: elapsed } = projection;
       latency('long-text-live-projection', elapsed);
       await clickShell(browser, SELECTORS.inspectorDone);
       const closed = await waitFor(browser, `Boolean(document.querySelector('#veInspector')?.hidden)`, { label: 'contextual inspector close' });
@@ -1525,7 +1530,7 @@ async function runAcceptance(options, bundle) {
           ...(elapsed > bundle.profile.feedbackBudgetMs ? [`feedback:${rounded(elapsed)}`] : [])
         ],
         evidence: { binding: binding.binding, inspectorTitle: inspector.title, marker, projectedContainsMarker: projected.includes(marker),
-          feedbackMs: rounded(elapsed), budgetMs: bundle.profile.feedbackBudgetMs }
+          feedbackMs: rounded(elapsed), feedbackClock: projection.clock, driverWallMs: rounded(projection.wallMs), budgetMs: bundle.profile.feedbackBudgetMs }
       };
     });
 
@@ -1858,7 +1863,7 @@ async function runAcceptance(options, bundle) {
       await loginIfNeeded(browser, options);
       await waitForCanvas(browser, '/');
       const product = await openPage(browser, bundle.profile.product);
-      const titleBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading' });
+      const titleBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading', tagName: 'H1' });
       const restoredTitle = await projectedBindingText(browser, titleBinding.binding.bindingId);
       const restoredDescription = state.productDescription
         ? await waitForProjectedText(browser, state.productDescription.bindingId, state.productDescription.marker, 'restored long-text draft')
@@ -2751,7 +2756,7 @@ async function runAcceptance(options, bundle) {
 
     await scenario('history-restore-new-transaction', 'History restore is confirmed in the UI and appends a new transaction', async () => {
       const navigation = await openPage(browser, bundle.profile.product);
-      const titleBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading' });
+      const titleBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading', tagName: 'H1' });
       const originalTitle = await projectedBindingText(browser, titleBinding.binding.bindingId);
       const marker = `H6-history-source-${Date.now()}`;
       await clickBinding(browser, titleBinding.binding.bindingId);
@@ -2817,10 +2822,12 @@ async function runAcceptance(options, bundle) {
 
     await scenario('two-tab-conflict', 'Two editor tabs expose mine, theirs and base and reject silent overwrite', async () => {
       await ensurePage(browser, bundle.profile.product);
-      const titleBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading' });
-      const original = await projectedBindingText(browser, titleBinding.binding.bindingId);
       const peer = await openPeerEditor(browser, options.origin);
       const peerNavigation = await openPageInPeer(browser, bundle.profile.product);
+      await browser.send('Page.bringToFront');
+      await ensurePage(browser, bundle.profile.product);
+      const titleBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading', tagName: 'H1' });
+      const original = await projectedBindingText(browser, titleBinding.binding.bindingId);
       const mineMarker = `H6-mine-${Date.now()}`;
       const theirsMarker = `H6-theirs-${Date.now()}`;
       const mineTitle = `${original} · ${mineMarker}`;
@@ -2839,6 +2846,7 @@ async function runAcceptance(options, bundle) {
 
       const peerEdit = await editPeerProductTitle(browser, theirsMarker);
       const peerSave = await savePeerEditor(browser);
+      await browser.send('Page.bringToFront');
       await waitFor(browser, `document.body.textContent.includes('сохранён в другой вкладке')`, { timeoutMs: 8_000, label: 'cross-tab conflict notification' });
 
       const conflictRequestIndex = telemetry.requests.length;
@@ -2890,7 +2898,7 @@ async function runAcceptance(options, bundle) {
 
     await scenario('expired-session-draft-recovery', 'An expired session returns to login without deleting the IndexedDB draft', async () => {
       await ensurePage(browser, bundle.profile.product);
-      const titleBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading' });
+      const titleBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading', tagName: 'H1' });
       const original = await projectedBindingText(browser, titleBinding.binding.bindingId);
       const marker = `H6-session-recovery-${Date.now()}`;
       const recoveredTitle = `${original} · ${marker}`;
@@ -2919,7 +2927,7 @@ async function runAcceptance(options, bundle) {
       );
       const relogin = await loginIfNeeded(browser, options);
       await ensurePage(browser, bundle.profile.product);
-      const restoredBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading' });
+      const restoredBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'title', tool: 'heading', tagName: 'H1' });
       const restoredProjection = await waitForProjectedText(browser, restoredBinding.binding.bindingId, marker, 'recovered draft projection after login');
       state.sessionRecovery = { marker, title: recoveredTitle };
       return {
