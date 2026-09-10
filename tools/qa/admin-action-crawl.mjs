@@ -10,7 +10,7 @@ import {
 } from './admin-canvas-contract.mjs';
 import { CdpBrowser } from './cdp-browser.mjs';
 import { clickWhenReady, visibleClickPoint } from './actionable-click.mjs';
-import { sourceWorkingTreeDirty } from './git-evidence.mjs';
+import { sourceWorkingTreeStatus } from './git-evidence.mjs';
 import { buildExpectedRouteModel, reconcileRouteSets } from './route-passport-model.mjs';
 
 const root = process.cwd();
@@ -768,10 +768,11 @@ try {
   const excludedUnpublished = navigatorRoutes.filter((route) => editorOnlyRoutes.has(route));
   const navigatorReconciliation = reconcileRouteSets(routeModel.routes.map((route) => route.pathname),
     navigatorRoutes.filter((route) => !editorOnlyRoutes.has(route)));
+  const sourceStatus = sourceWorkingTreeStatus(root);
   const output = {
     schemaVersion: 1, generatedAt: new Date().toISOString(),
     evidence: {
-      sourceSHA: git('rev-parse', 'HEAD'), branch: git('branch', '--show-current') || '(detached)', dirty: sourceWorkingTreeDirty(root),
+      sourceSHA: git('rev-parse', 'HEAD'), branch: git('branch', '--show-current') || '(detached)', dirty: Boolean(sourceStatus), sourceStatus,
       origin: parsedOrigin.origin, loopbackOnly: true, credentialsPersisted: false,
       isolatedMutations: options.isolatedMutations,
       isolationProof,

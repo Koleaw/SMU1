@@ -9,6 +9,7 @@ import sharp from 'sharp';
 import { runAdminLauncher } from '../admin-api/launcher.mjs';
 import { validateVisualEditorAcceptanceEvidence } from './evidence-contract.mjs';
 import { buildExpectedRouteModel } from './route-passport-model.mjs';
+import { sourceWorkingTreeStatus } from './git-evidence.mjs';
 
 const execFileAsync = promisify(execFile);
 const sourceRoot = process.cwd();
@@ -240,6 +241,8 @@ try {
   }, null, 2)}\n`, 'utf8');
 
   let report = null, acceptance = null;
+  const bootstrapSourceStatus = sourceWorkingTreeStatus(checkoutRoot);
+  if (bootstrapSourceStatus) throw new Error(`Disposable QA bootstrap changed source files before the crawl: ${bootstrapSourceStatus}`);
   if (stage !== 'acceptance') {
     const reportRelative = '.admin-runtime/h6-qa/admin-action-crawl.json';
     report = await runRecorded(process.execPath, [
@@ -264,7 +267,7 @@ try {
       }
     }, reportRelative, outputPath);
     if (report?.evidence?.sourceSHA !== sourceSHA || report?.evidence?.branch !== branch || report?.evidence?.dirty) {
-      throw new Error('Admin action evidence is not bound to the clean exact source revision.');
+      throw new Error(`Admin action evidence is not bound to the clean exact source revision: ${report?.evidence?.sourceStatus || 'source SHA or branch mismatch'}`);
     }
     if (report?.evidence?.releaseActionsExecuted || report?.aggregate?.failed || report?.aggregate?.canvasRoutesFailed) {
       throw new Error('The isolated visual-editor action crawl reported a failure or a release mutation.');
