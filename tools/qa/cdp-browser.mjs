@@ -67,7 +67,7 @@ const chromeCandidates = ({ headful = false } = {}) => process.platform === 'win
 
 export const preferredChromePath = (settings = {}) => chromeCandidates(settings).find((candidate) => candidate && (path.isAbsolute(candidate) ? fs.existsSync(candidate) : true));
 
-export async function createDistServer({ distRoot, basePath = '/' }) {
+export async function createDistServer({ distRoot, basePath = '/', cacheStaticAssets = false }) {
   const normalizedBase = normalizeBase(basePath);
   const requests = [];
   let origin = '';
@@ -118,7 +118,10 @@ export async function createDistServer({ distRoot, basePath = '/' }) {
       }
       requests.push({ method: request.method, pathname: originalPathname, status: 200, localPathname: pathname });
       response.writeHead(200, {
-        'cache-control': 'no-store',
+        // Opt in only for a frozen build on this server's fresh, random origin.
+        // Editor/mutation tests retain no-store; documents always stay fresh.
+        'cache-control': cacheStaticAssets && path.extname(filename).toLowerCase() !== '.html'
+          ? 'private, max-age=3600, immutable' : 'no-store',
         'content-length': String(info.size),
         'content-type': MIME_TYPES[path.extname(filename).toLowerCase()] || 'application/octet-stream'
       });
@@ -410,6 +413,9 @@ export class CdpBrowser {
       await Promise.all(dialogContext.tasks);
       if (dialogContext.failure) throw dialogContext.failure;
       if (navigation.errorText) throw new Error(`Navigation failed for ${url}: ${navigation.errorText}`);
+      // CDP omits loaderId for same-document navigation. Hash/history changes
+      // do not emit DOMContentLoaded; still run the bounded readiness checks.
+      if (!navigation.loaderId) readyWaiter.cancel();
       await ready;
       diagnostics.phase = 'document-readiness';
       const deadline = Date.now() + 5_000;

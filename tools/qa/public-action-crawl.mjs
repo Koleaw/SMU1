@@ -119,7 +119,9 @@ if (options.onlyRoute && routesToCrawl.length !== 1) throw new Error(`--route mu
 const runUnknownProbe = !options.shard || options.shard.index === 1;
 
 let distServer = null;
-const origin = options.origin || (distServer = await createDistServer({ distRoot: options.distRoot, basePath })).origin;
+const origin = options.origin || (distServer = await createDistServer({
+  distRoot: options.distRoot, basePath, cacheStaticAssets: true
+})).origin;
 const originValue = new URL(origin).origin;
 if (!['127.0.0.1', 'localhost', '[::1]'].includes(new URL(origin).hostname)) {
   throw new Error(`Public action crawl accepts only loopback origins, received ${originValue}.`);
@@ -991,6 +993,13 @@ try {
         route: expected.pathname, routeClass: expected.routeClass, viewport, requestedUrl,
         pageIdentity, actionCount: actionResults.length, actionResults, gallerySemantics, events: routeEvents, issues, status: issues.length ? 'fail' : 'pass'
       });
+      if (issues.length) progress(`route failed ${JSON.stringify({
+        route: expected.pathname, viewport: viewport.id, issues,
+        actions: actionResults.filter((result) => result.status === 'fail').map((result) => ({
+          id: result.action.id, name: result.action.name, policy: result.policy,
+          executions: result.executions.map((execution) => ({ mode: execution.mode, status: execution.status }))
+        }))
+      })}`);
       completed += 1;
       if (completed % 20 === 0 || completed === routesToCrawl.length * REQUIRED_VIEWPORTS.length) {
         progress(`crawled ${completed}/${routesToCrawl.length * REQUIRED_VIEWPORTS.length} route/viewport action surfaces`);
@@ -1236,6 +1245,25 @@ try {
     || !dialogAudit.passed
     || publicLifecycleSemantics.some((result) => result.status === 'fail')
     || unknownResults.some((result) => result.status === 'fail') || unknownNoJsResult?.status === 'fail') process.exitCode = 1;
+} catch (error) {
+  const partial = {
+    complete: false, sourceSHA: git('rev-parse', 'HEAD'),
+    error: String(error.stack || error), context: { ...context }, navigation: browser.lastNavigation,
+    openedRouteViewportPairs: routeResults.length,
+    requiredRouteViewportPairs: routesToCrawl.length * REQUIRED_VIEWPORTS.length,
+    routes: routeResults.map((result) => ({
+      route: result.route, viewport: result.viewport.id, status: result.status, issues: result.issues,
+      failedActions: result.actionResults.filter((action) => action.status === 'fail').map((action) => ({
+        id: action.action.id, name: action.action.name, policy: action.policy,
+        executions: action.executions.map((execution) => ({ mode: execution.mode, status: execution.status }))
+      }))
+    }))
+  };
+  await mkdir(path.dirname(options.output), { recursive: true });
+  // This diagnostic is deliberately not a final evidence file or merger input.
+  await writeFile(`${options.output}.partial.json`, `${JSON.stringify(partial, null, 2)}\n`, 'utf8');
+  progress(`incomplete crawl ${JSON.stringify(partial)}`);
+  throw error;
 } finally {
   await browser.send('Emulation.setScriptExecutionDisabled', { value: false }).catch(() => {});
   await browser.close();

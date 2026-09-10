@@ -52,6 +52,32 @@ test('dist server enforces configured BASE_PATH and is read-only', async () => {
   }
 });
 
+test('frozen-build caching is opt-in, caches assets and never caches documents or missing resources', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'smu1-h6-dist-cache-'));
+  await writeFile(path.join(root, 'index.html'), '<h1>First build</h1>', 'utf8');
+  await writeFile(path.join(root, '404.html'), '<h1>404</h1>', 'utf8');
+  await writeFile(path.join(root, 'asset.css'), 'h1{color:navy}', 'utf8');
+  const ordinary = await createDistServer({ distRoot: root });
+  const frozen = await createDistServer({ distRoot: root, cacheStaticAssets: true });
+  try {
+    assert.equal((await fetch(`${ordinary.origin}/asset.css`)).headers.get('cache-control'), 'no-store');
+    const asset = await fetch(`${frozen.origin}/asset.css`);
+    assert.equal(asset.status, 200);
+    assert.equal(await asset.text(), 'h1{color:navy}');
+    assert.equal(asset.headers.get('cache-control'), 'private, max-age=3600, immutable');
+    assert.equal((await fetch(frozen.origin)).headers.get('cache-control'), 'no-store');
+    await writeFile(path.join(root, 'index.html'), '<h1>Changed document</h1>', 'utf8');
+    assert.equal(await (await fetch(frozen.origin)).text(), '<h1>Changed document</h1>');
+    const missing = await fetch(`${frozen.origin}/missing.css`);
+    assert.equal(missing.status, 404);
+    assert.equal(missing.headers.get('cache-control'), 'no-store');
+  } finally {
+    await ordinary.close();
+    await frozen.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('CDP keyboard Enter activates focused native controls', { skip: !preferredChromePath() }, async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'smu1-h6-cdp-keyboard-'));
   await writeFile(path.join(root, 'index.html'), `<!doctype html><html><body>
@@ -73,6 +99,41 @@ test('CDP keyboard Enter activates focused native controls', { skip: !preferredC
     await browser.evaluate(`document.querySelector('#summary').focus()`);
     await browser.dispatchKey('Enter', { code: 'Enter' });
     assert.equal(await browser.evaluate(`document.querySelector('#details').open`), true);
+  } finally {
+    await browser.close();
+    await server.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('same-document navigation stays ready without waiting for a new DOMContentLoaded', { skip: !preferredChromePath() }, async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'smu1-h6-cdp-same-document-'));
+  await writeFile(path.join(root, 'index.html'), '<!doctype html><h1 id="anchor">Ready</h1>', 'utf8');
+  await writeFile(path.join(root, '404.html'), '<h1>404</h1>', 'utf8');
+  const server = await createDistServer({ distRoot: root });
+  const browser = await new CdpBrowser().start();
+  let documentEvents = 0;
+  browser.on('Page.domContentEventFired', () => { documentEvents += 1; });
+  try {
+    const initial = await browser.navigate(`${server.origin}/`);
+    assert.ok(initial.loaderId);
+    await browser.evaluate('window.__sameDocumentMarker = true');
+    const previousEvents = documentEvents;
+    const started = performance.now();
+    const sameDocument = await browser.navigate(`${server.origin}/#anchor`);
+    assert.equal(sameDocument.loaderId, undefined);
+    assert.ok(performance.now() - started < 5000, 'a hash change must not wait for the 20-second document event timeout');
+    assert.equal(documentEvents, previousEvents);
+    assert.equal(await browser.evaluate('window.__sameDocumentMarker'), true);
+    assert.equal(await browser.evaluate('location.hash'), '#anchor');
+    assert.equal(browser.lastNavigation.phase, 'settled');
+    assert.equal(browser.listeners.get('Page.domContentEventFired')?.length, 1);
+    const reloaded = await browser.navigate(`${server.origin}/`);
+    assert.ok(reloaded.loaderId);
+    assert.notEqual(reloaded.loaderId, initial.loaderId);
+    assert.ok(documentEvents > previousEvents);
+    assert.equal(await browser.evaluate('Boolean(window.__sameDocumentMarker)'), false);
+    assert.equal(browser.pending.size, 0);
   } finally {
     await browser.close();
     await server.close();
