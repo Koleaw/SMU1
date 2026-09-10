@@ -1,0 +1,43 @@
+{
+  "run": 34482989987,
+  "sourceSHA": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+  "failedChecks": [],
+  "report": null,
+  "status": "pass",
+  "summary": {
+    "artifact": {
+      "bytesAfter": 413451398,
+      "bytesBefore": 413451398,
+      "duplicateGroups": 14,
+      "duplicateWastedBytes": 17599754,
+      "files": 4365,
+      "mediaBytes": 390026583,
+      "mediaFiles": 4084,
+      "nonMediaBytes": 23424815,
+      "nonMediaFiles": 281,
+      "referencedMediaBytes": 390010438,
+      "referencedMediaFiles": 4061,
+      "removableMediaBytes": 16145,
+      "removableMediaFiles": 23
+    },
+    "checks": 22,
+    "failed": 0,
+    "html": {
+      "admin": 6,
+      "designLab": 112,
+      "production": 111,
+      "total": 229
+    },
+    "manifest": {
+      "canonicalSources": 235,
+      "derivativeBytes": 279687344,
+      "derivatives": 4611,
+      "uniqueSources": 214
+    },
+    "passed": 22,
+    "warnings": 1
+  },
+  "warningChecks": [
+    "routes.lcp-raster-target-exceptions"
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "sourceSHA": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+  "routeViewports": 18,
+  "reviewed": [
+    {
+      "files": [
+        "_-1440-sheet0.png",
+        "_-1440-sheet1.png",
+        "_-1440-sheet2.png",
+        "_-1440-sheet3.png",
+        "_-1440-sheet4.png",
+        "_-1440-sheet5.png"
+      ],
+      "notes": "Главная desktop: просмотрены все секции и подвал; сетка, контраст шапки, иерархия и CTA согласованы. На кадре допустимое состояние загрузки видео; воспроизведение отдельно подтверждено в движении."
+    },
+    {
+      "files": [
+        "_-390-sheet0.png",
+        "_-390-sheet1.png",
+        "_kontakty_-1440-sheet0.png",
+        "_kontakty_-1440-sheet1.png",
+        "_kontakty_-1440-sheet2.png",
+        "_kontakty_-390-sheet0.png"
+      ],
+      "notes": "Главная mobile и контакты desktop/mobile просмотрены полностью, включая открытые группы подвала. CTA, длинный адрес, телефоны, реквизиты и отложенная карта помещаются; наложений и разрывов композиции не обнаружено."
+    },
+    {
+      "files": [
+        "_not-a-real-page-for-qa_-1440-sheet0.png",
+        "_not-a-real-page-for-qa_-1440-sheet1.png",
+        "_not-a-real-page-for-qa_-390-sheet0.png",
+        "_politika-konfidencialnosti_-1440-sheet0.png",
+        "_politika-konfidencialnosti_-1440-sheet1.png",
+        "_politika-konfidencialnosti_-1440-sheet2.png"
+      ],
+      "notes": "Настоящий 404 desktop/mobile: понятные действия возврата, контактный блок и полный подвал без дефектов. Политика desktop, начало до раздела 4: длинный заголовок, реквизиты, списки и разделители читаются, переполнений нет."
+    },
+    {
+      "files": [
+        "_politika-konfidencialnosti_-1440-sheet3.png",
+        "_politika-konfidencialnosti_-1440-sheet4.png",
+        "_politika-konfidencialnosti_-1440-sheet5.png",
+        "_politika-konfidencialnosti_-1440-sheet6.png",
+        "_politika-konfidencialnosti_-1440-sheet7.png",
+        "_politika-konfidencialnosti_-390-sheet0.png",
+        "_politika-konfidencialnosti_-390-sheet1.png"
+      ],
+      "notes": "Политика desktop до конца и mobile целиком: все 15 разделов, списки, перенос длинного названия, контакты и раскрытый подвал читаемы. Горизонтальное переполнение документа отсутствует; юридическое содержание в этом этапе не изменялось."
+    },
+    {
+      "files": [
+        "_topiarii_-1440-sheet0.png",
+        "_topiarii_-1440-sheet1.png",
+        "_topiarii_-1440-sheet2.png",
+        "_topiarii_-1440-sheet3.png",
+        "_topiarii_-1440-sheet4.png",
+        "_topiarii_-1440-sheet5.png"
+      ],
+      "notes": "Топиарии desktop целиком: фон фотографии непрерывен, фигура крупная без обрезки, два поля hero уравновешены; шапка читаема на обеих половинах. Проверены все формы, сценарии, исходные данные, CTA и подвал."
+    },
+    {
+      "files": [
+        "_topiarii_-390-sheet0.png",
+        "_topiarii_-390-sheet1.png",
+        "_ulichnaya-mebel_lavochki-i-skameyki_-1440-sheet0.png",
+        "_ulichnaya-mebel_lavochki-i-skameyki_-1440-sheet1.png",
+        "_ulichnaya-mebel_lavochki-i-skameyki_-1440-sheet2.png",
+        "_ulichnaya-mebel_lavochki-i-skameyki_-1440-sheet3.png"
+      ],
+      "notes": "Топиарии mobile целиком: фигура не обрезана, действия и содержание доступны, фон без случайных полос. Категория скамеек desktop целиком: фотография соответствует масштабу текста; все 16 карточек с различными длинами изделий и заголовков выровнены."
+    },
+    {
+      "files": [
+        "_ulichnaya-mebel_lavochki-i-skameyki_-390-sheet0.png",
+        "_ulichnaya-mebel_lavochki-i-skameyki_-390-sheet1.png",
+        "_ulichnaya-mebel_lavochki-i-skameyki_skamya-park_-1440-sheet0.png",
+        "_ulichnaya-mebel_lavochki-i-skameyki_skamya-park_-1440-sheet1.png",
+        "_ulichnaya-mebel_lavochki-i-skameyki_skamya-park_-1440-sheet2.png",
+        "_ulichnaya-mebel_lavochki-i-skameyki_skamya-park_-1440-sheet3.png"
+      ],
+      "notes": "Категория скамеек mobile целиком: все 16 фотографий/карточек и нижние действия просмотрены. Скамья Парк desktop: галерея с миниатюрами, описание, компактные технические данные, материалы/покрытие, варианты и связанные изделия согласованы; пропорции длинного изделия сохранены."
+    },
+    {
+      "files": [
+        "_ulichnaya-mebel_lavochki-i-skameyki_skamya-park_-390-sheet0.png",
+        "_ulichnaya-mebel_lavochki-i-skameyki_skamya-park_-390-sheet1.png",
+        "_ulichnaya-mebel_kacheli_kachel-portal_-1440-sheet0.png",
+        "_ulichnaya-mebel_kacheli_kachel-portal_-1440-sheet1.png",
+        "_ulichnaya-mebel_kacheli_kachel-portal_-1440-sheet2.png",
+        "_ulichnaya-mebel_kacheli_kachel-portal_-1440-sheet3.png"
+      ],
+      "notes": "Скамья Парк mobile целиком: длинные характеристики, компактные панели, миниатюры и CTA не обрезаются. Качель Портал desktop: просмотрены hero, описание, применение, галерея, адаптация и варианты; крупное изображение сохраняет конструкцию целиком."
+    },
+    {
+      "files": [
+        "_ulichnaya-mebel_kacheli_kachel-portal_-1440-sheet4.png",
+        "_ulichnaya-mebel_kacheli_kachel-portal_-1440-sheet5.png",
+        "_ulichnaya-mebel_kacheli_kachel-portal_-1440-sheet6.png",
+        "_ulichnaya-mebel_kacheli_kachel-portal_-390-sheet0.png",
+        "_ulichnaya-mebel_kacheli_kachel-portal_-390-sheet1.png"
+      ],
+      "notes": "Качель Портал desktop до подвала и mobile целиком: конструктив, четыре альтернативы, длинные названия, разные пропорции фотографий, три миниатюры и контактные блоки просмотрены. Не обнаружены обрезанные изделия, пустые шаблонные панели или перекрытия."
+    },
+    {
+      "files": [
+        "_vypolnennye-obekty_gorodskie-kacheli-dlya-obshchestvennyh-territoriy_-1440-sheet0.png",
+        "_vypolnennye-obekty_gorodskie-kacheli-dlya-obshchestvennyh-territoriy_-1440-sheet1.png",
+        "_vypolnennye-obekty_gorodskie-kacheli-dlya-obshchestvennyh-territoriy_-1440-sheet2.png",
+        "_vypolnennye-obekty_gorodskie-kacheli-dlya-obshchestvennyh-territoriy_-1440-sheet3.png",
+        "_vypolnennye-obekty_gorodskie-kacheli-dlya-obshchestvennyh-territoriy_-390-sheet0.png"
+      ],
+      "notes": "Объект «Городские качели» desktop/mobile просмотрен целиком. Длинный заголовок, реальная вертикальная фотография, четыре миниатюры, описание работ, переход к направлению и предыдущему объекту, CTA и подвал корректны. Галерея сохраняет весь вертикальный кадр."
+    }
+  ],
+  "additionalViews": [
+    "search/published-chromium-1440-search.png",
+    "search/published-firefox-390-search.png",
+    "search/published-webkit-390-search.png",
+    "published-interactions/webkit-mobile-menu.png",
+    "published-interactions/chromium-canopies-fullscreen.png",
+    "published-interactions/firefox-project-fullscreen.png"
+  ]
+}

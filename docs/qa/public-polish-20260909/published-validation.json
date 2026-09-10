@@ -1,0 +1,1407 @@
+{
+  "checkedAt": "2026-09-10T13:57:26.607Z",
+  "preview": "https://koleaw.github.io/SMU1/",
+  "identity": {
+    "artifactManifestSha256": "728139f539fe9fb09c486f88a5a23d2b91cc5772b4393230b9a97de8dd7a789a",
+    "fileCount": 4365,
+    "kind": "smu1-release-artifact-identity",
+    "largestFile": {
+      "bytes": 19322916,
+      "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+    },
+    "testedCommitSha": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+    "totalBytes": 413451398,
+    "version": 1
+  },
+  "ci": {
+    "originalRun": 34471843738,
+    "reconciliationRun": 34482989987,
+    "reconciliationAttempt": 2,
+    "toolingSHA": "370b185242bc5643ef784b96f03a82afe759bf1f",
+    "conclusion": "success",
+    "publicCrawl": {
+      "shards": 8,
+      "routeViewportsPassed": 222,
+      "noJsPassed": 111,
+      "actionOccurrences": 25234,
+      "safeExecutions": 16600,
+      "wallSecondsIncludingRunnerSetup": 1207,
+      "previousWallSeconds": 6555.237,
+      "reexecutedDuringReconciliation": false
+    },
+    "preservedH6": {
+      "actions": 687,
+      "executions": 854,
+      "canvasRoutes": 111,
+      "acceptanceChecks": 22
+    },
+    "pagesRulesRestored": true
+  },
+  "visual": {
+    "sha": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+    "browser": "151.0.7922.34",
+    "ledger": [
+      {
+        "route": "/",
+        "width": 1440,
+        "status": 200,
+        "h1": "Изделия, конструкции и комплексные работы на объекте",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/ulichnaya-mebel/lavochki-i-skameyki/",
+        "width": 1440,
+        "status": 200,
+        "h1": "Лавочки и скамейки для парков, дворов и коммерческих объектов",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-park/",
+        "width": 1440,
+        "status": 200,
+        "h1": "Скамья Парк",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/ulichnaya-mebel/kacheli/kachel-portal/",
+        "width": 1440,
+        "status": 200,
+        "h1": "Качель Портал",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/topiarii/",
+        "width": 1440,
+        "status": 200,
+        "h1": "Топиарии под заказ",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/vypolnennye-obekty/gorodskie-kacheli-dlya-obshchestvennyh-territoriy/",
+        "width": 1440,
+        "status": 200,
+        "h1": "Городские качели для общественных территорий",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/kontakty/",
+        "width": 1440,
+        "status": 200,
+        "h1": "Контакты",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/politika-konfidencialnosti/",
+        "width": 1440,
+        "status": 200,
+        "h1": "Политика конфиденциальности и обработки персональных данных",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/not-a-real-page-for-qa/",
+        "width": 1440,
+        "status": 404,
+        "h1": "Страница не найдена",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/",
+        "width": 390,
+        "status": 200,
+        "h1": "Изделия, конструкции и комплексные работы на объекте",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/ulichnaya-mebel/lavochki-i-skameyki/",
+        "width": 390,
+        "status": 200,
+        "h1": "Лавочки и скамейки для парков, дворов и коммерческих объектов",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/ulichnaya-mebel/lavochki-i-skameyki/skamya-park/",
+        "width": 390,
+        "status": 200,
+        "h1": "Скамья Парк",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/ulichnaya-mebel/kacheli/kachel-portal/",
+        "width": 390,
+        "status": 200,
+        "h1": "Качель Портал",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:500",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/topiarii/",
+        "width": 390,
+        "status": 200,
+        "h1": "Топиарии под заказ",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/vypolnennye-obekty/gorodskie-kacheli-dlya-obshchestvennyh-territoriy/",
+        "width": 390,
+        "status": 200,
+        "h1": "Городские качели для общественных территорий",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/kontakty/",
+        "width": 390,
+        "status": 200,
+        "h1": "Контакты",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/politika-konfidencialnosti/",
+        "width": 390,
+        "status": 200,
+        "h1": "Политика конфиденциальности и обработки персональных данных",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      },
+      {
+        "route": "/not-a-real-page-for-qa/",
+        "width": 390,
+        "status": 404,
+        "h1": "Страница не найдена",
+        "overflow": false,
+        "broken": [],
+        "fonts": [
+          "Manrope:400",
+          "Manrope:600",
+          "Manrope:700"
+        ],
+        "errors": []
+      }
+    ],
+    "actuallyViewedSheets": 59,
+    "review": "published-visual-review.json"
+  },
+  "search": {
+    "entries": 99,
+    "results": [
+      {
+        "name": "chromium",
+        "viewport": {
+          "width": 1440,
+          "height": 950
+        },
+        "pass": true,
+        "testedCommitSha": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+        "artifactManifestSha256": "728139f539fe9fb09c486f88a5a23d2b91cc5772b4393230b9a97de8dd7a789a",
+        "entries": 99,
+        "exact": [
+          "Скамья Радиус",
+          "Скамья Радиус со спинками"
+        ],
+        "errors": [],
+        "resources": [
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.Bl4B8cx4.css",
+            "status": 200,
+            "type": "text/css; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 200,
+            "type": "application/json; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.Bl4B8cx4.css",
+            "status": 200,
+            "type": "text/css; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 200,
+            "type": "application/json; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "name": "chromium",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "pass": true,
+        "testedCommitSha": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+        "artifactManifestSha256": "728139f539fe9fb09c486f88a5a23d2b91cc5772b4393230b9a97de8dd7a789a",
+        "entries": 99,
+        "exact": [
+          "Скамья Радиус",
+          "Скамья Радиус со спинками"
+        ],
+        "errors": [],
+        "resources": [
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.Bl4B8cx4.css",
+            "status": 200,
+            "type": "text/css; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 200,
+            "type": "application/json; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.Bl4B8cx4.css",
+            "status": 200,
+            "type": "text/css; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 200,
+            "type": "application/json; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "name": "webkit",
+        "viewport": {
+          "width": 1440,
+          "height": 950
+        },
+        "pass": true,
+        "testedCommitSha": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+        "artifactManifestSha256": "728139f539fe9fb09c486f88a5a23d2b91cc5772b4393230b9a97de8dd7a789a",
+        "entries": 99,
+        "exact": [
+          "Скамья Радиус",
+          "Скамья Радиус со спинками"
+        ],
+        "errors": [],
+        "resources": [
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.Bl4B8cx4.css",
+            "status": 200,
+            "type": "text/css; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 200,
+            "type": "application/json; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.Bl4B8cx4.css",
+            "status": 200,
+            "type": "text/css; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 200,
+            "type": "application/json; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "name": "webkit",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "pass": true,
+        "testedCommitSha": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+        "artifactManifestSha256": "728139f539fe9fb09c486f88a5a23d2b91cc5772b4393230b9a97de8dd7a789a",
+        "entries": 99,
+        "exact": [
+          "Скамья Радиус",
+          "Скамья Радиус со спинками"
+        ],
+        "errors": [],
+        "resources": [
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.Bl4B8cx4.css",
+            "status": 200,
+            "type": "text/css; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 200,
+            "type": "application/json; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.Bl4B8cx4.css",
+            "status": 200,
+            "type": "text/css; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 200,
+            "type": "application/json; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "name": "firefox",
+        "viewport": {
+          "width": 1440,
+          "height": 950
+        },
+        "pass": true,
+        "testedCommitSha": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+        "artifactManifestSha256": "728139f539fe9fb09c486f88a5a23d2b91cc5772b4393230b9a97de8dd7a789a",
+        "entries": 99,
+        "exact": [
+          "Скамья Радиус",
+          "Скамья Радиус со спинками"
+        ],
+        "errors": [],
+        "resources": [
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.Bl4B8cx4.css",
+            "status": 200,
+            "type": "text/css; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 200,
+            "type": "application/json; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 304
+          }
+        ]
+      },
+      {
+        "name": "firefox",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "pass": true,
+        "testedCommitSha": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+        "artifactManifestSha256": "728139f539fe9fb09c486f88a5a23d2b91cc5772b4393230b9a97de8dd7a789a",
+        "entries": 99,
+        "exact": [
+          "Скамья Радиус",
+          "Скамья Радиус со спинками"
+        ],
+        "errors": [],
+        "resources": [
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.Bl4B8cx4.css",
+            "status": 200,
+            "type": "text/css; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 200,
+            "type": "application/json; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.Dnrdjo3J.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_astro/public-search.C1S313Un.mjs",
+            "status": 200,
+            "type": "text/javascript; charset=utf-8"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/search-index.json",
+            "status": 304
+          }
+        ]
+      }
+    ],
+    "diagnostic": "Firefox revalidated the already fetched index with HTTP 304. Targeted recheck requires an earlier 200 for that exact URL and identical usable search results after navigation. Initial diagnostic retained outside repository."
+  },
+  "interactions": {
+    "expectedSha": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+    "base": "https://koleaw.github.io/SMU1/",
+    "startedAt": "2026-09-10T13:49:21.465Z",
+    "checks": [
+      {
+        "engine": "chromium",
+        "id": "video.desktop-autoplay",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 1.94944,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 1.97656,
+          "after": 2.133327
+        }
+      },
+      {
+        "engine": "chromium",
+        "id": "video.desktop-to-320",
+        "passed": true,
+        "state": {
+          "width": 320,
+          "source": null,
+          "paused": true,
+          "currentTime": 0,
+          "readyState": 0,
+          "status": "idle",
+          "poster": true,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Включить фоновое видео"
+        }
+      },
+      {
+        "engine": "chromium",
+        "id": "video.320-to-desktop-restores",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 0.106554,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 0.111182,
+          "after": 0.276355
+        }
+      },
+      {
+        "engine": "chromium",
+        "id": "video.pause-survives-resize",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": null,
+          "paused": true,
+          "currentTime": 0,
+          "readyState": 0,
+          "status": "idle",
+          "poster": true,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Включить фоновое видео"
+        }
+      },
+      {
+        "engine": "chromium",
+        "id": "video.explicit-resume",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 0.114329,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 0.120653,
+          "after": 0.287364
+        }
+      },
+      {
+        "engine": "chromium",
+        "id": "video.reduced-no-autoplay",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": null,
+          "paused": true,
+          "currentTime": 0,
+          "readyState": 0,
+          "status": "idle",
+          "poster": true,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Включить фоновое видео"
+        },
+        "videoRequests": 0
+      },
+      {
+        "engine": "chromium",
+        "id": "video.reduced-explicit-play",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 0.110649,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 0.116756,
+          "after": 0.280646
+        },
+        "videoRequests": 1
+      },
+      {
+        "engine": "chromium",
+        "id": "navigation.mobile-focus-contained",
+        "passed": true
+      },
+      {
+        "engine": "chromium",
+        "id": "navigation.mobile-focus-wraps-both-ways",
+        "passed": true
+      },
+      {
+        "engine": "chromium",
+        "id": "navigation.mobile-escape-focus",
+        "passed": true
+      },
+      {
+        "engine": "chromium",
+        "id": "navigation.back-forward-reinitializes",
+        "passed": true
+      },
+      {
+        "engine": "chromium",
+        "id": "navigation.mobile-footer",
+        "passed": true,
+        "expanded": [
+          true,
+          true
+        ]
+      },
+      {
+        "engine": "chromium",
+        "id": "navigation.desktop-keyboard",
+        "passed": true
+      },
+      {
+        "engine": "chromium",
+        "id": "navigation.anchor-below-sticky-header",
+        "passed": true,
+        "hash": "#direction-scope"
+      },
+      {
+        "engine": "chromium",
+        "id": "canopies.next-prev",
+        "passed": true,
+        "initial": "1 / 3",
+        "next": "2 / 3",
+        "previous": "1 / 3",
+        "initialSource": "https://koleaw.github.io/SMU1/_media/h5/b1/b1e564ca8b75f4d66de7f85b44b2591e824325351218cc2d1aed401d49b8db73-a56c0ac60e6b-w1024.avif",
+        "nextSource": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w480.avif"
+      },
+      {
+        "engine": "chromium",
+        "id": "canopies.fullscreen-keyboard",
+        "passed": true,
+        "firstFullscreen": "1 / 3",
+        "secondFullscreen": "2 / 3"
+      },
+      {
+        "engine": "chromium",
+        "id": "canopies.escape-restores-focus",
+        "passed": true
+      },
+      {
+        "engine": "chromium",
+        "id": "project.next-prev",
+        "passed": true,
+        "initial": "1 / 3",
+        "next": "2 / 3",
+        "previous": "1 / 3",
+        "initialSource": "https://koleaw.github.io/SMU1/_media/h5/24/248f17177df30b29ab9b231a8a18d9c72ea73042c612d2f268b03c0ce7ff92d3-a56c0ac60e6b-w1440.avif",
+        "nextSource": "https://koleaw.github.io/SMU1/_media/h5/da/da0872c68d9a09f0a7d2f99511efadd00c920a28a9e8831a4bd14ea869311556-a56c0ac60e6b-w1440.avif"
+      },
+      {
+        "engine": "chromium",
+        "id": "project.fullscreen-keyboard",
+        "passed": true,
+        "firstFullscreen": "1 / 3",
+        "secondFullscreen": "2 / 3"
+      },
+      {
+        "engine": "chromium",
+        "id": "project.escape-restores-focus",
+        "passed": true
+      },
+      {
+        "engine": "chromium",
+        "id": "runtime",
+        "passed": true,
+        "errors": [],
+        "failedResponses": []
+      },
+      {
+        "engine": "firefox",
+        "id": "video.desktop-autoplay",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 0.811891,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 0.811891,
+          "after": 0.976591
+        }
+      },
+      {
+        "engine": "firefox",
+        "id": "video.desktop-to-320",
+        "passed": true,
+        "state": {
+          "width": 320,
+          "source": null,
+          "paused": true,
+          "currentTime": 0,
+          "readyState": 0,
+          "status": "idle",
+          "poster": true,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Включить фоновое видео"
+        }
+      },
+      {
+        "engine": "firefox",
+        "id": "video.320-to-desktop-restores",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 0.122231,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 0.122231,
+          "after": 0.291434
+        }
+      },
+      {
+        "engine": "firefox",
+        "id": "video.pause-survives-resize",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": null,
+          "paused": true,
+          "currentTime": 0,
+          "readyState": 0,
+          "status": "idle",
+          "poster": true,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Включить фоновое видео"
+        }
+      },
+      {
+        "engine": "firefox",
+        "id": "video.explicit-resume",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 0.122972,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 0.122972,
+          "after": 0.285865
+        }
+      },
+      {
+        "engine": "firefox",
+        "id": "video.reduced-no-autoplay",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": null,
+          "paused": true,
+          "currentTime": 0,
+          "readyState": 0,
+          "status": "idle",
+          "poster": true,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Включить фоновое видео"
+        },
+        "videoRequests": 0
+      },
+      {
+        "engine": "firefox",
+        "id": "video.reduced-explicit-play",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 0.121163,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 0.121163,
+          "after": 0.28298
+        },
+        "videoRequests": 1
+      },
+      {
+        "engine": "firefox",
+        "id": "navigation.mobile-focus-contained",
+        "passed": true
+      },
+      {
+        "engine": "firefox",
+        "id": "navigation.mobile-focus-wraps-both-ways",
+        "passed": true
+      },
+      {
+        "engine": "firefox",
+        "id": "navigation.mobile-escape-focus",
+        "passed": true
+      },
+      {
+        "engine": "firefox",
+        "id": "navigation.back-forward-reinitializes",
+        "passed": true
+      },
+      {
+        "engine": "firefox",
+        "id": "navigation.mobile-footer",
+        "passed": true,
+        "expanded": [
+          true,
+          true
+        ]
+      },
+      {
+        "engine": "firefox",
+        "id": "navigation.desktop-keyboard",
+        "passed": true
+      },
+      {
+        "engine": "firefox",
+        "id": "navigation.anchor-below-sticky-header",
+        "passed": true,
+        "hash": "#direction-scope"
+      },
+      {
+        "engine": "firefox",
+        "id": "canopies.next-prev",
+        "passed": true,
+        "initial": "1 / 3",
+        "next": "2 / 3",
+        "previous": "1 / 3",
+        "initialSource": "https://koleaw.github.io/SMU1/_media/h5/b1/b1e564ca8b75f4d66de7f85b44b2591e824325351218cc2d1aed401d49b8db73-a56c0ac60e6b-w480.avif",
+        "nextSource": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w480.avif"
+      },
+      {
+        "engine": "firefox",
+        "id": "canopies.fullscreen-keyboard",
+        "passed": true,
+        "firstFullscreen": "1 / 3",
+        "secondFullscreen": "2 / 3"
+      },
+      {
+        "engine": "firefox",
+        "id": "canopies.escape-restores-focus",
+        "passed": true
+      },
+      {
+        "engine": "firefox",
+        "id": "project.next-prev",
+        "passed": true,
+        "initial": "1 / 3",
+        "next": "2 / 3",
+        "previous": "1 / 3",
+        "initialSource": "https://koleaw.github.io/SMU1/_media/h5/24/248f17177df30b29ab9b231a8a18d9c72ea73042c612d2f268b03c0ce7ff92d3-a56c0ac60e6b-w1440.avif",
+        "nextSource": "https://koleaw.github.io/SMU1/_media/h5/da/da0872c68d9a09f0a7d2f99511efadd00c920a28a9e8831a4bd14ea869311556-a56c0ac60e6b-w1440.avif"
+      },
+      {
+        "engine": "firefox",
+        "id": "project.fullscreen-keyboard",
+        "passed": true,
+        "firstFullscreen": "1 / 3",
+        "secondFullscreen": "2 / 3"
+      },
+      {
+        "engine": "firefox",
+        "id": "project.escape-restores-focus",
+        "passed": true
+      },
+      {
+        "engine": "firefox",
+        "id": "runtime",
+        "passed": true,
+        "errors": [],
+        "failedResponses": []
+      },
+      {
+        "engine": "webkit",
+        "id": "video.desktop-autoplay",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 0.7083406,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 0.7338558,
+          "after": 0.9312834
+        }
+      },
+      {
+        "engine": "webkit",
+        "id": "video.desktop-to-320",
+        "passed": true,
+        "state": {
+          "width": 320,
+          "source": null,
+          "paused": true,
+          "currentTime": 0,
+          "readyState": 0,
+          "status": "idle",
+          "poster": true,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Включить фоновое видео"
+        }
+      },
+      {
+        "engine": "webkit",
+        "id": "video.320-to-desktop-restores",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 0.1203259,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 0.1276441,
+          "after": 0.3310646
+        }
+      },
+      {
+        "engine": "webkit",
+        "id": "video.pause-survives-resize",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": true,
+          "currentTime": 0.513335,
+          "readyState": 4,
+          "status": "idle",
+          "poster": true,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Включить фоновое видео"
+        }
+      },
+      {
+        "engine": "webkit",
+        "id": "video.explicit-resume",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 0.5754334,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 0.5821514,
+          "after": 0.7533376
+        }
+      },
+      {
+        "engine": "webkit",
+        "id": "video.reduced-no-autoplay",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": null,
+          "paused": true,
+          "currentTime": 0,
+          "readyState": 0,
+          "status": "idle",
+          "poster": true,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Включить фоновое видео"
+        },
+        "videoRequests": 0
+      },
+      {
+        "engine": "webkit",
+        "id": "video.reduced-explicit-play",
+        "passed": true,
+        "state": {
+          "width": 1440,
+          "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "paused": false,
+          "currentTime": 0.1100857,
+          "readyState": 4,
+          "status": "playing",
+          "poster": false,
+          "toggleVisible": true,
+          "toggleDisabled": false,
+          "label": "Приостановить фоновое видео"
+        },
+        "progress": {
+          "before": 0.1181549,
+          "after": 0.3157065
+        },
+        "videoRequests": 0
+      },
+      {
+        "engine": "webkit",
+        "id": "navigation.mobile-focus-contained",
+        "passed": true
+      },
+      {
+        "engine": "webkit",
+        "id": "navigation.mobile-focus-wraps-both-ways",
+        "passed": true
+      },
+      {
+        "engine": "webkit",
+        "id": "navigation.mobile-escape-focus",
+        "passed": true
+      },
+      {
+        "engine": "webkit",
+        "id": "navigation.back-forward-reinitializes",
+        "passed": true
+      },
+      {
+        "engine": "webkit",
+        "id": "navigation.mobile-footer",
+        "passed": true,
+        "expanded": [
+          true,
+          true
+        ]
+      },
+      {
+        "engine": "webkit",
+        "id": "navigation.desktop-keyboard",
+        "passed": true
+      },
+      {
+        "engine": "webkit",
+        "id": "navigation.anchor-below-sticky-header",
+        "passed": true,
+        "hash": "#direction-scope"
+      },
+      {
+        "engine": "webkit",
+        "id": "canopies.next-prev",
+        "passed": true,
+        "initial": "1 / 3",
+        "next": "2 / 3",
+        "previous": "1 / 3",
+        "initialSource": "https://koleaw.github.io/SMU1/_media/h5/b1/b1e564ca8b75f4d66de7f85b44b2591e824325351218cc2d1aed401d49b8db73-a56c0ac60e6b-w480.webp",
+        "nextSource": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w480.webp"
+      },
+      {
+        "engine": "webkit",
+        "id": "canopies.fullscreen-keyboard",
+        "passed": true,
+        "firstFullscreen": "1 / 3",
+        "secondFullscreen": "2 / 3"
+      },
+      {
+        "engine": "webkit",
+        "id": "canopies.escape-restores-focus",
+        "passed": true
+      },
+      {
+        "engine": "webkit",
+        "id": "project.next-prev",
+        "passed": true,
+        "initial": "1 / 3",
+        "next": "2 / 3",
+        "previous": "1 / 3",
+        "initialSource": "https://koleaw.github.io/SMU1/_media/h5/24/248f17177df30b29ab9b231a8a18d9c72ea73042c612d2f268b03c0ce7ff92d3-a56c0ac60e6b-w1440.webp",
+        "nextSource": "https://koleaw.github.io/SMU1/_media/h5/da/da0872c68d9a09f0a7d2f99511efadd00c920a28a9e8831a4bd14ea869311556-a56c0ac60e6b-w1440.webp"
+      },
+      {
+        "engine": "webkit",
+        "id": "project.fullscreen-keyboard",
+        "passed": true,
+        "firstFullscreen": "1 / 3",
+        "secondFullscreen": "2 / 3"
+      },
+      {
+        "engine": "webkit",
+        "id": "project.escape-restores-focus",
+        "passed": true
+      },
+      {
+        "engine": "webkit",
+        "id": "runtime",
+        "passed": true,
+        "errors": [],
+        "failedResponses": []
+      },
+      {
+        "engine": "release",
+        "id": "identity-stable",
+        "passed": true
+      }
+    ],
+    "engines": [
+      {
+        "name": "chromium",
+        "version": "151.0.7922.34",
+        "errors": [],
+        "failedResponses": []
+      },
+      {
+        "name": "firefox",
+        "version": "153.0",
+        "errors": [],
+        "failedResponses": []
+      },
+      {
+        "name": "webkit",
+        "version": "26.5",
+        "errors": [],
+        "failedResponses": []
+      }
+    ],
+    "identityBefore": {
+      "version": 1,
+      "kind": "smu1-release-artifact-identity",
+      "testedCommitSha": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+      "artifactManifestSha256": "728139f539fe9fb09c486f88a5a23d2b91cc5772b4393230b9a97de8dd7a789a",
+      "fileCount": 4365,
+      "totalBytes": 413451398,
+      "largestFile": {
+        "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+        "bytes": 19322916,
+        "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+      },
+      "markerSha256": "dd9b2cb3bb86d471fe8a23e72ecaff0b038e50cb875f0314fed0317fb98e5cb1"
+    },
+    "identityAfter": {
+      "version": 1,
+      "kind": "smu1-release-artifact-identity",
+      "testedCommitSha": "43067f973d5626bcba74f801d1cac1d1d3b6e056",
+      "artifactManifestSha256": "728139f539fe9fb09c486f88a5a23d2b91cc5772b4393230b9a97de8dd7a789a",
+      "fileCount": 4365,
+      "totalBytes": 413451398,
+      "largestFile": {
+        "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+        "bytes": 19322916,
+        "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+      },
+      "markerSha256": "dd9b2cb3bb86d471fe8a23e72ecaff0b038e50cb875f0314fed0317fb98e5cb1"
+    },
+    "finishedAt": "2026-09-10T13:51:13.822Z",
+    "passed": true
+  },
+  "performanceReport": "published-performance.json",
+  "constraints": [
+    "No physical Windows 8, Chrome 109 or mobile-device execution. Current Chromium, Firefox and WebKit used.",
+    "Main and production domain unchanged. Candidate and preview retain the tested public source SHA; CI-only corrections are in the working branch.",
+    "Legal setup for future inquiry forms, new CMS/editor work and paid hosting remain separate stages."
+  ]
+}
