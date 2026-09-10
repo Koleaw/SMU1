@@ -278,6 +278,17 @@ export function buildExpectedRouteModel({ root = process.cwd() } = {}) {
     projects: active('projects').map((entry) => entry.data),
     jobs: active('jobs').map((entry) => entry.data)
   });
+  // The local editor also lists saved unpublished records. Derive those routes
+  // from the same content/route registry, rather than treating them as public.
+  const editorRecords = (name) => collections[name].map((entry) => ({ ...entry.data, isActive: true }));
+  const editorRegistry = createV2RouteRegistry({
+    productSections: editorRecords('product-sections'), services: editorRecords('services'),
+    categories: editorRecords('product-categories'), products: editorRecords('products'),
+    projects: editorRecords('projects'), jobs: editorRecords('jobs')
+  });
+  const publicRouteSet = new Set(registry.routes.map((route) => normalizeRoute(route.pathname)));
+  const editorOnlyRoutes = editorRegistry.routes.map((route) => normalizeRoute(route.pathname))
+    .filter((route) => !publicRouteSet.has(route)).sort((a, b) => a.localeCompare(b, 'ru'));
   const sections = new Map(active('product-sections').map((entry) => [entry.data.slug, entry]));
   const services = new Map(active('services').map((entry) => [entry.data.slug, entry]));
   const categories = new Map(active('product-categories').map((entry) => [entry.data.slug, entry]));
@@ -442,6 +453,7 @@ export function buildExpectedRouteModel({ root = process.cwd() } = {}) {
     schemaVersion: ROUTE_PASSPORT_SCHEMA_VERSION,
     registryVersion: registry.version,
     routes,
+    editorOnlyRoutes,
     collections: Object.fromEntries(Object.entries(collections).map(([name, entries]) => [name, entries.length]))
   };
 }

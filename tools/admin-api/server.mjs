@@ -1767,11 +1767,16 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const body = await readBody(req);
-      const allowed = new Set(['nextExactFailure', 'nextBackupFailure', 'expireSession']);
+      const allowed = new Set(['nextExactFailure', 'nextBackupFailure', 'expireSession', 'clearFaults']);
       const unknown = Object.keys(body || {}).filter((key) => !allowed.has(key));
       if (unknown.length || !Object.values(body || {}).some((value) => value === true)) {
         sendJson(res, 400, { error: 'Некорректная test-fault команда.', code: 'TEST_FAULT_INVALID' });
         return;
+      }
+      if (body.clearFaults === true) {
+        testFaults.nextExactFailure = false;
+        testFaults.nextBackupFailure = false;
+        testFaults.backupStatus = null;
       }
       if (body.nextExactFailure === true) {
         if (!deterministicExactRunner) {
@@ -1791,7 +1796,8 @@ const server = http.createServer(async (req, res) => {
           nextExactFailure: testFaults.nextExactFailure,
           nextBackupFailure: testFaults.nextBackupFailure
         },
-        sessionExpired: body.expireSession === true
+        sessionExpired: body.expireSession === true,
+        ...(body.clearFaults === true ? { faultsCleared: true } : {})
       };
       if (body.expireSession === true) sessions.expire(authSession.token);
       sendJson(res, 200, response);

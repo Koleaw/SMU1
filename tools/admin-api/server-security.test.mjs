@@ -439,6 +439,14 @@ test('isolated browser fault controls require explicit opt-in, auth and CSRF and
   assert.equal(armed.json.syntheticTestMode, true);
   assert.deepEqual(armed.json.armed, { nextExactFailure: true, nextBackupFailure: true });
 
+  const cleared = await request({
+    port: isolated.port, method: 'POST', pathname: '/api/admin/__test__/faults',
+    origin: isolated.origin, cookie, csrf: session.json.csrfToken, body: { clearFaults: true }
+  });
+  assert.equal(cleared.status, 200);
+  assert.equal(cleared.json.faultsCleared, true);
+  assert.deepEqual(cleared.json.armed, { nextExactFailure: false, nextBackupFailure: false });
+
   const expired = await request({
     port: isolated.port,
     method: 'POST',

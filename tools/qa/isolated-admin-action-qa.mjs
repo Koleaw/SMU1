@@ -120,6 +120,9 @@ try {
     'ADMIN_TEST_MODE=true',
     'ADMIN_TEST_FAULTS_ENABLED=true',
     'ADMIN_TEST_EXACT_MODE=deterministic',
+    // Let the UI join the server-scheduled exact run before its terminal result,
+    // as it does with a real build. An instant synthetic failure invites a retry.
+    'ADMIN_TEST_EXACT_DELAY_MS=5000',
     'PRODUCTION_DEPLOY_ENABLED=false',
     'ADMIN_ALLOW_PRODUCTION_PUBLISH=false',
     ''
@@ -197,9 +200,19 @@ try {
   }
   const failedMediaFile = 'h6-malformed.jpg';
   await writeFile(path.join(fixturesRoot, failedMediaFile), Buffer.from('not-a-raster-image', 'utf8'));
-  const projectRoute = buildExpectedRouteModel({ root: checkoutRoot }).routes
-    .map(route => route.pathname).filter(route => /^\/vypolnennye-obekty\/[^/]+\/$/u.test(route)).sort()[0];
-  if (!projectRoute) throw new Error('Acceptance requires a current published project route.');
+  const projectRoutes = buildExpectedRouteModel({ root: checkoutRoot }).routes
+    .map(route => route.pathname).filter(route => /^\/vypolnennye-obekty\/[^/]+\/$/u.test(route)).sort();
+  let projectRoute;
+  for (const route of projectRoutes) {
+    const slug = route.split('/').filter(Boolean).at(-1);
+    const content = JSON.parse(await readFile(path.join(isolatedContentRoot, 'projects', `${slug}.json`), 'utf8'));
+    const presentation = content.presentation || {};
+    if (!presentation.archiveCoverMedia && !presentation.detailHeroMedia && !presentation.publicGallery?.length) {
+      projectRoute = route;
+      break;
+    }
+  }
+  if (!projectRoute) throw new Error('Project media-role acceptance requires a current published text-only project.');
   const projectSlug = projectRoute.split('/').filter(Boolean).at(-1);
   await writeFile(path.join(fixturesRoot, 'visual-editor-acceptance.json'), `${JSON.stringify({
     schemaVersion: 1,

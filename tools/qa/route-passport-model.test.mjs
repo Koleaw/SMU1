@@ -20,6 +20,10 @@ test('authoritative source model describes every current production route and re
   const model = buildExpectedRouteModel();
   const summary = summarizeRouteModel(model.routes);
   assert.equal(summary.total, 111);
+  assert.deepEqual(model.editorOnlyRoutes, [
+    '/vypolnennye-obekty/objekt-parkovaya-zona/', '/vypolnennye-obekty/objekt-vhodnaya-gruppa/'
+  ]);
+  assert.equal(model.routes.some(route => model.editorOnlyRoutes.includes(route.pathname)), false);
   assert.deepEqual(summary.routeClasses, { canonical: 107, '404': 1, alias: 3 });
   assert.equal(summary.rendererVariants['product-list'], 11);
   assert.equal(summary.rendererVariants['gallery-only'], 6);

@@ -284,6 +284,16 @@ test('admin action evidence rejects generic execution of release controls', () =
     aggregate: { discoveredContexts: ['shell', 'iframe-home'] }
   };
   assert.equal(validateAdminActionEvidence(report, { authoritativeRoutes: ['/'] }).ok, true);
+  const withUnpublished = structuredClone(report);
+  withUnpublished.navigator.rawDiscovered = ['/', '/saved-draft/'];
+  withUnpublished.navigator.excludedUnpublished = ['/saved-draft/'];
+  const editorModel = { routes: [], editorOnlyRoutes: ['/saved-draft/'] };
+  assert.equal(validateAdminActionEvidence(withUnpublished, { authoritativeRoutes: ['/'], authoritativeModel: editorModel }).ok, true);
+  withUnpublished.navigator.excludedUnpublished = ['/unknown/'];
+  assert.match(validateAdminActionEvidence(withUnpublished, { authoritativeRoutes: ['/'], authoritativeModel: editorModel }).issues.join('\n'), /navigator-unpublished-reconciliation/);
+  withUnpublished.navigator.excludedUnpublished = ['/saved-draft/'];
+  withUnpublished.navigator.rawDiscovered.push('/unknown/');
+  assert.match(validateAdminActionEvidence(withUnpublished, { authoritativeRoutes: ['/'], authoritativeModel: editorModel }).issues.join('\n'), /navigator-unpublished-reconciliation/);
   const unsafeReset = structuredClone(report);
   unsafeReset.evidence.browserSafety.navigationDialogs = [{ type: 'beforeunload', accepted: true, reason: 'qa-baseline-reset' }];
   unsafeReset.evidence.baselineResets = [{

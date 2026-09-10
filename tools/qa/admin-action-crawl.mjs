@@ -9,6 +9,7 @@ import {
   isAdminHomeCanvasReady
 } from './admin-canvas-contract.mjs';
 import { CdpBrowser } from './cdp-browser.mjs';
+import { sourceWorkingTreeDirty } from './git-evidence.mjs';
 import { buildExpectedRouteModel, reconcileRouteSets } from './route-passport-model.mjs';
 
 const root = process.cwd();
@@ -768,11 +769,14 @@ try {
     .filter((result) => result.action.context === 'shell')
     .map((result) => result.action.dataAttributes?.['data-route'])
     .filter(Boolean))];
-  const navigatorReconciliation = reconcileRouteSets(routeModel.routes.map((route) => route.pathname), navigatorRoutes);
+  const editorOnlyRoutes = new Set(routeModel.editorOnlyRoutes);
+  const excludedUnpublished = navigatorRoutes.filter((route) => editorOnlyRoutes.has(route));
+  const navigatorReconciliation = reconcileRouteSets(routeModel.routes.map((route) => route.pathname),
+    navigatorRoutes.filter((route) => !editorOnlyRoutes.has(route)));
   const output = {
     schemaVersion: 1, generatedAt: new Date().toISOString(),
     evidence: {
-      sourceSHA: git('rev-parse', 'HEAD'), branch: git('branch', '--show-current') || '(detached)', dirty: Boolean(git('status', '--porcelain')),
+      sourceSHA: git('rev-parse', 'HEAD'), branch: git('branch', '--show-current') || '(detached)', dirty: sourceWorkingTreeDirty(root),
       origin: parsedOrigin.origin, loopbackOnly: true, credentialsPersisted: false,
       isolatedMutations: options.isolatedMutations,
       isolationProof,
@@ -789,7 +793,8 @@ try {
     },
     actionResults,
     canvasRouteResults,
-    navigator: { ...navigatorReconciliation, expectedCount: routeModel.routes.length, discoveredCount: navigatorRoutes.length },
+    navigator: { ...navigatorReconciliation, expectedCount: routeModel.routes.length,
+      discoveredCount: navigatorReconciliation.discovered.length, rawDiscovered: navigatorRoutes, excludedUnpublished },
     events,
     aggregate: {
       actions: actionResults.length,

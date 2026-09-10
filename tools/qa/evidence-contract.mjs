@@ -541,6 +541,13 @@ export function validateAdminActionEvidence(report, options = {}) {
   if (!Array.isArray(report?.events) || report.events.length) issues.push('admin-actions:global-errors');
   if (!report?.navigator?.exact || !exactArray(report.navigator.expected, authoritativeRoutes)
     || !exactArray(report.navigator.expected, report.navigator.discovered)) issues.push('admin-actions:navigator-manifest');
+  if (report?.navigator?.rawDiscovered) {
+    const excluded = report.navigator.excludedUnpublished || [];
+    if (excluded.some((route) => !(authoritativeModel.editorOnlyRoutes || []).includes(route))
+      || !exactArray(report.navigator.rawDiscovered, [...report.navigator.discovered, ...excluded])) {
+      issues.push('admin-actions:navigator-unpublished-reconciliation');
+    }
+  }
   const canvasSeen = new Set();
   for (const result of report?.canvasRouteResults || []) {
     if (!authoritativeRoutes.includes(result.route)) issues.push(`admin-actions:canvas-unexpected:${result.route}`);

@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import sharp from 'sharp';
 
 import { CdpBrowser } from './cdp-browser.mjs';
+import { clickWhenReady } from './actionable-click.mjs';
 import { buildExpectedRouteModel } from './route-passport-model.mjs';
 import { visualAcceptanceScenarioSetIssues } from './visual-editor-scenarios.mjs';
 import { createAdminRepoIdentity, createAdminUiHealthMarker } from '../admin-api/runtime-identity.mjs';
@@ -363,17 +364,7 @@ async function waitFor(browser, expression, { timeoutMs = 20_000, intervalMs = 4
 }
 
 async function clickShell(browser, selector) {
-  const point = await browser.evaluate(`(() => {
-    const element = document.querySelector(${json(selector)});
-    if (!element || element.hidden || element.disabled) return null;
-    element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
-    const rect = element.getBoundingClientRect();
-    if (rect.width < 1 || rect.height < 1) return null;
-    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-  })()`);
-  if (!point) throw new Error(`Clickable shell control is unavailable: ${selector}`);
-  await browser.dispatchClick(point);
-  return point;
+  return clickWhenReady(browser, selector);
 }
 
 async function setControlValue(browser, selector, value, { event = 'input' } = {}) {
@@ -488,6 +479,8 @@ async function loginIfNeeded(browser, options) {
   })()`);
   await clickShell(browser, SELECTORS.loginSubmit);
   await waitFor(browser, `Boolean(document.querySelector('#veApp:not([hidden])'))`, { timeoutMs: 20_000, label: 'synthetic login' });
+  await waitFor(browser, `!document.querySelector(${json(SELECTORS.loginSubmit)})?.disabled`, { label: 'login bootstrap complete' });
+  await waitForCanvas(browser, '/');
   return { attempted: true, success: true, reason: 'synthetic-credentials' };
 }
 
@@ -667,9 +660,10 @@ async function openPage(browser, descriptor) {
     const exact = routeWanted ? rows.find((row) => row.route === routeWanted) : null;
     const slugMatches = slugWanted ? rows.filter((row) => row.route.split('/').filter(Boolean).at(-1) === slugWanted) : [];
     const row = exact || slugMatches.sort((left, right) => left.route.length - right.route.length)[0] || rows[0];
-    return row ? { route: row.route, label: row.label, point: row.point } : null;
+    if (row) row.button.dataset.acceptancePageResult = 'true';
+    return row ? { route: row.route, label: row.label } : null;
   })()`, { timeoutMs: 10_000, label: `page result ${descriptor.query}` });
-  await browser.dispatchClick(selected.point);
+  await clickShell(browser, '#vePageDialogResults [data-acceptance-page-result="true"]');
   const canvas = await waitForCanvas(browser, selected.route);
   return { query: descriptor.query, slug: descriptor.slug, selectedRoute: selected.route, selectedLabel: selected.label, canvas };
 }
@@ -779,17 +773,7 @@ async function clickBinding(browser, bindingId, controlKey = 'target') {
     return Boolean(element);
   })()`);
   const selector = `#veOverlay [data-binding-id="${bindingId.replace(/["\\]/gu, '\\$&')}"][data-control-key="${controlKey}"]`;
-  const point = await waitFor(browser, `(() => {
-    const element = document.querySelector(${json(selector)});
-    if (!element || element.hidden || element.disabled) return null;
-    const rect = element.getBoundingClientRect();
-    const style = getComputedStyle(element);
-    return rect.width > 1 && rect.height > 1 && style.visibility !== 'hidden' && style.display !== 'none'
-      ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-      : null;
-  })()`, { timeoutMs: 8_000, intervalMs: 50, label: `overlay ${controlKey}` });
-  await browser.dispatchClick(point);
-  return point;
+  return clickWhenReady(browser, selector, { scroll: false });
 }
 
 async function projectedBindingText(browser, bindingId) {
@@ -998,6 +982,7 @@ async function runAcceptance(options, bundle) {
   const state = { productNavigation: null, productTitle: null, productDescription: null, noPhotoNavigation: null, queueOrder: null };
 
   async function scenario(id, title, callback) {
+    if (process.env.H6_QA_VERBOSE === 'true') process.stderr.write(`[h6-acceptance] start ${id}\n`);
     telemetry.setScenario(id);
     const indices = telemetry.indices();
     const started = performance.now();
@@ -1051,6 +1036,7 @@ async function runAcceptance(options, bundle) {
       allowedErrors: allowedRuntimeErrors,
       dialogs: slices.dialogs
     });
+    process.stderr.write(`[h6-acceptance] ${issues.length ? 'FAIL' : 'PASS'} ${id}${issues.length ? ': ' + issues.join('; ') : ''}\n`);
     return { returned, thrown, issues };
   }
 
@@ -1777,12 +1763,12 @@ async function runAcceptance(options, bundle) {
       const reverseButton = await browser.evaluate(`(() => {
         const button = Array.from(document.querySelectorAll('#veMediaBody button')).find((item) => item.textContent?.replace(/\\s+/gu, ' ').trim() === 'Обратный порядок');
         if (!button) return null;
-        const rect = button.getBoundingClientRect();
-        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        button.dataset.acceptanceMediaReverse = 'true';
+        return true;
       })()`);
       if (!reverseButton) throw new Error('Media queue reverse-order control is missing.');
       const reorderStarted = performance.now();
-      await browser.dispatchClick(reverseButton);
+      await clickShell(browser, '#veMediaBody [data-acceptance-media-reverse="true"]');
       const reversed = await waitFor(browser, `(() => {
         const names = Array.from(document.querySelectorAll('#veMediaBody .ve-media-row .ve-media-row__copy strong')).map((item) => item.textContent?.trim() || '');
         return names.length === 20 && names[0] === ${json(initialNames.at(-1))} && names.at(-1) === ${json(initialNames[0])} ? names : null;
@@ -2037,10 +2023,10 @@ async function runAcceptance(options, bundle) {
       const retryButton = await waitFor(browser, `(() => {
         const button = Array.from(document.querySelectorAll('#veMediaBody button')).find((item) => item.textContent?.replace(/\\s+/gu, ' ').trim() === 'Повторить ошибки');
         if (!button || button.disabled) return null;
-        const rect = button.getBoundingClientRect();
-        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        button.dataset.acceptanceMediaRetry = 'true';
+        return true;
       })()`, { label: 'retry failed media control' });
-      await browser.dispatchClick(retryButton);
+      await clickShell(browser, '#veMediaBody [data-acceptance-media-retry="true"]');
       await waitFor(browser, `(() => {
         const failed = document.querySelectorAll('#veMediaBody .ve-media-row[data-status="error"]');
         const retry = Array.from(document.querySelectorAll('#veMediaBody button')).find((item) => item.textContent?.replace(/\\s+/gu, ' ').trim() === 'Повторить ошибки');
@@ -3038,6 +3024,8 @@ async function runAcceptance(options, bundle) {
       const saveRemains = canonical.status === 200 && canonical.title === failureSave.canonical.title;
       const backupFailureVisible = ui.status.includes('резервная копия не создана')
         && /недоступно|не создана/iu.test(ui.summary);
+      const cleared = await testFaultControl(browser, { clearFaults: true });
+      if (cleared.status !== 200 || cleared.payload?.faultsCleared !== true) throw new Error('Injected failures were not cleared after their assertions.');
       return {
         issues: [
           ...(backup.lastError?.code !== 'BACKUP_TEST_INJECTED_FAILURE' ? ['backup-failure-code-missing'] : []),
@@ -3051,7 +3039,8 @@ async function runAcceptance(options, bundle) {
           ui,
           canonical,
           saveRemains,
-          backupFailureVisible
+          backupFailureVisible,
+          faultsCleared: cleared.payload.faultsCleared
         }
       };
     });
