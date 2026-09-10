@@ -9,6 +9,25 @@
   position: relative;
 }
 
+/* Keep a photo-less product editable while scrolling its canvas. The public
+   sticky handoff brings the next navigation panel over the hero's lower edge. */
+.catalog-v2--standard-no-media :is(.product-final-handoff, .product-final-handoff__scene) {
+  height: auto !important;
+}
+
+.catalog-v2--standard-no-media .product-final-handoff__scene {
+  position: static !important;
+  overflow: visible !important;
+}
+
+.catalog-v2--standard-no-media .product-final-handoff + * {
+  margin-top: 0 !important;
+}
+
+.catalog-v2--standard-no-media [data-product-final-track] {
+  transform: none !important;
+}
+
 .v2-product-top__gallery--editor-affordance {
   position: absolute !important;
   z-index: 4;
@@ -24,6 +43,10 @@
   padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
+  opacity: 1 !important;
+  transform: none !important;
+  clip-path: none !important;
+  transition: none !important;
 }
 
 .v2-product-top__gallery--editor-affordance .v2-media-empty--editor-affordance {
