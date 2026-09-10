@@ -545,7 +545,7 @@ export function validateAdminActionEvidence(report, options = {}) {
   if (report?.navigator?.rawDiscovered) {
     const excluded = report.navigator.excludedUnpublished || [];
     if (excluded.some((route) => !(authoritativeModel.editorOnlyRoutes || []).includes(route))
-      || !exactArray(report.navigator.rawDiscovered, [...report.navigator.discovered, ...excluded])) {
+      || !exactArray([...report.navigator.rawDiscovered].sort(), [...report.navigator.discovered, ...excluded].sort())) {
       issues.push('admin-actions:navigator-unpublished-reconciliation');
     }
   }

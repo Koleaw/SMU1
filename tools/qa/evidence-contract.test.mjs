@@ -285,9 +285,14 @@ test('admin action evidence rejects generic execution of release controls', () =
   };
   assert.equal(validateAdminActionEvidence(report, { authoritativeRoutes: ['/'] }).ok, true);
   const withUnpublished = structuredClone(report);
+  const editorModel = { routes: [], editorOnlyRoutes: ['/saved-draft/'] };
   withUnpublished.navigator.rawDiscovered = ['/', '/saved-draft/'];
   withUnpublished.navigator.excludedUnpublished = ['/saved-draft/'];
-  const editorModel = { routes: [], editorOnlyRoutes: ['/saved-draft/'] };
+  withUnpublished.navigator.rawDiscovered = ['/saved-draft/', '/'];
+  assert.doesNotMatch(validateAdminActionEvidence(withUnpublished, { authoritativeRoutes: ['/'], authoritativeModel: editorModel }).issues.join('\n'), /navigator-unpublished-reconciliation/);
+  withUnpublished.navigator.rawDiscovered.push('/');
+  assert.match(validateAdminActionEvidence(withUnpublished, { authoritativeRoutes: ['/'], authoritativeModel: editorModel }).issues.join('\n'), /navigator-unpublished-reconciliation/);
+  withUnpublished.navigator.rawDiscovered = ['/', '/saved-draft/'];
   assert.equal(validateAdminActionEvidence(withUnpublished, { authoritativeRoutes: ['/'], authoritativeModel: editorModel }).ok, true);
   withUnpublished.navigator.excludedUnpublished = ['/unknown/'];
   assert.match(validateAdminActionEvidence(withUnpublished, { authoritativeRoutes: ['/'], authoritativeModel: editorModel }).issues.join('\n'), /navigator-unpublished-reconciliation/);

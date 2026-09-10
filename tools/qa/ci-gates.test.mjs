@@ -55,7 +55,10 @@ test('CI retains independent failed stages and gates publishing on complete evid
   assert.match(jobs['resume-evidence'], /inputs\.deploy_target == 'test'[\s\S]*github\.ref_name != 'main'[\s\S]*github\.ref_name != 'master'/u);
   assert.match(jobs['resume-evidence'], /resume-preview-evidence\.mjs resolve/u);
   assert.match(jobs['resume-evidence'], /resume-preview-evidence\.mjs reconcile/u);
-  assert.match(jobs['resume-evidence'], /npm run qa:h6:verify-evidence\s+working-directory: site/u);
+  assert.match(jobs['resume-evidence'], /node \.\.\/qa-tools\/tools\/qa\/verify-h6-evidence\.mjs\s+working-directory: site/u);
+  assert.match(jobs['resume-evidence'], /steps\.reconcile\.outputs\.artifact_recheck == 'true'/u);
+  assert.match(jobs['resume-evidence'], /npm run qa:performance[\s\S]*npm run qa:h6:route-passport[\s\S]*npm run qa:h6:media-privacy/u);
+  for (const name of ['public-inputs','public-actions','public-evidence','release']) assert.match(jobs[name], /node tools\/qa\/restore-ci-artifact\.mjs/u);
   assert.doesNotMatch(jobs['resume-evidence'], /run: npm run build|public-action-crawl\.mjs|--stage=actions|--stage=acceptance/u);
   assert.match(jobs['deploy-resumed-preview'], /needs: resume-evidence/u);
   for (const name of ['resume-evidence', 'deploy-resumed-preview']) {

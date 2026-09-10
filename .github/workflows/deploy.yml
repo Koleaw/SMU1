@@ -338,7 +338,7 @@ jobs:
         with:
           name: validated-build-${{ github.sha }}
           path: .admin-runtime/ci
-      - run: tar -xmf .admin-runtime/ci/validated-build.tar
+      - run: node tools/qa/restore-ci-artifact.mjs
       - id: inputs
         run: node tools/qa/public-action-cache.mjs prepare
       - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -383,7 +383,7 @@ jobs:
         with:
           name: validated-build-${{ github.sha }}
           path: .admin-runtime/ci
-      - run: tar -xmf .admin-runtime/ci/validated-build.tar
+      - run: node tools/qa/restore-ci-artifact.mjs
       - name: Crawl concrete public routes on this dedicated runner
         run: node tools/qa/public-action-crawl.mjs --shard=${{ matrix.shard }}/8 --expected-input-key=${{ needs.public-inputs.outputs.input_key }} --output=.admin-runtime/h6-qa/shard-${{ matrix.shard }}.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -416,7 +416,7 @@ jobs:
         with:
           name: validated-build-${{ github.sha }}
           path: .admin-runtime/ci
-      - run: tar -xmf .admin-runtime/ci/validated-build.tar
+      - run: node tools/qa/restore-ci-artifact.mjs
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         if: needs.public-inputs.outputs.cache_hit == 'true'
         with:
@@ -467,7 +467,7 @@ jobs:
         with:
           name: validated-build-${{ github.sha }}
           path: .admin-runtime/ci
-      - run: tar -xmf .admin-runtime/ci/validated-build.tar
+      - run: node tools/qa/restore-ci-artifact.mjs
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: admin-*-${{ github.sha }}
@@ -561,7 +561,7 @@ jobs:
       - run: npm ci
         working-directory: qa-tools
       - name: Check reconciliation and exact-run contracts
-        run: node --test tools/qa/public-action-shards.test.mjs tools/qa/resume-preview-evidence.test.mjs
+        run: node --test tools/qa/public-action-shards.test.mjs tools/qa/resume-preview-evidence.test.mjs tools/qa/evidence-contract.test.mjs tools/qa/restore-ci-artifact.test.mjs tools/qa/ci-gates.test.mjs
         working-directory: qa-tools
       - id: original
         name: Require the unchanged candidate, preview and every successful original browser job
@@ -611,8 +611,22 @@ jobs:
           BASE_PATH: ${{ steps.reconcile.outputs.base_path }}
         run: node tools/qa/public-action-cache.mjs seal
         working-directory: site
-      - name: Run every original release-evidence validator on the original checkout
-        run: npm run qa:h6:verify-evidence
+      - name: Refresh only reports whose artifact identity preceded tracked SVG overlays
+        if: steps.reconcile.outputs.artifact_recheck == 'true'
+        env:
+          BASE_PATH: ${{ steps.reconcile.outputs.base_path }}
+          DEPLOY_TARGET: test
+          SITE_URL: https://koleaw.github.io
+          TEST_SITE_URL: https://koleaw.github.io
+        run: |
+          cp .admin-runtime/h6-qa/route-passport.json .admin-runtime/h6-qa/original-route-passport.json
+          cp .admin-runtime/h6-qa/media-privacy-chain.json .admin-runtime/h6-qa/original-media-privacy-chain.json
+          npm run qa:performance
+          npm run qa:h6:route-passport
+          npm run qa:h6:media-privacy
+        working-directory: site
+      - name: Validate every report against the exact original checkout with the reviewed reconciliation contract
+        run: node ../qa-tools/tools/qa/verify-h6-evidence.mjs
         working-directory: site
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:

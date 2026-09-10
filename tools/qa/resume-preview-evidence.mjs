@@ -44,6 +44,20 @@ export async function validateOriginalReport(report, site) {
   });
 }
 
+export function classifyTrackedOverlay(previous, current, readTracked) {
+  const oldFiles = new Map(previous.artifactFileHashes.map(entry => [entry[0], entry]));
+  const newFiles = new Map(current.artifactFileHashes.map(entry => [entry[0], entry]));
+  for (const [file, entry] of oldFiles) assert.deepEqual(newFiles.get(file), entry, 'Previously checked artifact file changed: ' + file);
+  const additions = [...newFiles.values()].filter(entry => !oldFiles.has(entry[0]));
+  for (const [file, fingerprint, bytes] of additions) {
+    assert.ok(/^assets\/.*\.svg$/.test(file) && !file.includes('..'), 'Unexpected checkout overlay: ' + file);
+    const tracked = readTracked(file);
+    assert.equal(tracked.length, bytes, 'Overlay size differs from the original tracked file.');
+    assert.equal(hash(tracked), fingerprint, 'Overlay bytes differ from the original tracked file.');
+  }
+  return additions;
+}
+
 const read = file => JSON.parse(fs.readFileSync(file, 'utf8'));
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', windowsHide: true }).trim();
@@ -103,8 +117,13 @@ async function main() {
   };
   const checked = await validateOriginalReport(report, site);
   assert.equal(checked.ok, true, checked.issues.join('\n'));
+  const passport = read(path.join(directory, 'route-passport.json'));
+  const additions = classifyTrackedOverlay(passport.evidence, report.evidence, file =>
+    execFileSync('git', ['show', sourceSHA + ':dist/' + file], { cwd: site, windowsHide: true }));
+  report.evidence.reconciliation.trackedCheckoutOverlay = additions;
+  output('artifact_recheck', String(additions.length > 0));
   fs.writeFileSync(path.join(directory, 'public-action-crawl.json'), JSON.stringify(report));
-  const basePath = read(path.join(directory, 'route-passport.json')).evidence.basePath;
+  const basePath = passport.evidence.basePath;
   assert.match(basePath, /^\/[A-Za-z0-9/_-]*$/);
   output('base_path', basePath);
   console.log(JSON.stringify({ originalRunId: runId, sourceSHA, aggregate: report.aggregate, issues: checked.issues }));

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
-import { validateResumeRun, validateReconciliationBoundary, validateOriginalReport } from './resume-preview-evidence.mjs';
+import { createHash } from 'node:crypto';
+import { validateResumeRun, validateReconciliationBoundary, validateOriginalReport, classifyTrackedOverlay } from './resume-preview-evidence.mjs';
 const sourceSHA = 'a'.repeat(40);
 const fixture = () => ({
   run: { status: 'completed', conclusion: 'failure', head_branch: 'preview', head_sha: sourceSHA, workflow_id: 123 },
@@ -40,4 +41,18 @@ test('reconciliation reads authoritative content from the original checkout rath
     assert.equal(checked.ok, false);
     assert.ok(checked.issues.includes('public-actions:schema-version'));
   } finally { process.chdir(site); }
+});
+
+test('artifact resumption can recheck original tracked SVG overlays but rejects any other changed byte', () => {
+  const bytes=Buffer.from('<svg/>');
+  const old={artifactFileHashes:[['index.html','a'.repeat(64),10]]};
+  const extra=['assets/icons/old.svg',createHash('sha256').update(bytes).digest('hex'),bytes.length];
+  const current={artifactFileHashes:[...old.artifactFileHashes,extra]};
+  assert.deepEqual(classifyTrackedOverlay(old,current,()=>bytes),[extra]);
+  for(const mutate of [
+    value=>{value.artifactFileHashes[0]=['index.html','b'.repeat(64),10];},
+    value=>{value.artifactFileHashes.shift();},
+    value=>{value.artifactFileHashes[1]=['assets/new.js',extra[1],extra[2]];},
+    value=>{value.artifactFileHashes[1]=[extra[0],'c'.repeat(64),extra[2]];}
+  ]){const changed=structuredClone(current);mutate(changed);assert.throws(()=>classifyTrackedOverlay(old,changed,()=>bytes));}
 });
