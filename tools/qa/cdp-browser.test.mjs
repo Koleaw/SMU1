@@ -148,8 +148,13 @@ test('explicit QA baseline navigation accepts only beforeunload and records no d
   await writeFile(path.join(root, 'index.html'), `<!doctype html><html><body>
     <button id="dirty" type="button">Dirty</button>
     <script>
-      document.querySelector('#dirty').addEventListener('click', () => {
+      document.querySelector('#dirty').addEventListener('click', (clickEvent) => {
         window.addEventListener('beforeunload', (event) => { event.preventDefault(); event.returnValue = ''; });
+        window.__beforeUnloadArm = {
+          armed: true,
+          trustedClick: clickEvent.isTrusted,
+          hasBeenActive: navigator.userActivation.hasBeenActive
+        };
       });
     </script>
   </body></html>`, 'utf8');
@@ -167,6 +172,26 @@ test('explicit QA baseline navigation accepts only beforeunload and records no d
       return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     })()`);
     await browser.dispatchClick(point);
+    // Observe the actual click handler before testing navigation. Ordinary
+    // browser.evaluate enables userGesture, which could create the activation
+    // this fixture must observe rather than supply itself.
+    const readiness = await browser.send('Runtime.evaluate', {
+      expression: `new Promise((resolve) => {
+        const deadline = performance.now() + 1000;
+        const inspect = () => {
+          if (window.__beforeUnloadArm || performance.now() >= deadline) {
+            resolve(window.__beforeUnloadArm || null);
+          } else setTimeout(inspect, 20);
+        };
+        inspect();
+      })`,
+      awaitPromise: true,
+      returnByValue: true,
+      userGesture: false
+    }, { timeoutMs: 1500 });
+    assert.equal(readiness.exceptionDetails, undefined, 'beforeunload readiness must be readable without creating a user gesture');
+    assert.deepEqual(readiness.result?.value, { armed: true, trustedClick: true, hasBeenActive: true },
+      'the real click must install beforeunload and establish sticky activation before navigation');
     await assert.rejects(
       browser.navigate(`${server.origin}/next/`),
       /Unexpected JavaScript beforeunload dialog blocked navigation/u

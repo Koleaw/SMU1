@@ -1744,17 +1744,23 @@ async function runAcceptance(options, bundle) {
         if (!affordance || !bindingElement) return null;
         try {
           const binding = JSON.parse(bindingElement.getAttribute('data-smu1-binding') || 'null');
-          return { text: affordance.textContent?.replace(/\\s+/gu, ' ').trim() || '', binding };
+          const rect = bindingElement.getBoundingClientRect();
+          return { text: affordance.textContent?.replace(/\\s+/gu, ' ').trim() || '', binding,
+            width: rect.width, height: rect.height, parentWidth: bindingElement.parentElement.getBoundingClientRect().width };
         } catch { return null; }
       })()`, { label: 'missing-product-media affordance' });
       const issues = [];
       if (evidence.text !== 'Добавить фотографии') issues.push(`affordance-label:${evidence.text}`);
       if (!['media', 'gallery'].includes(evidence.binding?.tool) || evidence.binding?.role !== 'missing-product-media') issues.push('affordance-binding');
+      if ((evidence.binding?.ownerCollection || evidence.binding?.owner?.collection) !== 'products'
+        || (evidence.binding?.recordSlug || evidence.binding?.owner?.slug) !== bundle.profile.noPhotoProduct.slug) issues.push('affordance-owner');
+      if (!(evidence.width >= 44 && evidence.height >= 44)) issues.push(`affordance-target-size:${evidence.width}x${evidence.height}`);
+      if (!(evidence.width <= evidence.parentWidth / 2 + 1)) issues.push(`affordance-too-wide:${evidence.width}/${evidence.parentWidth}`);
       return { issues, evidence: { navigation, ...evidence } };
     });
 
     await scenario('bulk-media-queue', 'Twenty raster files form a numbered, reorderable recovery queue', async ({ latency }) => {
-      const binding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'gallery', tool: 'gallery', role: 'missing-product-media' });
+      const binding = await findBinding(browser, { ownerCollection: 'products', ownerSlug: bundle.profile.noPhotoProduct.slug, fieldPath: 'gallery', tool: 'gallery', role: 'missing-product-media' });
       await clickBinding(browser, binding.binding.bindingId);
       await waitFor(browser, `Boolean(document.querySelector('#veMediaDialog')?.open && document.querySelector('#veMediaBody input[type="file"]'))`, { label: 'bulk media dialog' });
       const documentNode = await browser.send('DOM.getDocument', { depth: -1, pierce: true });
@@ -1869,7 +1875,7 @@ async function runAcceptance(options, bundle) {
         ? await waitForProjectedText(browser, state.productDescription.bindingId, state.productDescription.marker, 'restored long-text draft')
         : '';
       const noPhoto = await openPage(browser, bundle.profile.noPhotoProduct);
-      const mediaBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'gallery', tool: 'gallery', role: 'missing-product-media' });
+      const mediaBinding = await findBinding(browser, { ownerCollection: 'products', ownerSlug: bundle.profile.noPhotoProduct.slug, fieldPath: 'gallery', tool: 'gallery', role: 'missing-product-media' });
       await clickBinding(browser, mediaBinding.binding.bindingId);
       const restoredQueue = await waitFor(browser, `(() => {
         const names = Array.from(document.querySelectorAll('#veMediaBody .ve-media-row .ve-media-row__copy strong')).map((item) => item.textContent?.trim() || '');
@@ -1990,7 +1996,7 @@ async function runAcceptance(options, bundle) {
     await scenario('bulk-media-stage-save', 'Twenty photos stage, one failed file retries alone, an explicit cover is assigned, and Save promotes the batch atomically', async ({ latency }) => {
       if (!bundle.failedMediaFile) throw new Error('The disposable bundle lacks failedMediaFile for retry acceptance.');
       const navigation = await openPage(browser, bundle.profile.noPhotoProduct);
-      const mediaBinding = await findBinding(browser, { ownerCollection: 'products', fieldPath: 'gallery', tool: 'gallery', role: 'missing-product-media' });
+      const mediaBinding = await findBinding(browser, { ownerCollection: 'products', ownerSlug: bundle.profile.noPhotoProduct.slug, fieldPath: 'gallery', tool: 'gallery', role: 'missing-product-media' });
       await clickBinding(browser, mediaBinding.binding.bindingId);
       await waitFor(browser, `document.querySelector('#veMediaDialog')?.open && document.querySelectorAll('#veMediaBody .ve-media-row').length === 20`, {
         timeoutMs: 20_000,
