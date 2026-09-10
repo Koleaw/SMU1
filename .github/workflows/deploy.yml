@@ -619,6 +619,8 @@ jobs:
           SITE_URL: https://koleaw.github.io
           TEST_SITE_URL: https://koleaw.github.io
         run: |
+          node tools/performance/prepare-media.mjs
+          tar -xmf .admin-runtime/ci/validated-build.tar dist
           cp .admin-runtime/h6-qa/route-passport.json .admin-runtime/h6-qa/original-route-passport.json
           cp .admin-runtime/h6-qa/media-privacy-chain.json .admin-runtime/h6-qa/original-media-privacy-chain.json
           npm run qa:performance
