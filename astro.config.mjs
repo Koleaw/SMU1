@@ -1,6 +1,7 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import { exactPrerenderIntegration } from './tools/admin-api/exact-prerender-integration.mjs';
+import { isolatedMediaPreview } from './tools/qa/isolated-media-preview.mjs';
 
 const DEV_SITE_URL = 'http://localhost:4321';
 const inferDeployTarget = () => {
@@ -124,6 +125,9 @@ export default defineConfig({
       : [])
   ],
   vite: {
+    plugins: IS_EXPLICIT_LOCAL_ADMIN && process.env.ADMIN_TEST_MODE === 'true' && process.env.ADMIN_TEST_CONTENT_ROOT
+      ? [isolatedMediaPreview(process.env.ADMIN_TEST_CONTENT_ROOT)]
+      : [],
     // Keep the public client parseable in the last Chrome supported on Windows 8.
     build: {
       target: ['chrome109', 'firefox115', 'safari15.4'],

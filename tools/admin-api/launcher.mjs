@@ -515,6 +515,10 @@ export function createChildEnvironments(raw, config, options = {}) {
     PUBLIC_ADMIN_API_BASE: config.PUBLIC_ADMIN_API_BASE,
     PUBLIC_ADMIN_HEALTH_MARKER: createAdminUiHealthMarker(repoIdentity),
     SMU1_LOCAL_ADMIN: 'true',
+    ...(sourceEnvironment.ADMIN_TEST_MODE === 'true' && sourceEnvironment.ADMIN_TEST_CONTENT_ROOT ? {
+      ADMIN_TEST_MODE: 'true',
+      ADMIN_TEST_CONTENT_ROOT: sourceEnvironment.ADMIN_TEST_CONTENT_ROOT
+    } : {}),
     [UI_PARENT_IDENTITY_ENV]: repoIdentity,
     // Astro 7 auto-daemonizes when it detects an agent environment. The
     // editor owns this child and must observe/stop it directly, so force the
