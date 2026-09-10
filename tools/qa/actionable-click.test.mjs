@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { CdpBrowser, createDistServer, preferredChromePath } from './cdp-browser.mjs';
-import { clickWhenReady } from './actionable-click.mjs';
+import { clickWhenReady, visibleClickPoint } from './actionable-click.mjs';
 
 test('coordinate clicks wait for motion, visibility and hit-testing, then activate exactly once', { skip: !preferredChromePath() }, async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'smu1-actionable-'));
@@ -29,6 +29,13 @@ test('coordinate clicks wait for motion, visibility and hit-testing, then activa
     assert.ok(clipped.rect.top + clipped.rect.height / 2 > clipped.height, 'full centre is outside the viewport');
     assert.ok(clippedPoint.x < clipped.width && clippedPoint.y < clipped.height, 'native click stays in the visible intersection');
     assert.equal(clipped.count, 2);
+    await browser.evaluate(`{
+      const clip=document.createElement('div'); clip.style.cssText='position:fixed;left:20px;top:20px;width:80px;height:80px;overflow:hidden';
+      clip.innerHTML='<button id="clipped" style="position:absolute;left:100px;top:100px;width:40px;height:40px">Clipped</button><button id="visible" style="position:absolute;left:10px;top:10px">Visible</button>';
+      document.body.append(clip);
+    }`);
+    const candidates = await browser.evaluate(`['clipped','visible'].map(id=>({id,point:(${visibleClickPoint.toString()})(document.getElementById(id))}))`);
+    assert.deepEqual(candidates.filter(candidate=>candidate.point.ready).map(candidate=>candidate.id), ['visible'], 'selection excludes a target clipped by its ancestor, despite its on-screen bounding box');
   } finally {
     await browser.close(); await server.close();
     // mkdtemp returned this exact owned test directory.

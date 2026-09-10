@@ -9,7 +9,7 @@ import {
   isAdminHomeCanvasReady
 } from './admin-canvas-contract.mjs';
 import { CdpBrowser } from './cdp-browser.mjs';
-import { clickWhenReady } from './actionable-click.mjs';
+import { clickWhenReady, visibleClickPoint } from './actionable-click.mjs';
 import { sourceWorkingTreeDirty } from './git-evidence.mjs';
 import { buildExpectedRouteModel, reconcileRouteSets } from './route-passport-model.mjs';
 
@@ -502,8 +502,8 @@ const runCanvasRouteAudit = async () => {
               .find((candidate) => candidate.getAttribute('data-smu1-binding-id') === bindingId);
             let tool = '';
             try { tool = JSON.parse(bindingElement?.getAttribute('data-smu1-binding') || 'null')?.tool || ''; } catch {}
-            return { item, tool };
-          });
+            return { item, tool, point: (${visibleClickPoint.toString()})(item) };
+          }).filter(candidate => candidate.point.ready);
           return {
             h1: Array.from(documentValue?.querySelectorAll('h1') || []).map((item) => item.textContent?.replace(/\\s+/gu, ' ').trim()).filter(Boolean),
             canvasHint: document.querySelector('#veCanvasHint')?.textContent?.replace(/\\s+/gu, ' ').trim() || '',
@@ -532,7 +532,7 @@ const runCanvasRouteAudit = async () => {
         })()`).catch(() => null);
         if (snapshot?.h1?.length === 1 && (descriptor.routeClass === 'alias'
           ? snapshot.aliasBridgeReady && snapshot.aliasBridgeRevisionMatch
-          : snapshot.bindings > 0 && snapshot.overlays > 0)) break;
+          : snapshot.bindings > 0 && snapshot.overlays > 0 && snapshot.overlayPoint)) break;
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
       let contextual = { applicable: descriptor.routeClass !== 'alias', opened: false, controls: 0, escapeClosed: false };

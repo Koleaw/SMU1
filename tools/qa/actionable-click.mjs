@@ -1,5 +1,24 @@
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Self-contained so CDP callers can use the same hit test while selecting a
+// target. Bounding boxes alone do not account for clipped scrolling ancestors.
+export function visibleClickPoint(element) {
+  const doc = element.ownerDocument, win = doc.defaultView;
+  const rect = element.getBoundingClientRect();
+  const left = Math.max(0, rect.left), right = Math.min(win.innerWidth, rect.right);
+  const top = Math.max(0, rect.top), bottom = Math.min(win.innerHeight, rect.bottom);
+  if (right <= left || bottom <= top) return { ready: false, reason: 'outside-viewport' };
+  let hit = null, toast = null;
+  for (const [px, py] of [[.5,.5],[.5,.2],[.2,.2],[.8,.2],[.2,.5],[.8,.5],[.2,.8],[.5,.8],[.8,.8]]) {
+    const x = left + (right-left)*px, y = top + (bottom-top)*py;
+    hit = doc.elementFromPoint(x, y);
+    if (hit === element || element.contains(hit)) return { ready: true, x, y };
+    toast ||= hit?.closest('#veToastRegion .ve-toast');
+  }
+  if (toast) toast.dataset.acceptanceDismiss = 'true';
+  return { ready: false, reason: 'covered', hit: hit?.id || hit?.getAttribute('data-binding-id') || hit?.tagName || '', toast: Boolean(toast) };
+}
+
 // CDP dispatches coordinates without Playwright's actionability checks. Wait for
 // layout/scroll handlers and a stable, unobstructed target before dispatching once.
 export async function clickWhenReady(browser, selector, { scroll = true, timeoutMs = 8000, dismissToasts = false } = {}) {
@@ -18,18 +37,7 @@ export async function clickWhenReady(browser, selector, { scroll = true, timeout
       const rect = element.getBoundingClientRect(), style = getComputedStyle(element);
       if (rect.width < 1 || rect.height < 1 || style.visibility === 'hidden' || style.display === 'none') return { ready: false, reason: 'hidden' };
       if (['x', 'y', 'width', 'height'].some(key => Math.abs(rect[key] - before[key]) > 0.25)) return { ready: false, reason: 'moving' };
-      const left = Math.max(0, rect.left), right = Math.min(innerWidth, rect.right);
-      const top = Math.max(0, rect.top), bottom = Math.min(innerHeight, rect.bottom);
-      if (right <= left || bottom <= top) return { ready: false, reason: 'outside-viewport', rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }, viewport: { width: innerWidth, height: innerHeight }, scroll: { x: scrollX, y: scrollY } };
-      let hit = null, toast = null;
-      for (const [px, py] of [[.5,.5],[.5,.2],[.2,.2],[.8,.2],[.2,.5],[.8,.5],[.2,.8],[.5,.8],[.8,.8]]) {
-        const x = left + (right-left)*px, y = top + (bottom-top)*py;
-        hit = document.elementFromPoint(x, y);
-        if (hit === element || element.contains(hit)) return { ready: true, x, y };
-        toast ||= hit?.closest('#veToastRegion .ve-toast');
-      }
-      if (toast) toast.dataset.acceptanceDismiss = 'true';
-      return { ready: false, reason: 'covered', hit: hit?.id || hit?.getAttribute('data-binding-id') || hit?.tagName || '', toast: Boolean(toast) };
+      return (${visibleClickPoint.toString()})(element);
     })()`);
     if (last?.ready) {
       const point = { x: last.x, y: last.y };
