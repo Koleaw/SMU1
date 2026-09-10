@@ -1968,7 +1968,11 @@ export async function startVisualEditor() {
       ? { bindingId: document.activeElement.dataset.bindingId || '', controlKey: document.activeElement.dataset.controlKey || '' }
       : null;
     overlay.replaceChildren();
-    for (const row of state.bindingRows) {
+    // Large background/video regions must not cover the smaller text and action
+    // targets inside them (notably header links above a full-height hero).
+    const layers = [...state.bindingRows].sort((a, b) =>
+      (b.rect?.width || 0) * (b.rect?.height || 0) - (a.rect?.width || 0) * (a.rect?.height || 0));
+    for (const row of layers) {
       const { rect, binding } = row;
       if (!rect || rect.width < 4 || rect.height < 4 || rect.bottom < 0 || rect.right < 0) continue;
       const button = document.createElement('button');
@@ -4905,7 +4909,8 @@ export async function startVisualEditor() {
         alt: typeof raw === 'object' ? raw.alt || existing?.alt || '' : existing?.alt || '',
         caption: typeof raw === 'object' ? raw.caption || existing?.caption || '' : existing?.caption || '',
         role: nextRole, roles: originalRoles, originalRoles, roleChanged: false,
-        status: 'uploaded', error: '', canonicalPath: path, lease: null,
+        status: 'uploaded', error: '', canonicalPath: path,
+        lease: (record.stagedMedia || []).find((item) => item.canonicalPath === path) || null,
         existing: true
       });
     };
@@ -5059,7 +5064,9 @@ export async function startVisualEditor() {
         thumb.append(image);
       } else if (item.canonicalPath) {
         const image = document.createElement('img');
-        image.src = item.canonicalPath;
+        image.src = item.lease
+          ? api.stagedMediaPreviewUrl({ batchId: item.lease.batchId, leaseId: item.lease.leaseId })
+          : item.canonicalPath;
         image.alt = '';
         thumb.append(image);
       }

@@ -2040,10 +2040,17 @@ async function runAcceptance(options, bundle) {
         return true;
       })()`, { label: 'retry failed media control' });
       await clickShell(browser, '#veMediaBody [data-acceptance-media-retry="true"]');
+      const retryDeadline = Date.now() + 30_000;
+      while (Date.now() < retryDeadline) {
+        const completed = telemetry.requests.slice(retryStartedAt).filter(entry => entry.method === 'POST'
+          && entry.url.pathname.endsWith('/media/staging') && (entry.finished || entry.failed));
+        if (completed.length) break;
+        await sleep(40);
+      }
       await waitFor(browser, `(() => {
         const failed = document.querySelectorAll('#veMediaBody .ve-media-row[data-status="error"]');
         const retry = Array.from(document.querySelectorAll('#veMediaBody button')).find((item) => item.textContent?.replace(/\\s+/gu, ' ').trim() === 'Повторить ошибки');
-        return failed.length === 1 && retry && !retry.disabled ? true : null;
+        return failed.length === 1 && retry && !retry.disabled && document.querySelector('#veApp')?.dataset.mediaQueueRunning !== 'true' ? true : null;
       })()`, { timeoutMs: 30_000, intervalMs: 100, label: 'failed media retry completed' });
       const retryRequests = telemetry.requests.slice(retryStartedAt)
         .filter((entry) => entry.method === 'POST' && entry.url.pathname.endsWith('/media/staging'));
@@ -2052,9 +2059,9 @@ async function runAcceptance(options, bundle) {
         const row = document.querySelector('#veMediaBody .ve-media-row[data-status="error"]');
         const name = row?.querySelector('strong')?.textContent?.trim() || '';
         const remove = row?.querySelector('.ve-media-row__remove');
-        remove?.click();
         return { found: Boolean(row && remove), name };
       })()`);
+      await clickShell(browser, '#veMediaBody .ve-media-row[data-status="error"] .ve-media-row__remove');
       await waitFor(browser, `document.querySelectorAll('#veMediaBody .ve-media-row').length === 20 && !document.querySelector('#veMediaBody .ve-media-row[data-status="error"]')`, {
         label: 'failed media removed'
       });
