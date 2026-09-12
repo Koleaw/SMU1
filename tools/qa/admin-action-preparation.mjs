@@ -1,6 +1,19 @@
 import { findAdminActionElement } from './admin-action-state.mjs';
 import { visibleClickPoint } from './actionable-click.mjs';
 
+// Only the outer canvas scrollport moves; fixed iframe descendants may not
+// propagate scrollIntoView to this ancestor. No focus or action is dispatched.
+export function revealAdminCanvasControl(documentValue, element) {
+  const scroller = documentValue.querySelector('#veCanvasScroller');
+  if (!scroller) return false;
+  const box = element.getBoundingClientRect(), clip = scroller.getBoundingClientRect();
+  const left = clip.left + scroller.clientLeft, right = left + scroller.clientWidth;
+  const centre = (box.left + box.right) / 2;
+  if (centre >= left && centre <= right) return false;
+  scroller.scrollBy({left: centre - (left + right) / 2, behavior:'instant'});
+  return true;
+}
+
 // Serialized into CDP: reads observable state, never calls application handlers.
 export function readAdminControlState(documentValue, action, element) {
   const frame = documentValue.querySelector('#veFrame');
@@ -69,8 +82,8 @@ export function adminActionProbeExpression(action, { scroll = false, interaction
         const key = action.dataAttributes?.['data-control-key'] || '';
         // Reorder controls are anchored to the source's top, even when its
         // image/card is taller than the iframe viewport.
-        const block = key === 'handle' || key.startsWith('move-') ? 'start' : 'center';
-        const inline = key === 'handle' ? 'start' : key.startsWith('move-') ? 'end' : 'center';
+        const block = key === 'handle' || key === 'relation' || key.startsWith('move-') ? 'start' : 'center';
+        const inline = key === 'handle' ? 'start' : key === 'relation' || key.startsWith('move-') ? 'end' : 'center';
         source.scrollIntoView({block,inline,behavior:'instant'});
         canvas.contentWindow.dispatchEvent(new canvas.contentWindow.Event('scroll'));
       } else element.scrollIntoView({block:'center',inline:'center',behavior:'instant'});
@@ -79,6 +92,12 @@ export function adminActionProbeExpression(action, { scroll = false, interaction
     await frameTick();
     element = find(documentValue, action);
     if (!element) return { found:false, executable:false, reason:'replaced' };
+    if (${JSON.stringify(scroll)} && action.containerId === 'veOverlay'
+      && (${revealAdminCanvasControl.toString()})(document,element)) {
+      await frameTick();
+      element = find(documentValue, action);
+      if (!element) return {found:false,executable:false,reason:'replaced'};
+    }
     const before = element.getBoundingClientRect();
     await frameTick();
     if (!element.isConnected || find(documentValue, action) !== element) return { found:true, executable:false, reason:'replaced' };

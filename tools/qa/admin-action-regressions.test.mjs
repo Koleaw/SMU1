@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { findAdminActionElement, adminControlPostcondition } from './admin-action-state.mjs';
 import { visibleClickPoint } from './actionable-click.mjs';
+import { revealAdminCanvasControl } from './admin-action-preparation.mjs';
 
 const action = key => ({context:'shell',containerId:'veOverlay',tag:'button',dataAttributes:{'data-binding-id':'home:landscaping','data-control-key':key}});
 const native = key => [{type:'click',isTrusted:true,bindingId:'home:landscaping',controlKey:key}];
@@ -80,4 +81,43 @@ test('unrelated global hidden changes cannot prove a shell dialog action',()=>{
   const before=state({dialogs:0,hidden:6,canvasDocument:1,status:[]});
   assert.equal(adminControlPostcondition(picker,before,state({dialogs:0,hidden:5,canvasDocument:1,status:[]}),[]),false);
   assert.equal(adminControlPostcondition(picker,before,state({dialogs:1,hidden:5,canvasDocument:1,status:[]}),[]),true);
+});
+
+function clippedParentFixture({covered=false, clipped=false}={}) {
+  const bounds=(left,top,width,height)=>({left,top,right:left+width,bottom:top+height,width,height});
+  const clip={parentElement:null,clientLeft:0,clientTop:0,clientWidth:600,clientHeight:400,offsetWidth:600,offsetHeight:400,getBoundingClientRect:()=>bounds(260,100,600,400)};
+  const blocker={tagName:'BUTTON',closest:()=>null,getAttribute:()=> 'nested-media'};
+  const tested=[];
+  const doc={defaultView:{innerWidth:1440,innerHeight:900,getComputedStyle:()=>({overflowX:'auto',overflowY:'clip'})}};
+  const target={parentElement:clip,ownerDocument:doc,getBoundingClientRect:()=>bounds(clipped?1000:144,100,1423,808),contains:()=>false};
+  doc.elementFromPoint=(x,y)=>{tested.push({x,y});return !covered&&y<116&&x>=260&&x<860?target:blocker};
+  return {target,tested};
+}
+
+test('clipped parent padding remains a real exact native target when nested media covers the centre',()=>{
+  const {target,tested}=clippedParentFixture();
+  const point=visibleClickPoint(target);
+  assert.equal(point.ready,true);
+  assert.ok(point.x>=260&&point.x<860&&point.y>=100&&point.y<116);
+  assert.ok(tested.every(({x,y})=>x>=260&&x<860&&y>=100&&y<500),'every sample stays in the actual clipping intersection');
+});
+
+test('covered parent edges and an empty clipping intersection never become ready',()=>{
+  const covered=clippedParentFixture({covered:true});
+  assert.equal(visibleClickPoint(covered.target).ready,false);
+  const clipped=clippedParentFixture({clipped:true});
+  assert.deepEqual(visibleClickPoint(clipped.target),{ready:false,reason:'clipped-by-ancestor'});
+  assert.equal(clipped.tested.length,0,'no out-of-clip point is hit-tested');
+});
+
+test('fixed iframe control outside the horizontal canvas reveals only the outer scrollport',()=>{
+  const moves=[];let selector='';
+  const scroller={clientLeft:0,clientWidth:1170,getBoundingClientRect:()=>({left:270}),scrollBy:value=>moves.push(value)};
+  const documentValue={querySelector:value=>{selector=value;return scroller}};
+  const element={getBoundingClientRect:()=>({left:1574.59375,right:1700})};
+  assert.equal(revealAdminCanvasControl(documentValue,element),true);
+  assert.equal(selector,'#veCanvasScroller');
+  assert.deepEqual(moves,[{left:(1574.59375+1700)/2-(270+1440)/2,behavior:'instant'}]);
+  assert.equal(revealAdminCanvasControl(documentValue,{getBoundingClientRect:()=>({left:400,right:444})}),false);
+  assert.equal(moves.length,1,'already revealed controls do not move the canvas again');
 });

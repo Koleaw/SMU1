@@ -27,6 +27,7 @@ import {
 import { reorderEntityPages } from '../state/entity-reorder.mjs';
 import { createMediaScheduler } from '../../../tools/admin-api/media-scheduler.mjs';
 import { createOverlayRenderGuard } from './overlay-render-guard.mjs';
+import { homePosterControlLayout } from './home-poster-control.mjs';
 
 const BRIDGE_PROTOCOL = 'smu1-editor-bridge';
 const BRIDGE_VERSION = 1;
@@ -2013,6 +2014,30 @@ export async function startVisualEditor() {
       button.style.top = `${Math.max(0, rect.top)}px`;
       button.style.width = `${Math.max(8, rect.width)}px`;
       button.style.height = `${Math.max(8, rect.height)}px`;
+      if (binding.renderer?.family === 'home' && binding.role === 'home-hero-poster-desktop') {
+        const overlayRect = overlay.getBoundingClientRect();
+        const scrollerRect = canvasScroller.getBoundingClientRect();
+        const posterControl = homePosterControlLayout(row, layers, {
+          left: Math.max(0, scrollerRect.left - overlayRect.left),
+          top: Math.max(0, scrollerRect.top - overlayRect.top),
+          right: Math.min(canvasViewport.clientWidth, scrollerRect.right - overlayRect.left),
+          bottom: Math.min(canvasViewport.clientHeight, scrollerRect.bottom - overlayRect.top)
+        }, frame.contentDocument?.querySelector('[data-home-v2-header]')?.getBoundingClientRect().bottom || 0);
+        if (posterControl?.hidden) {
+          button.hidden = true;
+          button.style.display = 'none';
+        } else if (posterControl) {
+          button.classList.add('ve-overlay-target--home-poster');
+          button.textContent = 'Постер для компьютера';
+          button.title = 'Изменить постер для компьютера';
+          button.dataset.toolLabel = 'Постер для компьютера';
+          button.setAttribute('aria-label', 'Изменить: Постер для компьютера');
+          button.style.left = `${posterControl.left}px`;
+          button.style.top = `${posterControl.top}px`;
+          button.style.width = `${posterControl.width}px`;
+          button.style.height = `${posterControl.height}px`;
+        }
+      }
       button.addEventListener('click', () => void selectBinding(binding, rect));
       if (binding.tool === 'reorder-item') {
         const handle = document.createElement('button');

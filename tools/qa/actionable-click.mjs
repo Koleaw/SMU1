@@ -5,12 +5,35 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export function visibleClickPoint(element) {
   const doc = element.ownerDocument, win = doc.defaultView;
   const rect = element.getBoundingClientRect();
-  const left = Math.max(0, rect.left), right = Math.min(win.innerWidth, rect.right);
-  const top = Math.max(0, rect.top), bottom = Math.min(win.innerHeight, rect.bottom);
+  let left = Math.max(0, rect.left), right = Math.min(win.innerWidth, rect.right);
+  let top = Math.max(0, rect.top), bottom = Math.min(win.innerHeight, rect.bottom);
   if (right <= left || bottom <= top) return { ready: false, reason: 'outside-viewport' };
+  // The useful rectangle is the intersection of every scrolling/clipping
+  // ancestor. Sampling the uncut rectangle misses exposed parent padding.
+  for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+    const style = win.getComputedStyle(parent), bounds = parent.getBoundingClientRect();
+    const scaleX = parent.offsetWidth ? bounds.width / parent.offsetWidth : 1;
+    const scaleY = parent.offsetHeight ? bounds.height / parent.offsetHeight : 1;
+    const clipLeft = bounds.left + parent.clientLeft * scaleX;
+    const clipTop = bounds.top + parent.clientTop * scaleY;
+    if (/hidden|clip|auto|scroll/.test(style.overflowX)) {
+      left = Math.max(left, clipLeft); right = Math.min(right, clipLeft + parent.clientWidth * scaleX);
+    }
+    if (/hidden|clip|auto|scroll/.test(style.overflowY)) {
+      top = Math.max(top, clipTop); bottom = Math.min(bottom, clipTop + parent.clientHeight * scaleY);
+    }
+  }
+  if (right <= left || bottom <= top) return { ready: false, reason: 'clipped-by-ancestor' };
+  const points = [[.5,.5],[.5,.2],[.2,.2],[.8,.2],[.2,.5],[.8,.5],[.2,.8],[.5,.8],[.8,.8]]
+    .map(([px, py]) => [left + (right-left)*px, top + (bottom-top)*py]);
+  // Nested text/media controls may cover the centre of a parent while its
+  // padding remains a real native target. Edges still require exact hit-testing.
+  const insetX = Math.min(8, (right-left)/2), insetY = Math.min(8, (bottom-top)/2);
+  for (const x of [left+insetX, (left+right)/2, right-insetX]) {
+    for (const y of [top+insetY, (top+bottom)/2, bottom-insetY]) points.push([x,y]);
+  }
   let hit = null, toast = null;
-  for (const [px, py] of [[.5,.5],[.5,.2],[.2,.2],[.8,.2],[.2,.5],[.8,.5],[.2,.8],[.5,.8],[.8,.8]]) {
-    const x = left + (right-left)*px, y = top + (bottom-top)*py;
+  for (const [x, y] of points) {
     hit = doc.elementFromPoint(x, y);
     if (hit === element || element.contains(hit)) return { ready: true, x, y };
     toast ||= hit?.closest('#veToastRegion .ve-toast');

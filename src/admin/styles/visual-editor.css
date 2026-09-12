@@ -296,6 +296,10 @@ button { color: inherit; }
 .ve-overlay-target::after { content: attr(data-tool-label); position: absolute; top: -23px; left: -1px; max-width: 210px; padding: 3px 7px; border-radius: 4px 4px 4px 0; color: #fff; background: #0b684e; font-size: 9px; font-weight: 750; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; opacity: 0; overflow: hidden; }
 .ve-overlay-target:hover::after, .ve-overlay-target:focus-visible::after, .ve-overlay-target[aria-pressed="true"]::after { opacity: 1; }
 .ve-overlay-target[data-drop="true"] { opacity: 1; border-style: dashed; border-width: 3px; background: rgb(20 140 100 / .16); }
+.ve-overlay-target--home-poster { z-index: 6; min-height: 44px; padding: 8px 12px; border: 1px solid #fff; border-radius: 7px; color: #fff; background: #0b684e; opacity: 1; font: inherit; font-size: 12px; font-weight: 700; line-height: 1.2; }
+.ve-overlay-target--home-poster[aria-pressed="true"] { background: #0b684e; }
+.ve-overlay-target--home-poster:hover, .ve-overlay-target--home-poster:focus-visible { background: #084f3c; outline: 2px solid #f3b451; outline-offset: 2px; }
+.ve-overlay-target--home-poster::after { display: none; }
 .ve-reorder-handle, .ve-reorder-moves { position: absolute; z-index: 3; pointer-events: auto; }
 .ve-relation-handle { position: absolute; z-index: 6; min-width: 68px; height: 28px; border: 1px solid rgb(255 255 255 / .86); border-radius: 999px; padding: 0 9px; color: #fff; background: #0b684e; box-shadow: 0 3px 12px rgb(8 61 45 / .26); font: inherit; font-size: 9px; font-weight: 800; pointer-events: auto; cursor: pointer; }
 .ve-relation-handle:hover, .ve-relation-handle:focus-visible { background: #084f3c; outline: 2px solid #f3b451; outline-offset: 1px; }
