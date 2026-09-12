@@ -823,6 +823,13 @@
   min-width: 0;
 }
 
+/* Preserve long object names while the hero still uses two columns. */
+@media (min-width: 1181px) and (max-width: 1320px) {
+  .home-v2-body .projects-v2 .v2-project-detail__hero-grid {
+    grid-template-columns: minmax(0, 5.25fr) minmax(0, 6.75fr);
+  }
+}
+
 .v2-project-detail__hero h1 {
   max-width: 760px;
   margin-top: 14px;

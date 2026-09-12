@@ -6,6 +6,7 @@ import sharp from 'sharp';
 
 import { CdpBrowser } from './cdp-browser.mjs';
 import { clickWhenReady } from './actionable-click.mjs';
+import { classifyIframeDocumentCancellation, reconcileScenarioNetworkIssues } from './iframe-document-cancellation.mjs';
 import { measureTextProjection } from './text-projection-probe.mjs';
 import { buildExpectedRouteModel } from './route-passport-model.mjs';
 import { visualAcceptanceScenarioSetIssues } from './visual-editor-scenarios.mjs';
@@ -328,11 +329,15 @@ function requestMatchesAllowance(request, allowance) {
   });
 }
 
-function isBenignBrowserCancellation(request) {
-  return request?.failed === true
+function isBenignBrowserCancellation(request, telemetry) {
+  if (request?.failed === true
     && request.resourceType === 'Media'
     && request.status === 206
-    && request.failure === 'net::ERR_ABORTED';
+    && request.failure === 'net::ERR_ABORTED') return true;
+  const proof = classifyIframeDocumentCancellation(request, telemetry);
+  if (!proof) return false;
+  request.documentReplacementCancellation = proof;
+  return true;
 }
 
 function requestMatchesNetworkAllowance(request, allowance) {
@@ -884,24 +889,36 @@ async function mediaQueueSnapshot(browser) {
   }))()`);
 }
 
-function createTelemetry(browser, origin) {
+export function createTelemetry(browser, origin) {
   const requests = [];
   const requestById = new Map();
+  const frameNavigations = [];
   const events = [];
   const dialogs = [];
   let currentScenario = 'bootstrap';
+  let sequence = 0;
   const startedAt = Date.now();
   const elapsed = () => Date.now() - startedAt;
+  const timestamp = (value) => Number.isFinite(value) ? value : null;
 
+  browser.on('Page.frameNavigated', ({ frame }) => {
+    frameNavigations.push({
+      scenario: currentScenario, atMs: elapsed(), sequence: ++sequence,
+      frameId: String(frame?.id || ''), loaderId: String(frame?.loaderId || ''),
+      parentId: String(frame?.parentId || ''), url: sanitizeRequestUrl(frame?.url || '')
+    });
+  });
   browser.on('Network.requestWillBeSent', (event) => {
     const method = String(event.request?.method || 'GET').toUpperCase();
     const rawUrl = String(event.request?.url || '');
     const safeUrl = sanitizeRequestUrl(rawUrl);
     const record = {
       requestId: String(event.requestId || ''), scenario: currentScenario, atMs: elapsed(), method,
+      frameId: String(event.frameId || ''), loaderId: String(event.loaderId || ''),
+      requestTimestamp: timestamp(event.timestamp), startedSequence: ++sequence,
       url: safeUrl, resourceType: event.type || '', status: null, mimeType: '', fromDiskCache: false,
-      failed: false, finished: false, failure: '', releaseEndpoint: RELEASE_ENDPOINT.test(safeUrl.pathname),
-      releaseMutation: isReleaseMutation(method, rawUrl)
+      failed: false, finished: false, failure: '', canceled: false, blockedReason: '', corsError: false,
+      releaseEndpoint: RELEASE_ENDPOINT.test(safeUrl.pathname), releaseMutation: isReleaseMutation(method, rawUrl)
     };
     requests.push(record);
     requestById.set(record.requestId, record);
@@ -913,13 +930,20 @@ function createTelemetry(browser, origin) {
     record.mimeType = String(event.response?.mimeType || '');
     record.fromDiskCache = event.response?.fromDiskCache === true;
     record.responseAtMs = elapsed();
+    record.responseTimestamp = timestamp(event.timestamp);
+    record.responseSequence = ++sequence;
   });
   browser.on('Network.loadingFailed', (event) => {
     const record = requestById.get(String(event.requestId || ''));
     if (record) {
       record.failed = true;
       record.failure = redactDiagnostic(event.errorText || event.blockedReason || 'loading failed');
-      record.responseAtMs = elapsed();
+      record.canceled = event.canceled === true;
+      record.blockedReason = String(event.blockedReason || '');
+      record.corsError = Boolean(event.corsErrorStatus);
+      record.failureAtMs = elapsed();
+      record.failureTimestamp = timestamp(event.timestamp);
+      record.failureSequence = ++sequence;
     }
   });
   browser.on('Network.loadingFinished', (event) => {
@@ -927,6 +951,8 @@ function createTelemetry(browser, origin) {
     if (record) {
       record.finished = true;
       record.finishedAtMs = elapsed();
+      record.finishedTimestamp = timestamp(event.timestamp);
+      record.finishedSequence = ++sequence;
     }
   });
   browser.on('Runtime.exceptionThrown', (event) => {
@@ -943,7 +969,7 @@ function createTelemetry(browser, origin) {
   });
 
   return {
-    requests, events, dialogs,
+    requests, frameNavigations, events, dialogs,
     setScenario(value) { currentScenario = value; },
     slices(requestIndex, eventIndex, dialogIndex) {
       return { requests: requests.slice(requestIndex), errors: events.slice(eventIndex), dialogs: dialogs.slice(dialogIndex) };
@@ -987,6 +1013,7 @@ async function runAcceptance(options, bundle) {
   await browser.start();
   const telemetry = createTelemetry(browser, options.origin);
   const scenarios = [];
+  const scenarioNetworkFailures = new Map();
   const authoritativeRoutes = buildExpectedRouteModel({ root: bundle.proof.disposableRoot })
     .routes.map((route) => route.pathname)
     .sort((left, right) => left.localeCompare(right, 'en'));
@@ -1026,7 +1053,7 @@ async function runAcceptance(options, bundle) {
     const unexpectedRuntimeErrors = slices.errors.filter((entry) => !allowedRuntimeErrors.includes(entry));
     if (unexpectedRuntimeErrors.length) issues.push(`runtime-errors:${unexpectedRuntimeErrors.length}`);
     const unexpectedHttp = slices.requests.filter((request) => request.status >= 400 && !requestMatchesAllowance(request, returned.allowedHttpFailures));
-    const unexpectedNetwork = slices.requests.filter((request) => request.failed && !isBenignBrowserCancellation(request)
+    const unexpectedNetwork = slices.requests.filter((request) => request.failed && !isBenignBrowserCancellation(request, telemetry)
       && !requestMatchesNetworkAllowance(request, returned.allowedNetworkFailures)
       && !browser.safetyEvidence().intercepted.some((entry) => sanitizeRequestUrl(entry.url).pathname === request.url.pathname));
     if (unexpectedHttp.length) issues.push(`http-errors:${unexpectedHttp.length}`);
@@ -1037,6 +1064,7 @@ async function runAcceptance(options, bundle) {
     const unexpectedDialogs = slices.dialogs.filter((dialog) => !allowedDialogs.has(dialog.type));
     if (unexpectedDialogs.length) issues.push(`unexpected-dialogs:${unexpectedDialogs.length}`);
     const durationMs = rounded(performance.now() - started);
+    scenarioNetworkFailures.set(id, unexpectedNetwork);
     scenarios.push({
       id, title, status: issues.length ? 'fail' : 'pass', durationMs,
       latency: {
@@ -3110,11 +3138,11 @@ async function runAcceptance(options, bundle) {
     );
     for (const entry of scenarios) {
       const lateHttp = entry.requests.filter((request) => request.status >= 400 && !requestMatchesAllowance(request, entry.allowedHttpFailures));
-      const lateNetwork = entry.requests.filter((request) => request.failed && !isBenignBrowserCancellation(request)
+      const lateNetwork = entry.requests.filter((request) => request.failed && !isBenignBrowserCancellation(request, telemetry)
         && !requestMatchesNetworkAllowance(request, entry.allowedNetworkFailures)
         && !rawSafety.intercepted.some((intercept) => sanitizeRequestUrl(intercept.url).pathname === request.url.pathname));
       if (lateHttp.length && !entry.issues.some((issue) => issue.startsWith('http-errors:'))) entry.issues.push(`http-errors:${lateHttp.length}`);
-      if (lateNetwork.length && !entry.issues.some((issue) => issue.startsWith('network-errors:'))) entry.issues.push(`network-errors:${lateNetwork.length}`);
+      entry.issues = reconcileScenarioNetworkIssues(entry.issues, scenarioNetworkFailures.get(entry.id) || [], lateNetwork, telemetry);
       entry.status = entry.issues.length ? 'fail' : 'pass';
     }
     const failedScenarios = scenarios.filter((entry) => entry.status === 'fail');
@@ -3122,7 +3150,7 @@ async function runAcceptance(options, bundle) {
     const boundaryHttpErrors = telemetry.requests.filter((request) => ['bootstrap', 'final-boundary'].includes(request.scenario)
       && request.status >= 400 && !requestMatchesAllowance(request, []));
     const boundaryNetworkErrors = telemetry.requests.filter((request) => ['bootstrap', 'final-boundary'].includes(request.scenario)
-      && request.failed && !isBenignBrowserCancellation(request)
+      && request.failed && !isBenignBrowserCancellation(request, telemetry)
       && !rawSafety.intercepted.some((entry) => sanitizeRequestUrl(entry.url).pathname === request.url.pathname));
     const recoveryNavigationDialogs = [
       ...(scenarios.find((scenario) => scenario.id === 'reload-recovery')?.evidence?.recoveryNavigation?.dialogs || []),
@@ -3151,6 +3179,8 @@ async function runAcceptance(options, bundle) {
       scenarioRegistry,
       telemetry: {
         requestCount: telemetry.requests.length,
+        frameNavigationCount: telemetry.frameNavigations.length,
+        frameNavigations: telemetry.frameNavigations,
         errorCount: telemetry.events.length,
         dialogCount: telemetry.dialogs.length,
         requests: telemetry.requests,

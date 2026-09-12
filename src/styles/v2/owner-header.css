@@ -57,6 +57,12 @@
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .hv2-header:not(.is-scrolled) :where(a, button):focus-visible { outline-color: currentColor; }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2:is(.catalog-v2--fence-no-media, .catalog-v2--standard-no-media, [data-product-final-prototype='custom']) { --smu-header-right-ink: #fff; }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2:is(.catalog-v2--company, [data-direction-theme='metal'], [data-direction-theme='landscape'], [data-direction-theme='construction']) { --smu-header-right-ink: #fff; }
+/* The custom-order roof is light at the outer controls. Its inner navigation
+   and wide-screen contact links retain their own foreground over the wall. */
+@media (min-width: 761px) and (max-width: 1399px) {
+  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-product-final-prototype='custom'] .hv2-header:not(.is-scrolled) .hv2-search-open { color: #15232c; }
+  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-product-final-prototype='custom'] .hv2-header:not(.is-scrolled) .hv2-header__menu-button { color: #15232c; border-color: currentColor; background: transparent; }
+}
 @media (max-width: 980px) {
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .hv2-header:not(.is-scrolled) :is(.hv2-header__nav-group--right, .hv2-header__tools, .hv2-header__actions, .hv2-header__menu-button) { color: var(--smu-header-left-ink, #fff); }
 }

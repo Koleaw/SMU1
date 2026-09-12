@@ -869,6 +869,13 @@ body.home-v2-body:has(:is(.catalog-v2--company, .practical-v2--contacts, .practi
   font-size: clamp(28px, 3.2vw, 44px);
 }
 
+/* Give the address word room without reducing the contact heading scale. */
+@media (max-width: 1280px) {
+  :root[data-v2-public-route='true'] .home-v2-body .practical-v2.practical-v2--contacts .practical-contacts__address {
+    padding-inline: 20px;
+  }
+}
+
 .practical-contacts__address > p {
   margin-top: 18px;
   color: var(--hv2-muted);

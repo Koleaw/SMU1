@@ -14,6 +14,8 @@ import {
   v2PathnameWithBase
 } from '../../src/utils/v2TransitionRouting.mjs';
 import { resolveBrowserFinalMountRequest } from './browser-final-base-path.mjs';
+import { resolveCustomOrderHeadingSize, resolveSplitHubHeadingSize } from './h2-responsive-type-scale.mjs';
+import { evaluateResponsiveTextOverflow } from './h2-responsive-text-contract.mjs';
 import {
   evaluateEntranceClsDelta,
   evaluateTransitionFrameEvidence
@@ -4113,6 +4115,8 @@ const responsiveHeaderTypographyAudit = async () => {
     } else if (routeKind === 'project-detail' && width <= 760) {
       h1 = clampPx(30, .095, 42);
     }
+    h1 = resolveSplitHubHeadingSize(routeKind, width, h1);
+    h1 = resolveCustomOrderHeadingSize(routeKind, width, h1);
     const h2 = breakpoint === 'desktop'
       ? clampPx(44, .0325, 62)
       : breakpoint === 'tablet' ? clampPx(38, .04, 44) : clampPx(32, .098, 42);
@@ -4243,7 +4247,9 @@ const responsiveHeaderTypographyAudit = async () => {
       const typeOk = Boolean(typeScale && h1)
         && Math.abs(h1.fontSize - typeScale.h1) <= typeScale.tolerance
         && h2Ok && leadOk;
+      const textOverflow = evaluateResponsiveTextOverflow({ initial: initial.type, scrolled: scrolled.type });
       const overflowOk = initial.overflow <= 1 && scrolled.overflow <= 1
+        && textOverflow.ok
         && !initial.frameworkError && initial.meaningfulDom && initial.bodyOpacity === 1 && initial.mainOpacity === 1;
       const tooLong = [h1, h2, lead].filter(Boolean).filter((item) => item.overflow > 1
         || (item === h1 && item.lines > (viewport.width <= 760 ? 4.2 : 3.2)));
@@ -4269,6 +4275,7 @@ const responsiveHeaderTypographyAudit = async () => {
         headerVisualOk,
         typeOk,
         overflowOk,
+        textOverflow,
         evidenceOk,
         scrollTarget,
         initial,
@@ -4285,8 +4292,8 @@ const responsiveHeaderTypographyAudit = async () => {
     templates: representatives.map(({ routeKind, pathname }) => ({ routeKind, pathname })),
     audited: responsiveMetrics.length,
     failures: responsiveMetrics.filter((row) => !row.headerOk || !row.headerVisualOk || !row.typeOk || !row.overflowOk || !row.evidenceOk)
-      .map(({ route, routeKind, viewport, headerOk, telegramGeometryOk, headerVisualOk, typeOk, overflowOk, evidenceOk }) => (
-        { route, routeKind, viewport, headerOk, telegramGeometryOk, headerVisualOk, typeOk, overflowOk, evidenceOk }
+      .map(({ route, routeKind, viewport, headerOk, telegramGeometryOk, headerVisualOk, typeOk, overflowOk, textOverflow, evidenceOk }) => (
+        { route, routeKind, viewport, headerOk, telegramGeometryOk, headerVisualOk, typeOk, overflowOk, textOverflow, evidenceOk }
       )),
     longTextIssues });
   await setViewport(1440, 900, false, 1);

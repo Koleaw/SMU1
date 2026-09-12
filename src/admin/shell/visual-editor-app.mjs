@@ -25,6 +25,7 @@ import {
 } from '../state/direction-presentation-editor.mjs';
 import { reorderEntityPages } from '../state/entity-reorder.mjs';
 import { createMediaScheduler } from '../../../tools/admin-api/media-scheduler.mjs';
+import { createOverlayRenderGuard } from './overlay-render-guard.mjs';
 
 const BRIDGE_PROTOCOL = 'smu1-editor-bridge';
 const BRIDGE_VERSION = 1;
@@ -1963,7 +1964,24 @@ export async function startVisualEditor() {
     state.bindingRegistry = registry;
   }
 
-  function renderOverlay() {
+  const overlayRender = createOverlayRenderGuard(replaceOverlay);
+  overlay.addEventListener('pointerdown', (event) => {
+    // Native drag needs live overlay geometry while its canvas auto-scrolls.
+    if (event.button === 0 && !event.target.closest('.ve-reorder-handle')) overlayRender.hold(event.pointerId);
+  }, true);
+  overlay.addEventListener('dragstart', () => overlayRender.releaseAll(), true);
+  window.addEventListener('pointerup', (event) => overlayRender.release(event.pointerId), true);
+  window.addEventListener('pointercancel', (event) => overlayRender.release(event.pointerId), true);
+  window.addEventListener('dragend', () => overlayRender.releaseAll(), true);
+  window.addEventListener('blur', () => overlayRender.releaseAll());
+  // A mouse released outside this document must not leave its overlay frozen.
+  window.addEventListener('pointermove', (event) => {
+    if (event.pointerType === 'mouse' && event.buttons === 0) overlayRender.releaseAll();
+  }, true);
+
+  function renderOverlay() { overlayRender.request(); }
+
+  function replaceOverlay() {
     const focused = overlay.contains(document.activeElement) && document.activeElement instanceof HTMLElement
       ? { bindingId: document.activeElement.dataset.bindingId || '', controlKey: document.activeElement.dataset.controlKey || '' }
       : null;
