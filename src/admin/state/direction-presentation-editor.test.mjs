@@ -8,6 +8,7 @@ import {
   orderedDirectionItems,
   removeDirectionRelation,
   renumberDirectionItems,
+  reorderDirectionItemSubset,
   updateDirectionItem
 } from './direction-presentation-editor.mjs';
 
@@ -67,4 +68,34 @@ test('related set add/remove is typed, duplicate-safe, and deterministically ord
   }), /allowed collection/u);
   const removed = removeDirectionRelation(withService, 'fences');
   assert.deepEqual(removed.map((item) => [item.id, item.order]), [['related-services-stroitelstvo-i-remonty', 10]]);
+});
+
+test('partial direction order reuses only the selected slots and preserves foreign content and indexes', () => {
+  const source = [
+    { id: 'rail-b', order: 260, group: 'rail', isActive: true, media: { src: '/b.png' } },
+    { id: 'feature', order: 17, group: 'feature', isActive: true },
+    { id: 'hidden', order: 90, group: 'rail', isActive: false },
+    { id: 'rail-a', order: 120, group: 'rail', isActive: true, kicker: 'А' },
+    { id: 'wide', order: 999, group: 'wide', isActive: true }
+  ];
+  const before = structuredClone(source);
+  const next = reorderDirectionItemSubset(source, ['rail-b', 'rail-a']);
+  assert.deepEqual(next.map((item) => item.id), source.map((item) => item.id));
+  assert.deepEqual(next.map((item) => item.order), [120, 17, 90, 260, 999]);
+  for (const index of [1, 2, 4]) assert.deepEqual(next[index], source[index]);
+  for (const index of [0, 3]) assert.deepEqual({ ...next[index], order: source[index].order }, source[index]);
+  assert.deepEqual(source, before, 'the current snapshot must remain untouched');
+});
+
+test('partial direction order rejects duplicates, hidden and unknown ids without a silent partial update', () => {
+  const source = fixture();
+  assert.throws(() => reorderDirectionItemSubset(source, ['first', 'first']), /unique, known, active/u);
+  assert.throws(() => reorderDirectionItemSubset(source, ['first', 'missing']), /unique, known, active/u);
+  assert.throws(() => reorderDirectionItemSubset(source, ['first', 'second']), /unique, known, active/u);
+  assert.throws(() => reorderDirectionItemSubset(source, ['first']), /at least two/u);
+  const duplicateOrders = source.map((item) => ({ ...item, order: 10 }));
+  assert.throws(() => reorderDirectionItemSubset(duplicateOrders, ['third', 'first']), /distinct numeric order slots/u);
+  const invalidOrder = source.map((item) => ({ ...item, order: item.id === 'first' ? null : item.order }));
+  assert.throws(() => reorderDirectionItemSubset(invalidOrder, ['third', 'first']), /distinct numeric order slots/u);
+  assert.deepEqual(source, fixture());
 });

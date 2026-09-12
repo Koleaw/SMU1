@@ -1573,7 +1573,34 @@ async function runAcceptance(options, bundle) {
 
     await scenario('typed-price-validation', 'Typed price keeps an invalid draft but blocks the save transaction', async () => {
       const binding = await findBinding(browser, { ownerCollection: 'products', tool: 'price' });
+      // Start before the handoff runway: previous edits must not accidentally make
+      // an oversized sticky hero's otherwise unreachable price control visible.
+      await browser.evaluate(`document.querySelector('#veFrame').contentWindow.scrollTo({ top: 0, behavior: 'instant' })`);
+      const scrollStart = await waitFor(browser, `(() => {
+        const frame = document.querySelector('#veFrame');
+        const page = frame?.contentWindow;
+        const hero = frame?.contentDocument?.querySelector('[data-product-final-hero]');
+        const handoff = frame?.contentDocument?.querySelector('[data-product-final-handoff]');
+        return page && Math.abs(page.scrollY) <= 1 ? {
+          scrollY: page.scrollY, viewportHeight: page.innerHeight,
+          heroHeight: hero?.getBoundingClientRect().height ?? null,
+          handoffReady: handoff?.hasAttribute('data-product-final-handoff-ready') ?? false
+        } : null;
+      })()`, { label: 'price access from the start of the page' });
       await clickBinding(browser, binding.binding.bindingId);
+      const scrollAccess = await browser.evaluate(`(() => {
+        const frame = document.querySelector('#veFrame');
+        const source = frame.contentDocument.querySelector('[data-smu1-binding-id="' + CSS.escape(${json(binding.binding.bindingId)}) + '"]');
+        const rect = source?.getBoundingClientRect();
+        const handoff = frame.contentDocument.querySelector('[data-product-final-handoff]');
+        return {
+          start: ${json(scrollStart)}, scrollY: frame.contentWindow.scrollY,
+          viewportHeight: frame.contentWindow.innerHeight,
+          sourceRect: rect ? { top: rect.top, bottom: rect.bottom, height: rect.height } : null,
+          handoffReady: handoff?.hasAttribute('data-product-final-handoff-ready') ?? false,
+          sourceVisible: Boolean(rect && rect.top >= 0 && rect.bottom <= frame.contentWindow.innerHeight)
+        };
+      })()`);
       const original = await waitFor(browser, `(() => {
         const fieldset = document.querySelector('#veInspectorForm .ve-price-grid');
         const selects = fieldset?.querySelectorAll('select');
@@ -1635,6 +1662,7 @@ async function runAcceptance(options, bundle) {
       await clickShell(browser, SELECTORS.inspectorDone);
       return {
         issues: [
+          ...(!scrollAccess.sourceVisible ? ['price-source-outside-iframe-after-scroll'] : []),
           ...(!invalid.rangeUnderflow || invalid.valid ? ['native-typed-validation-missing'] : []),
           ...(!invalidDraft ? ['price-invalid-draft-not-checkpointed'] : []),
           ...(!previewRequest ? ['validation-preview-not-requested'] : []),
@@ -1643,7 +1671,7 @@ async function runAcceptance(options, bundle) {
           ...(!ui.dirty ? ['browser-draft-was-lost'] : [])
         ],
         allowedHttpFailures: [{ pathname: '/transactions/preview', statuses: [400, 409, 422] }],
-        evidence: { binding: binding.binding, original, invalid, invalidDraft, previewRequest, validationResponse, priceBlockers, applyRequest, ui, restored: true }
+        evidence: { binding: binding.binding, scrollAccess, original, invalid, invalidDraft, previewRequest, validationResponse, priceBlockers, applyRequest, ui, restored: true }
       };
     });
 

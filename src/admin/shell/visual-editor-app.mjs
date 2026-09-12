@@ -20,6 +20,7 @@ import {
   moveDirectionItem,
   orderedDirectionItems,
   renumberDirectionItems,
+  reorderDirectionItemSubset,
   removeDirectionRelation,
   updateDirectionItem
 } from '../state/direction-presentation-editor.mjs';
@@ -1184,6 +1185,7 @@ export async function startVisualEditor() {
     renderChanges();
     projectDraftToFrame();
     projectCurrentReorderToFrame();
+    syncReorderInspector(record);
   }
 
   async function ensureRecord(collection, slug) {
@@ -2120,6 +2122,7 @@ export async function startVisualEditor() {
       state.bindingRows = registeredBindingRows(message.bindings);
       renderOverlay();
       projectDraftToFrame();
+      projectCurrentReorderToFrame();
       canvasHint.textContent = state.bindingRows.length
         ? `Доступно элементов для редактирования: ${state.bindingRows.length}`
         : state.currentPage?.readOnly
@@ -2729,13 +2732,35 @@ export async function startVisualEditor() {
     return record;
   }
 
+  function syncReorderInspector(record) {
+    const selected = state.currentBinding;
+    if (inspector.hidden || selected?.record !== record || selected.binding.tool !== 'reorder-item') return;
+    const card = inspectorForm.querySelector('.ve-reorder-inspector');
+    if (!card) return;
+    const descriptors = reorderDescriptorList(selected.binding);
+    const identity = selected.binding.stableItemId || selected.binding.recordSlug;
+    const index = descriptors.findIndex((item) => (item.stableItemId || item.slug) === identity);
+    card.querySelector('[data-reorder-position]').textContent = index >= 0 ? String(index + 1) : '—';
+    card.querySelector('[data-reorder-total]').textContent = String(descriptors.length);
+    const focused = document.activeElement;
+    const buttons = Array.from(card.querySelectorAll('button[data-reorder-key]'));
+    buttons.forEach((button) => {
+      const key = button.dataset.reorderKey;
+      button.disabled = index < 0 || (['Home', 'ArrowUp'].includes(key) && index === 0)
+        || (['End', 'ArrowDown'].includes(key) && index === descriptors.length - 1);
+    });
+    if (buttons.includes(focused) && focused.disabled) {
+      (buttons.find((button) => !button.disabled) || card).focus({ preventScroll: true });
+    }
+  }
   function renderReorderInspector(record, binding) {
     const descriptors = reorderDescriptorList(binding);
     const identity = binding.stableItemId || binding.recordSlug;
     const index = descriptors.findIndex((item) => (item.stableItemId || item.slug) === identity);
     const card = document.createElement('section');
     card.className = 've-reorder-inspector';
-    card.innerHTML = `<p>Позиция <strong>${index >= 0 ? index + 1 : '—'}</strong> из ${descriptors.length}. Перестановка меняет данные и сохранится атомарно.</p>`;
+    card.tabIndex = -1;
+    card.innerHTML = `<p>Позиция <strong data-reorder-position>${index >= 0 ? index + 1 : '—'}</strong> из <span data-reorder-total>${descriptors.length}</span>. Перестановка меняет данные и сохранится атомарно.</p>`;
     const actions = document.createElement('div');
     actions.className = 've-reorder-inspector__actions';
     for (const [key, label] of [['Home', 'В начало'], ['ArrowUp', 'Выше'], ['ArrowDown', 'Ниже'], ['End', 'В конец']]) {
@@ -2743,6 +2768,7 @@ export async function startVisualEditor() {
       button.type = 'button';
       button.className = 've-button';
       button.textContent = label;
+      button.dataset.reorderKey = key;
       button.disabled = index < 0 || (['Home', 'ArrowUp'].includes(key) && index === 0) || (['End', 'ArrowDown'].includes(key) && index === descriptors.length - 1);
       button.addEventListener('click', () => void keyboardReorder(binding, key));
       actions.append(button);
@@ -2890,9 +2916,16 @@ export async function startVisualEditor() {
     const record = recordForBinding(binding);
     const items = clone(getAtPath(record?.history.snapshot().value, binding.fieldPath));
     if (record && Array.isArray(items) && items.every((item) => item && typeof item === 'object' && item.id)) {
+      const scopeIds = new Set(state.bindingRows.map((row) => row.binding)
+        .filter((candidate) => candidate.tool === 'reorder-item'
+          && candidate.ownerCollection === binding.ownerCollection
+          && candidate.recordSlug === binding.recordSlug
+          && candidate.fieldPath === binding.fieldPath
+          && (candidate.zoneId || candidate.parentSlug || state.currentPage?.slug) === zoneId)
+        .map((candidate) => String(candidate.stableItemId || candidate.recordSlug)));
       return orderedDirectionItems(items)
         .map(({ item }) => item)
-        .filter((item) => item.isActive !== false)
+        .filter((item) => item.isActive !== false && scopeIds.has(String(item.id)))
         .map((item) => ({ kind: 'in-record', slug: String(item.id), stableItemId: String(item.id), item, record, fieldPath: binding.fieldPath }));
     }
     return reorderEntityPages(state.pages, binding, zoneId)
@@ -2917,7 +2950,7 @@ export async function startVisualEditor() {
   }
 
   async function applyEntityReorder(descriptors, fromIndex, toIndex, label, zoneId) {
-    if (fromIndex < 0 || toIndex < 0 || fromIndex >= descriptors.length || toIndex >= descriptors.length || fromIndex === toIndex) return;
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= descriptors.length || toIndex >= descriptors.length || fromIndex === toIndex) return false;
     const next = descriptors.slice();
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
@@ -2938,23 +2971,34 @@ export async function startVisualEditor() {
     notifications.toast('Порядок изменён в браузерном черновике. Сохранение запишет все позиции одной транзакцией.', 'success');
     postToFrame('reorder-projection', { zoneId: zoneId || '', orderedSlugs: next.map((page) => page.slug) });
     updateChrome();
+    return true;
   }
 
   function applyInRecordReorder(descriptors, fromIndex, toIndex, label, zoneId) {
-    if (fromIndex < 0 || toIndex < 0 || fromIndex >= descriptors.length || toIndex >= descriptors.length || fromIndex === toIndex) return;
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= descriptors.length || toIndex >= descriptors.length || fromIndex === toIndex) return false;
     const descriptor = descriptors[0];
     const record = descriptor?.record;
-    if (!record) return;
+    if (!record) return false;
     const current = clone(getAtPath(record.history.snapshot().value, descriptor.fieldPath) || []);
     const active = descriptors.map((item) => item.item);
     const nextActive = active.slice();
     const [moved] = nextActive.splice(fromIndex, 1);
     nextActive.splice(toIndex, 0, moved);
-    let activeIndex = 0;
-    const completeOrder = orderedDirectionItems(current).map(({ item }) => item.isActive === false
-      ? String(item.id)
-      : String(nextActive[activeIndex++]?.id || item.id));
-    const next = renumberDirectionItems(current, completeOrder);
+    let next;
+    if (active.length === current.filter((item) => item.isActive !== false).length) {
+      let activeIndex = 0;
+      const completeOrder = orderedDirectionItems(current).map(({ item }) => item.isActive === false
+        ? String(item.id)
+        : String(nextActive[activeIndex++]?.id || item.id));
+      next = renumberDirectionItems(current, completeOrder);
+    } else {
+      try {
+        next = reorderDirectionItemSubset(current, nextActive.map((item) => String(item.id)));
+      } catch {
+        notifications.toast('Не удалось изменить порядок этой группы: у карточек должны быть разные числовые позиции. Проверьте поле «Порядок» в настройках страницы.', 'warning');
+        return false;
+      }
+    }
     const before = record.history.snapshot().value;
     const after = setAtPath(before, descriptor.fieldPath, next);
     record.history.commit(after, { label, force: true });
@@ -2968,6 +3012,7 @@ export async function startVisualEditor() {
     postToFrame('reorder-projection', { zoneId, orderedSlugs: nextActive.map((item) => String(item.id)) });
     notifications.toast('Порядок изменён в браузерном черновике. Сохранение запишет список одной транзакцией.', 'success');
     updateChrome();
+    return true;
   }
 
   async function applyReorder(descriptors, fromIndex, toIndex, label, zoneId) {
@@ -2994,8 +3039,8 @@ export async function startVisualEditor() {
     const descriptors = reorderDescriptorList(binding);
     const index = descriptors.findIndex((page) => (page.stableItemId || page.slug) === (binding.stableItemId || binding.recordSlug));
     const target = key === 'Home' ? 0 : key === 'End' ? descriptors.length - 1 : key === 'ArrowUp' ? index - 1 : index + 1;
-    await applyReorder(descriptors, index, target, `Изменить порядок: ${state.currentPage?.title || binding.zoneId}`, binding.zoneId);
-    if (target >= 0 && target < descriptors.length) notifications.announce(`Элемент перемещён на позицию ${target + 1}.`);
+    const moved = await applyReorder(descriptors, index, target, `Изменить порядок: ${state.currentPage?.title || binding.zoneId}`, binding.zoneId);
+    if (moved && target >= 0 && target < descriptors.length) notifications.announce(`Элемент перемещён на позицию ${target + 1}.`);
   }
 
   function renderChanges() {

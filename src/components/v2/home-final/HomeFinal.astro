@@ -52,6 +52,13 @@ const homeDirectionCardBinding = (id: string, field: string, tool = 'short-text'
     role: `home-direction-${field}`
   });
 };
+// The four feature roles and the single wide role have fixed columns and sizes.
+// Their nested content bindings remain editable; rail cards share a reorderable layout.
+const fixedDirectionPosition = () => adminDisposition(Astro.url, {
+  kind: 'template-fixed',
+  reason: 'Позиция и формат карточки заданы компоновкой главной. Изображение, название, описание и подпись редактируются отдельно.',
+  source: 'src/styles/v2/home-final.css#.hf-directions__layout'
+});
 const globalBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {
   renderer: { family: 'global-shell', variant: 'contact' }, owner: { collection: 'site-settings', slug: 'global' },
   fieldPath, scope: 'global', tool, affectedRoutes: ['*'], ...options
@@ -149,7 +156,7 @@ const globalHrefDisposition = (fieldPath: string, reason: string) => adminDispos
 
         <div class="hf-directions__layout">
           {directionCards.map(({ id, direction, className, kicker }) => direction && (
-            <a class={`hf-direction hf-direction--${className}`} href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="media" {...homeBinding('homeDirectionCards', 'reorder-item', { stableItemId: id, zoneId: 'home-directions', permissions: { edit: true, reorder: true, delete: false } })}>
+            <a class={`hf-direction hf-direction--${className}`} href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="media" {...fixedDirectionPosition()}>
               {direction.image && <V2ResponsiveImage
                 src={direction.image}
                 alt=""
@@ -173,7 +180,7 @@ const globalHrefDisposition = (fieldPath: string, reason: string) => adminDispos
 
           <div class="hf-direction-rail" aria-label="Специализированные направления">
             {railDirections.map(({ id, direction, kicker }) => direction && (
-              <a class="hf-direction-rail__item" href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="group" {...homeBinding('homeDirectionCards', 'reorder-item', { stableItemId: id, zoneId: 'home-directions', permissions: { edit: true, reorder: true, delete: false } })}>
+              <a class="hf-direction-rail__item" href={path(direction.href)} data-v2-transition-label={direction.title} data-reveal data-v2-reveal="group" {...homeBinding('homeDirectionCards', 'reorder-item', { stableItemId: id, zoneId: 'home-direction-rail', label: 'Специализированное направление', permissions: { edit: true, reorder: true, delete: false } })}>
                 {direction.image && <V2ResponsiveImage
                   src={direction.image}
                   alt=""
@@ -201,7 +208,7 @@ const globalHrefDisposition = (fieldPath: string, reason: string) => adminDispos
             data-v2-transition-label={landscapingCard.direction.title}
             data-reveal
             data-v2-reveal="media"
-            {...homeBinding('homeDirectionCards', 'reorder-item', { stableItemId: landscapingCard.id, zoneId: 'home-directions', permissions: { edit: true, reorder: true, delete: false } })}
+            {...fixedDirectionPosition()}
           >
             {landscapingCard.direction.image && <V2ResponsiveImage
               src={landscapingCard.direction.image}

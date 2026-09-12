@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { classifyAdminAction } from './action-crawl-core.mjs';
 import { adminControlPostcondition, findAdminActionElement, isExpectedIsolatedPublishStatus } from './admin-action-state.mjs';
+import { prepareAdminAction, adminActionStateExpression, armAdminActionTraceExpression } from './admin-action-preparation.mjs';
 import {
   ADMIN_EDITOR_REVISION_PATTERN_SOURCE,
   ADMIN_EDITOR_SESSION_PATTERN_SOURCE,
@@ -147,48 +148,6 @@ const inventoryExpression = `(() => {
     try { if (frame.contentDocument) result.push(...collect(frame.contentDocument, 'iframe-' + (frame.id || index + 1))); } catch {}
   }
   return result;
-})()`;
-
-const actionExpression = (action) => `(() => {
-  const frameValue = ${action.context === 'shell'
-    ? 'null'
-    : `Array.from(document.querySelectorAll('iframe')).find((frame, index) => 'iframe-' + (frame.id || index + 1) === ${JSON.stringify(action.context)})`};
-  const documentValue = ${action.context === 'shell' ? 'document' : 'frameValue?.contentDocument'};
-  const element = (${findAdminActionElement.toString()})(documentValue, ${JSON.stringify(action)});
-  if (!element) return { found: false };
-  const visible = (() => { const style = element.ownerDocument.defaultView.getComputedStyle(element); const rect = element.getBoundingClientRect(); return style.display !== 'none' && style.visibility !== 'hidden' && !element.hidden && rect.width > 0 && rect.height > 0; })();
-  if (!visible || element.disabled || element.getAttribute('aria-disabled') === 'true') return { found: true, executable: false };
-  element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
-  element.focus({ preventScroll: true });
-  const before = JSON.stringify({
-    className: element.className, expanded: element.getAttribute('aria-expanded'), pressed: element.getAttribute('aria-pressed'), selected: element.getAttribute('aria-selected'),
-    detailsOpen: element.tagName === 'SUMMARY' ? element.parentElement.open : null,
-    fullscreen: documentValue.querySelector('#veApp')?.dataset.fullscreen === 'true',
-    body: documentValue.body.className, html: documentValue.documentElement.className,
-    dialogs: documentValue.querySelectorAll('dialog[open],[role="dialog"]:not([hidden])').length,
-    hidden: Array.from(documentValue.querySelectorAll('[hidden]')).length,
-    status: Array.from(documentValue.querySelectorAll('[aria-live]')).map((item) => item.textContent?.trim()).filter(Boolean).slice(0, 12)
-  });
-  const rect = element.getBoundingClientRect();
-  const frameRect = frameValue?.getBoundingClientRect() || { left: 0, top: 0 };
-  return { found: true, executable: true, before, point: { x: frameRect.left + rect.left + rect.width / 2, y: frameRect.top + rect.top + rect.height / 2 }, active: documentValue.activeElement === element };
-})()`;
-
-const actionStateExpression = (action) => `(() => {
-  const documentValue = ${action.context === 'shell'
-    ? 'document'
-    : `Array.from(document.querySelectorAll('iframe')).find((frame, index) => 'iframe-' + (frame.id || index + 1) === ${JSON.stringify(action.context)})?.contentDocument`};
-  const element = (${findAdminActionElement.toString()})(documentValue, ${JSON.stringify(action)});
-  if (!element) return null;
-  return JSON.stringify({
-    className: element.className, expanded: element.getAttribute('aria-expanded'), pressed: element.getAttribute('aria-pressed'), selected: element.getAttribute('aria-selected'),
-    detailsOpen: element.tagName === 'SUMMARY' ? element.parentElement.open : null,
-    fullscreen: documentValue.querySelector('#veApp')?.dataset.fullscreen === 'true',
-    body: documentValue.body.className, html: documentValue.documentElement.className,
-    dialogs: documentValue.querySelectorAll('dialog[open],[role="dialog"]:not([hidden])').length,
-    hidden: Array.from(documentValue.querySelectorAll('[hidden]')).length,
-    status: Array.from(documentValue.querySelectorAll('[aria-live]')).map((item) => item.textContent?.trim()).filter(Boolean).slice(0, 12)
-  });
 })()`;
 
 const loginIfNeeded = async () => {
@@ -418,7 +377,7 @@ const runNavigationAcceptance = async (homePath) => {
   }
 };
 
-const ensureAdminActionExecutable = async (action) => {
+const ensureAdminActionExecutable = async (action, interaction = 'click') => {
   const revealGroup = async () => {
     for (let depth = 0; depth < 8; depth += 1) {
       const summary = await browser.evaluate(`(() => {
@@ -440,25 +399,26 @@ const ensureAdminActionExecutable = async (action) => {
     }
   };
   await revealGroup();
-  let prepared = await browser.evaluate(actionExpression(action));
-  if (prepared?.executable && prepared.active) return { prepared, restored: false, opener: null };
+  let prepared = await prepareAdminAction(browser, action, { interaction });
+  if (action.containerId === 'veOverlay') return { prepared, restored: false, opener: null };
+  if (prepared?.executable && (interaction === 'click' || prepared.active)) return { prepared, restored: false, opener: null };
   await restoreAdminHome();
   await revealGroup();
-  prepared = await browser.evaluate(actionExpression(action));
-  if (prepared?.executable && prepared.active) return { prepared, restored: true, opener: null };
+  prepared = await prepareAdminAction(browser, action, { interaction });
+  if (prepared?.executable && (interaction === 'click' || prepared.active)) return { prepared, restored: true, opener: null };
   const candidates = (await browser.evaluate(inventoryExpression)).filter((candidate) => {
     const policy = classifyAdminAction(candidate, { isolatedMutations: false });
     return `${candidate.context}:${candidate.id}` !== `${action.context}:${action.id}`
       && candidate.context === 'shell' && candidate.visible && !candidate.disabled && policy.policy === 'safe-ui-action';
   });
   for (const candidate of candidates) {
-    const opener = await browser.evaluate(actionExpression(candidate));
-    if (!opener?.executable || !opener.active) continue;
+    const opener = await prepareAdminAction(browser, candidate);
+    if (!opener?.executable) continue;
     await browser.dispatchClick(opener.point);
     await new Promise((resolve) => setTimeout(resolve, 45));
     await browser.evaluate(inventoryExpression);
-    prepared = await browser.evaluate(actionExpression(action));
-    if (prepared?.executable && prepared.active) return { prepared, restored: true, opener: { key: `${candidate.context}:${candidate.id}`, name: candidate.name } };
+    prepared = await prepareAdminAction(browser, action, { interaction });
+    if (prepared?.executable && (interaction === 'click' || prepared.active)) return { prepared, restored: true, opener: { key: `${candidate.context}:${candidate.id}`, name: candidate.name } };
     await restoreAdminHome();
   }
   return { prepared, restored: true, opener: null };
@@ -658,16 +618,22 @@ try {
       if (verboseProgress) progress(`action ${key}: ${policy.policy} (${String(action.name || action.domId || action.tag).slice(0, 120)})`);
       if (policy.execute && action.visible && !action.disabled) {
         if (!verboseProgress) progress(`checking ${key}: ${String(action.name || action.domId || action.tag).slice(0,100)}`);
-        for (const operation of ['click', 'keyboard']) {
+        const focusOnly = action.containerId === 'veOverlay' && action.dataAttributes?.['data-control-key'] === 'handle';
+        result.executionContract = focusOnly ? 'native-click-focus-only' : action.containerId === 'veOverlay'
+          ? action.dataAttributes?.['data-control-key']?.startsWith('move-') ? 'exact-ordered-projection' : 'exact-binding-editor-open' : 'observable-ui-state';
+        // Drag handles have no Enter action. Native click proves their exact focus;
+        // drag and Alt+Arrow movement remain covered by canonical acceptance.
+        for (const operation of focusOnly ? ['click'] : ['click', 'keyboard']) {
           await restoreAdminHome({ actionKey: key, afterMode: operation === 'keyboard' ? 'click' : 'previous-action' });
           current.actionKey = key;
           current.mode = operation;
           const eventIndex = events.length;
           const requestIndex = requests.length;
-          const preparation = await ensureAdminActionExecutable(action);
+          await browser.evaluate(armAdminActionTraceExpression());
+          const preparation = await ensureAdminActionExecutable(action, operation);
           // A selected mode/filter is intentionally idempotent. Establish a
           // different real UI state first so both activations prove a change.
-          const selection = await browser.evaluate(`(() => {
+          const selection = action.containerId === 'veOverlay' ? null : await browser.evaluate(`(() => {
             const action = ${JSON.stringify(action)};
             const element = (${findAdminActionElement.toString()})(document, action);
             const attribute = ['data-viewport', 'data-mode', 'data-filter', 'data-settings-tab'].find(name => element?.hasAttribute(name));
@@ -681,7 +647,7 @@ try {
           if (selection) {
             await browser.dispatchClick(selection.point);
             await new Promise(resolve => setTimeout(resolve, 45));
-            preparation.prepared = await browser.evaluate(actionExpression(action));
+            preparation.prepared = await prepareAdminAction(browser, action, { interaction: operation });
             preparation.selectionBaseline = { attribute: selection.attribute, value: selection.value };
           }
           const execution = preparation.prepared || { found: false, executable: false };
@@ -690,9 +656,14 @@ try {
             if (operation === 'click') await browser.dispatchClick(execution.point);
             else await browser.dispatchKey('Enter', { code: 'Enter' });
           }
-          await new Promise((resolve) => setTimeout(resolve, 45));
           if (execution?.executable) {
-            execution.after = await browser.evaluate(actionStateExpression(action));
+            const deadline = Date.now() + 3000;
+            do {
+              execution.after = await browser.evaluate(adminActionStateExpression(action));
+              execution.nativeEvents = await browser.evaluate('window.__h6AdminActionTrace?.events || []');
+              if (adminControlPostcondition(action, execution.before, execution.after, [], execution.nativeEvents)) break;
+              await new Promise(resolve => setTimeout(resolve, 40));
+            } while (Date.now() < deadline);
             execution.observableChange = execution.before !== execution.after;
           }
           const executionEvents = events.slice(eventIndex);
@@ -702,9 +673,9 @@ try {
           execution.unexpectedMutationRequests = policy.policy === 'safe-ui-action'
             ? execution.requests.filter((request) => !['GET', 'HEAD', 'OPTIONS'].includes(request.method))
             : [];
-          const postcondition = adminControlPostcondition(action, execution.before, execution.after, execution.requests.length);
+          const postcondition = adminControlPostcondition(action, execution.before, execution.after, execution.requests, execution.nativeEvents);
           execution.postcondition = postcondition;
-          execution.status = executionEvents.length || !execution?.found || !execution?.executable || !execution.active
+          execution.status = executionEvents.length || !execution?.found || !execution?.executable || (operation === 'keyboard' && !execution.active)
             || (policy.policy === 'safe-ui-action' && (!postcondition || execution.unexpectedMutationRequests.length))
             || (policy.policy === 'isolated-mutation' && !postcondition)
             ? 'fail'

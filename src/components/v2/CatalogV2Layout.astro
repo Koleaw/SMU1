@@ -323,7 +323,9 @@ const directionTheme = /(?:^|\/)topiarii(?:\/|$)/.test(themePath) ? 'topiary'
         }
 
         const nextHeight = hero.getBoundingClientRect().height;
-        if (!Number.isFinite(nextHeight) || nextHeight <= 0) {
+        // A sticky scene taller than its viewport can keep lower content out of reach.
+        // Let long text and short windows use normal document scrolling.
+        if (!Number.isFinite(nextHeight) || nextHeight <= 0 || nextHeight > window.innerHeight) {
           reset();
           return;
         }

@@ -47,6 +47,29 @@ export function renumberDirectionItems(items, orderedIds) {
   return items.map((item) => ({ ...clone(item), order: orderById.get(String(item.id)) }));
 }
 
+/** Reorders a rendered subset without changing other items or physical indexes. */
+export function reorderDirectionItemSubset(items, orderedIds) {
+  assertItems(items);
+  if (!Array.isArray(orderedIds) || orderedIds.length < 2) {
+    throw new TypeError('A partial reorder requires at least two stable ids.');
+  }
+  const ids = orderedIds.map(String);
+  const selected = new Set(ids);
+  const byId = new Map(items.map((item) => [String(item.id), item]));
+  if (selected.size !== ids.length || ids.some((id) => !byId.has(id) || byId.get(id).isActive === false)) {
+    throw new TypeError('A partial reorder requires unique, known, active stable ids.');
+  }
+  const slots = orderedDirectionItems(items)
+    .filter(({ item }) => selected.has(String(item.id)))
+    .map(({ item }) => item.order);
+  if (slots.some((order) => !Number.isFinite(order)) || new Set(slots).size !== slots.length) {
+    throw new TypeError('A partial reorder requires distinct numeric order slots.');
+  }
+  const orderById = new Map(ids.map((id, index) => [id, slots[index]]));
+  return items.map((item) => selected.has(String(item.id))
+    ? { ...clone(item), order: orderById.get(String(item.id)) }
+    : clone(item));
+}
 export function moveDirectionItem(items, stableId, destination) {
   const rows = orderedDirectionItems(items);
   const fromIndex = rows.findIndex(({ item }) => String(item.id) === String(stableId));
