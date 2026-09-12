@@ -28,15 +28,23 @@ test('custom-order narrow desktop scale ends exactly at its composition boundari
   for (const [width, expected] of [[1101, 67.161], [1181, 72.041], [1280, 78.08], [1311, 79.971], [1312, 80], [1320, 80]]) {
     assert.ok(Math.abs(resolveCustomOrderHeadingSize('custom-order', width, 88) - expected) < 1e-9, `width ${width}`);
   }
-  for (const [width, existing] of [[320, 44], [760, 52], [761, 46.421], [1100, 64], [1321, 88], [1920, 112]]) {
+  for (const [width, existing] of [[320, 44], [700, 52], [761, 46.421], [1100, 64], [1321, 88], [1920, 112]]) {
     assert.equal(resolveCustomOrderHeadingSize('custom-order', width, existing), existing);
   }
 });
 
 test('custom-order exception preserves hub and other families inside the narrow desktop range', () => {
   for (const routeKind of ['section-hub', 'home', 'category', 'direction', 'company', 'contacts', 'product-standard', 'product-premium', 'project-detail', 'career-detail', 'legal']) {
-    for (const width of [1101, 1181, 1280, 1320]) {
+    for (const width of [700, 701, 760, 761, 1101, 1181, 1280, 1320]) {
       assert.equal(resolveCustomOrderHeadingSize(routeKind, width, 88), 88, `${routeKind} at ${width}`);
     }
   }
+});
+
+test('custom-order 701–760px heading measure matches the new CSS while preserving both adjacent ranges', () => {
+  assert.equal(resolveCustomOrderHeadingSize('custom-order', 700, 52), 52);
+  for (const [width, expected] of [[701, 46], [754, 46], [755, 46.055], [760, 46.36]]) {
+    assert.ok(Math.abs(resolveCustomOrderHeadingSize('custom-order', width, 52) - expected) < 1e-9, `width ${width}`);
+  }
+  assert.equal(resolveCustomOrderHeadingSize('custom-order', 761, 46.421), 46.421);
 });

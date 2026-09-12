@@ -106,7 +106,7 @@
   }
 }
 
-@media (min-width: 761px) and (max-width: 1100px) {
+@media (min-width: 701px) and (max-width: 1100px) {
   :root[data-v2-public-route='true'] .catalog-v2[data-catalog-v2-root][data-product-final-prototype='custom'] .custom-order-v2 .custom-order-hero h1 {
     font-size: clamp(46px, 6.1vw, 64px);
   }
