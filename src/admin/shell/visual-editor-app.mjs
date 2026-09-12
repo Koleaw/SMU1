@@ -1568,6 +1568,20 @@ export async function startVisualEditor() {
     } : null;
   }
 
+  function canvasMediaItems(record, binding, mediaValue) {
+    const rawItems = Array.isArray(mediaValue) ? mediaValue : mediaValue ? [mediaValue] : [];
+    if (binding.renderer?.family === 'catalog-card' && binding.coverPath) {
+      const content = record.history.snapshot().value;
+      const coverFirst = [getAtPath(content, binding.coverPath), ...rawItems].flatMap((item) => {
+        const src = typeof item === 'string' ? item.trim()
+          : item && typeof item.src === 'string' ? item.src.trim() : '';
+        if (!src || /\/assets\/images\/placeholders\//i.test(src)) return [];
+        return [typeof item === 'string' ? src : { ...item, src }];
+      });
+      return coverFirst.slice(0, 1).map((item) => canvasMediaItem(record, item, content.title || '')).filter(Boolean);
+    }
+    return rawItems.map((item) => canvasMediaItem(record, item)).filter(Boolean);
+  }
   function canvasStructuredListValue(record, value, fields) {
     if (Array.isArray(value)) return value.map((item) => canvasStructuredListValue(record, item, fields));
     if (!value || typeof value !== 'object') return value;
@@ -1807,8 +1821,7 @@ export async function startVisualEditor() {
       } else if (row.binding.tool === 'media' || row.binding.tool === 'gallery') {
         const mediaValue = record.collection === 'projects' && row.binding.fieldPath === 'gallery'
           ? content.presentation?.publicGallery || [] : value;
-        const rawItems = Array.isArray(mediaValue) ? mediaValue : mediaValue ? [mediaValue] : [];
-        const items = rawItems.map((item) => canvasMediaItem(record, item)).filter(Boolean);
+        const items = canvasMediaItems(record, row.binding, mediaValue);
         value = {
           __smu1MediaProjection: true,
           items,

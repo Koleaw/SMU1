@@ -70,6 +70,14 @@
   font: inherit;
 }
 
+.v2-product-card__media img[hidden] {
+  visibility: hidden !important;
+}
+
+.v2-media-empty--editor-affordance[hidden] {
+  display: none !important;
+}
+
 .v2-media-empty--editor-affordance > span {
   display: inline-flex;
   min-height: 38px;

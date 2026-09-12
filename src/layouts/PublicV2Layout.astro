@@ -1042,6 +1042,66 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
             && binding.renderer?.version === 'h6-v1'
           );
 
+          const liveCardCovers = new WeakMap();
+          const projectLiveCardCover = (element, binding, value) => {
+            if (binding.renderer?.family !== 'catalog-card' || !binding.coverPath) return false;
+            const item = value.items?.[0];
+            let image = element.querySelector('img');
+            let original = liveCardCovers.get(element);
+            if (!original) {
+              original = {
+                image,
+                canonical: image?.dataset.smu1CanonicalMedia || image?.getAttribute('src') || '',
+                imageAttributes: image ? ['src', 'srcset', 'sizes', 'alt'].map((name) => [name, image.getAttribute(name)]) : [],
+                sources: image ? Array.from(image.closest('picture')?.querySelectorAll('source') || []).map((source) => [source, source.getAttribute('srcset')]) : []
+              };
+              liveCardCovers.set(element, original);
+            }
+            const placeholder = element.querySelector('.v2-media-empty');
+            if (placeholder) placeholder.hidden = Boolean(item);
+            const card = element.closest('.v2-product-card');
+            // Removing a live cover keeps its existing media slot. Only an
+            // originally photo-less card uses the compact SSR affordance.
+            const compactEmpty = !item && !original.image;
+            card?.classList.toggle('v2-product-card--no-media', compactEmpty);
+            card?.classList.toggle('v2-product-card--editor-missing-media', compactEmpty);
+            element.classList.toggle('v2-product-card__media--editor-affordance', compactEmpty);
+            if (!item) {
+              if (!placeholder) {
+                const empty = document.createElement('span');
+                empty.className = 'v2-media-empty v2-media-empty--editor-affordance';
+                const label = document.createElement('span');
+                label.textContent = 'Добавить фотографии';
+                empty.append(label);
+                element.append(empty);
+              }
+              if (image) clearLiveImage(image);
+              return true;
+            }
+            card?.classList.toggle('v2-product-card--isolated', /\.(png|svg)$/i.test(item.src));
+            if (!image) {
+              image = document.createElement('img');
+              image.dataset.smu1LiveMedia = 'true';
+              image.setAttribute('data-v2-image', '');
+              element.append(image);
+            }
+            if (image === original.image && item.src === original.canonical) {
+              // Readiness and Undo keep the original responsive picture intact.
+              for (const [name, attribute] of original.imageAttributes) {
+                if (image.getAttribute(name) === attribute) continue;
+                if (attribute === null) image.removeAttribute(name);
+                else image.setAttribute(name, attribute);
+              }
+              for (const [source, srcset] of original.sources) {
+                if (source.getAttribute('srcset') === srcset) continue;
+                if (srcset === null) source.removeAttribute('srcset');
+                else source.setAttribute('srcset', srcset);
+              }
+              image.hidden = false;
+              if (item.alt) image.alt = item.alt;
+            } else writeLiveImage(image, item);
+            return true;
+          };
           const liveGalleries = new WeakMap();
           const projectLiveGallery = (element, value) => {
             const items = (Array.isArray(value.items) ? value.items : value.paths || [])
@@ -1952,7 +2012,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
               return;
             }
             if (value && typeof value === 'object' && value.__smu1MediaProjection === true && Array.isArray(value.paths)) {
-              if (projectLiveGallery(element, value)) return;
+              if (projectLiveCardCover(element, binding, value) || projectLiveGallery(element, value)) return;
               const items = (Array.isArray(value.items) ? value.items : value.paths)
                 .map((item) => typeof item === 'string' ? { src: item, alt: '', caption: '' } : item)
                 .filter((item) => item && typeof item.src === 'string' && item.src);
@@ -2048,7 +2108,12 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
               const roots = message.orderedSlugs.map((slug) => rowBySlug.get(String(slug))?.root).filter(Boolean);
               const parent = roots[0]?.parentElement;
               if (parent && roots.length === rows.length && roots.every((root) => root.parentElement === parent)) {
-                roots.forEach((root) => parent.append(root));
+                const selected = new Set(roots);
+                const current = Array.from(parent.children).filter((child) => selected.has(child));
+                if (selected.size === roots.length && current.length === roots.length
+                  && current.some((root, index) => root !== roots[index])) {
+                  roots.forEach((root) => parent.append(root));
+                }
               }
               queueGeometry();
             }
