@@ -6,6 +6,7 @@ import sharp from 'sharp';
 
 import { CdpBrowser } from './cdp-browser.mjs';
 import { clickWhenReady } from './actionable-click.mjs';
+import { installNativeClickTelemetry, beginNativeClickTrace, endNativeClickTrace, nativeClickTraceBeginExpression } from './native-click-telemetry.mjs';
 import { classifyIframeDocumentCancellation, reconcileScenarioNetworkIssues } from './iframe-document-cancellation.mjs';
 import { measureTextProjection } from './text-projection-probe.mjs';
 import { buildExpectedRouteModel } from './route-passport-model.mjs';
@@ -777,19 +778,23 @@ function borrowedMediaSnapshotExpression(relationBindingId) {
 }
 
 async function clickBinding(browser, bindingId, controlKey = 'target') {
-  // Opening the conflict-test peer activates that tab. Real interaction first
-  // returns to this tab, allowing its canvas geometry animation frame to run.
-  await browser.send('Page.bringToFront');
-  await browser.evaluate(`(() => {
-    const frame = document.querySelector('#veFrame');
-    const selector = '[data-smu1-binding-id="' + CSS.escape(${json(bindingId)}) + '"]';
-    const element = frame?.contentDocument?.querySelector(selector);
-    element?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
-    frame?.contentWindow?.dispatchEvent(new Event('scroll'));
-    return Boolean(element);
-  })()`);
-  const selector = `#veOverlay [data-binding-id="${bindingId.replace(/["\\]/gu, '\\$&')}"][data-control-key="${controlKey}"]`;
-  return clickWhenReady(browser, selector, { dismissToasts: true });
+  const nativeExpected = beginNativeClickTrace(browser, bindingId, controlKey);
+  try {
+    // Opening the conflict-test peer activates that tab. Real interaction first
+    // returns to this tab, allowing its canvas geometry animation frame to run.
+    await browser.send('Page.bringToFront');
+    await browser.evaluate(`(() => {
+      ${nativeClickTraceBeginExpression(nativeExpected)};
+      const frame = document.querySelector('#veFrame');
+      const selector = '[data-smu1-binding-id="' + CSS.escape(${json(bindingId)}) + '"]';
+      const element = frame?.contentDocument?.querySelector(selector);
+      element?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+      frame?.contentWindow?.dispatchEvent(new Event('scroll'));
+      return Boolean(element);
+    })()`);
+    const selector = `#veOverlay [data-binding-id="${bindingId.replace(/["\\]/gu, '\\$&')}"][data-control-key="${controlKey}"]`;
+    return await clickWhenReady(browser, selector, { dismissToasts: true });
+  } finally { endNativeClickTrace(browser); }
 }
 
 async function projectedBindingText(browser, bindingId) {
@@ -893,6 +898,7 @@ export function createTelemetry(browser, origin) {
   const requests = [];
   const requestById = new Map();
   const frameNavigations = [];
+  const nativeEvents = [];
   const events = [];
   const dialogs = [];
   let currentScenario = 'bootstrap';
@@ -969,12 +975,13 @@ export function createTelemetry(browser, origin) {
   });
 
   return {
-    requests, frameNavigations, events, dialogs,
+    requests, frameNavigations, events, dialogs, nativeEvents,
+    recordNativeEvent(value) { nativeEvents.push({ scenario: currentScenario, atMs: elapsed(), sequence: ++sequence, ...value }); },
     setScenario(value) { currentScenario = value; },
-    slices(requestIndex, eventIndex, dialogIndex) {
-      return { requests: requests.slice(requestIndex), errors: events.slice(eventIndex), dialogs: dialogs.slice(dialogIndex) };
+    slices(requestIndex, eventIndex, dialogIndex, nativeIndex = 0) {
+      return { requests: requests.slice(requestIndex), errors: events.slice(eventIndex), dialogs: dialogs.slice(dialogIndex), nativeEvents: nativeEvents.slice(nativeIndex) };
     },
-    indices() { return { requestIndex: requests.length, eventIndex: events.length, dialogIndex: dialogs.length }; },
+    indices() { return { requestIndex: requests.length, eventIndex: events.length, dialogIndex: dialogs.length, nativeIndex: nativeEvents.length }; },
     origin
   };
 }
@@ -1012,6 +1019,7 @@ async function runAcceptance(options, bundle) {
   const browser = new CdpBrowser({ headful: options.headful, safetyMode: 'admin-no-release' });
   await browser.start();
   const telemetry = createTelemetry(browser, options.origin);
+  await installNativeClickTelemetry(browser, options.origin, telemetry.recordNativeEvent);
   const scenarios = [];
   const scenarioNetworkFailures = new Map();
   const authoritativeRoutes = buildExpectedRouteModel({ root: bundle.proof.disposableRoot })
@@ -1045,7 +1053,7 @@ async function runAcceptance(options, bundle) {
         await browser.evaluate(`(() => { window.__h6AcceptancePeer?.close?.(); window.__h6AcceptancePeer = null; return true; })()`).catch(() => {});
       }
     }
-    const slices = telemetry.slices(indices.requestIndex, indices.eventIndex, indices.dialogIndex);
+    const slices = telemetry.slices(indices.requestIndex, indices.eventIndex, indices.dialogIndex, indices.nativeIndex);
     const issues = [...(returned.issues || [])];
     if (thrown) issues.push(`exception:${String(thrown.message || thrown)}`);
     const allowedRuntimeErrors = slices.errors.filter((entry) => (returned.allowedRuntimeErrors || [])
@@ -1081,7 +1089,8 @@ async function runAcceptance(options, bundle) {
       requests: slices.requests,
       errors: unexpectedRuntimeErrors,
       allowedErrors: allowedRuntimeErrors,
-      dialogs: slices.dialogs
+      dialogs: slices.dialogs,
+      nativeEvents: slices.nativeEvents
     });
     process.stderr.write(`[h6-acceptance] ${issues.length ? 'FAIL' : 'PASS'} ${id}${issues.length ? ': ' + issues.join('; ') : ''}\n`);
     return { returned, thrown, issues };
@@ -1773,8 +1782,27 @@ async function runAcceptance(options, bundle) {
         try {
           const binding = JSON.parse(bindingElement.getAttribute('data-smu1-binding') || 'null');
           const rect = bindingElement.getBoundingClientRect();
+          const overlay = document.querySelector('#veOverlay');
+          const target = overlay?.querySelector('[data-binding-id="' + CSS.escape(binding.bindingId) + '"][data-control-key="target"]');
+          if (!target) return null;
+          const snapshot = () => {
+            const source = bindingElement.getBoundingClientRect(), canvas = frame.getBoundingClientRect(), action = target.getBoundingClientRect();
+            return { scrollTop: overlay.scrollTop, scrollLeft: overlay.scrollLeft,
+              source: { x: source.x, y: source.y, width: source.width, height: source.height },
+              frame: { x: canvas.x, y: canvas.y },
+              target: { x: action.x, y: action.y, width: action.width, height: action.height } };
+          };
+          const beforeScrollIntoView = snapshot();
+          if (Math.abs(beforeScrollIntoView.target.x - beforeScrollIntoView.frame.x - beforeScrollIntoView.source.x) > 2
+            || Math.abs(beforeScrollIntoView.target.y - beforeScrollIntoView.frame.y - beforeScrollIntoView.source.y) > 2
+            || Math.abs(beforeScrollIntoView.target.width - beforeScrollIntoView.source.width) > 2
+            || Math.abs(beforeScrollIntoView.target.height - beforeScrollIntoView.source.height) > 2) return null;
+          target.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+          // Capture atomically, before a later geometry message could reset the overlay scroll.
+          const afterScrollIntoView = snapshot();
           return { text: affordance.textContent?.replace(/\\s+/gu, ' ').trim() || '', binding,
-            width: rect.width, height: rect.height, parentWidth: bindingElement.parentElement.getBoundingClientRect().width };
+            width: rect.width, height: rect.height, parentWidth: bindingElement.parentElement.getBoundingClientRect().width,
+            overlayAlignment: { beforeScrollIntoView, afterScrollIntoView } };
         } catch { return null; }
       })()`, { label: 'missing-product-media affordance' });
       const issues = [];
@@ -1784,6 +1812,13 @@ async function runAcceptance(options, bundle) {
         || (evidence.binding?.recordSlug || evidence.binding?.owner?.slug) !== bundle.profile.noPhotoProduct.slug) issues.push('affordance-owner');
       if (!(evidence.width >= 44 && evidence.height >= 44)) issues.push(`affordance-target-size:${evidence.width}x${evidence.height}`);
       if (!(evidence.width <= evidence.parentWidth / 2 + 1)) issues.push(`affordance-too-wide:${evidence.width}/${evidence.parentWidth}`);
+      for (const [phase, geometry] of Object.entries(evidence.overlayAlignment)) {
+        if (geometry.scrollTop !== 0 || geometry.scrollLeft !== 0) issues.push(`overlay-scrolled:${phase}:${geometry.scrollLeft},${geometry.scrollTop}`);
+        if (Math.abs(geometry.target.x - geometry.frame.x - geometry.source.x) > 2
+          || Math.abs(geometry.target.y - geometry.frame.y - geometry.source.y) > 2
+          || Math.abs(geometry.target.width - geometry.source.width) > 2
+          || Math.abs(geometry.target.height - geometry.source.height) > 2) issues.push(`overlay-source-misaligned:${phase}`);
+      }
       return { issues, evidence: { navigation, ...evidence } };
     });
 
@@ -3181,6 +3216,8 @@ async function runAcceptance(options, bundle) {
         requestCount: telemetry.requests.length,
         frameNavigationCount: telemetry.frameNavigations.length,
         frameNavigations: telemetry.frameNavigations,
+        nativeEventCount: telemetry.nativeEvents.length,
+        nativeEvents: telemetry.nativeEvents,
         errorCount: telemetry.events.length,
         dialogCount: telemetry.dialogs.length,
         requests: telemetry.requests,

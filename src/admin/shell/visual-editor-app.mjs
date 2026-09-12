@@ -916,12 +916,16 @@ function restoreFocusDialog(dialog, trigger) {
     return;
   }
   const previous = trigger || document.activeElement;
+  const bindingId = previous instanceof HTMLElement && previous.closest('#veOverlay') ? previous.dataset.bindingId : '';
+  const controlKey = bindingId ? previous.dataset.controlKey : '';
   dialog.showModal();
   requestAnimationFrame(() => {
     dialog.querySelector('input, button:not([data-dialog-close]), select, textarea')?.focus();
   });
   dialog.addEventListener('close', () => {
-    if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    const current = previous instanceof HTMLElement && previous.isConnected ? previous : bindingId && controlKey
+      ? document.querySelector(`#veOverlay [data-binding-id="${CSS.escape(bindingId)}"][data-control-key="${CSS.escape(controlKey)}"]`) : null;
+    if (current instanceof HTMLElement) current.focus(bindingId ? { preventScroll: true } : undefined);
   }, { once: true });
 }
 

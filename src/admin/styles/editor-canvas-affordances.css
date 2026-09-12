@@ -147,15 +147,12 @@
 }
 
 @media (max-width: 980px) {
-  /* A narrow no-photo hero uses its full width for text and actions. Reserve
-     editor-only space for the add-photo control instead of covering that copy. */
-  .v2-product-top--editor-missing-media .v2-product-top__grid {
-    padding-bottom: 64px !important;
-  }
-
+  /* Use the existing fixed canvas-action pattern on narrow viewports. An
+     absent image must not add height to the public hero. */
   .v2-product-top__gallery--editor-affordance {
-    right: 12px;
-    bottom: 6px;
+    position: fixed !important;
+    z-index: 70;
+    inset: auto 12px 12px auto !important;
     width: min(220px, calc(100% - 24px)) !important;
   }
 
