@@ -1,0 +1,1854 @@
+{
+  "kind": "smu1-owner-review-published-validation",
+  "version": 1,
+  "completedAt": "2026-09-20T14:55:19.247Z",
+  "status": "passed-with-documented-limitations",
+  "preview": "https://koleaw.github.io/SMU1/",
+  "initialSHA": "64458350e5c4d4ee3c27db37b597673ac46c8e35",
+  "publishedSourceSHA": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+  "identity": {
+    "version": 1,
+    "kind": "smu1-release-artifact-identity",
+    "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+    "artifactManifestSha256": "7f5efa038601effc8aa9ff61fa38268e5bdcf1c8ae277be69959fd347c2b67c2",
+    "fileCount": 4373,
+    "totalBytes": 419929876,
+    "largestFile": {
+      "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "bytes": 19322916,
+      "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+    },
+    "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2"
+  },
+  "refsCheckedAt": "2026-09-20T14:55:19.247Z",
+  "remoteRefs": {
+    "refs/heads/codex/owner-review-evidence-20260920": "46233f02452f1ab9883ab86bdf9f6299c22c298f",
+    "refs/heads/main": "a27027a5824dde6e378533ad52bd291aa07011b5",
+    "refs/heads/preview": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+    "refs/heads/v4-product-final-candidate": "ef349f33265b56e67fdea8356e72d1b6e97ba102"
+  },
+  "ci": {
+    "originalRun": 35505511441,
+    "originalReleaseConclusion": "failure",
+    "firstResumeRun": 35507682799,
+    "firstResumeConclusion": "failure",
+    "successfulResume": {
+      "id": 35507855164,
+      "url": "https://github.com/Koleaw/SMU1/actions/runs/35507855164",
+      "status": "completed",
+      "conclusion": "success",
+      "toolingSHA": "46233f02452f1ab9883ab86bdf9f6299c22c298f",
+      "startedAt": "2026-09-20T11:26:44Z",
+      "updatedAt": "2026-09-20T11:29:22Z"
+    },
+    "originalRawReportsByteIdentical": [
+      {
+        "original": "E:\\CodexTemp\\smu1-owner-20260911\\ci-actions-ef349f3\\admin-action-crawl.json",
+        "resumed": "E:\\CodexTemp\\smu1-owner-20260911\\ci-resumed-ef349f3\\admin-action-crawl.json",
+        "sha256": "16cb20b7baf23a2a1f96d53a280c88676482ad798e04dde2c14eee9ed98458b7",
+        "byteIdentical": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      },
+      {
+        "original": "E:\\CodexTemp\\smu1-owner-20260911\\ci-acceptance-ef349f3\\visual-editor-acceptance.json",
+        "resumed": "E:\\CodexTemp\\smu1-owner-20260911\\ci-resumed-ef349f3\\visual-editor-acceptance.json",
+        "sha256": "23f4bef728916405e75411b7962545fcea632b6d524a9ddcd2a70c10f3adc79c",
+        "byteIdentical": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      },
+      {
+        "original": "E:\\CodexTemp\\smu1-owner-20260911\\ci-ef349f3-public-1\\shard-1.json",
+        "resumed": "E:\\CodexTemp\\smu1-owner-20260911\\ci-resumed-ef349f3\\public-action-shards\\shard-1.json",
+        "sha256": "7ef81628c47394e9783ca2b1ad784d49b28d34abf5240e1208e31c9ff0a64ff9",
+        "byteIdentical": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      },
+      {
+        "original": "E:\\CodexTemp\\smu1-owner-20260911\\ci-ef349f3-public-2\\shard-2.json",
+        "resumed": "E:\\CodexTemp\\smu1-owner-20260911\\ci-resumed-ef349f3\\public-action-shards\\shard-2.json",
+        "sha256": "8d388083fae2c306d8c11c60caea2f475f50ab8ce7e96c484a1df64d509e12ef",
+        "byteIdentical": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      },
+      {
+        "original": "E:\\CodexTemp\\smu1-owner-20260911\\ci-ef349f3-public-3\\shard-3.json",
+        "resumed": "E:\\CodexTemp\\smu1-owner-20260911\\ci-resumed-ef349f3\\public-action-shards\\shard-3.json",
+        "sha256": "95aca45651aea73a9a9c61ca0ecaca63ca88935cb9dc559486dfc371b0c16c22",
+        "byteIdentical": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      },
+      {
+        "original": "E:\\CodexTemp\\smu1-owner-20260911\\ci-ef349f3-public-4\\shard-4.json",
+        "resumed": "E:\\CodexTemp\\smu1-owner-20260911\\ci-resumed-ef349f3\\public-action-shards\\shard-4.json",
+        "sha256": "80fc3c3dab04d948cf879e33e070b41619ea49cf3e8996decc9a33646e815085",
+        "byteIdentical": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      },
+      {
+        "original": "E:\\CodexTemp\\smu1-owner-20260911\\ci-ef349f3-public-5\\shard-5.json",
+        "resumed": "E:\\CodexTemp\\smu1-owner-20260911\\ci-resumed-ef349f3\\public-action-shards\\shard-5.json",
+        "sha256": "15ceb9d67ae14ba72adc76e7188273d1d5c8fd8a685a3d375a78600a0fb3ac4a",
+        "byteIdentical": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      },
+      {
+        "original": "E:\\CodexTemp\\smu1-owner-20260911\\ci-ef349f3-public-6\\shard-6.json",
+        "resumed": "E:\\CodexTemp\\smu1-owner-20260911\\ci-resumed-ef349f3\\public-action-shards\\shard-6.json",
+        "sha256": "7ef2cb741a0cdb17bea947c414a2409d245a9912478aca57b1c1f6072a4be699",
+        "byteIdentical": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      },
+      {
+        "original": "E:\\CodexTemp\\smu1-owner-20260911\\ci-ef349f3-public-7\\shard-7.json",
+        "resumed": "E:\\CodexTemp\\smu1-owner-20260911\\ci-resumed-ef349f3\\public-action-shards\\shard-7.json",
+        "sha256": "2127104d652bcb7d53c8bb31dc494b9a10abb66d923a0a1f381cab80a0e8df2d",
+        "byteIdentical": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      },
+      {
+        "original": "E:\\CodexTemp\\smu1-owner-20260911\\ci-ef349f3-public-8\\shard-8.json",
+        "resumed": "E:\\CodexTemp\\smu1-owner-20260911\\ci-resumed-ef349f3\\public-action-shards\\shard-8.json",
+        "sha256": "17eb9024dd4be6fd1327bf71559ee210fccb1a9b40c01d66d94fd51615fb0b09",
+        "byteIdentical": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      }
+    ],
+    "build": {
+      "sha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+      "runId": 35505511441,
+      "jobId": 106064529531,
+      "success": true,
+      "source": "ci-job-106064529531.log",
+      "astro": {
+        "files": 437,
+        "errors": 0,
+        "warnings": 0,
+        "hints": 83
+      },
+      "secondaryAdminRoundtrip": {
+        "checks": 52,
+        "passed": 52,
+        "failed": 0
+      },
+      "h5AfterPrune": {
+        "checks": 22,
+        "passed": 22,
+        "failed": 0,
+        "warnings": [
+          "routes.lcp-raster-target-exceptions"
+        ],
+        "bytesAfter": 419929876,
+        "bytesBefore": 419929876,
+        "duplicateGroups": 12,
+        "duplicateWastedBytes": 17594638,
+        "files": 4373,
+        "mediaBytes": 396172753,
+        "mediaFiles": 4091,
+        "nonMediaBytes": 23757123,
+        "nonMediaFiles": 282,
+        "referencedMediaBytes": 396172753,
+        "referencedMediaFiles": 4091,
+        "removableMediaBytes": 0,
+        "removableMediaFiles": 0,
+        "manifest": {
+          "canonicalSources": 235,
+          "derivativeBytes": 279687344,
+          "derivatives": 4611,
+          "uniqueSources": 214
+        }
+      },
+      "static": {
+        "checks": 38,
+        "passed": 38,
+        "failed": 0,
+        "counts": {
+          "routes": 107,
+          "links": 9296,
+          "media": 15213
+        },
+        "warnings": 0
+      },
+      "basicBrowser": {
+        "checks": 17,
+        "passed": 17,
+        "failed": 0
+      },
+      "browserAndMotion": {
+        "checks": 178,
+        "passed": 178,
+        "failed": 0
+      },
+      "publicIsolation": {
+        "checks": 14,
+        "passed": 14,
+        "failed": 0
+      },
+      "routePassport": {
+        "passed": 222,
+        "failed": 0,
+        "unknownPassed": 2,
+        "editorCovered": 216,
+        "bindingOccurrences": 31076,
+        "interactions": 25276,
+        "images": 2172,
+        "galleries": 1974,
+        "consoleNetworkEvents": 0,
+        "publicArtifactIsolation": true,
+        "publicArtifactLeaks": 0,
+        "actualRendererFamilies": {
+          "home": 1,
+          "not-found": 1,
+          "direction": 6,
+          "custom-order": 1,
+          "practical": 5,
+          "category": 22,
+          "catalog": 2,
+          "product": 68,
+          "project-archive": 1,
+          "project": 4
+        },
+        "actualRendererVariants": {
+          "404": 1,
+          "home-final": 1,
+          "direction-place-commercial": 1,
+          "custom-order": 1,
+          "contacts": 1,
+          "product-list": 13,
+          "direction-engineering-commercial": 1,
+          "direction-engineering-visual": 2,
+          "company": 1,
+          "catalog-hub": 2,
+          "text-only": 2,
+          "gallery-only": 6,
+          "mixed": 1,
+          "standard-no-media": 3,
+          "privacy-legal": 1,
+          "direction-project-commercial": 1,
+          "direction-visual": 1,
+          "premium-media": 9,
+          "standard-media": 56,
+          "vacancies-archive": 1,
+          "vacancy-detail": 1,
+          "archive": 1,
+          "gallery+landscape+media-first": 1,
+          "gallery+portrait+media-last": 1,
+          "large-gallery+landscape+media-first": 1,
+          "text-only+landscape+text-only": 1
+        },
+        "routeClasses": {
+          "404": 1,
+          "canonical": 107,
+          "alias": 3
+        }
+      },
+      "search": {
+        "entries": 99,
+        "indexBytes": 58744,
+        "indexGzipBytes": 6988,
+        "lazyModuleGzipBytes": 4587
+      },
+      "backupRestore": {
+        "pass": true,
+        "fileCount": 485,
+        "totalBytes": 884709309,
+        "notPublicArtifactSize": true
+      },
+      "privacy": {
+        "pass": true
+      },
+      "artifact": {
+        "id": 10603728706,
+        "bytes": 648642712,
+        "sha256": "28acb1325515b5e3d57729022d1d8769bd955ffbd591de19ca612a9e46340692",
+        "digestSource": "GitHub artifact metadata; local archive not downloaded"
+      }
+    },
+    "admin": {
+      "sha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+      "runId": 35505511441,
+      "verifiedAt": "2026-09-20T10:50:47.355Z",
+      "actions": {
+        "jobId": 106064529627,
+        "artifactId": 10604095653,
+        "artifactSHA256": "186ac440e635320b340d8ddaaa9df7376dd66e2ae0e046afc7911f2678cca1cc",
+        "aggregate": {
+          "actions": 514,
+          "canvasRoutesPassed": 111,
+          "canvasRoutesFailed": 0,
+          "passed": 514,
+          "failed": 0,
+          "executions": 504,
+          "policies": {
+            "navigation-inventory": 129,
+            "hidden-state": 75,
+            "isolated-mutation": 2,
+            "disabled-state": 8,
+            "safe-ui-action": 251,
+            "focus-state": 3,
+            "canvas-public-action-covered": 46
+          },
+          "discoveredContexts": [
+            "shell",
+            "iframe-veFrame"
+          ]
+        },
+        "events": 0,
+        "statusResponses": 513,
+        "statusUnconfirmed": 0,
+        "releaseMutations": 0,
+        "handle": [
+          {
+            "key": "shell:a292",
+            "status": "pass",
+            "executions": [
+              {
+                "operation": "click",
+                "status": "pass",
+                "nativeEvents": 3,
+                "postcondition": true
+              }
+            ]
+          }
+        ]
+      },
+      "acceptance": {
+        "jobId": 106064529621,
+        "artifactId": 10603149371,
+        "artifactSHA256": "2d0a84f65effa12bcc977168e6a9f5affc6eeaeefb6e9bea9f7c0c81c64ef10c",
+        "aggregate": {
+          "checks": 22,
+          "scenarios": 20,
+          "passed": 22,
+          "failed": 0,
+          "failedIds": [],
+          "boundary": {
+            "status": "pass",
+            "errors": [],
+            "httpErrors": [],
+            "networkErrors": [],
+            "navigationDialogs": [
+              {
+                "type": "beforeunload",
+                "accepted": true,
+                "reason": "qa-baseline-reset"
+              },
+              {
+                "type": "beforeunload",
+                "accepted": true,
+                "reason": "qa-baseline-reset"
+              },
+              {
+                "type": "beforeunload",
+                "accepted": true,
+                "reason": "qa-baseline-reset"
+              }
+            ],
+            "navigationDialogFailed": false
+          },
+          "latencyP95Ms": 1367
+        },
+        "releaseMutations": 0
+      }
+    },
+    "publicCrawl": {
+      "sha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+      "verifiedAt": "2026-09-20T11:15:16.139Z",
+      "source": "E:/CodexTemp/smu1-owner-20260911/ci-public-evidence-ef349f3/public-action-crawl.json",
+      "pass": true,
+      "manifest": {
+        "expectedCount": 111,
+        "openedRouteViewportPairs": 222,
+        "requiredRouteViewportPairs": 222,
+        "mergedShards": {
+          "total": 8,
+          "indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      },
+      "aggregate": {
+        "routeViewportsPassed": 222,
+        "routeViewportsFailed": 0,
+        "actionOccurrences": 25276,
+        "safeExecutions": 16644,
+        "gallerySemanticOccurrences": 158,
+        "gallerySemanticPassed": 156,
+        "gallerySemanticFailed": 0,
+        "lifecycleSemanticOccurrences": 3,
+        "lifecycleSemanticsPassed": 3,
+        "lifecycleSemanticsFailed": 0,
+        "protectedLeadOrFileActions": 214,
+        "unknownViewportsPassed": 2,
+        "unknownViewportsFailed": 0,
+        "unknownNoJsPassed": true,
+        "publicArtifactIsolation": true,
+        "publicArtifactLeaks": 0,
+        "unexpectedNavigationDialogs": 0,
+        "dialogDrainPassed": true,
+        "noJsPassed": 111,
+        "noJsFailed": 0,
+        "noJsRequired": 111
+      },
+      "search": [
+        {
+          "shard": 1,
+          "viewport": "desktop-1440x900",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 1,
+          "viewport": "mobile-390x844",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 2,
+          "viewport": "desktop-1440x900",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 2,
+          "viewport": "mobile-390x844",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 3,
+          "viewport": "desktop-1440x900",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 3,
+          "viewport": "mobile-390x844",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 4,
+          "viewport": "desktop-1440x900",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 4,
+          "viewport": "mobile-390x844",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 5,
+          "viewport": "desktop-1440x900",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 5,
+          "viewport": "mobile-390x844",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 6,
+          "viewport": "desktop-1440x900",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 6,
+          "viewport": "mobile-390x844",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 7,
+          "viewport": "desktop-1440x900",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 7,
+          "viewport": "mobile-390x844",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 8,
+          "viewport": "desktop-1440x900",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        },
+        {
+          "shard": 8,
+          "viewport": "mobile-390x844",
+          "status": "pass",
+          "checks": 22,
+          "failed": []
+        }
+      ],
+      "events": [],
+      "artifact": {
+        "sha256": "e18cf8bac1425c565710f035eac29e85e4943bd7c711ae7818e913e0eff72ee9",
+        "bytes": 419929876,
+        "files": 4373,
+        "publicActionInputsKey": "adf099d711cf453a96ede370e837ef7c3224d3c93b993f5c126b572d61460c39"
+      },
+      "shards": [
+        {
+          "index": 1,
+          "total": 8,
+          "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-1.json",
+          "generatedAt": "2026-09-20T11:11:05.279Z",
+          "distFreshness": {
+            "fresh": true,
+            "sourceFiles": 758,
+            "htmlFiles": 229,
+            "latestSourceMtime": "2026-09-20T10:55:44.260Z",
+            "oldestHtmlMtime": "2026-09-20T10:55:59.913Z"
+          },
+          "origin": "http://127.0.0.1:44911",
+          "assignedRoutes": 14,
+          "routeViewportPairs": 28,
+          "noJsRoutes": 14
+        },
+        {
+          "index": 2,
+          "total": 8,
+          "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-2.json",
+          "generatedAt": "2026-09-20T11:11:07.656Z",
+          "distFreshness": {
+            "fresh": true,
+            "sourceFiles": 758,
+            "htmlFiles": 229,
+            "latestSourceMtime": "2026-09-20T10:55:43.162Z",
+            "oldestHtmlMtime": "2026-09-20T10:55:58.864Z"
+          },
+          "origin": "http://127.0.0.1:43785",
+          "assignedRoutes": 14,
+          "routeViewportPairs": 28,
+          "noJsRoutes": 14
+        },
+        {
+          "index": 3,
+          "total": 8,
+          "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-3.json",
+          "generatedAt": "2026-09-20T11:12:55.929Z",
+          "distFreshness": {
+            "fresh": true,
+            "sourceFiles": 758,
+            "htmlFiles": 229,
+            "latestSourceMtime": "2026-09-20T10:55:48.785Z",
+            "oldestHtmlMtime": "2026-09-20T10:56:28.368Z"
+          },
+          "origin": "http://127.0.0.1:35107",
+          "assignedRoutes": 14,
+          "routeViewportPairs": 28,
+          "noJsRoutes": 14
+        },
+        {
+          "index": 4,
+          "total": 8,
+          "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-4.json",
+          "generatedAt": "2026-09-20T11:11:59.426Z",
+          "distFreshness": {
+            "fresh": true,
+            "sourceFiles": 758,
+            "htmlFiles": 229,
+            "latestSourceMtime": "2026-09-20T10:55:44.789Z",
+            "oldestHtmlMtime": "2026-09-20T10:56:00.094Z"
+          },
+          "origin": "http://127.0.0.1:42483",
+          "assignedRoutes": 14,
+          "routeViewportPairs": 28,
+          "noJsRoutes": 14
+        },
+        {
+          "index": 5,
+          "total": 8,
+          "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-5.json",
+          "generatedAt": "2026-09-20T11:11:41.984Z",
+          "distFreshness": {
+            "fresh": true,
+            "sourceFiles": 758,
+            "htmlFiles": 229,
+            "latestSourceMtime": "2026-09-20T10:55:44.484Z",
+            "oldestHtmlMtime": "2026-09-20T10:56:02.964Z"
+          },
+          "origin": "http://127.0.0.1:35025",
+          "assignedRoutes": 14,
+          "routeViewportPairs": 28,
+          "noJsRoutes": 14
+        },
+        {
+          "index": 6,
+          "total": 8,
+          "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-6.json",
+          "generatedAt": "2026-09-20T11:13:04.432Z",
+          "distFreshness": {
+            "fresh": true,
+            "sourceFiles": 758,
+            "htmlFiles": 229,
+            "latestSourceMtime": "2026-09-20T10:55:45.473Z",
+            "oldestHtmlMtime": "2026-09-20T10:56:03.762Z"
+          },
+          "origin": "http://127.0.0.1:34457",
+          "assignedRoutes": 14,
+          "routeViewportPairs": 28,
+          "noJsRoutes": 14
+        },
+        {
+          "index": 7,
+          "total": 8,
+          "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-7.json",
+          "generatedAt": "2026-09-20T11:12:53.078Z",
+          "distFreshness": {
+            "fresh": true,
+            "sourceFiles": 758,
+            "htmlFiles": 229,
+            "latestSourceMtime": "2026-09-20T10:55:44.481Z",
+            "oldestHtmlMtime": "2026-09-20T10:56:00.243Z"
+          },
+          "origin": "http://127.0.0.1:37365",
+          "assignedRoutes": 14,
+          "routeViewportPairs": 28,
+          "noJsRoutes": 14
+        },
+        {
+          "index": 8,
+          "total": 8,
+          "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-8.json",
+          "generatedAt": "2026-09-20T11:11:04.909Z",
+          "distFreshness": {
+            "fresh": true,
+            "sourceFiles": 758,
+            "htmlFiles": 229,
+            "latestSourceMtime": "2026-09-20T10:55:44.592Z",
+            "oldestHtmlMtime": "2026-09-20T10:55:59.868Z"
+          },
+          "origin": "http://127.0.0.1:41219",
+          "assignedRoutes": 13,
+          "routeViewportPairs": 26,
+          "noJsRoutes": 13
+        }
+      ],
+      "artifactEvidence": {
+        "id": 10604331665,
+        "sha256": "e484543d285e900c8f83fee4acb95af42a94a0bd57585d1fa87c9f3e2a77566d",
+        "bytes": 9619143,
+        "jobId": 106068949526
+      }
+    }
+  },
+  "sourcePreservation": {
+    "sourceWorktreeDiff": "",
+    "changedSincePublishedSource": [
+      ".github/workflows/deploy.yml",
+      "docs/qa/owner-review-20260911/RESUME-20260920.md",
+      "docs/qa/owner-review-20260911/pause-checkpoint.json",
+      "docs/qa/owner-review-20260911/pause-evidence/ci-admin-ef349f3-summary.json",
+      "docs/qa/owner-review-20260911/pause-evidence/ci-build-ef349f3-summary.json",
+      "docs/qa/owner-review-20260911/pause-evidence/ci-public-ef349f3-summary.json",
+      "docs/qa/owner-review-20260911/pause-evidence/ci-public-shards-ef349f3-summary.json",
+      "docs/qa/owner-review-20260911/pause-evidence/content-preservation-final.json",
+      "docs/qa/owner-review-20260911/pause-evidence/pages-policies-restored.json",
+      "docs/qa/owner-review-20260911/pause-evidence/published-browser--report.json",
+      "docs/qa/owner-review-20260911/pause-evidence/published-engines--report.json",
+      "docs/qa/owner-review-20260911/pause-evidence/published-readonly-ef349f33265b.json",
+      "docs/qa/owner-review-20260911/pause-evidence/published-visual-supplement--report.json",
+      "docs/qa/owner-review-20260911/pause-evidence/reconciliation-contract-ef349f3.json",
+      "docs/qa/owner-review-20260911/reconciliation.md",
+      "tools/qa/ci-gates.test.mjs",
+      "tools/qa/evidence-contract.mjs",
+      "tools/qa/evidence-contract.test.mjs"
+    ],
+    "preservedOriginalContent": [
+      {
+        "file": "src/content/static-pages/home.json",
+        "sha256": "18460ad213139e0a81f3f794a17688aade1ef4b9ae5f2f89f3bc0809afc21610",
+        "unchanged": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      },
+      {
+        "file": "src/content/jobs/svarshchik.json",
+        "sha256": "2f8319111e8b1814422c4eadf3d727082b7b67d747c89abd821bce0d61dff676",
+        "unchanged": true,
+        "reverifiedAt": "2026-09-20T14:55:19.247Z"
+      }
+    ],
+    "contentChangeAudit": "pause-evidence/content-preservation-final.json",
+    "onlyContentKeysChangedSinceInitial": [
+      "imageView",
+      "homeImage"
+    ],
+    "changedContentRecords": 78,
+    "userDocumentUntouched": true,
+    "generatedWorktreeUntouched": true
+  },
+  "environment": {
+    "browserPlugin": "Browser plugin not available",
+    "fallback": "Existing Playwright runtime; no new browser dependencies installed",
+    "publishedViewports": [
+      {
+        "width": 1366,
+        "height": 768
+      },
+      {
+        "width": 390,
+        "height": 844
+      },
+      {
+        "width": 320,
+        "height": 844
+      }
+    ],
+    "engines": [
+      "Chromium",
+      "Firefox",
+      "WebKit"
+    ],
+    "localAdditionalWidths": [
+      1024,
+      768
+    ],
+    "actualChromeZoom": {
+      "ratio": 2,
+      "physicalWidth": 1366,
+      "innerWidth": 683,
+      "dpr": 2,
+      "report": "E:/CodexTemp/smu1-owner-20260911/zoom/report.json"
+    },
+    "physicalOldDeviceTested": false
+  },
+  "publishedHTTP": {
+    "kind": "smu1-owner-review-published-readonly",
+    "version": 1,
+    "checkedAt": "2026-09-20T14:53:10.842Z",
+    "label": "Final-post-pause-identity-and-resources",
+    "expectedSHA": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+    "preview": "https://koleaw.github.io/SMU1/",
+    "oldPublicationProbe": false,
+    "scope": {
+      "browser": false,
+      "fullRouteCrawl": false,
+      "networkWrites": false,
+      "methods": [
+        "GET"
+      ],
+      "visualAcceptance": false,
+      "ciAcceptance": false,
+      "completeArtifactHashRecomputed": false
+    },
+    "identity": {
+      "version": 1,
+      "kind": "smu1-release-artifact-identity",
+      "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+      "artifactManifestSha256": "7f5efa038601effc8aa9ff61fa38268e5bdcf1c8ae277be69959fd347c2b67c2",
+      "fileCount": 4373,
+      "totalBytes": 419929876,
+      "largestFile": {
+        "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+        "bytes": 19322916,
+        "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+      },
+      "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2"
+    },
+    "checks": [
+      {
+        "name": "identity.start",
+        "pass": true,
+        "detail": {
+          "version": 1,
+          "kind": "smu1-release-artifact-identity",
+          "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+          "artifactManifestSha256": "7f5efa038601effc8aa9ff61fa38268e5bdcf1c8ae277be69959fd347c2b67c2",
+          "fileCount": 4373,
+          "totalBytes": 419929876,
+          "largestFile": {
+            "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+            "bytes": 19322916,
+            "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+          },
+          "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2"
+        }
+      },
+      {
+        "name": "home.semantic-document",
+        "pass": true,
+        "detail": {
+          "bytes": 133562,
+          "sha256": "ee9cb520e8068d915b5588725386b31b77ddee3c1d3b23025777405df7b1a78c"
+        }
+      },
+      {
+        "name": "favicon.svg",
+        "pass": true,
+        "detail": {
+          "url": "https://koleaw.github.io/SMU1/assets/brand/favicon.svg?v=20260911",
+          "sha256": "06294096b0a80027d5afd85f60e6af73ebfdde758ed1fdc8d2d34e7db1af15c8"
+        }
+      },
+      {
+        "name": "favicon.touch",
+        "pass": true,
+        "detail": {
+          "url": "https://koleaw.github.io/SMU1/assets/brand/apple-touch-icon.png?v=20260911",
+          "sha256": "f633291bf43ba019843d56e128d431259bbb0b38535202be373e5ffb1f2171c2"
+        }
+      },
+      {
+        "name": "favicon.ico",
+        "pass": true,
+        "detail": {
+          "url": "https://koleaw.github.io/SMU1/assets/brand/favicon.ico?v=20260911",
+          "dimensions": [
+            [
+              16,
+              16
+            ],
+            [
+              32,
+              32
+            ],
+            [
+              48,
+              48
+            ]
+          ],
+          "sha256": "317a47d15e777fe837b220e4d9bd111cfb7796c43fdeb39f07c4b511d502d67a"
+        }
+      },
+      {
+        "name": "home.photo.topiarii",
+        "pass": true,
+        "detail": {
+          "source": "/uploads/chatgpt-image-5-2026-21-56-34-1783277800820.png",
+          "sourceSha256": "ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704",
+          "responsiveReferences": 17,
+          "sampledResources": [
+            {
+              "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w1024.jpg",
+              "format": "jpeg",
+              "width": 1024,
+              "height": 768,
+              "sha256": "6e9a1f2a41636fac0cc7e5c5c531dca28187998695c0149a449994e2bc88897c"
+            },
+            {
+              "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w320.avif",
+              "format": "heif",
+              "width": 320,
+              "height": 240,
+              "sha256": "3c2dcbdfb8334151a9aa2e00e037f7588cf2a6ce2e66569d7550e629ed3edeca"
+            },
+            {
+              "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w320.webp",
+              "format": "webp",
+              "width": 320,
+              "height": 240,
+              "sha256": "6ad3db5d4f7dd96a6c3e8bd5e6d45c79643ceffc5d8e1205653173eb263bac06"
+            }
+          ]
+        }
+      },
+      {
+        "name": "home.photo.navesy-i-kozyrki",
+        "pass": true,
+        "detail": {
+          "source": "/uploads/chatgpt-image-23-2026-11-43-06-1779555009138.png",
+          "sourceSha256": "0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048",
+          "responsiveReferences": 17,
+          "sampledResources": [
+            {
+              "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w1024.jpg",
+              "format": "jpeg",
+              "width": 1024,
+              "height": 768,
+              "sha256": "8796c50f6931dc814d1359475c3086b86010f2f768363e279aef7dabcc016dc5"
+            },
+            {
+              "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w320.avif",
+              "format": "heif",
+              "width": 320,
+              "height": 240,
+              "sha256": "26dcc98038e6d4d4c62d80b3b8491cabf9ca0e5ac69360a23ed196762356374d"
+            },
+            {
+              "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w320.webp",
+              "format": "webp",
+              "width": 320,
+              "height": 240,
+              "sha256": "a62e0f1b677218969da86a5c6c010731682f00ebda71b4550d62ad2532a03ae4"
+            }
+          ]
+        }
+      },
+      {
+        "name": "search.index",
+        "pass": true,
+        "detail": {
+          "entries": 99,
+          "version": 1,
+          "bytes": 58744,
+          "sha256": "cc8f353c42d66493e552703295f8a2a900c6e70e6343d22f6d90d4621cba85d6"
+        }
+      },
+      {
+        "name": "search.bootstrap",
+        "pass": true,
+        "detail": {
+          "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.YNHViKiE.mjs",
+          "bytes": 3958,
+          "sha256": "2c325e900a2bcbe722283005b534c88f992e23537c86904bb707442f6b33196d"
+        }
+      },
+      {
+        "name": "search.stylesheet",
+        "pass": true,
+        "detail": {
+          "url": "https://koleaw.github.io/SMU1/_astro/public-search.CNMtX_GT.css",
+          "bytes": 6090,
+          "sha256": "4b4710023eb261672200b62aa98115bc98ed61a196b9575dcebbf3616de3ce55"
+        }
+      },
+      {
+        "name": "search.module",
+        "pass": true,
+        "detail": {
+          "url": "https://koleaw.github.io/SMU1/_astro/public-search._c4seyV6.mjs",
+          "bytes": 13673,
+          "sha256": "a6c95851823e81540beb671912fb386dea59318e60b95a0fb1acd4991b0b8acc"
+        }
+      },
+      {
+        "name": "identity.end-stable",
+        "pass": true,
+        "detail": {
+          "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2",
+          "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102"
+        }
+      }
+    ],
+    "resources": [
+      {
+        "url": "https://koleaw.github.io/SMU1/_release/identity.json",
+        "kind": "release-marker",
+        "method": "GET",
+        "status": 200,
+        "bytes": 472,
+        "sha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2",
+        "contentType": "application/json; charset=utf-8",
+        "pass": true,
+        "etag": "W/\"6aafc389-1d8\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/",
+        "kind": "home-html",
+        "method": "GET",
+        "status": 200,
+        "bytes": 133562,
+        "sha256": "ee9cb520e8068d915b5588725386b31b77ddee3c1d3b23025777405df7b1a78c",
+        "contentType": "text/html; charset=utf-8",
+        "pass": true,
+        "etag": "W/\"6aafc389-209ba\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/assets/brand/favicon.svg?v=20260911",
+        "kind": "favicon-svg",
+        "method": "GET",
+        "status": 200,
+        "bytes": 4691,
+        "sha256": "06294096b0a80027d5afd85f60e6af73ebfdde758ed1fdc8d2d34e7db1af15c8",
+        "contentType": "image/svg+xml",
+        "pass": true,
+        "etag": "W/\"6aafc389-1253\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/assets/brand/favicon.ico?v=20260911",
+        "kind": "favicon-ico",
+        "method": "GET",
+        "status": 200,
+        "bytes": 3121,
+        "sha256": "317a47d15e777fe837b220e4d9bd111cfb7796c43fdeb39f07c4b511d502d67a",
+        "contentType": "image/vnd.microsoft.icon",
+        "pass": true,
+        "etag": "W/\"6aafc389-c31\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/assets/brand/apple-touch-icon.png?v=20260911",
+        "kind": "favicon-touch",
+        "method": "GET",
+        "status": 200,
+        "bytes": 6618,
+        "sha256": "f633291bf43ba019843d56e128d431259bbb0b38535202be373e5ffb1f2171c2",
+        "contentType": "image/png",
+        "pass": true,
+        "etag": "\"6aafc389-19da\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w1024.jpg",
+        "kind": "home-photo-topiarii",
+        "method": "GET",
+        "status": 200,
+        "bytes": 89346,
+        "sha256": "6e9a1f2a41636fac0cc7e5c5c531dca28187998695c0149a449994e2bc88897c",
+        "contentType": "image/jpeg",
+        "pass": true,
+        "etag": "\"6aafc388-15d02\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w1024.jpg",
+        "kind": "home-photo-navesy-i-kozyrki",
+        "method": "GET",
+        "status": 200,
+        "bytes": 182340,
+        "sha256": "8796c50f6931dc814d1359475c3086b86010f2f768363e279aef7dabcc016dc5",
+        "contentType": "image/jpeg",
+        "pass": true,
+        "etag": "\"6aafc389-2c844\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w320.avif",
+        "kind": "home-photo-topiarii",
+        "method": "GET",
+        "status": 200,
+        "bytes": 5582,
+        "sha256": "3c2dcbdfb8334151a9aa2e00e037f7588cf2a6ce2e66569d7550e629ed3edeca",
+        "contentType": "image/avif",
+        "pass": true,
+        "etag": "\"6aafc388-15ce\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w320.avif",
+        "kind": "home-photo-navesy-i-kozyrki",
+        "method": "GET",
+        "status": 200,
+        "bytes": 12302,
+        "sha256": "26dcc98038e6d4d4c62d80b3b8491cabf9ca0e5ac69360a23ed196762356374d",
+        "contentType": "image/avif",
+        "pass": true,
+        "etag": "\"6aafc389-300e\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w320.webp",
+        "kind": "home-photo-topiarii",
+        "method": "GET",
+        "status": 200,
+        "bytes": 6982,
+        "sha256": "6ad3db5d4f7dd96a6c3e8bd5e6d45c79643ceffc5d8e1205653173eb263bac06",
+        "contentType": "image/webp",
+        "pass": true,
+        "etag": "\"6aafc388-1b46\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w320.webp",
+        "kind": "home-photo-navesy-i-kozyrki",
+        "method": "GET",
+        "status": 200,
+        "bytes": 20014,
+        "sha256": "a62e0f1b677218969da86a5c6c010731682f00ebda71b4550d62ad2532a03ae4",
+        "contentType": "image/webp",
+        "pass": true,
+        "etag": "\"6aafc389-4e2e\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/search-index.json",
+        "kind": "search-index",
+        "method": "GET",
+        "status": 200,
+        "bytes": 58744,
+        "sha256": "cc8f353c42d66493e552703295f8a2a900c6e70e6343d22f6d90d4621cba85d6",
+        "contentType": "application/json; charset=utf-8",
+        "pass": true,
+        "etag": "W/\"6aafc389-e578\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/_astro/public-search._c4seyV6.mjs",
+        "kind": "search-module",
+        "method": "GET",
+        "status": 200,
+        "bytes": 13673,
+        "sha256": "a6c95851823e81540beb671912fb386dea59318e60b95a0fb1acd4991b0b8acc",
+        "contentType": "text/javascript; charset=utf-8",
+        "pass": true,
+        "etag": "W/\"6aafc389-3569\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.YNHViKiE.mjs",
+        "kind": "search-bootstrap",
+        "method": "GET",
+        "status": 200,
+        "bytes": 3958,
+        "sha256": "2c325e900a2bcbe722283005b534c88f992e23537c86904bb707442f6b33196d",
+        "contentType": "text/javascript; charset=utf-8",
+        "pass": true,
+        "etag": "W/\"6aafc389-f76\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/_astro/public-search.CNMtX_GT.css",
+        "kind": "search-stylesheet",
+        "method": "GET",
+        "status": 200,
+        "bytes": 6090,
+        "sha256": "4b4710023eb261672200b62aa98115bc98ed61a196b9575dcebbf3616de3ce55",
+        "contentType": "text/css; charset=utf-8",
+        "pass": true,
+        "etag": "W/\"6aafc389-17ca\""
+      },
+      {
+        "url": "https://koleaw.github.io/SMU1/_release/identity.json",
+        "kind": "release-marker-end",
+        "method": "GET",
+        "status": 200,
+        "bytes": 472,
+        "sha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2",
+        "contentType": "application/json; charset=utf-8",
+        "pass": true,
+        "etag": "W/\"6aafc389-1d8\""
+      }
+    ],
+    "failures": [],
+    "pass": true,
+    "publishedResourceAcceptance": true,
+    "completedAt": "2026-09-20T14:53:14.148Z",
+    "summary": {
+      "checks": 12,
+      "passed": 12,
+      "failed": 0,
+      "requests": 16
+    }
+  },
+  "publishedBrowser": {
+    "chromium": {
+      "report": "pause-evidence/published-browser--report.json",
+      "started": "2026-09-20T11:35:08.636Z",
+      "completed": "2026-09-20T11:36:34.768Z",
+      "pass": true,
+      "identityStable": true,
+      "rows": [
+        {
+          "name": "01-release-identity",
+          "pass": true,
+          "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+          "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2"
+        },
+        {
+          "name": "02-home-entry-video",
+          "pass": true,
+          "video": {
+            "state": "playing",
+            "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+            "paused": false,
+            "time": 1.730353,
+            "error": null,
+            "posterLoaded": true,
+            "overlayControls": 0,
+            "actualPlayback": true,
+            "afterTime": 1.769227
+          },
+          "geometry": {
+            "width": 1366,
+            "overflow": 0,
+            "titleOverflow": 0,
+            "title": "Изделия, конструкции и комплексные работы на объекте",
+            "titleBox": {
+              "x": 32,
+              "y": 271.265625,
+              "right": 1009.09375,
+              "bottom": 529.96875
+            }
+          },
+          "icons": [
+            {
+              "rel": "icon",
+              "href": "https://koleaw.github.io/SMU1/assets/brand/favicon.svg?v=20260911"
+            },
+            {
+              "rel": "icon",
+              "href": "https://koleaw.github.io/SMU1/assets/brand/favicon.ico?v=20260911"
+            },
+            {
+              "rel": "apple-touch-icon",
+              "href": "https://koleaw.github.io/SMU1/assets/brand/apple-touch-icon.png?v=20260911"
+            }
+          ]
+        },
+        {
+          "name": "03-home-special-images",
+          "pass": true,
+          "images": [
+            {
+              "href": "/topiarii/",
+              "source": "/uploads/chatgpt-image-5-2026-21-56-34-1783277800820.png",
+              "src": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w320.avif",
+              "loaded": true,
+              "sources": 3
+            },
+            {
+              "href": "/navesy-i-kozyrki/",
+              "source": "/uploads/chatgpt-image-23-2026-11-43-06-1779555009138.png",
+              "src": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w320.avif",
+              "loaded": true,
+              "sources": 3
+            }
+          ],
+          "offscreenVideoPaused": true
+        },
+        {
+          "name": "04-search-groups-and-focus",
+          "pass": true,
+          "mainTitles": [
+            "Вазон Контур",
+            "Скамья Контур"
+          ],
+          "collapsedArrowsSkipped": true,
+          "expandedArrowsIncluded": true,
+          "secondaryExplained": true,
+          "ovalMain": true,
+          "emptyState": true,
+          "focusReturned": true
+        },
+        {
+          "name": "05-search-error-retry",
+          "pass": true,
+          "intentionallyAbortedRequests": 1,
+          "recovered": true
+        },
+        {
+          "name": "06-phone390-menu-search-video",
+          "pass": true,
+          "video": {
+            "state": "playing",
+            "source": "/SMU1/uploads/hero-home-mobile.mp4",
+            "paused": false,
+            "time": 0.869934,
+            "error": null,
+            "posterLoaded": true,
+            "overlayControls": 0,
+            "actualPlayback": true,
+            "afterTime": 0.914645
+          },
+          "menuMotionControl": true,
+          "hrefs": [
+            "/SMU1/",
+            "#contact",
+            "/SMU1/ulichnaya-mebel/",
+            "/SMU1/ograzhdeniya-i-zabory/",
+            "/SMU1/navesy-i-kozyrki/",
+            "/SMU1/topiarii/",
+            "/SMU1/metallokonstruktsii-dlya-biznesa/",
+            "/SMU1/blagoustroystvo-territoriy/",
+            "/SMU1/stroitelstvo-i-remonty/",
+            "/SMU1/izgotovlenie-na-zakaz/",
+            "/SMU1/vypolnennye-obekty/",
+            "/SMU1/o-nas/",
+            "/SMU1/kontakty/",
+            "/SMU1/vakansii/",
+            "tel:+79129735006",
+            "tel:+79125799665",
+            "https://t.me/smu1build",
+            "mailto:smu1.kurgan@yandex.ru"
+          ],
+          "geometry": {
+            "width": 390,
+            "overflow": 0,
+            "titleOverflow": 0,
+            "title": "Изделия, конструкции и комплексные работы на объекте",
+            "titleBox": {
+              "x": 16,
+              "y": 347.859375,
+              "right": 374,
+              "bottom": 573.328125
+            }
+          }
+        },
+        {
+          "name": "07-phone320-menu-navigation-back-forward",
+          "pass": true,
+          "video": {
+            "state": "idle",
+            "source": null,
+            "paused": true,
+            "time": 0,
+            "error": null,
+            "posterLoaded": true,
+            "overlayControls": 0,
+            "actualPlayback": false,
+            "expectedPoster": true
+          },
+          "positions": {
+            "logo": 12,
+            "search": 162,
+            "menu": 220
+          },
+          "nativeBackForward": true,
+          "afterBack": {
+            "menuHidden": true,
+            "menuExpanded": "false",
+            "searchOpen": false,
+            "locked": false,
+            "introState": "settled",
+            "introHidden": true,
+            "focusInHiddenSurface": false,
+            "activeTag": "BODY",
+            "activeLabel": "К основному содержаниюПродукция+−Продукция и конструкцииУлич"
+          },
+          "backControls": {
+            "menuWorked": true,
+            "searchWorked": true,
+            "menuFocusReturned": true,
+            "searchFocusReturned": true
+          },
+          "afterForward": {
+            "menuHidden": true,
+            "menuExpanded": "false",
+            "searchOpen": false,
+            "locked": false,
+            "introState": "settled",
+            "introHidden": true,
+            "focusInHiddenSurface": false,
+            "activeTag": "BODY",
+            "activeLabel": "К основному содержаниюК основному содержаниюПродукция+−Проду"
+          },
+          "forwardControls": {
+            "menuWorked": true,
+            "searchWorked": true,
+            "menuFocusReturned": true,
+            "searchFocusReturned": true
+          },
+          "afterForwardControls": {
+            "menuHidden": true,
+            "menuExpanded": "false",
+            "searchOpen": false,
+            "locked": false,
+            "introState": "settled",
+            "introHidden": true,
+            "focusInHiddenSurface": false,
+            "activeTag": "BUTTON",
+            "activeLabel": "Открыть поиск"
+          },
+          "geometry": {
+            "width": 320,
+            "overflow": 0,
+            "titleOverflow": 0,
+            "title": "Контакты",
+            "titleBox": {
+              "x": 12,
+              "y": 163,
+              "right": 308,
+              "bottom": 206.109375
+            }
+          }
+        },
+        {
+          "name": "08-contacts-automatic-map",
+          "pass": true,
+          "initialState": "ready",
+          "href": "https://yandex.ru/maps/?mode=routes&rtext=%7E%D1%83%D0%BB.+%D0%9F%D1%80%D0%BE%D0%BC%D1%8B%D1%88%D0%BB%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F%2C+17%2C+%D0%9A%D1%83%D1%80%D0%B3%D0%B0%D0%BD&rtt=auto",
+          "state": "ready",
+          "audit": {
+            "starts": [
+              {
+                "top": 608.625,
+                "bottom": 978.625,
+                "height": 768,
+                "scrollY": 0,
+                "at": 32.69999999925494,
+                "src": "https://api-maps.yandex.ru/services/constructor/1.0/js/?um=constructor%3Aca887405ce74342784b43229f8bdac691fceefd5cbebc53bc6209bca88dd8046&width=100%25&height=480&lang=ru_RU&scroll=false"
+              }
+            ],
+            "focusedFrames": []
+          },
+          "focusedSearch": true,
+          "scrollY": 487,
+          "iframe": "Яндекс Карта: ул. Промышленная, 17, Курган",
+          "height": 370
+        },
+        {
+          "name": "09-vacancies-footer-and-detail",
+          "pass": true,
+          "href": "/SMU1/vakansii/svarshchik-metallokonstruktsiy/",
+          "expectedTitle": "Сварщик металлоконструкций",
+          "sections": [
+            {
+              "title": "Обязанности",
+              "items": 3
+            },
+            {
+              "title": "Требования",
+              "items": 3
+            },
+            {
+              "title": "Условия",
+              "items": 3
+            }
+          ],
+          "archive": {
+            "bottom": 1132.59375,
+            "documentHeight": 1133,
+            "viewport": 768,
+            "position": "static"
+          },
+          "detail": {
+            "bottom": 1857.6875,
+            "documentHeight": 1858,
+            "viewport": 768,
+            "position": "static"
+          }
+        },
+        {
+          "name": "10-canopies-representative",
+          "pass": true,
+          "route": "/navesy-i-kozyrki/",
+          "views": [
+            {
+              "width": 1366,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Навесы и козырьки под объект",
+              "titleBox": {
+                "x": 32,
+                "y": 273.90625,
+                "right": 552.890625,
+                "bottom": 490.75
+              }
+            },
+            {
+              "width": 390,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Навесы и козырьки под объект",
+              "titleBox": {
+                "x": 16,
+                "y": 189.09375,
+                "right": 374,
+                "bottom": 326.671875
+              }
+            }
+          ]
+        },
+        {
+          "name": "11-topiary-representative",
+          "pass": true,
+          "route": "/topiarii/",
+          "views": [
+            {
+              "width": 1366,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Топиарии под заказ",
+              "titleBox": {
+                "x": 32,
+                "y": 294.703125,
+                "right": 458.171875,
+                "bottom": 439.265625
+              }
+            },
+            {
+              "width": 390,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Топиарии под заказ",
+              "titleBox": {
+                "x": 16,
+                "y": 189.09375,
+                "right": 286.40625,
+                "bottom": 280.8125
+              }
+            }
+          ]
+        },
+        {
+          "name": "12-metal-representative",
+          "pass": true,
+          "route": "/metallokonstruktsii-dlya-biznesa/",
+          "views": [
+            {
+              "width": 1366,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Металлоконструкции для цехов, складов и других объектов",
+              "titleBox": {
+                "x": 32,
+                "y": 287.359375,
+                "right": 884.359375,
+                "bottom": 504.203125
+              }
+            },
+            {
+              "width": 390,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Металлоконструкции для цехов, складов и других объектов",
+              "titleBox": {
+                "x": 16,
+                "y": 194.625,
+                "right": 374,
+                "bottom": 286.359375
+              }
+            }
+          ]
+        },
+        {
+          "name": "13-construction-representative",
+          "pass": true,
+          "route": "/stroitelstvo-i-remonty/",
+          "views": [
+            {
+              "width": 1366,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Строительство и ремонты для производственных, коммерческих и частных объектов",
+              "titleBox": {
+                "x": 32,
+                "y": 230.9375,
+                "right": 884.359375,
+                "bottom": 592.34375
+              }
+            },
+            {
+              "width": 390,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Строительство и ремонты для производственных, коммерческих и частных объектов",
+              "titleBox": {
+                "x": 16,
+                "y": 190.40625,
+                "right": 374,
+                "bottom": 363.0625
+              }
+            }
+          ],
+          "fullscreen": {
+            "fit": "contain",
+            "naturalWidth": 1366,
+            "naturalHeight": 1821,
+            "box": {
+              "top": 94.484375,
+              "bottom": 738,
+              "height": 643.515625
+            },
+            "media": {
+              "top": 94.484375,
+              "bottom": 738,
+              "height": 643.515625
+            }
+          },
+          "focusReturned": true
+        },
+        {
+          "name": "14-wave-representative",
+          "pass": true,
+          "route": "/ulichnaya-mebel/shezlongi/shezlong-volna/",
+          "views": [
+            {
+              "width": 1366,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Шезлонг Волна",
+              "titleBox": {
+                "x": 32,
+                "y": 209.15625,
+                "right": 499.375,
+                "bottom": 264.59375
+              }
+            },
+            {
+              "width": 390,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Шезлонг Волна",
+              "titleBox": {
+                "x": 16,
+                "y": 162,
+                "right": 374,
+                "bottom": 205.609375
+              }
+            }
+          ]
+        },
+        {
+          "name": "15-portal-representative",
+          "pass": true,
+          "route": "/ulichnaya-mebel/kacheli/kachel-portal/",
+          "views": [
+            {
+              "width": 1366,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Качель Портал",
+              "titleBox": {
+                "x": 32,
+                "y": 220.75,
+                "right": 391.515625,
+                "bottom": 331.625
+              }
+            },
+            {
+              "width": 390,
+              "overflow": 0,
+              "titleOverflow": 0,
+              "title": "Качель Портал",
+              "titleBox": {
+                "x": 16,
+                "y": 198,
+                "right": 298.921875,
+                "bottom": 285.21875
+              }
+            }
+          ]
+        }
+      ],
+      "pageErrors": [],
+      "requestFailures": [
+        {
+          "page": "https://koleaw.github.io/SMU1/",
+          "url": "https://koleaw.github.io/SMU1/search-index.json",
+          "error": "net::ERR_FAILED"
+        },
+        {
+          "page": "https://koleaw.github.io/SMU1/",
+          "url": "https://koleaw.github.io/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "error": "net::ERR_ABORTED"
+        }
+      ]
+    },
+    "firefoxWebkit": {
+      "report": "pause-evidence/published-engines--report.json",
+      "started": "2026-09-20T11:30:38.644Z",
+      "completed": "2026-09-20T11:31:13.098Z",
+      "pass": true,
+      "rows": [
+        {
+          "name": "firefox",
+          "label": "home-video-poster",
+          "pass": true,
+          "state": "playing",
+          "paused": false,
+          "time": 1.24,
+          "src": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "posterLoaded": true,
+          "videoErrors": [],
+          "overlayControls": 0,
+          "actualPlayback": true
+        },
+        {
+          "name": "firefox",
+          "label": "search-synonyms-descriptions",
+          "pass": true,
+          "results": [
+            {
+              "term": "лавочка",
+              "count": 20,
+              "descriptions": {
+                "tag": "DETAILS",
+                "open": false,
+                "immediatelyVisible": false
+              }
+            },
+            {
+              "term": "скамья без спинки",
+              "count": 5,
+              "descriptions": {
+                "tag": "SECTION",
+                "open": null,
+                "immediatelyVisible": true
+              }
+            },
+            {
+              "term": "деревянными",
+              "count": 12,
+              "descriptions": {
+                "tag": "SECTION",
+                "open": null,
+                "immediatelyVisible": true
+              }
+            }
+          ],
+          "collapsedArrowsSkipped": true,
+          "expandedArrowsIncluded": true
+        },
+        {
+          "name": "firefox",
+          "label": "phone-menu-search",
+          "pass": true,
+          "width": 320,
+          "focusReturned": true,
+          "overflow": 0
+        },
+        {
+          "name": "firefox",
+          "label": "canopy-lower-sections",
+          "pass": true,
+          "sections": [
+            {
+              "selector": "direction-gallery",
+              "height": 718,
+              "title": "Примеры навесов и козырьков"
+            },
+            {
+              "selector": "direction-types",
+              "height": 856.5,
+              "title": "Какие навесы и козырьки делаем"
+            },
+            {
+              "selector": "direction-scope",
+              "height": 374.933349609375,
+              "title": "Для каких объектов"
+            },
+            {
+              "selector": "direction-related direction-related--default direction-related--links",
+              "height": 391.41668701171875,
+              "title": "Связанные направления"
+            },
+            {
+              "selector": "direction-brief",
+              "height": 640.2833251953125,
+              "title": "Что можно прислать"
+            }
+          ]
+        },
+        {
+          "name": "webkit",
+          "label": "home-video-poster",
+          "pass": true,
+          "state": "playing",
+          "paused": false,
+          "time": 0.8805783,
+          "src": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "posterLoaded": true,
+          "videoErrors": [],
+          "overlayControls": 0,
+          "actualPlayback": true
+        },
+        {
+          "name": "webkit",
+          "label": "search-synonyms-descriptions",
+          "pass": true,
+          "results": [
+            {
+              "term": "лавочка",
+              "count": 20,
+              "descriptions": {
+                "tag": "DETAILS",
+                "open": false,
+                "immediatelyVisible": false
+              }
+            },
+            {
+              "term": "скамья без спинки",
+              "count": 5,
+              "descriptions": {
+                "tag": "SECTION",
+                "open": null,
+                "immediatelyVisible": true
+              }
+            },
+            {
+              "term": "деревянными",
+              "count": 12,
+              "descriptions": {
+                "tag": "SECTION",
+                "open": null,
+                "immediatelyVisible": true
+              }
+            }
+          ],
+          "collapsedArrowsSkipped": true,
+          "expandedArrowsIncluded": true
+        },
+        {
+          "name": "webkit",
+          "label": "phone-menu-search",
+          "pass": true,
+          "width": 320,
+          "focusReturned": true,
+          "overflow": 0
+        },
+        {
+          "name": "webkit",
+          "label": "canopy-lower-sections",
+          "pass": true,
+          "sections": [
+            {
+              "selector": "direction-gallery",
+              "height": 718,
+              "title": "Примеры навесов и козырьков"
+            },
+            {
+              "selector": "direction-types",
+              "height": 856.375,
+              "title": "Какие навесы и козырьки делаем"
+            },
+            {
+              "selector": "direction-scope",
+              "height": 374.9375,
+              "title": "Для каких объектов"
+            },
+            {
+              "selector": "direction-related direction-related--default direction-related--links",
+              "height": 391.40625,
+              "title": "Связанные направления"
+            },
+            {
+              "selector": "direction-brief",
+              "height": 640.265625,
+              "title": "Что можно прислать"
+            }
+          ]
+        }
+      ],
+      "errors": []
+    },
+    "supplement": {
+      "report": "pause-evidence/published-visual-supplement--report.json",
+      "started": "2026-09-20T11:37:06.730Z",
+      "completed": "2026-09-20T11:41:45.695Z",
+      "pass": true
+    }
+  },
+  "visualReview": {
+    "report": "published-visual-review.json",
+    "captured": 57,
+    "visuallyReviewed": 57,
+    "acceptedVisibleStates": 50,
+    "supplementedCaptures": 7,
+    "newOpenVisualDefects": 0
+  },
+  "earlierFailurePreserved": {
+    "report": "E:/CodexTemp/smu1-owner-20260911/published-browser-first/report.json",
+    "passed": 14,
+    "failed": 1,
+    "note": "First Chromium run timed out waiting for video resume. Harness now waits for entrance focus before moving focus to the menu video control; no product source changes. A dedicated trusted-keyboard probe and the full repeat passed. Original failed report is retained."
+  },
+  "limitations": [
+    "Yandex constructor iframe is operational and automatic; missing JS API key prevents the supported dark map layer and custom SMU-1 marker. Provider labels and attribution retained.",
+    "Cross-origin iframe internal HTTP errors may fire load and cannot always be distinguished by the parent; external address, route and retry remain available.",
+    "No physical old device was tested. Windows WebKit bare Tab link traversal and BFCache persisted=true are not claimed.",
+    "Existing soft H5 routes.lcp-raster-target-exceptions warning remains; no budget increased or failing H5 check.",
+    "HTTP checks are selected resource checks, not a rehash of the complete remote artifact or a full live route crawl. Complete route crawl refers to exact-source CI.",
+    "Earlier local visual rounds preceded final interaction fixes; final published inspection covers the named routes/states in the included reports."
+  ]
+}
