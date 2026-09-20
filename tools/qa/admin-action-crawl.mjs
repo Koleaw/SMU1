@@ -2,7 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { classifyAdminAction } from './action-crawl-core.mjs';
-import { adminControlPostcondition, findAdminActionElement, isExpectedIsolatedPublishStatus } from './admin-action-state.mjs';
+import { adminControlPostcondition, findAdminActionElement } from './admin-action-state.mjs';
+import { observeIsolatedPublishStatus } from './admin-status-evidence.mjs';
 import { prepareAdminAction, adminActionStateExpression, armAdminActionTraceExpression } from './admin-action-preparation.mjs';
 import {
   ADMIN_EDITOR_REVISION_PATTERN_SOURCE,
@@ -80,45 +81,24 @@ const current = { actionKey: '', mode: '' };
 const events = [];
 const baselineResets = [];
 const requests = [];
-const requestMethods = new Map();
-const statusProbes = new Map();
-const pendingStatusBodies = new Set();
 const expectedStatusResponses = [];
+const statusEvidence = observeIsolatedPublishStatus({ browser, origin: parsedOrigin.origin,
+  isolated: isolationProof?.valid, current, events, expected: expectedStatusResponses });
 browser.on('Runtime.exceptionThrown', ({ exceptionDetails }) => events.push({ ...current, kind: 'runtime-exception', text: exceptionDetails?.exception?.description || exceptionDetails?.text || '' }));
 browser.on('Runtime.consoleAPICalled', ({ type, args }) => {
   if (['error', 'assert'].includes(type)) events.push({ ...current, kind: `console-${type}`, text: args?.map((item) => item.value ?? item.description ?? '').join(' ') || '' });
 });
 browser.on('Network.responseReceived', ({ response, type, requestId }) => {
+  const inspectingStatus = statusEvidence.response({ response, type, requestId });
   const url = sanitizeObservedUrl(response.url);
   const expectedNotFoundCanvas = response.status === 404 && current.actionKey === 'canvas-route:/404.html'
     && ['/404', '/404.html'].includes(url.pathname);
   if (response.status >= 400 && !expectedNotFoundCanvas) {
     const event = { ...current, kind: 'http-response', status: response.status, url, resourceType: type };
-    if (isolationProof?.valid && response.status === 403 && requestMethods.get(requestId) === 'GET'
-      && url.origin === parsedOrigin.origin && url.pathname === '/api/admin/publish/status' && !url.queryKeys.length) {
-      statusProbes.set(requestId, { event, responseUrl: response.url });
-    } else events.push(event);
+    if (!inspectingStatus) events.push(event);
   }
 });
-browser.on('Network.loadingFinished', ({ requestId }) => {
-  const probe = statusProbes.get(requestId);
-  if (!probe) return;
-  statusProbes.delete(requestId);
-  const pending = browser.send('Network.getResponseBody', { requestId }).then((body) => {
-    const payload = JSON.parse(body.base64Encoded ? Buffer.from(body.body, 'base64').toString('utf8') : body.body);
-    if (isExpectedIsolatedPublishStatus({ method: 'GET', status: probe.event.status,
-      origin: parsedOrigin.origin, url: probe.responseUrl, code: payload.code, isolated: isolationProof?.valid })) {
-      expectedStatusResponses.push({ ...probe.event, method: 'GET', code: payload.code });
-    } else events.push(probe.event);
-  }).catch(() => events.push(probe.event)).finally(() => pendingStatusBodies.delete(pending));
-  pendingStatusBodies.add(pending);
-});
-browser.on('Network.loadingFailed', ({ requestId }) => {
-  const probe = statusProbes.get(requestId);
-  if (probe) { events.push(probe.event); statusProbes.delete(requestId); }
-});
 browser.on('Network.requestWillBeSent', ({ request, type, requestId }) => {
-  requestMethods.set(requestId, String(request.method || 'GET').toUpperCase());
   const url = sanitizeObservedUrl(request.url);
   if (url.origin === parsedOrigin.origin) requests.push({ ...current, method: request.method, url, resourceType: type });
 });
@@ -248,6 +228,7 @@ const waitForAdminHomeCanvas = async ({ timeoutMs = 20_000 } = {}) => {
 };
 
 const restoreAdminHome = async ({ actionKey = current.actionKey || 'unspecified', afterMode = current.mode || 'unspecified' } = {}) => {
+  await statusEvidence.settle();
   const preflight = await browser.evaluate(`(() => {
     const app = document.querySelector('#veApp');
     const pendingMediaQueues = Number(app?.dataset.pendingMediaQueues || 0);
@@ -666,6 +647,7 @@ try {
             } while (Date.now() < deadline);
             execution.observableChange = execution.before !== execution.after;
           }
+          await statusEvidence.settle();
           const executionEvents = events.slice(eventIndex);
           execution.events = executionEvents;
           execution.requests = requests.slice(requestIndex);
@@ -709,8 +691,7 @@ try {
     events.push({ ...current, kind: 'unexpected-browser-dialog', text: dialogDrainError });
   }
   const rawBrowserSafety = browser.safetyEvidence();
-  await Promise.all([...pendingStatusBodies]);
-  for (const probe of statusProbes.values()) events.push(probe.event);
+  await statusEvidence.settle();
   const acceptedNavigationDialogs = rawBrowserSafety.navigationDialogs.filter((dialog) => dialog.accepted).length;
   const evidencedAcceptedDialogs = baselineResets.reduce((count, reset) => count + reset.dialogs.filter((dialog) => dialog.accepted).length, 0);
   const resetEvidenceValid = !dialogDrainError
