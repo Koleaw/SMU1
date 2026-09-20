@@ -240,7 +240,10 @@ export function initPublicSearch(dialog) {
   dialog.addEventListener('keydown', (event) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     if (document.activeElement !== input && !list.contains(document.activeElement)) return;
-    const links = Array.from(list.querySelectorAll('a')).filter((link) => link.getClientRects().length);
+    // Collapsed details can retain descendant rectangles in browser layout.
+    // Their results must join keyboard navigation only after expansion.
+    const links = Array.from(list.querySelectorAll('a')).filter((link) =>
+      link.getClientRects().length && !link.closest('details:not([open])'));
     if (!links.length) return;
     event.preventDefault();
     const current = links.indexOf(document.activeElement);

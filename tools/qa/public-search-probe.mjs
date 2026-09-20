@@ -23,9 +23,24 @@ export async function exercisePublicSearch(browser, { extended = false } = {}) {
     await browser.dispatchClick(point);
   };
   const fill = async (value) => {
-    await browser.evaluate(`(() => { const input = document.querySelector('[data-search-input]'); input.focus(); input.select(); })()`);
+    await browser.evaluate(`(() => {
+      const input = document.querySelector('[data-search-input]');
+      window.__h6SearchRenderObserver?.disconnect();
+      window.__h6SearchRenderedQuery = null;
+      // The input clears old links synchronously, then renders after debounce.
+      // Observe the status update instead of assuming a fixed renderer speed.
+      const observer = new MutationObserver(() => {
+        window.__h6SearchRenderedQuery = input.value;
+        observer.disconnect();
+      });
+      window.__h6SearchRenderObserver = observer;
+      observer.observe(document.querySelector('[data-search-status]'), { childList: true, characterData: true, subtree: true });
+      input.focus(); input.select();
+    })()`);
     await browser.send('Input.insertText', { text: value });
-    await new Promise((resolve) => setTimeout(resolve, 135));
+    const rendered = await waitFor(`window.__h6SearchRenderedQuery === ${JSON.stringify(value)}`);
+    await browser.evaluate(`window.__h6SearchRenderObserver?.disconnect()`);
+    if (!rendered) throw new Error(`Public search did not render query: ${value}`);
   };
   const focused = (selector) => browser.evaluate(`document.activeElement === document.querySelector(${JSON.stringify(selector)})`);
   try {
@@ -51,8 +66,14 @@ export async function exercisePublicSearch(browser, { extended = false } = {}) {
       check('russian-synonym', await browser.evaluate(`document.querySelector('[data-search-results] strong')?.textContent === 'Скамья Радиус'`));
       await fill('Контур');
       check('description-matches-collapsed', await browser.evaluate(`(() => { const group = document.querySelector('[data-search-descriptions]'); return group?.tagName === 'DETAILS' && !group.open && [...group.querySelectorAll('a')].some((a) => a.textContent.includes('Вазон Овал') && a.querySelector('mark')?.textContent.toLowerCase() === 'контуром'); })()`));
+      const titleCount = await browser.evaluate(`document.querySelectorAll('[data-search-results] > ol a').length`);
+      for (let i = 0; i <= titleCount; i += 1) await browser.dispatchKey('ArrowDown', { code: 'ArrowDown' });
+      check('arrows-skip-collapsed-descriptions', await focused('[data-search-input]'));
       await click('[data-search-descriptions] summary');
       check('description-group-expands', await browser.evaluate(`document.querySelector('[data-search-descriptions]')?.open`));
+      await browser.evaluate(`document.querySelector('[data-search-input]').focus()`);
+      for (let i = 0; i <= titleCount; i += 1) await browser.dispatchKey('ArrowDown', { code: 'ArrowDown' });
+      check('arrows-enter-expanded-descriptions', await focused('[data-search-descriptions] a'));
       await fill('Овал');
       check('oval-title-primary', await browser.evaluate(`document.querySelector('[data-search-results] strong')?.textContent === 'Вазон Овал'`));
       await fill('скамья без спинки');
@@ -64,9 +85,9 @@ export async function exercisePublicSearch(browser, { extended = false } = {}) {
       await click('[data-search-clear]');
       check('clear-query-and-focus', await browser.evaluate(`document.querySelector('[data-search-input]').value === '' && document.activeElement === document.querySelector('[data-search-input]')`));
       await click('[data-search-suggestions] button');
-      check('suggestion-results', await browser.evaluate(`[...document.querySelectorAll('[data-search-results] a')].filter((a) => a.getClientRects().length).length === 12`));
+      check('suggestion-results', await browser.evaluate(`document.querySelectorAll('[data-search-results] > ol a').length === 12 && !document.querySelector('[data-search-descriptions]')?.open`));
       await click('[data-search-more]');
-      check('more-results-and-focus', await browser.evaluate(`document.querySelectorAll('[data-search-results] a').length > 12 && document.activeElement === document.querySelectorAll('[data-search-results] a')[12]`));
+      check('more-results-and-focus', await browser.evaluate(`document.querySelectorAll('[data-search-results] > ol a').length > 12 && document.activeElement === document.querySelectorAll('[data-search-results] > ol a')[12]`));
     }
     await browser.dispatchKey('Escape', { code: 'Escape' });
     check('escape-closes-and-restores-focus', await browser.evaluate(`!document.querySelector('[data-search-dialog]').open && document.activeElement === document.querySelector('[data-search-open]') && document.querySelector('[data-search-open]').getAttribute('aria-expanded') === 'false'`));
