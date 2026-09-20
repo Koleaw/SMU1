@@ -1,0 +1,33 @@
+{
+  "restoredAt": "2026-09-20T11:30:33.812Z",
+  "exactOriginalPolicies": true,
+  "after": {
+    "total_count": 4,
+    "branch_policies": [
+      {
+        "id": 46364899,
+        "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k0NjM2NDg5OQ==",
+        "name": "None",
+        "type": "branch"
+      },
+      {
+        "id": 46364906,
+        "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k0NjM2NDkwNg==",
+        "name": "main",
+        "type": "branch"
+      },
+      {
+        "id": 52663679,
+        "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k1MjY2MzY3OQ==",
+        "name": "preview",
+        "type": "branch"
+      },
+      {
+        "id": 55399107,
+        "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k1NTM5OTEwNw==",
+        "name": "v3-home-final-candidate",
+        "type": "branch"
+      }
+    ]
+  }
+}

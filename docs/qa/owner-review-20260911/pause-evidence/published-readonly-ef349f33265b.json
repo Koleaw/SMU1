@@ -1,0 +1,397 @@
+{
+  "kind": "smu1-owner-review-published-readonly",
+  "version": 1,
+  "checkedAt": "2026-09-20T11:30:35.620Z",
+  "label": "Published owner-review resource check",
+  "expectedSHA": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+  "preview": "https://koleaw.github.io/SMU1/",
+  "oldPublicationProbe": false,
+  "scope": {
+    "browser": false,
+    "fullRouteCrawl": false,
+    "networkWrites": false,
+    "methods": [
+      "GET"
+    ],
+    "visualAcceptance": false,
+    "ciAcceptance": false,
+    "completeArtifactHashRecomputed": false
+  },
+  "identity": {
+    "version": 1,
+    "kind": "smu1-release-artifact-identity",
+    "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+    "artifactManifestSha256": "7f5efa038601effc8aa9ff61fa38268e5bdcf1c8ae277be69959fd347c2b67c2",
+    "fileCount": 4373,
+    "totalBytes": 419929876,
+    "largestFile": {
+      "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "bytes": 19322916,
+      "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+    },
+    "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2"
+  },
+  "checks": [
+    {
+      "name": "identity.start",
+      "pass": true,
+      "detail": {
+        "version": 1,
+        "kind": "smu1-release-artifact-identity",
+        "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+        "artifactManifestSha256": "7f5efa038601effc8aa9ff61fa38268e5bdcf1c8ae277be69959fd347c2b67c2",
+        "fileCount": 4373,
+        "totalBytes": 419929876,
+        "largestFile": {
+          "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+          "bytes": 19322916,
+          "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+        },
+        "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2"
+      }
+    },
+    {
+      "name": "home.semantic-document",
+      "pass": true,
+      "detail": {
+        "bytes": 133562,
+        "sha256": "ee9cb520e8068d915b5588725386b31b77ddee3c1d3b23025777405df7b1a78c"
+      }
+    },
+    {
+      "name": "favicon.svg",
+      "pass": true,
+      "detail": {
+        "url": "https://koleaw.github.io/SMU1/assets/brand/favicon.svg?v=20260911",
+        "sha256": "06294096b0a80027d5afd85f60e6af73ebfdde758ed1fdc8d2d34e7db1af15c8"
+      }
+    },
+    {
+      "name": "favicon.touch",
+      "pass": true,
+      "detail": {
+        "url": "https://koleaw.github.io/SMU1/assets/brand/apple-touch-icon.png?v=20260911",
+        "sha256": "f633291bf43ba019843d56e128d431259bbb0b38535202be373e5ffb1f2171c2"
+      }
+    },
+    {
+      "name": "favicon.ico",
+      "pass": true,
+      "detail": {
+        "url": "https://koleaw.github.io/SMU1/assets/brand/favicon.ico?v=20260911",
+        "dimensions": [
+          [
+            16,
+            16
+          ],
+          [
+            32,
+            32
+          ],
+          [
+            48,
+            48
+          ]
+        ],
+        "sha256": "317a47d15e777fe837b220e4d9bd111cfb7796c43fdeb39f07c4b511d502d67a"
+      }
+    },
+    {
+      "name": "home.photo.navesy-i-kozyrki",
+      "pass": true,
+      "detail": {
+        "source": "/uploads/chatgpt-image-23-2026-11-43-06-1779555009138.png",
+        "sourceSha256": "0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048",
+        "responsiveReferences": 17,
+        "sampledResources": [
+          {
+            "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w1024.jpg",
+            "format": "jpeg",
+            "width": 1024,
+            "height": 768,
+            "sha256": "8796c50f6931dc814d1359475c3086b86010f2f768363e279aef7dabcc016dc5"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w320.avif",
+            "format": "heif",
+            "width": 320,
+            "height": 240,
+            "sha256": "26dcc98038e6d4d4c62d80b3b8491cabf9ca0e5ac69360a23ed196762356374d"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w320.webp",
+            "format": "webp",
+            "width": 320,
+            "height": 240,
+            "sha256": "a62e0f1b677218969da86a5c6c010731682f00ebda71b4550d62ad2532a03ae4"
+          }
+        ]
+      }
+    },
+    {
+      "name": "home.photo.topiarii",
+      "pass": true,
+      "detail": {
+        "source": "/uploads/chatgpt-image-5-2026-21-56-34-1783277800820.png",
+        "sourceSha256": "ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704",
+        "responsiveReferences": 17,
+        "sampledResources": [
+          {
+            "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w1024.jpg",
+            "format": "jpeg",
+            "width": 1024,
+            "height": 768,
+            "sha256": "6e9a1f2a41636fac0cc7e5c5c531dca28187998695c0149a449994e2bc88897c"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w320.avif",
+            "format": "heif",
+            "width": 320,
+            "height": 240,
+            "sha256": "3c2dcbdfb8334151a9aa2e00e037f7588cf2a6ce2e66569d7550e629ed3edeca"
+          },
+          {
+            "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w320.webp",
+            "format": "webp",
+            "width": 320,
+            "height": 240,
+            "sha256": "6ad3db5d4f7dd96a6c3e8bd5e6d45c79643ceffc5d8e1205653173eb263bac06"
+          }
+        ]
+      }
+    },
+    {
+      "name": "search.index",
+      "pass": true,
+      "detail": {
+        "entries": 99,
+        "version": 1,
+        "bytes": 58744,
+        "sha256": "cc8f353c42d66493e552703295f8a2a900c6e70e6343d22f6d90d4621cba85d6"
+      }
+    },
+    {
+      "name": "search.stylesheet",
+      "pass": true,
+      "detail": {
+        "url": "https://koleaw.github.io/SMU1/_astro/public-search.CNMtX_GT.css",
+        "bytes": 6090,
+        "sha256": "4b4710023eb261672200b62aa98115bc98ed61a196b9575dcebbf3616de3ce55"
+      }
+    },
+    {
+      "name": "search.bootstrap",
+      "pass": true,
+      "detail": {
+        "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.YNHViKiE.mjs",
+        "bytes": 3958,
+        "sha256": "2c325e900a2bcbe722283005b534c88f992e23537c86904bb707442f6b33196d"
+      }
+    },
+    {
+      "name": "search.module",
+      "pass": true,
+      "detail": {
+        "url": "https://koleaw.github.io/SMU1/_astro/public-search._c4seyV6.mjs",
+        "bytes": 13673,
+        "sha256": "a6c95851823e81540beb671912fb386dea59318e60b95a0fb1acd4991b0b8acc"
+      }
+    },
+    {
+      "name": "identity.end-stable",
+      "pass": true,
+      "detail": {
+        "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2",
+        "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102"
+      }
+    }
+  ],
+  "resources": [
+    {
+      "url": "https://koleaw.github.io/SMU1/_release/identity.json",
+      "kind": "release-marker",
+      "method": "GET",
+      "status": 200,
+      "bytes": 472,
+      "sha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2",
+      "contentType": "application/json; charset=utf-8",
+      "pass": true,
+      "etag": "W/\"6aafc389-1d8\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/",
+      "kind": "home-html",
+      "method": "GET",
+      "status": 200,
+      "bytes": 133562,
+      "sha256": "ee9cb520e8068d915b5588725386b31b77ddee3c1d3b23025777405df7b1a78c",
+      "contentType": "text/html; charset=utf-8",
+      "pass": true,
+      "etag": "W/\"6aafc389-209ba\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/assets/brand/favicon.svg?v=20260911",
+      "kind": "favicon-svg",
+      "method": "GET",
+      "status": 200,
+      "bytes": 4691,
+      "sha256": "06294096b0a80027d5afd85f60e6af73ebfdde758ed1fdc8d2d34e7db1af15c8",
+      "contentType": "image/svg+xml",
+      "pass": true,
+      "etag": "W/\"6aafc389-1253\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/assets/brand/favicon.ico?v=20260911",
+      "kind": "favicon-ico",
+      "method": "GET",
+      "status": 200,
+      "bytes": 3121,
+      "sha256": "317a47d15e777fe837b220e4d9bd111cfb7796c43fdeb39f07c4b511d502d67a",
+      "contentType": "image/vnd.microsoft.icon",
+      "pass": true,
+      "etag": "W/\"6aafc389-c31\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/assets/brand/apple-touch-icon.png?v=20260911",
+      "kind": "favicon-touch",
+      "method": "GET",
+      "status": 200,
+      "bytes": 6618,
+      "sha256": "f633291bf43ba019843d56e128d431259bbb0b38535202be373e5ffb1f2171c2",
+      "contentType": "image/png",
+      "pass": true,
+      "etag": "\"6aafc389-19da\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w1024.jpg",
+      "kind": "home-photo-topiarii",
+      "method": "GET",
+      "status": 200,
+      "bytes": 89346,
+      "sha256": "6e9a1f2a41636fac0cc7e5c5c531dca28187998695c0149a449994e2bc88897c",
+      "contentType": "image/jpeg",
+      "pass": true,
+      "etag": "\"6aafc389-15d02\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w1024.jpg",
+      "kind": "home-photo-navesy-i-kozyrki",
+      "method": "GET",
+      "status": 200,
+      "bytes": 182340,
+      "sha256": "8796c50f6931dc814d1359475c3086b86010f2f768363e279aef7dabcc016dc5",
+      "contentType": "image/jpeg",
+      "pass": true,
+      "etag": "\"6aafc389-2c844\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w320.avif",
+      "kind": "home-photo-topiarii",
+      "method": "GET",
+      "status": 200,
+      "bytes": 5582,
+      "sha256": "3c2dcbdfb8334151a9aa2e00e037f7588cf2a6ce2e66569d7550e629ed3edeca",
+      "contentType": "image/avif",
+      "pass": true,
+      "etag": "\"6aafc388-15ce\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w320.avif",
+      "kind": "home-photo-navesy-i-kozyrki",
+      "method": "GET",
+      "status": 200,
+      "bytes": 12302,
+      "sha256": "26dcc98038e6d4d4c62d80b3b8491cabf9ca0e5ac69360a23ed196762356374d",
+      "contentType": "image/avif",
+      "pass": true,
+      "etag": "\"6aafc389-300e\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w320.webp",
+      "kind": "home-photo-topiarii",
+      "method": "GET",
+      "status": 200,
+      "bytes": 6982,
+      "sha256": "6ad3db5d4f7dd96a6c3e8bd5e6d45c79643ceffc5d8e1205653173eb263bac06",
+      "contentType": "image/webp",
+      "pass": true,
+      "etag": "\"6aafc388-1b46\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w320.webp",
+      "kind": "home-photo-navesy-i-kozyrki",
+      "method": "GET",
+      "status": 200,
+      "bytes": 20014,
+      "sha256": "a62e0f1b677218969da86a5c6c010731682f00ebda71b4550d62ad2532a03ae4",
+      "contentType": "image/webp",
+      "pass": true,
+      "etag": "\"6aafc389-4e2e\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/search-index.json",
+      "kind": "search-index",
+      "method": "GET",
+      "status": 200,
+      "bytes": 58744,
+      "sha256": "cc8f353c42d66493e552703295f8a2a900c6e70e6343d22f6d90d4621cba85d6",
+      "contentType": "application/json; charset=utf-8",
+      "pass": true,
+      "etag": "W/\"6aafc389-e578\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/_astro/public-search._c4seyV6.mjs",
+      "kind": "search-module",
+      "method": "GET",
+      "status": 200,
+      "bytes": 13673,
+      "sha256": "a6c95851823e81540beb671912fb386dea59318e60b95a0fb1acd4991b0b8acc",
+      "contentType": "text/javascript; charset=utf-8",
+      "pass": true,
+      "etag": "W/\"6aafc389-3569\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/_astro/public-search-dialog.YNHViKiE.mjs",
+      "kind": "search-bootstrap",
+      "method": "GET",
+      "status": 200,
+      "bytes": 3958,
+      "sha256": "2c325e900a2bcbe722283005b534c88f992e23537c86904bb707442f6b33196d",
+      "contentType": "text/javascript; charset=utf-8",
+      "pass": true,
+      "etag": "W/\"6aafc389-f76\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/_astro/public-search.CNMtX_GT.css",
+      "kind": "search-stylesheet",
+      "method": "GET",
+      "status": 200,
+      "bytes": 6090,
+      "sha256": "4b4710023eb261672200b62aa98115bc98ed61a196b9575dcebbf3616de3ce55",
+      "contentType": "text/css; charset=utf-8",
+      "pass": true,
+      "etag": "W/\"6aafc389-17ca\""
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/_release/identity.json",
+      "kind": "release-marker-end",
+      "method": "GET",
+      "status": 200,
+      "bytes": 472,
+      "sha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2",
+      "contentType": "application/json; charset=utf-8",
+      "pass": true,
+      "etag": "W/\"6aafc389-1d8\""
+    }
+  ],
+  "failures": [],
+  "pass": true,
+  "publishedResourceAcceptance": true,
+  "completedAt": "2026-09-20T11:30:38.236Z",
+  "summary": {
+    "checks": 12,
+    "passed": 12,
+    "failed": 0,
+    "requests": 16
+  }
+}

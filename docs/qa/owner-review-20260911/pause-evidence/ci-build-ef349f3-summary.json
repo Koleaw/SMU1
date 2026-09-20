@@ -1,0 +1,150 @@
+{
+  "sha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+  "runId": 35505511441,
+  "jobId": 106064529531,
+  "success": true,
+  "source": "ci-job-106064529531.log",
+  "astro": {
+    "files": 437,
+    "errors": 0,
+    "warnings": 0,
+    "hints": 83
+  },
+  "secondaryAdminRoundtrip": {
+    "checks": 52,
+    "passed": 52,
+    "failed": 0
+  },
+  "h5AfterPrune": {
+    "checks": 22,
+    "passed": 22,
+    "failed": 0,
+    "warnings": [
+      "routes.lcp-raster-target-exceptions"
+    ],
+    "bytesAfter": 419929876,
+    "bytesBefore": 419929876,
+    "duplicateGroups": 12,
+    "duplicateWastedBytes": 17594638,
+    "files": 4373,
+    "mediaBytes": 396172753,
+    "mediaFiles": 4091,
+    "nonMediaBytes": 23757123,
+    "nonMediaFiles": 282,
+    "referencedMediaBytes": 396172753,
+    "referencedMediaFiles": 4091,
+    "removableMediaBytes": 0,
+    "removableMediaFiles": 0,
+    "manifest": {
+      "canonicalSources": 235,
+      "derivativeBytes": 279687344,
+      "derivatives": 4611,
+      "uniqueSources": 214
+    }
+  },
+  "static": {
+    "checks": 38,
+    "passed": 38,
+    "failed": 0,
+    "counts": {
+      "routes": 107,
+      "links": 9296,
+      "media": 15213
+    },
+    "warnings": 0
+  },
+  "basicBrowser": {
+    "checks": 17,
+    "passed": 17,
+    "failed": 0
+  },
+  "browserAndMotion": {
+    "checks": 178,
+    "passed": 178,
+    "failed": 0
+  },
+  "publicIsolation": {
+    "checks": 14,
+    "passed": 14,
+    "failed": 0
+  },
+  "routePassport": {
+    "passed": 222,
+    "failed": 0,
+    "unknownPassed": 2,
+    "editorCovered": 216,
+    "bindingOccurrences": 31076,
+    "interactions": 25276,
+    "images": 2172,
+    "galleries": 1974,
+    "consoleNetworkEvents": 0,
+    "publicArtifactIsolation": true,
+    "publicArtifactLeaks": 0,
+    "actualRendererFamilies": {
+      "home": 1,
+      "not-found": 1,
+      "direction": 6,
+      "custom-order": 1,
+      "practical": 5,
+      "category": 22,
+      "catalog": 2,
+      "product": 68,
+      "project-archive": 1,
+      "project": 4
+    },
+    "actualRendererVariants": {
+      "404": 1,
+      "home-final": 1,
+      "direction-place-commercial": 1,
+      "custom-order": 1,
+      "contacts": 1,
+      "product-list": 13,
+      "direction-engineering-commercial": 1,
+      "direction-engineering-visual": 2,
+      "company": 1,
+      "catalog-hub": 2,
+      "text-only": 2,
+      "gallery-only": 6,
+      "mixed": 1,
+      "standard-no-media": 3,
+      "privacy-legal": 1,
+      "direction-project-commercial": 1,
+      "direction-visual": 1,
+      "premium-media": 9,
+      "standard-media": 56,
+      "vacancies-archive": 1,
+      "vacancy-detail": 1,
+      "archive": 1,
+      "gallery+landscape+media-first": 1,
+      "gallery+portrait+media-last": 1,
+      "large-gallery+landscape+media-first": 1,
+      "text-only+landscape+text-only": 1
+    },
+    "routeClasses": {
+      "404": 1,
+      "canonical": 107,
+      "alias": 3
+    }
+  },
+  "search": {
+    "entries": 99,
+    "indexBytes": 58744,
+    "indexGzipBytes": 6988,
+    "lazyModuleGzipBytes": 4587
+  },
+  "backupRestore": {
+    "pass": true,
+    "fileCount": 485,
+    "totalBytes": 884709309,
+    "notPublicArtifactSize": true
+  },
+  "privacy": {
+    "pass": true
+  },
+  "artifact": {
+    "id": 10603728706,
+    "bytes": 648642712,
+    "sha256": "28acb1325515b5e3d57729022d1d8769bd955ffbd591de19ca612a9e46340692",
+    "digestSource": "GitHub artifact metadata; local archive not downloaded"
+  }
+}

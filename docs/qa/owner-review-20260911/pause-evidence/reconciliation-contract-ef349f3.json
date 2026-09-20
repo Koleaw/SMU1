@@ -1,0 +1,44 @@
+{
+  "testedSourceSHA": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+  "checkedAt": "2026-09-20T11:20:13.428Z",
+  "pass": true,
+  "results": {
+    "admin": {
+      "ok": true,
+      "issues": [],
+      "actions": 514
+    },
+    "public": {
+      "ok": true,
+      "issues": [],
+      "expectedPairs": 222,
+      "seenPairs": 222
+    },
+    "acceptance": {
+      "ok": true,
+      "issues": [],
+      "requiredScenarios": 20,
+      "seenScenarios": 20
+    }
+  },
+  "lostNativeClickRejected": true,
+  "originalReleaseJob": 106069059856,
+  "rawReports": [
+    {
+      "kind": "admin",
+      "file": "ci-actions-ef349f3/admin-action-crawl.json",
+      "sha256": "16cb20b7baf23a2a1f96d53a280c88676482ad798e04dde2c14eee9ed98458b7"
+    },
+    {
+      "kind": "public",
+      "file": "ci-public-evidence-ef349f3/public-action-crawl.json",
+      "sha256": "e6b5a1185bb27de9273ef82322965425e531a3039f7e73872cdfd1c5b7a4fc0f"
+    },
+    {
+      "kind": "acceptance",
+      "file": "ci-acceptance-ef349f3/visual-editor-acceptance.json",
+      "sha256": "23f4bef728916405e75411b7962545fcea632b6d524a9ddcd2a70c10f3adc79c"
+    }
+  ],
+  "note": "Immutable original CI reports revalidated; no result, timestamp, source SHA or browser input rewritten."
+}

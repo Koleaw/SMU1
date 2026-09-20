@@ -1,0 +1,581 @@
+{
+  "expectedSHA": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+  "base": "https://koleaw.github.io/SMU1",
+  "started": "2026-09-20T11:35:08.636Z",
+  "pass": true,
+  "identityStable": true,
+  "rows": [
+    {
+      "name": "01-release-identity",
+      "pass": true,
+      "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+      "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2"
+    },
+    {
+      "name": "02-home-entry-video",
+      "pass": true,
+      "video": {
+        "state": "playing",
+        "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+        "paused": false,
+        "time": 1.730353,
+        "error": null,
+        "posterLoaded": true,
+        "overlayControls": 0,
+        "actualPlayback": true,
+        "afterTime": 1.769227
+      },
+      "geometry": {
+        "width": 1366,
+        "overflow": 0,
+        "titleOverflow": 0,
+        "title": "Изделия, конструкции и комплексные работы на объекте",
+        "titleBox": {
+          "x": 32,
+          "y": 271.265625,
+          "right": 1009.09375,
+          "bottom": 529.96875
+        }
+      },
+      "icons": [
+        {
+          "rel": "icon",
+          "href": "https://koleaw.github.io/SMU1/assets/brand/favicon.svg?v=20260911"
+        },
+        {
+          "rel": "icon",
+          "href": "https://koleaw.github.io/SMU1/assets/brand/favicon.ico?v=20260911"
+        },
+        {
+          "rel": "apple-touch-icon",
+          "href": "https://koleaw.github.io/SMU1/assets/brand/apple-touch-icon.png?v=20260911"
+        }
+      ]
+    },
+    {
+      "name": "03-home-special-images",
+      "pass": true,
+      "images": [
+        {
+          "href": "/topiarii/",
+          "source": "/uploads/chatgpt-image-5-2026-21-56-34-1783277800820.png",
+          "src": "https://koleaw.github.io/SMU1/_media/h5/eb/ebc218e7e012df71f35686428d87906b21d8a9c74d66d6c4935ae2574f31b704-a56c0ac60e6b-w320.avif",
+          "loaded": true,
+          "sources": 3
+        },
+        {
+          "href": "/navesy-i-kozyrki/",
+          "source": "/uploads/chatgpt-image-23-2026-11-43-06-1779555009138.png",
+          "src": "https://koleaw.github.io/SMU1/_media/h5/0d/0d46440fef1b882a000a2ab7a2ba6486c553b9fd7dd71360916c387961359048-a56c0ac60e6b-w320.avif",
+          "loaded": true,
+          "sources": 3
+        }
+      ],
+      "offscreenVideoPaused": true
+    },
+    {
+      "name": "04-search-groups-and-focus",
+      "pass": true,
+      "mainTitles": [
+        "Вазон Контур",
+        "Скамья Контур"
+      ],
+      "collapsedArrowsSkipped": true,
+      "expandedArrowsIncluded": true,
+      "secondaryExplained": true,
+      "ovalMain": true,
+      "emptyState": true,
+      "focusReturned": true
+    },
+    {
+      "name": "05-search-error-retry",
+      "pass": true,
+      "intentionallyAbortedRequests": 1,
+      "recovered": true
+    },
+    {
+      "name": "06-phone390-menu-search-video",
+      "pass": true,
+      "video": {
+        "state": "playing",
+        "source": "/SMU1/uploads/hero-home-mobile.mp4",
+        "paused": false,
+        "time": 0.869934,
+        "error": null,
+        "posterLoaded": true,
+        "overlayControls": 0,
+        "actualPlayback": true,
+        "afterTime": 0.914645
+      },
+      "menuMotionControl": true,
+      "hrefs": [
+        "/SMU1/",
+        "#contact",
+        "/SMU1/ulichnaya-mebel/",
+        "/SMU1/ograzhdeniya-i-zabory/",
+        "/SMU1/navesy-i-kozyrki/",
+        "/SMU1/topiarii/",
+        "/SMU1/metallokonstruktsii-dlya-biznesa/",
+        "/SMU1/blagoustroystvo-territoriy/",
+        "/SMU1/stroitelstvo-i-remonty/",
+        "/SMU1/izgotovlenie-na-zakaz/",
+        "/SMU1/vypolnennye-obekty/",
+        "/SMU1/o-nas/",
+        "/SMU1/kontakty/",
+        "/SMU1/vakansii/",
+        "tel:+79129735006",
+        "tel:+79125799665",
+        "https://t.me/smu1build",
+        "mailto:smu1.kurgan@yandex.ru"
+      ],
+      "geometry": {
+        "width": 390,
+        "overflow": 0,
+        "titleOverflow": 0,
+        "title": "Изделия, конструкции и комплексные работы на объекте",
+        "titleBox": {
+          "x": 16,
+          "y": 347.859375,
+          "right": 374,
+          "bottom": 573.328125
+        }
+      }
+    },
+    {
+      "name": "07-phone320-menu-navigation-back-forward",
+      "pass": true,
+      "video": {
+        "state": "idle",
+        "source": null,
+        "paused": true,
+        "time": 0,
+        "error": null,
+        "posterLoaded": true,
+        "overlayControls": 0,
+        "actualPlayback": false,
+        "expectedPoster": true
+      },
+      "positions": {
+        "logo": 12,
+        "search": 162,
+        "menu": 220
+      },
+      "nativeBackForward": true,
+      "afterBack": {
+        "menuHidden": true,
+        "menuExpanded": "false",
+        "searchOpen": false,
+        "locked": false,
+        "introState": "settled",
+        "introHidden": true,
+        "focusInHiddenSurface": false,
+        "activeTag": "BODY",
+        "activeLabel": "К основному содержаниюПродукция+−Продукция и конструкцииУлич"
+      },
+      "backControls": {
+        "menuWorked": true,
+        "searchWorked": true,
+        "menuFocusReturned": true,
+        "searchFocusReturned": true
+      },
+      "afterForward": {
+        "menuHidden": true,
+        "menuExpanded": "false",
+        "searchOpen": false,
+        "locked": false,
+        "introState": "settled",
+        "introHidden": true,
+        "focusInHiddenSurface": false,
+        "activeTag": "BODY",
+        "activeLabel": "К основному содержаниюК основному содержаниюПродукция+−Проду"
+      },
+      "forwardControls": {
+        "menuWorked": true,
+        "searchWorked": true,
+        "menuFocusReturned": true,
+        "searchFocusReturned": true
+      },
+      "afterForwardControls": {
+        "menuHidden": true,
+        "menuExpanded": "false",
+        "searchOpen": false,
+        "locked": false,
+        "introState": "settled",
+        "introHidden": true,
+        "focusInHiddenSurface": false,
+        "activeTag": "BUTTON",
+        "activeLabel": "Открыть поиск"
+      },
+      "geometry": {
+        "width": 320,
+        "overflow": 0,
+        "titleOverflow": 0,
+        "title": "Контакты",
+        "titleBox": {
+          "x": 12,
+          "y": 163,
+          "right": 308,
+          "bottom": 206.109375
+        }
+      }
+    },
+    {
+      "name": "08-contacts-automatic-map",
+      "pass": true,
+      "initialState": "ready",
+      "href": "https://yandex.ru/maps/?mode=routes&rtext=%7E%D1%83%D0%BB.+%D0%9F%D1%80%D0%BE%D0%BC%D1%8B%D1%88%D0%BB%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F%2C+17%2C+%D0%9A%D1%83%D1%80%D0%B3%D0%B0%D0%BD&rtt=auto",
+      "state": "ready",
+      "audit": {
+        "starts": [
+          {
+            "top": 608.625,
+            "bottom": 978.625,
+            "height": 768,
+            "scrollY": 0,
+            "at": 32.69999999925494,
+            "src": "https://api-maps.yandex.ru/services/constructor/1.0/js/?um=constructor%3Aca887405ce74342784b43229f8bdac691fceefd5cbebc53bc6209bca88dd8046&width=100%25&height=480&lang=ru_RU&scroll=false"
+          }
+        ],
+        "focusedFrames": []
+      },
+      "focusedSearch": true,
+      "scrollY": 487,
+      "iframe": "Яндекс Карта: ул. Промышленная, 17, Курган",
+      "height": 370
+    },
+    {
+      "name": "09-vacancies-footer-and-detail",
+      "pass": true,
+      "href": "/SMU1/vakansii/svarshchik-metallokonstruktsiy/",
+      "expectedTitle": "Сварщик металлоконструкций",
+      "sections": [
+        {
+          "title": "Обязанности",
+          "items": 3
+        },
+        {
+          "title": "Требования",
+          "items": 3
+        },
+        {
+          "title": "Условия",
+          "items": 3
+        }
+      ],
+      "archive": {
+        "bottom": 1132.59375,
+        "documentHeight": 1133,
+        "viewport": 768,
+        "position": "static"
+      },
+      "detail": {
+        "bottom": 1857.6875,
+        "documentHeight": 1858,
+        "viewport": 768,
+        "position": "static"
+      }
+    },
+    {
+      "name": "10-canopies-representative",
+      "pass": true,
+      "route": "/navesy-i-kozyrki/",
+      "views": [
+        {
+          "width": 1366,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Навесы и козырьки под объект",
+          "titleBox": {
+            "x": 32,
+            "y": 273.90625,
+            "right": 552.890625,
+            "bottom": 490.75
+          }
+        },
+        {
+          "width": 390,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Навесы и козырьки под объект",
+          "titleBox": {
+            "x": 16,
+            "y": 189.09375,
+            "right": 374,
+            "bottom": 326.671875
+          }
+        }
+      ]
+    },
+    {
+      "name": "11-topiary-representative",
+      "pass": true,
+      "route": "/topiarii/",
+      "views": [
+        {
+          "width": 1366,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Топиарии под заказ",
+          "titleBox": {
+            "x": 32,
+            "y": 294.703125,
+            "right": 458.171875,
+            "bottom": 439.265625
+          }
+        },
+        {
+          "width": 390,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Топиарии под заказ",
+          "titleBox": {
+            "x": 16,
+            "y": 189.09375,
+            "right": 286.40625,
+            "bottom": 280.8125
+          }
+        }
+      ]
+    },
+    {
+      "name": "12-metal-representative",
+      "pass": true,
+      "route": "/metallokonstruktsii-dlya-biznesa/",
+      "views": [
+        {
+          "width": 1366,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Металлоконструкции для цехов, складов и других объектов",
+          "titleBox": {
+            "x": 32,
+            "y": 287.359375,
+            "right": 884.359375,
+            "bottom": 504.203125
+          }
+        },
+        {
+          "width": 390,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Металлоконструкции для цехов, складов и других объектов",
+          "titleBox": {
+            "x": 16,
+            "y": 194.625,
+            "right": 374,
+            "bottom": 286.359375
+          }
+        }
+      ]
+    },
+    {
+      "name": "13-construction-representative",
+      "pass": true,
+      "route": "/stroitelstvo-i-remonty/",
+      "views": [
+        {
+          "width": 1366,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Строительство и ремонты для производственных, коммерческих и частных объектов",
+          "titleBox": {
+            "x": 32,
+            "y": 230.9375,
+            "right": 884.359375,
+            "bottom": 592.34375
+          }
+        },
+        {
+          "width": 390,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Строительство и ремонты для производственных, коммерческих и частных объектов",
+          "titleBox": {
+            "x": 16,
+            "y": 190.40625,
+            "right": 374,
+            "bottom": 363.0625
+          }
+        }
+      ],
+      "fullscreen": {
+        "fit": "contain",
+        "naturalWidth": 1366,
+        "naturalHeight": 1821,
+        "box": {
+          "top": 94.484375,
+          "bottom": 738,
+          "height": 643.515625
+        },
+        "media": {
+          "top": 94.484375,
+          "bottom": 738,
+          "height": 643.515625
+        }
+      },
+      "focusReturned": true
+    },
+    {
+      "name": "14-wave-representative",
+      "pass": true,
+      "route": "/ulichnaya-mebel/shezlongi/shezlong-volna/",
+      "views": [
+        {
+          "width": 1366,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Шезлонг Волна",
+          "titleBox": {
+            "x": 32,
+            "y": 209.15625,
+            "right": 499.375,
+            "bottom": 264.59375
+          }
+        },
+        {
+          "width": 390,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Шезлонг Волна",
+          "titleBox": {
+            "x": 16,
+            "y": 162,
+            "right": 374,
+            "bottom": 205.609375
+          }
+        }
+      ]
+    },
+    {
+      "name": "15-portal-representative",
+      "pass": true,
+      "route": "/ulichnaya-mebel/kacheli/kachel-portal/",
+      "views": [
+        {
+          "width": 1366,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Качель Портал",
+          "titleBox": {
+            "x": 32,
+            "y": 220.75,
+            "right": 391.515625,
+            "bottom": 331.625
+          }
+        },
+        {
+          "width": 390,
+          "overflow": 0,
+          "titleOverflow": 0,
+          "title": "Качель Портал",
+          "titleBox": {
+            "x": 16,
+            "y": 198,
+            "right": 298.921875,
+            "bottom": 285.21875
+          }
+        }
+      ]
+    }
+  ],
+  "pageErrors": [],
+  "requestFailures": [
+    {
+      "page": "https://koleaw.github.io/SMU1/",
+      "url": "https://koleaw.github.io/SMU1/search-index.json",
+      "error": "net::ERR_FAILED"
+    },
+    {
+      "page": "https://koleaw.github.io/SMU1/",
+      "url": "https://koleaw.github.io/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "identity": {
+    "version": 1,
+    "kind": "smu1-release-artifact-identity",
+    "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+    "artifactManifestSha256": "7f5efa038601effc8aa9ff61fa38268e5bdcf1c8ae277be69959fd347c2b67c2",
+    "fileCount": 4373,
+    "totalBytes": 419929876,
+    "largestFile": {
+      "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "bytes": 19322916,
+      "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+    },
+    "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2"
+  },
+  "videoAttempts": [
+    {
+      "url": "https://koleaw.github.io/SMU1/",
+      "width": 1366,
+      "state": "playing",
+      "source": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "paused": false,
+      "time": 1.730353,
+      "error": null,
+      "posterLoaded": true,
+      "overlayControls": 0
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/",
+      "width": 390,
+      "state": "playing",
+      "source": "/SMU1/uploads/hero-home-mobile.mp4",
+      "paused": false,
+      "time": 0.869934,
+      "error": null,
+      "posterLoaded": true,
+      "overlayControls": 0
+    },
+    {
+      "url": "https://koleaw.github.io/SMU1/",
+      "width": 320,
+      "state": "idle",
+      "source": null,
+      "paused": true,
+      "time": 0,
+      "error": null,
+      "posterLoaded": true,
+      "overlayControls": 0
+    }
+  ],
+  "mapAttempt": {
+    "initialState": "ready",
+    "href": "https://yandex.ru/maps/?mode=routes&rtext=%7E%D1%83%D0%BB.+%D0%9F%D1%80%D0%BE%D0%BC%D1%8B%D1%88%D0%BB%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F%2C+17%2C+%D0%9A%D1%83%D1%80%D0%B3%D0%B0%D0%BD&rtt=auto",
+    "scrollBeforeLoad": 487,
+    "state": "ready",
+    "audit": {
+      "starts": [
+        {
+          "top": 608.625,
+          "bottom": 978.625,
+          "height": 768,
+          "scrollY": 0,
+          "at": 32.69999999925494,
+          "src": "https://api-maps.yandex.ru/services/constructor/1.0/js/?um=constructor%3Aca887405ce74342784b43229f8bdac691fceefd5cbebc53bc6209bca88dd8046&width=100%25&height=480&lang=ru_RU&scroll=false"
+        }
+      ],
+      "focusedFrames": []
+    },
+    "focusedSearch": true,
+    "scrollY": 487,
+    "iframe": "Яндекс Карта: ул. Промышленная, 17, Курган",
+    "height": 370
+  },
+  "identityEnd": {
+    "version": 1,
+    "kind": "smu1-release-artifact-identity",
+    "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+    "artifactManifestSha256": "7f5efa038601effc8aa9ff61fa38268e5bdcf1c8ae277be69959fd347c2b67c2",
+    "fileCount": 4373,
+    "totalBytes": 419929876,
+    "largestFile": {
+      "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "bytes": 19322916,
+      "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+    },
+    "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2"
+  },
+  "completed": "2026-09-20T11:36:34.768Z"
+}

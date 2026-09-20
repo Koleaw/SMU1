@@ -1,0 +1,500 @@
+{
+  "baseline": "64458350e5c4d4ee3c27db37b597673ac46c8e35",
+  "tested": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+  "checkedAt": "2026-09-20T10:58:20.212Z",
+  "pass": true,
+  "changedRecords": 78,
+  "allowedKeys": [
+    "imageView",
+    "homeImage"
+  ],
+  "originals": [
+    {
+      "file": "src/content/static-pages/home.json",
+      "sha256": "18460ad213139e0a81f3f794a17688aade1ef4b9ae5f2f89f3bc0809afc21610",
+      "byteIdenticalToInitialWorktree": true,
+      "gitTextEqualAfterLineEndingNormalization": true,
+      "workCRLF": 54
+    },
+    {
+      "file": "src/content/jobs/svarshchik.json",
+      "sha256": "2f8319111e8b1814422c4eadf3d727082b7b67d747c89abd821bce0d61dff676",
+      "byteIdenticalToInitialWorktree": true,
+      "gitTextEqualAfterLineEndingNormalization": true,
+      "workCRLF": 24
+    }
+  ],
+  "details": [
+    {
+      "file": "src/content/product-categories/besedki-i-pergoly.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/product-categories/kacheli.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/product-categories/malye-elementy.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/product-categories/navesy.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/product-categories/shezlongi.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/product-categories/stoly-i-komplekty.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/product-categories/ulichnoe-osveshchenie.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/product-categories/urny.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/product-categories/vazony-i-tsvetochnitsy.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/product-categories/veloparkovki.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/product-sections/navesy.json",
+      "changedTopLevelKeys": [
+        "homeImage"
+      ]
+    },
+    {
+      "file": "src/content/product-sections/topiarii.json",
+      "changedTopLevelKeys": [
+        "homeImage",
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/product-sections/ulichnaya-mebel.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/besedka-kofe.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/besedka-kub.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/bolshaya-skameyka-amplituda.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/ekran-s-navesom.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/fonar-liniya.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/fonar-mayak.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/fonar-prizma.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/fonar-sektor.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/fonar-vektor-vysokiy.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/fonar-vektor.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/kachel-duga.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/kachel-patio.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/kachel-portal.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/kachel-s-navesom.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/kacheli-pergola.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/kacheli-s-dlinnym-navesom.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/naves-galereya.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/naves-terra.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/parkovka-dlya-samokatov-arka.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/pergola-lamel.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/pergola-s-lavkoy.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/shezlong-dyuna.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/shezlong-siluet.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/shezlong-vitok.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/shezlong-volna.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/sidenie-kub.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/sidenie-pilon.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-bulvar.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-kapsula.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-kontur.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-liniya-so-spinkami.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-liniya.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-loft.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-park.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-plato.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-podium.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-radius-so-spinkami.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-radius.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-reyka.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-skoba.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-smu1-bazovaya.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/skamya-volna.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/stantsiya-razdelnogo-sbora.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/stol-so-skamyami-orbita.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/urna-blok.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/urna-ellips.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/urna-kolonna.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/urna-layn.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/urna-monolit.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/urna-panel.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/urna-profil.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/urna-slim.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/urna-vertikal.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/vazon-gorizont.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/vazon-koltso.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/vazon-kontur.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/vazon-lenta.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/vazon-oval.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/vazon-ritm.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/vazon-soft.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/veloparkovka-duga.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/veloparkovka-marker.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/veloparkovka-pik.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/veloparkovka-pilon.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    },
+    {
+      "file": "src/content/products/veloparkovka-ramka.json",
+      "changedTopLevelKeys": [
+        "imageView"
+      ]
+    }
+  ],
+  "sourceWorktreeDiff": "",
+  "auditCorrection": "First direct git-blob/worktree byte assertion failed because Git stores LF while this Windows checkout uses CRLF. Verified original worktree SHA256 and exact text equality after CRLF normalization; no content edits made."
+}

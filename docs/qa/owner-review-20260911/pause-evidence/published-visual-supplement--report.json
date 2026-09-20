@@ -1,0 +1,77 @@
+{
+  "sha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+  "started": "2026-09-20T11:37:06.730Z",
+  "pass": true,
+  "reason": "Unobstructed Firefox canopy sections; original screenshots retained with pointer-hover dropdown open. Settled Chromium menu, metal proof and vacancy contact/footer.",
+  "rows": [
+    {
+      "selector": "#direction-gallery",
+      "file": "firefox-canopy-direction-gallery.png",
+      "title": "Примеры навесов и козырьков"
+    },
+    {
+      "selector": "#direction-types",
+      "file": "firefox-canopy-direction-types.png",
+      "title": "Какие навесы и козырьки делаем"
+    },
+    {
+      "selector": "#direction-scope",
+      "file": "firefox-canopy-direction-scope.png",
+      "title": "Для каких объектов"
+    },
+    {
+      "selector": ".direction-related",
+      "file": "firefox-canopy-direction-related.png",
+      "title": "Связанные направления"
+    },
+    {
+      "selector": "#direction-brief",
+      "file": "firefox-canopy-direction-brief.png",
+      "title": "Что можно прислать"
+    },
+    {
+      "file": "chromium-menu-320-settled.png"
+    },
+    {
+      "file": "chromium-metal-proof-desktop.png",
+      "title": "Комплекс работ на производственной территории",
+      "height": 722
+    },
+    {
+      "file": "chromium-metal-proof-phone.png"
+    },
+    {
+      "file": "chromium-vacancy-contact.png"
+    },
+    {
+      "file": "chromium-vacancy-footer-settled.png"
+    }
+  ],
+  "identity": {
+    "artifactManifestSha256": "7f5efa038601effc8aa9ff61fa38268e5bdcf1c8ae277be69959fd347c2b67c2",
+    "fileCount": 4373,
+    "kind": "smu1-release-artifact-identity",
+    "largestFile": {
+      "bytes": 19322916,
+      "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+    },
+    "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+    "totalBytes": 419929876,
+    "version": 1
+  },
+  "identityEnd": {
+    "artifactManifestSha256": "7f5efa038601effc8aa9ff61fa38268e5bdcf1c8ae277be69959fd347c2b67c2",
+    "fileCount": 4373,
+    "kind": "smu1-release-artifact-identity",
+    "largestFile": {
+      "bytes": 19322916,
+      "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+    },
+    "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+    "totalBytes": 419929876,
+    "version": 1
+  },
+  "completed": "2026-09-20T11:41:45.695Z"
+}

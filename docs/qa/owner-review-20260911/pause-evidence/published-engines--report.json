@@ -1,0 +1,216 @@
+{
+  "sha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+  "started": "2026-09-20T11:30:38.644Z",
+  "browserPlugin": "Browser plugin not available; existing Playwright runtime",
+  "rows": [
+    {
+      "name": "firefox",
+      "label": "home-video-poster",
+      "pass": true,
+      "state": "playing",
+      "paused": false,
+      "time": 1.24,
+      "src": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "posterLoaded": true,
+      "videoErrors": [],
+      "overlayControls": 0,
+      "actualPlayback": true
+    },
+    {
+      "name": "firefox",
+      "label": "search-synonyms-descriptions",
+      "pass": true,
+      "results": [
+        {
+          "term": "лавочка",
+          "count": 20,
+          "descriptions": {
+            "tag": "DETAILS",
+            "open": false,
+            "immediatelyVisible": false
+          }
+        },
+        {
+          "term": "скамья без спинки",
+          "count": 5,
+          "descriptions": {
+            "tag": "SECTION",
+            "open": null,
+            "immediatelyVisible": true
+          }
+        },
+        {
+          "term": "деревянными",
+          "count": 12,
+          "descriptions": {
+            "tag": "SECTION",
+            "open": null,
+            "immediatelyVisible": true
+          }
+        }
+      ],
+      "collapsedArrowsSkipped": true,
+      "expandedArrowsIncluded": true
+    },
+    {
+      "name": "firefox",
+      "label": "phone-menu-search",
+      "pass": true,
+      "width": 320,
+      "focusReturned": true,
+      "overflow": 0
+    },
+    {
+      "name": "firefox",
+      "label": "canopy-lower-sections",
+      "pass": true,
+      "sections": [
+        {
+          "selector": "direction-gallery",
+          "height": 718,
+          "title": "Примеры навесов и козырьков"
+        },
+        {
+          "selector": "direction-types",
+          "height": 856.5,
+          "title": "Какие навесы и козырьки делаем"
+        },
+        {
+          "selector": "direction-scope",
+          "height": 374.933349609375,
+          "title": "Для каких объектов"
+        },
+        {
+          "selector": "direction-related direction-related--default direction-related--links",
+          "height": 391.41668701171875,
+          "title": "Связанные направления"
+        },
+        {
+          "selector": "direction-brief",
+          "height": 640.2833251953125,
+          "title": "Что можно прислать"
+        }
+      ]
+    },
+    {
+      "name": "webkit",
+      "label": "home-video-poster",
+      "pass": true,
+      "state": "playing",
+      "paused": false,
+      "time": 0.8805783,
+      "src": "/SMU1/uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "posterLoaded": true,
+      "videoErrors": [],
+      "overlayControls": 0,
+      "actualPlayback": true
+    },
+    {
+      "name": "webkit",
+      "label": "search-synonyms-descriptions",
+      "pass": true,
+      "results": [
+        {
+          "term": "лавочка",
+          "count": 20,
+          "descriptions": {
+            "tag": "DETAILS",
+            "open": false,
+            "immediatelyVisible": false
+          }
+        },
+        {
+          "term": "скамья без спинки",
+          "count": 5,
+          "descriptions": {
+            "tag": "SECTION",
+            "open": null,
+            "immediatelyVisible": true
+          }
+        },
+        {
+          "term": "деревянными",
+          "count": 12,
+          "descriptions": {
+            "tag": "SECTION",
+            "open": null,
+            "immediatelyVisible": true
+          }
+        }
+      ],
+      "collapsedArrowsSkipped": true,
+      "expandedArrowsIncluded": true
+    },
+    {
+      "name": "webkit",
+      "label": "phone-menu-search",
+      "pass": true,
+      "width": 320,
+      "focusReturned": true,
+      "overflow": 0
+    },
+    {
+      "name": "webkit",
+      "label": "canopy-lower-sections",
+      "pass": true,
+      "sections": [
+        {
+          "selector": "direction-gallery",
+          "height": 718,
+          "title": "Примеры навесов и козырьков"
+        },
+        {
+          "selector": "direction-types",
+          "height": 856.375,
+          "title": "Какие навесы и козырьки делаем"
+        },
+        {
+          "selector": "direction-scope",
+          "height": 374.9375,
+          "title": "Для каких объектов"
+        },
+        {
+          "selector": "direction-related direction-related--default direction-related--links",
+          "height": 391.40625,
+          "title": "Связанные направления"
+        },
+        {
+          "selector": "direction-brief",
+          "height": 640.265625,
+          "title": "Что можно прислать"
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "pass": true,
+  "identity": {
+    "version": 1,
+    "kind": "smu1-release-artifact-identity",
+    "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+    "artifactManifestSha256": "7f5efa038601effc8aa9ff61fa38268e5bdcf1c8ae277be69959fd347c2b67c2",
+    "fileCount": 4373,
+    "totalBytes": 419929876,
+    "largestFile": {
+      "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "bytes": 19322916,
+      "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+    },
+    "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2"
+  },
+  "identityEnd": {
+    "version": 1,
+    "kind": "smu1-release-artifact-identity",
+    "testedCommitSha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+    "artifactManifestSha256": "7f5efa038601effc8aa9ff61fa38268e5bdcf1c8ae277be69959fd347c2b67c2",
+    "fileCount": 4373,
+    "totalBytes": 419929876,
+    "largestFile": {
+      "path": "uploads/media-1779034941013-progressive-6f6afec8877c.mp4",
+      "bytes": 19322916,
+      "sha256": "6f6afec8877c0322e548fe4ded217b42806ff57b0f399c3a7de6292421d033ae"
+    },
+    "markerSha256": "0ccfe0d0761ff99e6e78751b23deafc55afe09fb255935b515318307ed279ef2"
+  },
+  "completed": "2026-09-20T11:31:13.098Z"
+}

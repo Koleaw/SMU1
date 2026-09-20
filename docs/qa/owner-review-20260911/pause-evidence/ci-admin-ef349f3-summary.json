@@ -1,0 +1,87 @@
+{
+  "sha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+  "runId": 35505511441,
+  "verifiedAt": "2026-09-20T10:50:47.355Z",
+  "actions": {
+    "jobId": 106064529627,
+    "artifactId": 10604095653,
+    "artifactSHA256": "186ac440e635320b340d8ddaaa9df7376dd66e2ae0e046afc7911f2678cca1cc",
+    "aggregate": {
+      "actions": 514,
+      "canvasRoutesPassed": 111,
+      "canvasRoutesFailed": 0,
+      "passed": 514,
+      "failed": 0,
+      "executions": 504,
+      "policies": {
+        "navigation-inventory": 129,
+        "hidden-state": 75,
+        "isolated-mutation": 2,
+        "disabled-state": 8,
+        "safe-ui-action": 251,
+        "focus-state": 3,
+        "canvas-public-action-covered": 46
+      },
+      "discoveredContexts": [
+        "shell",
+        "iframe-veFrame"
+      ]
+    },
+    "events": 0,
+    "statusResponses": 513,
+    "statusUnconfirmed": 0,
+    "releaseMutations": 0,
+    "handle": [
+      {
+        "key": "shell:a292",
+        "status": "pass",
+        "executions": [
+          {
+            "operation": "click",
+            "status": "pass",
+            "nativeEvents": 3,
+            "postcondition": true
+          }
+        ]
+      }
+    ]
+  },
+  "acceptance": {
+    "jobId": 106064529621,
+    "artifactId": 10603149371,
+    "artifactSHA256": "2d0a84f65effa12bcc977168e6a9f5affc6eeaeefb6e9bea9f7c0c81c64ef10c",
+    "aggregate": {
+      "checks": 22,
+      "scenarios": 20,
+      "passed": 22,
+      "failed": 0,
+      "failedIds": [],
+      "boundary": {
+        "status": "pass",
+        "errors": [],
+        "httpErrors": [],
+        "networkErrors": [],
+        "navigationDialogs": [
+          {
+            "type": "beforeunload",
+            "accepted": true,
+            "reason": "qa-baseline-reset"
+          },
+          {
+            "type": "beforeunload",
+            "accepted": true,
+            "reason": "qa-baseline-reset"
+          },
+          {
+            "type": "beforeunload",
+            "accepted": true,
+            "reason": "qa-baseline-reset"
+          }
+        ],
+        "navigationDialogFailed": false
+      },
+      "latencyP95Ms": 1367
+    },
+    "releaseMutations": 0
+  }
+}

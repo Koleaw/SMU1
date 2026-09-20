@@ -1,0 +1,312 @@
+{
+  "sha": "ef349f33265b56e67fdea8356e72d1b6e97ba102",
+  "verifiedAt": "2026-09-20T11:15:16.139Z",
+  "source": "E:/CodexTemp/smu1-owner-20260911/ci-public-evidence-ef349f3/public-action-crawl.json",
+  "pass": true,
+  "manifest": {
+    "expectedCount": 111,
+    "openedRouteViewportPairs": 222,
+    "requiredRouteViewportPairs": 222,
+    "mergedShards": {
+      "total": 8,
+      "indexes": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    }
+  },
+  "aggregate": {
+    "routeViewportsPassed": 222,
+    "routeViewportsFailed": 0,
+    "actionOccurrences": 25276,
+    "safeExecutions": 16644,
+    "gallerySemanticOccurrences": 158,
+    "gallerySemanticPassed": 156,
+    "gallerySemanticFailed": 0,
+    "lifecycleSemanticOccurrences": 3,
+    "lifecycleSemanticsPassed": 3,
+    "lifecycleSemanticsFailed": 0,
+    "protectedLeadOrFileActions": 214,
+    "unknownViewportsPassed": 2,
+    "unknownViewportsFailed": 0,
+    "unknownNoJsPassed": true,
+    "publicArtifactIsolation": true,
+    "publicArtifactLeaks": 0,
+    "unexpectedNavigationDialogs": 0,
+    "dialogDrainPassed": true,
+    "noJsPassed": 111,
+    "noJsFailed": 0,
+    "noJsRequired": 111
+  },
+  "search": [
+    {
+      "shard": 1,
+      "viewport": "desktop-1440x900",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 1,
+      "viewport": "mobile-390x844",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 2,
+      "viewport": "desktop-1440x900",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 2,
+      "viewport": "mobile-390x844",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 3,
+      "viewport": "desktop-1440x900",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 3,
+      "viewport": "mobile-390x844",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 4,
+      "viewport": "desktop-1440x900",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 4,
+      "viewport": "mobile-390x844",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 5,
+      "viewport": "desktop-1440x900",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 5,
+      "viewport": "mobile-390x844",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 6,
+      "viewport": "desktop-1440x900",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 6,
+      "viewport": "mobile-390x844",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 7,
+      "viewport": "desktop-1440x900",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 7,
+      "viewport": "mobile-390x844",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 8,
+      "viewport": "desktop-1440x900",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    },
+    {
+      "shard": 8,
+      "viewport": "mobile-390x844",
+      "status": "pass",
+      "checks": 22,
+      "failed": []
+    }
+  ],
+  "events": [],
+  "artifact": {
+    "sha256": "e18cf8bac1425c565710f035eac29e85e4943bd7c711ae7818e913e0eff72ee9",
+    "bytes": 419929876,
+    "files": 4373,
+    "publicActionInputsKey": "adf099d711cf453a96ede370e837ef7c3224d3c93b993f5c126b572d61460c39"
+  },
+  "shards": [
+    {
+      "index": 1,
+      "total": 8,
+      "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-1.json",
+      "generatedAt": "2026-09-20T11:11:05.279Z",
+      "distFreshness": {
+        "fresh": true,
+        "sourceFiles": 758,
+        "htmlFiles": 229,
+        "latestSourceMtime": "2026-09-20T10:55:44.260Z",
+        "oldestHtmlMtime": "2026-09-20T10:55:59.913Z"
+      },
+      "origin": "http://127.0.0.1:44911",
+      "assignedRoutes": 14,
+      "routeViewportPairs": 28,
+      "noJsRoutes": 14
+    },
+    {
+      "index": 2,
+      "total": 8,
+      "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-2.json",
+      "generatedAt": "2026-09-20T11:11:07.656Z",
+      "distFreshness": {
+        "fresh": true,
+        "sourceFiles": 758,
+        "htmlFiles": 229,
+        "latestSourceMtime": "2026-09-20T10:55:43.162Z",
+        "oldestHtmlMtime": "2026-09-20T10:55:58.864Z"
+      },
+      "origin": "http://127.0.0.1:43785",
+      "assignedRoutes": 14,
+      "routeViewportPairs": 28,
+      "noJsRoutes": 14
+    },
+    {
+      "index": 3,
+      "total": 8,
+      "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-3.json",
+      "generatedAt": "2026-09-20T11:12:55.929Z",
+      "distFreshness": {
+        "fresh": true,
+        "sourceFiles": 758,
+        "htmlFiles": 229,
+        "latestSourceMtime": "2026-09-20T10:55:48.785Z",
+        "oldestHtmlMtime": "2026-09-20T10:56:28.368Z"
+      },
+      "origin": "http://127.0.0.1:35107",
+      "assignedRoutes": 14,
+      "routeViewportPairs": 28,
+      "noJsRoutes": 14
+    },
+    {
+      "index": 4,
+      "total": 8,
+      "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-4.json",
+      "generatedAt": "2026-09-20T11:11:59.426Z",
+      "distFreshness": {
+        "fresh": true,
+        "sourceFiles": 758,
+        "htmlFiles": 229,
+        "latestSourceMtime": "2026-09-20T10:55:44.789Z",
+        "oldestHtmlMtime": "2026-09-20T10:56:00.094Z"
+      },
+      "origin": "http://127.0.0.1:42483",
+      "assignedRoutes": 14,
+      "routeViewportPairs": 28,
+      "noJsRoutes": 14
+    },
+    {
+      "index": 5,
+      "total": 8,
+      "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-5.json",
+      "generatedAt": "2026-09-20T11:11:41.984Z",
+      "distFreshness": {
+        "fresh": true,
+        "sourceFiles": 758,
+        "htmlFiles": 229,
+        "latestSourceMtime": "2026-09-20T10:55:44.484Z",
+        "oldestHtmlMtime": "2026-09-20T10:56:02.964Z"
+      },
+      "origin": "http://127.0.0.1:35025",
+      "assignedRoutes": 14,
+      "routeViewportPairs": 28,
+      "noJsRoutes": 14
+    },
+    {
+      "index": 6,
+      "total": 8,
+      "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-6.json",
+      "generatedAt": "2026-09-20T11:13:04.432Z",
+      "distFreshness": {
+        "fresh": true,
+        "sourceFiles": 758,
+        "htmlFiles": 229,
+        "latestSourceMtime": "2026-09-20T10:55:45.473Z",
+        "oldestHtmlMtime": "2026-09-20T10:56:03.762Z"
+      },
+      "origin": "http://127.0.0.1:34457",
+      "assignedRoutes": 14,
+      "routeViewportPairs": 28,
+      "noJsRoutes": 14
+    },
+    {
+      "index": 7,
+      "total": 8,
+      "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-7.json",
+      "generatedAt": "2026-09-20T11:12:53.078Z",
+      "distFreshness": {
+        "fresh": true,
+        "sourceFiles": 758,
+        "htmlFiles": 229,
+        "latestSourceMtime": "2026-09-20T10:55:44.481Z",
+        "oldestHtmlMtime": "2026-09-20T10:56:00.243Z"
+      },
+      "origin": "http://127.0.0.1:37365",
+      "assignedRoutes": 14,
+      "routeViewportPairs": 28,
+      "noJsRoutes": 14
+    },
+    {
+      "index": 8,
+      "total": 8,
+      "sourceFile": ".admin-runtime/h6-qa/public-action-shards/shard-8.json",
+      "generatedAt": "2026-09-20T11:11:04.909Z",
+      "distFreshness": {
+        "fresh": true,
+        "sourceFiles": 758,
+        "htmlFiles": 229,
+        "latestSourceMtime": "2026-09-20T10:55:44.592Z",
+        "oldestHtmlMtime": "2026-09-20T10:55:59.868Z"
+      },
+      "origin": "http://127.0.0.1:41219",
+      "assignedRoutes": 13,
+      "routeViewportPairs": 26,
+      "noJsRoutes": 13
+    }
+  ],
+  "artifactEvidence": {
+    "id": 10604331665,
+    "sha256": "e484543d285e900c8f83fee4acb95af42a94a0bd57585d1fa87c9f3e2a77566d",
+    "bytes": 9619143,
+    "jobId": 106068949526
+  }
+}

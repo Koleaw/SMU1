@@ -1,0 +1,314 @@
+[
+  {
+    "shard": 1,
+    "aggregate": {
+      "routeViewportsPassed": 28,
+      "routeViewportsFailed": 0,
+      "actionOccurrences": 3132,
+      "safeExecutions": 2030,
+      "gallerySemanticOccurrences": 14,
+      "gallerySemanticPassed": 14,
+      "gallerySemanticFailed": 0,
+      "lifecycleSemanticOccurrences": 2,
+      "lifecycleSemanticsPassed": 2,
+      "lifecycleSemanticsFailed": 0,
+      "protectedLeadOrFileActions": 26,
+      "unknownViewportsPassed": 2,
+      "unknownViewportsFailed": 0,
+      "unknownNoJsPassed": true,
+      "publicArtifactIsolation": true,
+      "publicArtifactLeaks": 0,
+      "unexpectedNavigationDialogs": 0,
+      "dialogDrainPassed": true,
+      "noJsPassed": 14,
+      "noJsFailed": 0,
+      "noJsRequired": 14
+    },
+    "search": [
+      {
+        "id": "desktop-1440x900",
+        "status": "pass",
+        "checks": 22
+      },
+      {
+        "id": "mobile-390x844",
+        "status": "pass",
+        "checks": 22
+      }
+    ],
+    "events": 0
+  },
+  {
+    "shard": 2,
+    "aggregate": {
+      "routeViewportsPassed": 28,
+      "routeViewportsFailed": 0,
+      "actionOccurrences": 3148,
+      "safeExecutions": 2028,
+      "gallerySemanticOccurrences": 18,
+      "gallerySemanticPassed": 18,
+      "gallerySemanticFailed": 0,
+      "lifecycleSemanticOccurrences": 0,
+      "lifecycleSemanticsPassed": 0,
+      "lifecycleSemanticsFailed": 0,
+      "protectedLeadOrFileActions": 24,
+      "unknownViewportsPassed": 0,
+      "unknownViewportsFailed": 0,
+      "unknownNoJsPassed": false,
+      "publicArtifactIsolation": true,
+      "publicArtifactLeaks": 0,
+      "unexpectedNavigationDialogs": 0,
+      "dialogDrainPassed": true,
+      "noJsPassed": 14,
+      "noJsFailed": 0,
+      "noJsRequired": 14
+    },
+    "search": [
+      {
+        "id": "desktop-1440x900",
+        "status": "pass",
+        "checks": 22
+      },
+      {
+        "id": "mobile-390x844",
+        "status": "pass",
+        "checks": 22
+      }
+    ],
+    "events": 0
+  },
+  {
+    "shard": 3,
+    "aggregate": {
+      "routeViewportsPassed": 28,
+      "routeViewportsFailed": 0,
+      "actionOccurrences": 3172,
+      "safeExecutions": 2072,
+      "gallerySemanticOccurrences": 20,
+      "gallerySemanticPassed": 19,
+      "gallerySemanticFailed": 0,
+      "lifecycleSemanticOccurrences": 0,
+      "lifecycleSemanticsPassed": 0,
+      "lifecycleSemanticsFailed": 0,
+      "protectedLeadOrFileActions": 28,
+      "unknownViewportsPassed": 0,
+      "unknownViewportsFailed": 0,
+      "unknownNoJsPassed": false,
+      "publicArtifactIsolation": true,
+      "publicArtifactLeaks": 0,
+      "unexpectedNavigationDialogs": 0,
+      "dialogDrainPassed": true,
+      "noJsPassed": 14,
+      "noJsFailed": 0,
+      "noJsRequired": 14
+    },
+    "search": [
+      {
+        "id": "desktop-1440x900",
+        "status": "pass",
+        "checks": 22
+      },
+      {
+        "id": "mobile-390x844",
+        "status": "pass",
+        "checks": 22
+      }
+    ],
+    "events": 0
+  },
+  {
+    "shard": 4,
+    "aggregate": {
+      "routeViewportsPassed": 28,
+      "routeViewportsFailed": 0,
+      "actionOccurrences": 3162,
+      "safeExecutions": 2048,
+      "gallerySemanticOccurrences": 20,
+      "gallerySemanticPassed": 20,
+      "gallerySemanticFailed": 0,
+      "lifecycleSemanticOccurrences": 0,
+      "lifecycleSemanticsPassed": 0,
+      "lifecycleSemanticsFailed": 0,
+      "protectedLeadOrFileActions": 28,
+      "unknownViewportsPassed": 0,
+      "unknownViewportsFailed": 0,
+      "unknownNoJsPassed": false,
+      "publicArtifactIsolation": true,
+      "publicArtifactLeaks": 0,
+      "unexpectedNavigationDialogs": 0,
+      "dialogDrainPassed": true,
+      "noJsPassed": 14,
+      "noJsFailed": 0,
+      "noJsRequired": 14
+    },
+    "search": [
+      {
+        "id": "desktop-1440x900",
+        "status": "pass",
+        "checks": 22
+      },
+      {
+        "id": "mobile-390x844",
+        "status": "pass",
+        "checks": 22
+      }
+    ],
+    "events": 0
+  },
+  {
+    "shard": 5,
+    "aggregate": {
+      "routeViewportsPassed": 28,
+      "routeViewportsFailed": 0,
+      "actionOccurrences": 3192,
+      "safeExecutions": 2076,
+      "gallerySemanticOccurrences": 22,
+      "gallerySemanticPassed": 22,
+      "gallerySemanticFailed": 0,
+      "lifecycleSemanticOccurrences": 1,
+      "lifecycleSemanticsPassed": 1,
+      "lifecycleSemanticsFailed": 0,
+      "protectedLeadOrFileActions": 26,
+      "unknownViewportsPassed": 0,
+      "unknownViewportsFailed": 0,
+      "unknownNoJsPassed": false,
+      "publicArtifactIsolation": true,
+      "publicArtifactLeaks": 0,
+      "unexpectedNavigationDialogs": 0,
+      "dialogDrainPassed": true,
+      "noJsPassed": 14,
+      "noJsFailed": 0,
+      "noJsRequired": 14
+    },
+    "search": [
+      {
+        "id": "desktop-1440x900",
+        "status": "pass",
+        "checks": 22
+      },
+      {
+        "id": "mobile-390x844",
+        "status": "pass",
+        "checks": 22
+      }
+    ],
+    "events": 0
+  },
+  {
+    "shard": 6,
+    "aggregate": {
+      "routeViewportsPassed": 28,
+      "routeViewportsFailed": 0,
+      "actionOccurrences": 3268,
+      "safeExecutions": 2228,
+      "gallerySemanticOccurrences": 24,
+      "gallerySemanticPassed": 24,
+      "gallerySemanticFailed": 0,
+      "lifecycleSemanticOccurrences": 0,
+      "lifecycleSemanticsPassed": 0,
+      "lifecycleSemanticsFailed": 0,
+      "protectedLeadOrFileActions": 28,
+      "unknownViewportsPassed": 0,
+      "unknownViewportsFailed": 0,
+      "unknownNoJsPassed": false,
+      "publicArtifactIsolation": true,
+      "publicArtifactLeaks": 0,
+      "unexpectedNavigationDialogs": 0,
+      "dialogDrainPassed": true,
+      "noJsPassed": 14,
+      "noJsFailed": 0,
+      "noJsRequired": 14
+    },
+    "search": [
+      {
+        "id": "desktop-1440x900",
+        "status": "pass",
+        "checks": 22
+      },
+      {
+        "id": "mobile-390x844",
+        "status": "pass",
+        "checks": 22
+      }
+    ],
+    "events": 0
+  },
+  {
+    "shard": 7,
+    "aggregate": {
+      "routeViewportsPassed": 28,
+      "routeViewportsFailed": 0,
+      "actionOccurrences": 3242,
+      "safeExecutions": 2184,
+      "gallerySemanticOccurrences": 24,
+      "gallerySemanticPassed": 23,
+      "gallerySemanticFailed": 0,
+      "lifecycleSemanticOccurrences": 0,
+      "lifecycleSemanticsPassed": 0,
+      "lifecycleSemanticsFailed": 0,
+      "protectedLeadOrFileActions": 28,
+      "unknownViewportsPassed": 0,
+      "unknownViewportsFailed": 0,
+      "unknownNoJsPassed": false,
+      "publicArtifactIsolation": true,
+      "publicArtifactLeaks": 0,
+      "unexpectedNavigationDialogs": 0,
+      "dialogDrainPassed": true,
+      "noJsPassed": 14,
+      "noJsFailed": 0,
+      "noJsRequired": 14
+    },
+    "search": [
+      {
+        "id": "desktop-1440x900",
+        "status": "pass",
+        "checks": 22
+      },
+      {
+        "id": "mobile-390x844",
+        "status": "pass",
+        "checks": 22
+      }
+    ],
+    "events": 0
+  },
+  {
+    "shard": 8,
+    "aggregate": {
+      "routeViewportsPassed": 26,
+      "routeViewportsFailed": 0,
+      "actionOccurrences": 2960,
+      "safeExecutions": 1978,
+      "gallerySemanticOccurrences": 16,
+      "gallerySemanticPassed": 16,
+      "gallerySemanticFailed": 0,
+      "lifecycleSemanticOccurrences": 0,
+      "lifecycleSemanticsPassed": 0,
+      "lifecycleSemanticsFailed": 0,
+      "protectedLeadOrFileActions": 26,
+      "unknownViewportsPassed": 0,
+      "unknownViewportsFailed": 0,
+      "unknownNoJsPassed": false,
+      "publicArtifactIsolation": true,
+      "publicArtifactLeaks": 0,
+      "unexpectedNavigationDialogs": 0,
+      "dialogDrainPassed": true,
+      "noJsPassed": 13,
+      "noJsFailed": 0,
+      "noJsRequired": 13
+    },
+    "search": [
+      {
+        "id": "desktop-1440x900",
+        "status": "pass",
+        "checks": 22
+      },
+      {
+        "id": "mobile-390x844",
+        "status": "pass",
+        "checks": 22
+      }
+    ],
+    "events": 0
+  }
+]
