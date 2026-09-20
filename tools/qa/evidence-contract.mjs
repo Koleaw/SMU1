@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { adminControlPostcondition } from './admin-action-state.mjs';
 import {
   buildExpectedRouteModel,
   REQUIRED_VIEWPORTS,
@@ -598,10 +599,26 @@ export function validateAdminActionEvidence(report, options = {}) {
     if (action.status !== 'pass') issues.push(`admin-actions:failed:${action.key}`);
     if (!action.policy) issues.push(`admin-actions:missing-policy:${action.key}`);
     if (action.policy === 'safe-ui-action' && action.action?.visible && !action.action?.disabled) {
-      const modes = new Set((action.executions || []).filter((execution) => execution.status === 'pass' && execution.executable).map((execution) => execution.operation));
-      if (!modes.has('click') || !modes.has('keyboard')) issues.push(`admin-actions:safe-execution-gap:${action.key}`);
-      if ((action.executions || []).some((execution) => execution.status === 'pass' && (!execution.active || !execution.postcondition))) {
+      const executions = action.executions || [];
+      const focusOnly = action.action.containerId === 'veOverlay'
+        && action.action.dataAttributes?.['data-control-key'] === 'handle';
+      const requiredModes = focusOnly ? ['click'] : ['click', 'keyboard'];
+      const modes = new Set(executions.filter((execution) => execution.status === 'pass' && execution.found && execution.executable).map((execution) => execution.operation));
+      if (executions.length !== requiredModes.length || !requiredModes.every((mode) => modes.has(mode))) {
+        issues.push(`admin-actions:safe-execution-gap:${action.key}`);
+      }
+      // `active` describes preparation, before activation: only Enter needs
+      // prior focus. Recompute the actual result, including trusted activation
+      // of the exact overlay binding; a stored PASS boolean is not sufficient.
+      if (executions.some((execution) => execution.status !== 'pass'
+        || (execution.operation === 'keyboard' && !execution.active)
+        || execution.postcondition !== true
+        || !adminControlPostcondition(action.action, execution.before, execution.after, execution.requests, execution.nativeEvents))) {
         issues.push(`admin-actions:safe-postcondition:${action.key}`);
+      }
+      if (executions.some((execution) => execution.events?.length
+        || execution.requests?.some((request) => !['GET', 'HEAD', 'OPTIONS'].includes(request.method)))) {
+        issues.push(`admin-actions:safe-side-effect:${action.key}`);
       }
     }
     if (['release-intercept-required', 'requires-isolated-fixture', 'requires-file-fixture'].includes(action.policy) && action.executions?.length) {

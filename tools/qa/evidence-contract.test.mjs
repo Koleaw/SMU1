@@ -249,7 +249,7 @@ test('public action evidence requires each viewport, click, keyboard and no-JS r
   assert.match(validatePublicActionEvidence(emptyRegistry, { authoritativeRoutes: [route] }).issues.join('\n'), /missing-or-empty-registry/u);
 });
 
-test('admin action evidence rejects generic execution of release controls', () => {
+test('admin action evidence verifies pointer/keyboard results and rejects release controls', () => {
   const report = {
     schemaVersion: 1,
     evidence: {
@@ -284,6 +284,58 @@ test('admin action evidence rejects generic execution of release controls', () =
     aggregate: { discoveredContexts: ['shell', 'iframe-home'] }
   };
   assert.equal(validateAdminActionEvidence(report, { authoritativeRoutes: ['/'] }).ok, true);
+  const withSafe = structuredClone(report);
+  const safe = {
+    key: 'shell:dialog', policy: 'safe-ui-action', status: 'pass',
+    action: { context: 'shell', containerId: 'veApp', tag: 'button', visible: true, disabled: false },
+    executions: ['click', 'keyboard'].map(operation => ({
+      operation, status: 'pass', found: true, executable: true,
+      active: operation === 'keyboard', postcondition: true,
+      before: JSON.stringify({ dialogs: 0 }), after: JSON.stringify({ dialogs: 1 }),
+      nativeEvents: [], requests: [], events: []
+    }))
+  };
+  withSafe.actionResults.push(safe);
+  const validateSafe = value => validateAdminActionEvidence(value, { authoritativeRoutes: ['/'] });
+  assert.equal(validateSafe(withSafe).ok, true, 'a mouse click does not need focus before activation');
+  for (const [label, mutate, issue] of [
+    ['missing keyboard', a => a.executions.pop(), /safe-execution-gap/],
+    ['unfocused Enter', a => { a.executions[1].active = false; }, /safe-postcondition/],
+    ['unchanged UI with forged PASS', a => { a.executions[0].after = a.executions[0].before; }, /safe-postcondition/],
+    ['failed outcome', a => { a.executions[0].postcondition = false; }, /safe-postcondition/],
+    ['failed execution', a => { a.executions[0].status = 'fail'; }, /safe-postcondition/],
+    ['missing target', a => { a.executions[0].found = false; }, /safe-execution-gap/],
+    ['unreachable target', a => { a.executions[0].executable = false; }, /safe-execution-gap/],
+    ['write request', a => { a.executions[0].requests.push({ method: 'POST' }); }, /safe-side-effect/],
+    ['runtime error', a => { a.executions[0].events.push({ kind: 'runtime-exception' }); }, /safe-side-effect/],
+    ['forged focus-only label', a => { a.executionContract = 'native-click-focus-only'; a.executions.pop(); }, /safe-execution-gap/]
+  ]) {
+    const invalid = structuredClone(withSafe);
+    mutate(invalid.actionResults.at(-1));
+    assert.match(validateSafe(invalid).issues.join('\n'), issue, label);
+  }
+  const withHandle = structuredClone(report);
+  const handle = structuredClone(safe);
+  handle.key = 'shell:handle';
+  handle.action.containerId = 'veOverlay';
+  handle.action.dataAttributes = { 'data-binding-id': 'home:canopies', 'data-control-key': 'handle' };
+  handle.executions = [handle.executions[0]];
+  handle.executions[0].before = JSON.stringify({ active: false });
+  handle.executions[0].after = JSON.stringify({ active: true });
+  handle.executions[0].nativeEvents = [{ type: 'click', isTrusted: true, bindingId: 'home:canopies', controlKey: 'handle' }];
+  withHandle.actionResults.push(handle);
+  assert.equal(validateSafe(withHandle).ok, true, 'drag handles prove the exact native click and resulting focus; Enter has no action');
+  for (const [label, mutate] of [
+    ['lost click', e => { e.nativeEvents = []; }],
+    ['synthetic click', e => { e.nativeEvents[0].isTrusted = false; }],
+    ['wrong binding', e => { e.nativeEvents[0].bindingId = 'home:topiary'; }],
+    ['wrong control', e => { e.nativeEvents[0].controlKey = 'move-End'; }],
+    ['focus not reached', e => { e.after = e.before; }]
+  ]) {
+    const invalid = structuredClone(withHandle);
+    mutate(invalid.actionResults.at(-1).executions[0]);
+    assert.match(validateSafe(invalid).issues.join('\n'), /safe-postcondition/, label);
+  }
   const withUnpublished = structuredClone(report);
   const editorModel = { routes: [], editorOnlyRoutes: ['/saved-draft/'] };
   withUnpublished.navigator.rawDiscovered = ['/', '/saved-draft/'];
