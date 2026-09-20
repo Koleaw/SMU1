@@ -1986,8 +1986,9 @@ export async function startVisualEditor() {
 
   const overlayRender = createOverlayRenderGuard(replaceOverlay);
   overlay.addEventListener('pointerdown', (event) => {
-    // Native drag needs live overlay geometry while its canvas auto-scrolls.
-    if (event.button === 0 && !event.target.closest('.ve-reorder-handle')) overlayRender.hold(event.pointerId);
+    // A drag handle is still a click until native dragstart. Preserve its node
+    // during that press too; dragstart below restores live auto-scroll geometry.
+    if (event.button === 0) overlayRender.hold(event.pointerId);
   }, true);
   overlay.addEventListener('dragstart', () => overlayRender.releaseAll(), true);
   window.addEventListener('pointerup', (event) => overlayRender.release(event.pointerId), true);
