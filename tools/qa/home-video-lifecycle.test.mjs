@@ -8,7 +8,7 @@ const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.Modu
 const { initializeHomeFinalVideo } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 
 // Exercise the actual lifecycle without requiring a visible optional menu.
-const fixture = ({ reduced = false, saveData = false, reject = false, controls = 0 } = {}) => {
+const fixture = ({ reduced = false, saveData = false, reject = false, controls = 0, deferPlaying = false } = {}) => {
   const saved = new Map(['window', 'document', 'navigator', 'matchMedia', 'innerHeight', 'IntersectionObserver']
     .map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const timers = new Set();
@@ -35,7 +35,11 @@ const fixture = ({ reduced = false, saveData = false, reject = false, controls =
     play() {
       this.playCalls += 1;
       if (reject) return Promise.reject(new DOMException('Autoplay denied', 'NotAllowedError'));
-      this.paused = false; this.dispatchEvent(new Event('playing')); return Promise.resolve();
+      this.paused = false;
+      if (deferPlaying) return new Promise((resolve) => {
+        this.completePlay = () => { this.dispatchEvent(new Event('playing')); resolve(); };
+      });
+      this.dispatchEvent(new Event('playing')); return Promise.resolve();
     }
   });
   let visibility;
@@ -119,5 +123,21 @@ test('desktop and compact menu controls share user intent across viewport change
     page.toggles[1].dispatchEvent(new Event('click'));
     assert.equal(page.video.paused, false);
     assert.ok(page.toggles.every((toggle) => toggle.attributes['aria-pressed'] === 'true'));
+  } finally { page.cleanup(); }
+});
+
+test('resume stays loading after paused becomes false until the playing event', () => {
+  const page = fixture({ controls: 2, deferPlaying: true });
+  try {
+    page.video.completePlay();
+    page.toggles[0].dispatchEvent(new Event('click'));
+    assert.equal(page.video.paused, true);
+    page.toggles[1].dispatchEvent(new Event('click'));
+    assert.equal(page.video.paused, false);
+    assert.equal(page.hero.dataset.hfVideoState, 'loading');
+    assert.ok(page.toggles.every((toggle) => toggle.label.textContent === 'Отменить загрузку'));
+    page.video.completePlay();
+    assert.equal(page.hero.dataset.hfVideoState, 'playing');
+    assert.ok(page.toggles.every((toggle) => toggle.label.textContent === 'Пауза видео'));
   } finally { page.cleanup(); }
 });

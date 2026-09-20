@@ -688,6 +688,7 @@ const homeVideoStateExpression = `(() => {
   const controlStyle = getComputedStyle(toggle);
   return {
     paused: video.paused,
+    status: video.closest('[data-hf-hero]')?.dataset.hfVideoState || '',
     ended: video.ended,
     readyState: video.readyState,
     currentTime: video.currentTime,
@@ -737,7 +738,7 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
     const exerciseExplicitPlayback = async () => {
       const requestIndex = requests.length;
       await clickVideoAsUser();
-      const playing = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused && state.readyState >= 2 ? state : null; })()`, {
+      const playing = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused && state.status === 'playing' && state.readyState >= 2 ? state : null; })()`, {
         timeoutMs: 12_000, label: 'explicit Home video playback'
       });
       const advanced = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused && state.currentTime > ${Number(playing.currentTime) + 0.05} ? state : null; })()`, {
@@ -779,7 +780,7 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
       if (playing?.paused) {
         await clickVideoAsUser();
       }
-      playing = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused && state.readyState >= 2 ? state : null; })()`, {
+      playing = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused && state.status === 'playing' && state.readyState >= 2 ? state : null; })()`, {
         timeoutMs: 12_000,
         label: 'Home video playback'
       });
@@ -788,8 +789,11 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
         label: 'Home video pause'
       });
       await clickVideoAsUser();
-      const resumed = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused ? state : null; })()`, {
+      const resumed = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused && state.status === 'playing' && state.readyState >= 2 ? state : null; })()`, {
         label: 'Home video resume'
+      });
+      const advanced = await waitForBrowserValue(`(() => { const state = (${homeVideoStateExpression}); return state && !state.paused && state.status === 'playing' && state.currentTime > ${Number(resumed.currentTime) + 0.05} ? state : null; })()`, {
+        timeoutMs: 12_000, label: 'resumed Home video time advancement'
       });
       evidence.normalMotion = {
         reducedMotion: false,
@@ -799,7 +803,9 @@ const exerciseHomeVideoLifecycle = () => executeLifecycleSemantic({
         videoRequestCount: requests.slice(normalRequestIndex).filter((request) => VIDEO_ASSET_URL.test(request.url || '')).length,
         playingBeforePause: playing.paused === false,
         pausedAfterPause: paused.paused === true,
-        playingAfterResume: resumed.paused === false,
+        playingAfterResume: resumed.paused === false && advanced.currentTime > resumed.currentTime + 0.05,
+        resumedStartTime: resumed.currentTime,
+        resumedAdvancedTime: advanced.currentTime,
         labelAfterPause: paused.label,
         labelAfterResume: resumed.label,
         ariaAfterPause: paused.ariaLabel,
