@@ -14,12 +14,13 @@ import {
   v2PathnameWithBase
 } from '../../src/utils/v2TransitionRouting.mjs';
 import { resolveBrowserFinalMountRequest } from './browser-final-base-path.mjs';
-import { resolveCustomOrderHeadingSize, resolveSplitHubHeadingSize } from './h2-responsive-type-scale.mjs';
+import { evaluateResponsiveTypeScale, resolveCustomOrderHeadingSize, resolveSplitHubHeadingSize, resolveToolTypeScale } from './h2-responsive-type-scale.mjs';
 import { evaluateResponsiveTextOverflow } from './h2-responsive-text-contract.mjs';
 import {
   evaluateEntranceClsDelta,
   evaluateTransitionFrameEvidence
 } from './h2-motion-evidence-contracts.mjs';
+import { installHeldNavigationCapture } from './h2-covered-navigation-capture.mjs';
 
 const root = process.cwd();
 const distRoot = path.join(root, 'dist');
@@ -1239,27 +1240,6 @@ const captureH3CoveredAtEvent = async ({ fromHref, targetHref }) => {
   await resetTrace();
   storageEvents.length = 0;
 
-  const interceptionReady = await evaluate(`(() => {
-    if (!window.navigation || typeof window.navigation.addEventListener !== 'function') return false;
-    window.__smu1H4CoveredNavigation = { prevented: false, cancelable: false, destination: '' };
-    window.navigation.addEventListener('navigate', (event) => {
-      const destination = event.destination?.url || '';
-      if (destination !== ${JSON.stringify(targetHref)}) return;
-      window.__smu1H4CoveredNavigation.cancelable = event.cancelable;
-      window.__smu1H4CoveredNavigation.destination = destination;
-      if (!event.cancelable) return;
-      event.preventDefault();
-      window.__smu1H4CoveredNavigation.prevented = true;
-    }, { once: true });
-    return true;
-  })()`);
-  if (!interceptionReady) throw new Error('Navigation API is unavailable for H3 covered capture.');
-
-  await fireRouteClick(targetHref, {
-    label: classify(targetHref).canonicalLabel
-  });
-  const held = await waitForCondition(`window.__smu1H4CoveredNavigation?.prevented === true
-    && document.documentElement.dataset.v2PageState === 'navigating'`, 3500, 5);
   const expectedLabel = classify(targetHref).canonicalLabel;
   const coveredGeometryExpression = `(() => {
     const html = document.documentElement;
@@ -1297,10 +1277,21 @@ const captureH3CoveredAtEvent = async ({ fromHref, targetHref }) => {
       transitionLabel: label?.textContent?.trim() || '',
       token,
       viewport: { width: innerWidth, height: innerHeight, dpr: devicePixelRatio },
-      interception: window.__smu1H4CoveredNavigation || null
+      interception: window.__smu1H4CoveredNavigation ? { ...window.__smu1H4CoveredNavigation } : null
     };
   })()`;
-  const geometry = await evaluate(coveredGeometryExpression);
+  const interceptionReady = await evaluate(`(${installHeldNavigationCapture.toString()})(
+    ${JSON.stringify(targetHref)}, () => ${coveredGeometryExpression})`);
+  if (!interceptionReady) throw new Error('Navigation API is unavailable for H3 covered capture.');
+
+  await fireRouteClick(targetHref, { label: expectedLabel });
+  const held = await waitForCondition(`window.__smu1H4CoveredNavigation?.prevented === true
+    && document.documentElement.dataset.v2PageState === 'navigating'`, 3500, 5);
+  const geometry = await evaluate('window.__smu1H4CoveredGeometry || null');
+  // A semantic event sample and a PNG have different observation times. Keep
+  // fresh geometry on both sides of the PNG; the event snapshot cannot stand
+  // in for either live observation while CDP or the screenshot is delayed.
+  const preCaptureGeometry = held ? await evaluate(coveredGeometryExpression) : null;
   const filename = held ? await screenshot('sheet-03-covered-event', {
     directory: 'final/transitions/h3',
     flow: 'home-to-topiary-covered-event',
@@ -1314,15 +1305,21 @@ const captureH3CoveredAtEvent = async ({ fromHref, targetHref }) => {
     || outgoingTrace.find((row) => row.pageState === 'covering');
   const covered = traceEvents(outgoingTrace, 'v2:page-covered')[0]
     || outgoingTrace.find((row) => row.pageState === 'covered');
+  // Backwards-compatible field: actualOffset now explicitly records the
+  // synchronous semantic sample. The manifest's PNG offset stays separate.
   const actualOffset = covering && Number.isFinite(geometry?.sampledAt)
     ? geometry.sampledAt - covering.at : null;
+  const captureStartOffset = covering && Number.isFinite(preCaptureGeometry?.sampledAt)
+    ? preCaptureGeometry.sampledAt - covering.at : null;
   const captureEndOffset = covering && Number.isFinite(postCaptureGeometry?.sampledAt)
     ? postCaptureGeometry.sampledAt - covering.at : null;
   const coveredEventOffset = covering && covered ? covered.at - covering.at : null;
   if (filename) {
     const capture = captureManifest.at(-1);
     if (capture?.filename.endsWith('sheet-03-covered-event.png')) {
-      capture.actualCaptureOffset = actualOffset;
+      capture.actualCaptureOffset = captureStartOffset;
+      capture.semanticSampleOffset = actualOffset;
+      capture.captureWindowStartOffset = captureStartOffset;
       capture.captureWindowEndOffset = captureEndOffset;
       capture.coveredEventOffset = coveredEventOffset;
     }
@@ -1356,8 +1353,11 @@ const captureH3CoveredAtEvent = async ({ fromHref, targetHref }) => {
   return {
     filename,
     geometry,
+    preCaptureGeometry,
     postCaptureGeometry,
     actualOffset,
+    semanticSampleOffset: actualOffset,
+    captureStartOffset,
     captureEndOffset,
     coveredEventOffset,
     held,
@@ -1673,6 +1673,7 @@ const transitionFilmstripAudit = async () => {
     targetHref: hrefFor(routes.deep)
   });
   const coveredGeometry = coveredCapture.geometry;
+  const coveredPreGeometry = coveredCapture.preCaptureGeometry;
   const coveredPostGeometry = coveredCapture.postCaptureGeometry;
   const coveredExpectedLabel = classify(hrefFor(routes.deep)).canonicalLabel;
   let coveredToken = null;
@@ -1698,6 +1699,15 @@ const transitionFilmstripAudit = async () => {
     && coveredGeometry?.gridVisible
     && coveredGeometry?.labelVisible
     && coveredGeometry?.transitionLabel === coveredExpectedLabel
+    && coveredPreGeometry?.href === coveredGeometry.href
+    && coveredPreGeometry?.pageState === 'navigating'
+    && coveredPreGeometry?.pageVariant === 'h3'
+    && coveredPreGeometry?.locked
+    && coveredPreGeometry?.sheetLeft <= 3
+    && coveredPreGeometry?.sheetRight >= coveredPreGeometry?.overlayWidth - 3
+    && coveredPreGeometry?.gridVisible
+    && coveredPreGeometry?.labelVisible
+    && coveredPreGeometry?.token === coveredGeometry.token
     && coveredPostGeometry?.href === coveredGeometry.href
     && coveredPostGeometry?.pageState === 'navigating'
     && coveredPostGeometry?.locked
@@ -1713,6 +1723,8 @@ const transitionFilmstripAudit = async () => {
     && coveredSemanticEvent
     && coveredCapture.actualOffset >= 250
     && coveredCapture.actualOffset <= 360
+    && coveredCapture.captureStartOffset >= coveredCapture.actualOffset
+    && coveredCapture.captureEndOffset >= coveredCapture.captureStartOffset
     && coveredCapture.captureEndOffset >= coveredCapture.actualOffset
     && coveredCapture.captureEndOffset < 1000
     && coveredCapture.coveredEventOffset >= 250
@@ -1936,8 +1948,11 @@ const transitionFilmstripAudit = async () => {
         filename: coveredCapture.filename,
         verified: coveredFrameVerified,
         geometry: coveredCapture.geometry,
+        preCaptureGeometry: coveredCapture.preCaptureGeometry,
         postCaptureGeometry: coveredCapture.postCaptureGeometry,
         actualOffset: coveredCapture.actualOffset,
+        semanticSampleOffset: coveredCapture.semanticSampleOffset,
+        captureStartOffset: coveredCapture.captureStartOffset,
         captureEndOffset: coveredCapture.captureEndOffset,
         coveredEventOffset: coveredCapture.coveredEventOffset,
         arrivalProof: coveredCapture.arrivalProof,
@@ -3904,7 +3919,8 @@ const responsiveHeaderTypographyAudit = async () => {
     if (!byKind.has(descriptor.routeKind)) byKind.set(descriptor.routeKind, descriptor);
   });
   const representatives = [...byKind.values()];
-  const readMetrics = () => evaluate(`(() => {
+  const readMetrics = (typeSelectors = null) => evaluate(`(() => {
+    const typeSelectors = ${JSON.stringify(typeSelectors)};
     const html = document.documentElement;
     const header = document.querySelector('[data-home-v2-header]');
     const brand = header?.querySelector('.hv2-header__brand');
@@ -3918,8 +3934,8 @@ const responsiveHeaderTypographyAudit = async () => {
     const search = header?.querySelector('[data-search-open]');
     const menu = header?.querySelector('[data-hv2-mobile-open]');
     const main = document.querySelector('main');
-    const h1 = main?.querySelector('h1,[data-v2-entrance-role="title-primary"]');
-    const h2 = main?.querySelector([
+    const h1 = main?.querySelector(typeSelectors?.h1 || 'h1,[data-v2-entrance-role="title-primary"]');
+    const h2 = main?.querySelector(typeSelectors?.h2 || [
       '.home-final .hf-section-head h2',
       '.home-final .hf-intake__intro h2',
       '.catalog-v2 .v2-section-heading h2',
@@ -3965,7 +3981,7 @@ const responsiveHeaderTypographyAudit = async () => {
       '.custom-order-v2 .custom-order-directions h2',
       '.custom-order-v2 .custom-order-contact h2'
     ].join(','));
-    const lead = main?.querySelector([
+    const lead = main?.querySelector(typeSelectors?.lead || [
       '.home-final .hf-hero__lead',
       '.hv2-hero__lead',
       '.catalog-v2[data-product-final-prototype="hub"] .v2-catalog-hero__lead',
@@ -4075,6 +4091,8 @@ const responsiveHeaderTypographyAudit = async () => {
     return null;
   };
   const typeScaleFor = (routeKind, width, pathname = '') => {
+    const toolScale = resolveToolTypeScale(routeKind, width);
+    if (toolScale) return toolScale;
     const family = typeFamilyForRouteKind(routeKind);
     if (!family) return null;
     const breakpoint = width <= 760 ? 'mobile' : width <= 1180 ? 'tablet' : 'desktop';
@@ -4145,7 +4163,8 @@ const responsiveHeaderTypographyAudit = async () => {
         scrollTo(0, 0);
       })()`);
       await settle(80);
-      const initial = await readMetrics();
+      const typeScale = typeScaleFor(descriptor.routeKind, viewport.width, descriptor.pathname);
+      const initial = await readMetrics(typeScale?.selectors);
       const scrollTarget = await evaluate(`(() => {
         const header = document.querySelector('[data-home-v2-header]');
         const boundary = document.querySelector('[data-hv2-hero], [data-immersive-direction-hero], [data-v2-hero-scroll]');
@@ -4164,7 +4183,7 @@ const responsiveHeaderTypographyAudit = async () => {
       await settle(120);
       await evaluate('scrollBy(0, -24)');
       await settle(80);
-      const scrolled = await readMetrics();
+      const scrolled = await readMetrics(typeScale?.selectors);
       const metricId = `${descriptor.routeKind}-${viewport.width}x${viewport.height}`;
       const headerExpected = expectedHeaderHeight(viewport.width);
       const logoExpected = expectedLogoWidth(viewport.width);
@@ -4240,14 +4259,8 @@ const responsiveHeaderTypographyAudit = async () => {
       const h1 = initial.type.h1;
       const h2 = initial.type.h2;
       const lead = initial.type.lead;
-      const typeScale = typeScaleFor(descriptor.routeKind, viewport.width, descriptor.pathname);
-      const h2Ok = !h2 || Boolean(typeScale)
-        && Math.abs(h2.fontSize - typeScale.h2) <= typeScale.tolerance;
-      const leadOk = !lead || Boolean(typeScale)
-        && Math.abs(lead.fontSize - typeScale.lead) <= typeScale.tolerance;
-      const typeOk = Boolean(typeScale && h1)
-        && Math.abs(h1.fontSize - typeScale.h1) <= typeScale.tolerance
-        && h2Ok && leadOk;
+      const typography = evaluateResponsiveTypeScale(typeScale, initial.type);
+      const typeOk = typography.ok;
       const textOverflow = evaluateResponsiveTextOverflow({ initial: initial.type, scrolled: scrolled.type });
       const overflowOk = initial.overflow <= 1 && scrolled.overflow <= 1
         && textOverflow.ok
@@ -4275,6 +4288,7 @@ const responsiveHeaderTypographyAudit = async () => {
         telegramGeometryOk,
         headerVisualOk,
         typeOk,
+        typography,
         overflowOk,
         textOverflow,
         evidenceOk,
