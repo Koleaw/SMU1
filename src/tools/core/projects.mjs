@@ -3,20 +3,21 @@ export const storageKey='smu1.tools.projects.v1';
 export const maxFileBytes=4*1024*1024;
 export const toolIds=['metal','raskroy','fundament','ograzhdenie','plitka','maf','zdanie'];
 export const newId=()=>globalThis.crypto?.randomUUID?.()||`p-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const isRecord=value=>Boolean(value)&&typeof value==='object'&&!Array.isArray(value)&&[Object.prototype,null].includes(Object.getPrototypeOf(value));
 export function bounded(value,depth=0) {
   if(depth>12)throw new Error('Слишком глубокая структура файла.');
   if(value===null || typeof value==='boolean')return;
   if(typeof value==='string') {if(value.length>20000)throw new Error('Слишком длинное значение.');return;}
   if(typeof value==='number') {if(!Number.isFinite(value)||Math.abs(value)>1e14)throw new Error('Недопустимое число.');return;}
   if(Array.isArray(value)){if(value.length>5000)throw new Error('Слишком много элементов.');value.forEach(v=>bounded(v,depth+1));return;}
-  if(typeof value!=='object')throw new Error('Недопустимый формат данных.');
+  if(!isRecord(value))throw new Error('Недопустимый формат данных.');
   const keys=Object.keys(value);if(keys.length>100)throw new Error('Слишком много полей.');
   keys.forEach(k=>{if(['__proto__','constructor','prototype'].includes(k))throw new Error('Недопустимое имя поля.');bounded(value[k],depth+1);});
 }
 // Strict draft shape permits empty numeric controls, but rejects unknown fields before any write.
 export function validateShape(value,template,path='input') {
   if(Array.isArray(template)) { if(!Array.isArray(value)||value.length>200)throw new Error(`${path}: неверный список или более 200 строк.`);if(template.length) value.forEach((v,i)=>validateShape(v,template[0],`${path}.${i}`));return; }
-  if(template && typeof template==='object') {if(!value||Array.isArray(value)||typeof value!=='object')throw new Error(`${path}: неверная структура.`);for(const key of Object.keys(value))if(!(key in template)||['__proto__','constructor','prototype'].includes(key))throw new Error(`${path}.${key}: неизвестное поле.`);for(const key of Object.keys(template)) {if(!(key in value))throw new Error(`${path}.${key}: отсутствует поле.`);validateShape(value[key],template[key],`${path}.${key}`);}return;}
+  if(template && typeof template==='object') {if(!isRecord(value))throw new Error(`${path}: неверная структура.`);for(const key of Object.keys(value))if(!Object.hasOwn(template,key)||['__proto__','constructor','prototype'].includes(key))throw new Error(`${path}.${key}: неизвестное поле.`);for(const key of Object.keys(template)) {if(!Object.hasOwn(value,key))throw new Error(`${path}.${key}: отсутствует поле.`);validateShape(value[key],template[key],`${path}.${key}`);}return;}
   if(typeof template==='boolean') {if(typeof value!=='boolean')throw new Error(`${path}: требуется переключатель.`);}
   else if(!['string','number'].includes(typeof value)&&value!==null)throw new Error(`${path}: требуется значение.`);
   if(typeof value==='string'&&value.length>2000)throw new Error(`${path}: не более 2000 символов.`);
@@ -25,9 +26,13 @@ export function validateProject(project) {
   bounded(project);
   const required=['id','tool','name','input','methodologyVersion','referenceVersions','createdAt','updatedAt','demo'];
   const allowed=[...required,'resultSnapshot','snapshotText','imported'];
-  if(!project||Array.isArray(project)||Object.keys(project).some(k=>!allowed.includes(k))||required.some(k=>!(k in project)))throw new Error('Некорректная структура расчёта.');
-  if(typeof project.id!=='string'||project.id.length>100||!toolIds.includes(project.tool)||typeof project.name!=='string'||!project.name.trim()||project.name.length>120)throw new Error('Неверное название или тип расчёта.');
-  if(!/^\d+\.\d+\.\d+$/.test(project.methodologyVersion)||!project.referenceVersions||Array.isArray(project.referenceVersions)||typeof project.referenceVersions!=='object'||typeof project.demo!=='boolean')throw new Error('Неверная версия расчёта.');
+  if(!isRecord(project)||Object.keys(project).some(k=>!allowed.includes(k))||required.some(k=>!Object.hasOwn(project,k))||!isRecord(project.input))throw new Error('Некорректная структура расчёта.');
+  if(typeof project.id!=='string'||!project.id.trim()||project.id.length>100||!toolIds.includes(project.tool)||typeof project.name!=='string'||!project.name.trim()||project.name.length>120)throw new Error('Неверное название или тип расчёта.');
+  if(typeof project.methodologyVersion!=='string'||project.methodologyVersion.length>40||!/^\d+\.\d+\.\d+$/.test(project.methodologyVersion)||!isRecord(project.referenceVersions)||typeof project.demo!=='boolean')throw new Error('Неверная версия расчёта.');
+  for(const [key,version] of Object.entries(project.referenceVersions))if(!key.trim()||key.length>100||typeof version!=='string'||!version.trim()||version.length>120)throw new Error('Неверная версия справочника.');
+  if(Object.hasOwn(project,'imported')&&typeof project.imported!=='boolean')throw new Error('Некорректный признак импортированного расчёта.');
+  if(Object.hasOwn(project,'snapshotText')&&typeof project.snapshotText!=='string')throw new Error('Исторический текст результата должен быть строкой.');
+  if(Object.hasOwn(project,'resultSnapshot')&&!isRecord(project.resultSnapshot))throw new Error('Исторический снимок результата должен быть объектом.');
   for(const date of [project.createdAt,project.updatedAt])if(typeof date!=='string'||!Number.isFinite(Date.parse(date)))throw new Error('Неверная дата расчёта.');
   return project;
 }
@@ -46,7 +51,10 @@ export function parseFile(raw) {
 }
 export function serialize(projects) {return JSON.stringify({format:'smu1-tools',version:1,projects},null,2);}
 export function writeProjects(storage,projects) {
+  if(!Array.isArray(projects))throw new Error('Некорректная папка расчётов.');
   if(projects.length>60)throw new Error('В папке уже 60 расчётов. Сохраните архив файлом и удалите ненужные.');
+  projects.forEach(validateProject);
+  if(new Set(projects.map(p=>p.id)).size!==projects.length)throw new Error('В папке повторяются ID расчётов.');
   const serialized=serialize(projects);if(new TextEncoder().encode(serialized).length>maxFileBytes)throw new Error('Папка превышает 4 МБ. Выгрузите проекты файлом.');
   storage.setItem(storageKey,serialized);
 }
