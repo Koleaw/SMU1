@@ -102,12 +102,15 @@
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-direction-theme] #construction-proof .v2-project-gallery__stage { height: clamp(240px, calc(100svh - var(--hv2-header-height) - 360px), 440px); }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-direction-theme] #construction-proof .v2-project-lightbox img { object-fit: contain; object-position: center; transform: none; }
 
+/* The custom-order composition stays split down to its own 700px breakpoint. */
+@media (min-width: 701px) {
+  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .custom-order-hero__media { padding-top: var(--hv2-header-height); background: #fff; }
+}
 @media (min-width: 981px) {
   /* Navigation occupies real space above media. Changing a gallery frame
      cannot put a dark facade or a bright sky underneath an adjacent control. */
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-product-final-prototype] { --v2-media-header-space: var(--hv2-header-height); }
-  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .immersive-direction-hero:is(.immersive-direction-hero--canopies, .immersive-direction-hero--topiary) .immersive-direction-hero__media,
-  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .custom-order-hero__media { padding-top: var(--v2-media-header-space); background: #fff; }
+  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .immersive-direction-hero:is(.immersive-direction-hero--canopies, .immersive-direction-hero--topiary) .immersive-direction-hero__media { padding-top: var(--v2-media-header-space); background: #fff; }
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-direction-theme][data-product-final-prototype] :is(.v2-catalog-hero__grid, .v2-product-top__grid, .v2-premium-product-hero__inner) {
     width: 100%; max-width: none; padding-inline: 0; margin-inline: 0; gap: 0;
     grid-template-columns: repeat(2, minmax(0, 1fr));

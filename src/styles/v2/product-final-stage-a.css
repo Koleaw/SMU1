@@ -807,7 +807,7 @@
 
   .catalog-v2[data-catalog-v2-root][data-product-final-prototype='standard-product'] .v2-product-summary__meta > div {
     min-height: 52px;
-    grid-template-columns: 112px minmax(0, 1fr);
+    --v2-meta-label-width: 112px;
     border-bottom-color: rgba(255, 255, 255, 0.3);
   }
 

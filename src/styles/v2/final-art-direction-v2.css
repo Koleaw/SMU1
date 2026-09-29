@@ -56,7 +56,7 @@
 }
 
 .home-v2-body :where(h1, h2, h3) {
-  overflow-wrap: normal !important;
+  overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
   text-wrap: balance;

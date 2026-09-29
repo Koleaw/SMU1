@@ -898,15 +898,17 @@ a:focus-visible .v2-card-link i {
 }
 
 .v2-product-summary__meta > div {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   min-height: 56px;
-  grid-template-columns: 104px 1fr;
   align-items: center;
-  gap: 18px;
+  gap: 8px 18px;
   border-bottom: 1px solid var(--hv2-border-neutral);
 }
 
 .v2-product-summary__meta dt {
+  flex: 0 0 auto;
+  min-width: var(--v2-meta-label-width, 104px);
   color: var(--hv2-text-secondary);
   font-size: 10px;
   font-weight: 700;
@@ -915,6 +917,7 @@ a:focus-visible .v2-card-link i {
 }
 
 .v2-product-summary__meta dd {
+  flex: 1 1 min-content;
   margin: 0;
   font-size: 14px;
   font-weight: 700;
@@ -2122,7 +2125,7 @@ a:focus-visible .v2-card-link i {
   }
 
   .v2-product-summary__meta > div {
-    grid-template-columns: 94px 1fr;
+    --v2-meta-label-width: 94px;
   }
 }
 

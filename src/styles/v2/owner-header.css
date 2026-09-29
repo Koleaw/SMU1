@@ -58,7 +58,10 @@
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2:is(.catalog-v2--fence-no-media, .catalog-v2--standard-no-media) { --smu-header-right-ink: #fff; }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2:is(.catalog-v2--company, [data-direction-theme='metal'], [data-direction-theme='landscape'], [data-direction-theme='construction']) { --smu-header-right-ink: #fff; }
 @media (max-width: 980px) {
-  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .hv2-header:not(.is-scrolled) :is(.hv2-header__nav-group--right, .hv2-header__tools, .hv2-header__actions, .hv2-header__menu-button) { color: var(--smu-header-left-ink, #fff); }
+  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2:not([data-product-final-prototype='custom']) .hv2-header:not(.is-scrolled) :is(.hv2-header__nav-group--right, .hv2-header__tools, .hv2-header__actions, .hv2-header__menu-button) { color: var(--smu-header-left-ink, #fff); }
+}
+@media (max-width: 700px) {
+  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-product-final-prototype='custom'] .hv2-header:not(.is-scrolled) :is(.hv2-header__tools, .hv2-header__menu-button) { color: var(--smu-header-left-ink, #fff); }
 }
 @media (max-width: 380px) {
   :root[data-v2-public-route='true'] .home-v2-body .hv2-header .hv2-header__inner { gap: 12px; }
