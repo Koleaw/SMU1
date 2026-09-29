@@ -172,11 +172,10 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
             <span class="hv2-header__dropdown-indicator-close">−</span>
           </span>
         </button>
-        <div class="hv2-dropdown__panel" id={productsMenuId} data-hv2-dropdown-panel>
-          <p class="hv2-dropdown__eyebrow" {...globalBinding('shellLabels.productsMenuEyebrow')}>{shellLabels.productsMenuEyebrow}</p>
+        <div class="hv2-dropdown__panel" id={productsMenuId} data-hv2-dropdown-panel inert aria-hidden="true">
           <div class="hv2-dropdown__links">
-            {productLinks.map((item) => (
-              <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-dropdown-link {...navigationAttributes(item, 'desktop-product')}>
+            {productLinks.map((item, index) => (
+              <a href={path(item.href)} tabindex="-1" style={`--menu-index:${index}`} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-dropdown-link {...navigationAttributes(item, 'desktop-product')}>
                 <span>{item.label}</span>
               </a>
             ))}
@@ -208,16 +207,15 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
             <span class="hv2-header__dropdown-indicator-close">−</span>
           </span>
         </button>
-        <div class="hv2-dropdown__panel hv2-dropdown__panel--right" id={companyMenuId} data-hv2-dropdown-panel>
-          <p class="hv2-dropdown__eyebrow" {...globalBinding('companyShortName')}>{settings.companyShortName}</p>
+        <div class="hv2-dropdown__panel hv2-dropdown__panel--right" id={companyMenuId} data-hv2-dropdown-panel inert aria-hidden="true">
           <div class="hv2-dropdown__links">
-            {companyLinks.map((item) => (
-              <a href={path(item.href)} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-dropdown-link {...navigationAttributes(item, 'desktop-company')}>
+            {companyLinks.map((item, index) => (
+              <a href={path(item.href)} tabindex="-1" style={`--menu-index:${index}`} aria-current={currentState(item.href)} data-v2-transition-label={transitionLabel(item.href, item.label)} data-hv2-dropdown-link {...navigationAttributes(item, 'desktop-company')}>
                 <span>{item.label}</span>
               </a>
             ))}
+            {isHome && <button class="hv2-menu-video-toggle" style="--menu-index:3" type="button" data-hf-video-toggle hidden aria-pressed="false"><span data-hf-video-toggle-label>Фоновое видео</span></button>}
           </div>
-          {isHome && <button class="hv2-menu-video-toggle" type="button" data-hf-video-toggle hidden aria-pressed="false"><span data-hf-video-toggle-label>Фоновое видео</span></button>}
         </div>
       </div>
       </div>
@@ -337,11 +335,6 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
     display: contents;
   }
 
-  /* Visibility must switch immediately so the first ArrowDown can focus a link. */
-  .hv2-dropdown.is-open .hv2-dropdown__panel {
-    transition-property: opacity, transform;
-  }
-
   :global(html.hv2-menu-open .cookie-banner) {
     display: none;
   }
@@ -361,6 +354,7 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
     const dropdowns = Array.from(header.querySelectorAll<HTMLElement>('[data-hv2-dropdown]'));
     const clickedDropdowns = new WeakSet<HTMLElement>();
     let closeTimer = 0;
+    let restoringDropdownFocus = false;
     const revealHeader = () => header.classList.remove('is-hidden');
     header.addEventListener('focusin', revealHeader);
 
@@ -369,7 +363,15 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
       group.classList.remove('is-open');
       clickedDropdowns.delete(group);
       trigger?.setAttribute('aria-expanded', 'false');
-      if (restoreFocus) trigger?.focus();
+      const panel = group.querySelector<HTMLElement>('[data-hv2-dropdown-panel]');
+      panel?.setAttribute('inert', '');
+      panel?.setAttribute('aria-hidden', 'true');
+      panel?.querySelectorAll<HTMLElement>('a, button').forEach((link) => link.tabIndex = -1);
+      if (restoreFocus) {
+        restoringDropdownFocus = true;
+        trigger?.focus({ preventScroll: true });
+        restoringDropdownFocus = false;
+      }
     };
 
     const closeAllDropdowns = (except?: HTMLElement) => {
@@ -385,6 +387,10 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
       const trigger = group.querySelector<HTMLButtonElement>('[data-hv2-dropdown-trigger]');
       group.classList.add('is-open');
       trigger?.setAttribute('aria-expanded', 'true');
+      const panel = group.querySelector<HTMLElement>('[data-hv2-dropdown-panel]');
+      panel?.removeAttribute('inert');
+      panel?.setAttribute('aria-hidden', 'false');
+      panel?.querySelectorAll<HTMLElement>('a, button').forEach((link) => link.removeAttribute('tabindex'));
       if (focusFirst) {
         const firstLink = group.querySelector<HTMLAnchorElement>('[data-hv2-dropdown-link]');
         firstLink?.focus();
@@ -407,7 +413,7 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
         if (event.pointerType !== 'mouse') return;
         closeTimer = window.setTimeout(() => closeDropdown(group), 180);
       });
-      group.addEventListener('focusin', () => openDropdown(group));
+      group.addEventListener('focusin', () => { if (!restoringDropdownFocus) openDropdown(group); });
       group.addEventListener('focusout', (event) => {
         const next = event.relatedTarget;
         if (!(next instanceof Node) || !group.contains(next)) {
@@ -438,12 +444,15 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
         if (event.key === 'Escape') {
           event.preventDefault();
           closeDropdown(group, true);
-        } else if (event.key === 'ArrowDown' && links.length) {
+        } else if ((event.key === 'ArrowDown' || event.key === 'ArrowRight') && links.length) {
           event.preventDefault();
           links[(currentIndex + 1 + links.length) % links.length]?.focus();
-        } else if (event.key === 'ArrowUp' && links.length) {
+        } else if ((event.key === 'ArrowUp' || event.key === 'ArrowLeft') && links.length) {
           event.preventDefault();
           links[(currentIndex - 1 + links.length) % links.length]?.focus();
+        } else if ((event.key === 'Home' || event.key === 'End') && links.length) {
+          event.preventDefault();
+          links[event.key === 'Home' ? 0 : links.length - 1]?.focus();
         }
       });
     });
@@ -467,6 +476,7 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
         && Boolean(header.closest('[data-catalog-v2-root]'))
         && currentScrollY > Math.max(64, header.offsetHeight);
       const solid = header.dataset.hv2HeaderMode === 'light'
+        || currentScrollY > 4
         || !heroBoundary
         || stackedHeroScrolled
         || heroBoundary.getBoundingClientRect().bottom <= header.offsetHeight;

@@ -3,6 +3,7 @@ import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import V2Breadcrumbs from './V2Breadcrumbs.astro';
 import V2ResponsiveImage from './V2ResponsiveImage.astro';
+import { mediaBackground } from '../../utils/v2MediaPresentation';
 import { adminBinding } from '../../admin/bindings/adminBinding';
 import {
   catalogMediaPresentation,
@@ -73,6 +74,7 @@ const secondaryLabelBinding = Astro.props.secondaryLabelBinding ?? {};
 const hasBreadcrumbs = breadcrumbs.length > 0 || Astro.slots.has('breadcrumbs');
 const imagePresentationStyle = [
   imageViewStyle(imageView),
+  `background:${mediaBackground(image)}`,
   `--v2-image-source-x:${imageView?.positionX ?? 50}%`,
   `--v2-image-source-y:${imageView?.positionY ?? 50}%`,
   `--v2-image-source-scale:${imageView?.scale ?? 1}`

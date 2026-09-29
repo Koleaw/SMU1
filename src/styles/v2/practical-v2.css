@@ -223,7 +223,7 @@ body.home-v2-body:has(:is(.catalog-v2--company, .practical-v2--contacts, .practi
   letter-spacing: -0.052em;
 }
 
-.practical-company__hero-lead {
+.practical-company .practical-company__hero-lead {
   max-width: 760px;
   margin-top: 24px;
   color: rgba(255, 255, 255, 0.86);
@@ -578,7 +578,7 @@ body.home-v2-body:has(:is(.catalog-v2--company, .practical-v2--contacts, .practi
     line-height: 1.02;
   }
 
-  .practical-company__hero-lead {
+  .practical-company .practical-company__hero-lead {
     margin-top: 18px;
     font-size: 16px;
     line-height: 1.48;

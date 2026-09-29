@@ -9,6 +9,7 @@ import V2ProjectGallery from './V2ProjectGallery.astro';
 import V2ProjectMeta from './V2ProjectMeta.astro';
 import V2SectionNav from '../V2SectionNav.astro';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
+import { resolveV2ResponsiveMedia } from '../../../utils/v2ResponsiveMedia';
 import '../../../styles/v2/projects-v2.css';
 import { adminBinding, isLocalAdminCanvas } from '../../../admin/bindings/adminBinding';
 import settings from '../../../content/site-settings/global.json';
@@ -51,6 +52,8 @@ const categoryFieldPath = project.category?.trim()
       ? 'shortCategory'
       : 'category';
 const heroLead = project.result?.trim() || project.shortDescription;
+const heroDimensions = heroMedia ? resolveV2ResponsiveMedia(heroMedia.src, 'hero') : null;
+const heroRatio = heroDimensions?.width && heroDimensions?.height ? heroDimensions.width / heroDimensions.height : 1.5;
 const additionalFacts = [
   project.summary && project.summary !== project.shortDescription ? { title: settings.projectUi.detailFactSummaryLabel, titleField: 'detailFactSummaryLabel', text: project.summary, fieldPath: 'summary' } : null,
   project.task ? { title: settings.projectUi.detailFactTaskLabel, titleField: 'detailFactTaskLabel', text: project.task, fieldPath: 'task' } : null,
@@ -113,8 +116,8 @@ const sectionNavItems = [
       </div>
       {heroMedia && (
         <figure
-          class="v2-project-detail__hero-media"
-          style={`--v2-project-hero-position: ${detailHeroPosition};`}
+          class:list={['v2-project-detail__hero-media', { 'v2-project-detail__hero-media--portrait': heroRatio < 1 }]}
+          style={`--v2-project-hero-position: ${detailHeroPosition}; --project-hero-ratio: ${heroRatio};`}
           data-v2-media
           data-v2-reveal
           data-v2-entrance-role="media"
@@ -124,7 +127,7 @@ const sectionNavItems = [
             src={heroMedia.src}
             alt={heroMedia.alt}
             role="hero"
-            sizes="(max-width: 760px) calc(100vw - 32px), 56vw"
+            sizes={heroRatio < 1 ? `(max-width: 760px) min(calc(100vw - 32px), ${Math.round(500 * heroRatio)}px), ${Math.round(500 * heroRatio)}px` : '(max-width: 760px) calc(100vw - 32px), 56vw'}
             loading="eager"
             fetchpriority="high"
             decoding="async"

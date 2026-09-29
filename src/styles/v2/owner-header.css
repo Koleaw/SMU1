@@ -14,7 +14,7 @@
   transform: none; pointer-events: none;
 }
 :root[data-v2-public-route='true'] .home-v2-body .hv2-header .hv2-header__nav-group {
-  display: flex; min-width: 0; align-items: stretch; gap: 16px; pointer-events: none;
+  display: flex; min-width: 0; align-items: stretch; gap: 16px; pointer-events: none; position: static;
 }
 :root[data-v2-public-route='true'] .home-v2-body .hv2-header .hv2-header__nav-group > * { flex: 0 0 auto; pointer-events: auto; }
 :root[data-v2-public-route='true'] .home-v2-body .hv2-header .hv2-header__nav-group--left { justify-content: flex-end; }
@@ -55,24 +55,8 @@
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .hv2-header:not(.is-scrolled) :is(.hv2-header__nav-group--left, .hv2-header__brand) { color: var(--smu-header-left-ink, #fff); }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .hv2-header:not(.is-scrolled) :is(.hv2-header__nav-group--right, .hv2-header__tools, .hv2-header__actions, .hv2-header__menu-button) { color: var(--smu-header-right-ink, #15232c); text-shadow: none; }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .hv2-header:not(.is-scrolled) :where(a, button):focus-visible { outline-color: currentColor; }
-:root[data-v2-public-route='true'] .home-v2-body .catalog-v2:is(.catalog-v2--fence-no-media, .catalog-v2--standard-no-media, [data-product-final-prototype='custom']) { --smu-header-right-ink: #fff; }
+:root[data-v2-public-route='true'] .home-v2-body .catalog-v2:is(.catalog-v2--fence-no-media, .catalog-v2--standard-no-media) { --smu-header-right-ink: #fff; }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2:is(.catalog-v2--company, [data-direction-theme='metal'], [data-direction-theme='landscape'], [data-direction-theme='construction']) { --smu-header-right-ink: #fff; }
-/* The custom-order photograph crosses from wall to roof beneath the tools.
-   Give the existing controls a stable surface while navigation stays white. */
-@media (min-width: 701px) {
-  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-product-final-prototype='custom'] .hv2-header:not(.is-scrolled) :is(.hv2-search-open, .hv2-header__menu-button) {
-    color: #15232c; background: #fff; border: 1px solid #15232c;
-  }
-  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-product-final-prototype='custom'] .hv2-header:not(.is-scrolled) :is(.hv2-search-open, .hv2-header__menu-button):hover {
-    color: #15232c; background: #eef2f5;
-  }
-  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-product-final-prototype='custom'] .hv2-header:not(.is-scrolled) :is(.hv2-search-open, .hv2-header__menu-button):focus-visible {
-    outline: 3px solid #15232c; outline-offset: 3px; box-shadow: 0 0 0 4px #fff;
-  }
-}
-@media (max-width: 700px) {
-  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-product-final-prototype='custom'] .hv2-header:not(.is-scrolled) .hv2-header__menu-button { background: transparent; }
-}
 @media (max-width: 980px) {
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .hv2-header:not(.is-scrolled) :is(.hv2-header__nav-group--right, .hv2-header__tools, .hv2-header__actions, .hv2-header__menu-button) { color: var(--smu-header-left-ink, #fff); }
 }
@@ -83,3 +67,12 @@
 .hv2-menu-video-toggle { display: block; width: 100%; min-height: 48px; padding: 16px 0; border-top: 1px solid #ccd3d9; text-align: left; color: #253c50; font-size: 14px; }
 .hv2-menu-video-toggle[hidden] { display: none; }
 .hv2-menu-video-toggle:focus-visible { outline: 2px solid #1e4fa3; outline-offset: 3px; }
+
+/* The measured desktop mode and its mobile replacement switch together. */
+@media (min-width: 1101px) {
+  :root[data-v2-public-route='true'] .home-v2-body .hv2-header[data-header-compact='false'] .hv2-header__nav { display: grid; }
+  :root[data-v2-public-route='true'] .home-v2-body .hv2-header[data-header-compact='false'] .hv2-header__menu-button { display: none; }
+}
+:root[data-v2-public-route='true'] .hv2-header .hv2-dropdown__links a[aria-current] { color: inherit; }
+:root[data-v2-public-route='true'] .hv2-header .hv2-dropdown__links a[aria-current]::after { opacity: .55; transform: none; }
+:root[data-v2-public-route='true'] .hv2-header .hv2-dropdown__panel .hv2-menu-video-toggle { flex: 0 0 auto; width: auto; min-height: 44px; padding: 8px 0; border: 0; color: inherit; font-size: 13px; }

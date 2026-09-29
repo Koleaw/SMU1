@@ -21,6 +21,14 @@
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root] .v2-sparse-state__content .hv2-text-link { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root] .v2-category-examples__gallery { max-width: none; }
 
+/* Standalone galleries follow the source frame instead of stretching portraits. */
+:root[data-v2-public-route='true'] .home-v2-body .catalog-v2 .v2-product-gallery--natural .v2-product-gallery__stage {
+  width: min(100%, calc(560px * var(--gallery-frame-ratio, 1.5)));
+  height: auto;
+  aspect-ratio: var(--gallery-frame-ratio, 1.5);
+  margin-inline: auto;
+  border: 0;
+}
 /* Arrow shapes are shared by every use of the gallery, including directions. */
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root] .v2-product-gallery__arrows button,
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root] .v2-product-lightbox__arrows button { width: 48px; min-width: 48px; height: 48px; padding: 0; flex: 0 0 48px; }
@@ -38,11 +46,9 @@
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='standard-product'] .v2-product-gallery__stage { padding-bottom: 60px; }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='standard-product'] .v2-product-gallery__media { bottom: 60px; }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='standard-product'] .v2-product-gallery__arrows { bottom: 4px; right: 0; }
-:root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='standard-product'] .v2-product-gallery__status { bottom: 4px; left: 0; padding-inline: 0; color: var(--hv2-muted); background: transparent; font-size: 13px; text-align: left; }
+:root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='standard-product'] .v2-product-gallery__status { bottom: 4px; left: 16px; padding-inline: 0; color: var(--hv2-muted); background: transparent; font-size: 13px; text-align: left; }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='standard-product'] .v2-product-gallery--single .v2-product-gallery__stage { padding-bottom: 0; }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='standard-product'] .v2-product-gallery--single .v2-product-gallery__media { bottom: 0; }
-:root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root] .v2-product-card[data-catalog-product-slug='veloparkovka-marker'] .v2-product-card__media img,
-:root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='standard-product'] [data-catalog-product-slug='veloparkovka-marker'] .v2-product-gallery[data-v2-gallery-current='0'] .v2-product-gallery__open img { transform: scale(1.35) !important; }
 
 /* A compact technical chapter, with a clear level below the page headings. */
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='premium-product'] .v2-premium-product-hero__media { background-image: none; }
@@ -57,7 +63,7 @@
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='standard-product'].catalog-v2--standard-no-media .v2-product-top { min-height: clamp(520px, 65vh, 650px); }
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='category']:not(.catalog-v2--fence-direction) .v2-catalog-hero { min-height: 520px; }
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='category']:not(.catalog-v2--fence-direction) .v2-catalog-hero__copy { padding-top: calc(var(--hv2-header-height) + 22px); padding-bottom: 40px; }
-  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='category']:not(.catalog-v2--fence-direction) .v2-catalog-hero__media { align-self: stretch; height: auto; min-height: 100%; padding: 28px 0 28px 12px; }
+  :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='category']:not(.catalog-v2--fence-direction) .v2-catalog-hero__media { align-self: stretch; height: auto; min-height: 100%; padding: var(--v2-media-header-space) 0 0; }
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='category']:not(.catalog-v2--fence-direction) .v2-catalog-hero h1 { font-size: clamp(42px, 4.05vw, 64px); line-height: 1.03; text-wrap: balance; }
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='category'] .v2-catalog-hero__meta { grid-template-columns: 1fr; gap: 8px; }
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root][data-product-final-prototype='category'].catalog-v2--fence-no-media .v2-catalog-hero { min-height: 560px; }

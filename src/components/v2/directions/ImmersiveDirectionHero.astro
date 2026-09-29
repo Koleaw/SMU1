@@ -1,6 +1,7 @@
 ---
 import { v2Href as resolveV2Href } from '../../../utils/v2Routes';
 import { imageViewStyle } from '../catalogV2Data';
+import { mediaBackground } from '../../../utils/v2MediaPresentation';
 import V2Breadcrumbs from '../V2Breadcrumbs.astro';
 import V2ResponsiveImage from '../V2ResponsiveImage.astro';
 import { resolveV2ResponsiveMedia } from '../../../utils/v2ResponsiveMedia';
@@ -67,10 +68,11 @@ const mediaPositionY = imageView?.positionY ?? 50;
 const mediaScale = imageView?.scale ?? 1;
 const mediaStyle = [
   imageViewStyle(imageView),
+  `background:${mediaBackground(image)}`,
   productFinalHandoff
     ? `--direction-hero-image-fit:${mediaFit};--direction-hero-image-x:${mediaPositionX}%;--direction-hero-image-y:${mediaPositionY}%;--direction-hero-image-scale:${mediaScale};`
     : ''
-].join('');
+].join(';');
 const responsiveMedia = image ? resolveV2ResponsiveMedia(image, 'hero') : null;
 const isolatedMedia = variant === 'canopies' || variant === 'topiary';
 const transitionPlaceholder = isolatedMedia

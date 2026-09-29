@@ -120,8 +120,7 @@
 }
 
 @media (max-width: 1100px) {
-  .catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction'] .hv2-header:not(.is-scrolled),
-  .catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction']:has(.immersive-direction-hero--topiary) .hv2-header:not(.is-scrolled) {
+  .catalog-v2[data-catalog-v2-root][data-product-final-prototype='direction']:not(:has(.immersive-direction-hero--canopies, .immersive-direction-hero--topiary)) .hv2-header:not(.is-scrolled) {
     background: rgba(11, 29, 54, .96);
   }
 }

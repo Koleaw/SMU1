@@ -3,6 +3,7 @@ import { safeInlineJson } from '../../utils/safeInlineJson.mjs';
 import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
 import { imageViewStyle } from './catalogV2Data';
+import { galleryImageView, mediaBackground } from '../../utils/v2MediaPresentation';
 import V2ResponsiveImage from './V2ResponsiveImage.astro';
 import { resolveV2ResponsiveMedia, type V2MediaRole } from '../../utils/v2ResponsiveMedia';
 import { adminBinding } from '../../admin/bindings/adminBinding';
@@ -16,6 +17,7 @@ interface Props {
   entityLabel?: string;
   pageCritical?: boolean;
   mediaSizes?: string;
+  naturalFrame?: boolean;
   bindingOwner?: { collection: string; slug: string };
   bindingField?: string;
   affectedRoutes?: string[];
@@ -32,6 +34,7 @@ const {
   caption = '',
   entityLabel = 'товара',
   pageCritical = false,
+  naturalFrame = false,
   mediaSizes = '(max-width: 760px) calc(100vw - 32px), min(1120px, calc(100vw - 64px))'
 } = Astro.props as Props;
 const galleryImages = Array.from(new Set(images.map((item) => item.trim()).filter(Boolean)));
@@ -46,6 +49,13 @@ for (const item of imageMetadata) {
 }
 const fallbackAlt = (index: number) => hasMultipleImages ? `${title} — фото ${index + 1} из ${galleryImages.length}` : `${title} — фото`;
 const firstImageAlt = metadataBySource.get(galleryImages[0])?.alt || fallbackAlt(0);
+const frameRatio = (source: string) => {
+  const media = resolveV2ResponsiveMedia(source, 'gallery');
+  return media.width && media.height ? media.width / media.height : 1.5;
+};
+const frameSizes = (source: string) => naturalFrame
+  ? `(max-width: 760px) calc(100vw - 32px), min(calc(100vw - 64px), ${Math.round(560 * frameRatio(source))}px)`
+  : frameRatio(source) < 1 ? '(max-width: 980px) 55vw, 32vw' : mediaSizes;
 const responsivePayload = (source: string, role: V2MediaRole, sizes: string) => {
   const media = resolveV2ResponsiveMedia(source, role);
   const serialise = (items: Array<{ path: string; width: number }>) => items
@@ -62,10 +72,12 @@ const responsivePayload = (source: string, role: V2MediaRole, sizes: string) => 
   };
 };
 const galleryPayload = galleryImages.map((source) => ({
-  main: responsivePayload(source, 'gallery', mediaSizes),
+  main: responsivePayload(source, 'gallery', frameSizes(source)),
   lightbox: responsivePayload(source, 'lightbox', '100vw'),
   alt: metadataBySource.get(source)?.alt || '',
-  caption: metadataBySource.get(source)?.caption || ''
+  caption: metadataBySource.get(source)?.caption || '',
+  viewStyle: imageViewStyle(galleryImageView(source, imageView, frameRatio(source))),
+  background: mediaBackground(source)
 }));
 const hasItemCaptions = galleryPayload.some((item) => item.caption);
 const bindingOwner = Astro.props.bindingOwner;
@@ -83,26 +95,28 @@ const captionBinding = Astro.props.captionBinding ?? {};
 ---
 
 <section
-  class:list={['v2-product-gallery', { 'v2-product-gallery--empty': !hasImages, 'v2-product-gallery--single': hasImages && !hasMultipleImages }]}
+  class:list={['v2-product-gallery', { 'v2-product-gallery--natural': naturalFrame, 'v2-product-gallery--empty': !hasImages, 'v2-product-gallery--single': hasImages && !hasMultipleImages }]}
+  style={hasImages ? `--gallery-frame-ratio:${frameRatio(galleryImages[0])};--gallery-hero-ratio:${Math.max(1.25, frameRatio(galleryImages[0]))}` : undefined}
   id={galleryId}
   aria-label={`Галерея: ${title}`}
   data-v2-product-gallery
   data-v2-gallery-current="0"
+  data-gallery-portrait={hasImages && frameRatio(galleryImages[0]) < 1 ? 'true' : 'false'}
   {...galleryBinding}
 >
   <div class="v2-product-gallery__stage" data-v2-gallery-context>
-    <div class="v2-product-gallery__media" data-v2-media>
+    <div class="v2-product-gallery__media" data-v2-media style={`background:${galleryPayload[0]?.background || '#fff'}`}>
       {hasImages ? (
         <button class="v2-product-gallery__open" type="button" aria-label="Открыть текущее изображение на весь экран" data-v2-gallery-open>
           <V2ResponsiveImage
             src={galleryImages[0]}
             alt={firstImageAlt}
             role="gallery"
-            sizes={mediaSizes}
+            sizes={frameSizes(galleryImages[0])}
             loading={pageCritical ? 'eager' : 'lazy'}
             fetchpriority={pageCritical ? 'high' : 'auto'}
             decoding="async"
-            style={imageViewStyle(imageView)}
+            style={galleryPayload[0]?.viewStyle}
             data-v2-gallery-main
             data-v2-page-critical={pageCritical ? '' : undefined}
             {...mediaDisposition}
@@ -215,6 +229,8 @@ const captionBinding = Astro.props.captionBinding ?? {};
         lightbox: ResponsiveCandidate;
         alt?: string;
         caption?: string;
+        viewStyle?: string;
+        background?: string;
       };
       let data: { images?: GalleryCandidate[]; title?: string } = {};
       try {
@@ -331,6 +347,13 @@ const captionBinding = Astro.props.captionBinding ?? {};
       const setCurrent = (index: number, revealThumb = true) => {
         current = normalizedIndex(index);
         gallery.dataset.v2GalleryCurrent = String(current);
+        const frame = sources[current].main;
+        if (frame.width && frame.height) {
+          gallery.style.setProperty('--gallery-frame-ratio', String(frame.width / frame.height));
+          gallery.dataset.galleryPortrait = String(frame.width < frame.height);
+        }
+        if (sources[current].viewStyle) mainImage.style.cssText = sources[current].viewStyle!;
+        media.style.background = sources[current].background || '#fff';
         setImageState(mainImage, media, sources[current].main, altFor(current));
         if (captionElement) {
           captionElement.textContent = sources[current].caption || '';

@@ -41,9 +41,12 @@ const galleryId = `v2-project-gallery-${safeKey}`;
 const lightboxTitleId = `${galleryId}-lightbox-title`;
 const lightboxCaptionId = `${galleryId}-lightbox-caption`;
 const first = galleryImages[0];
-const gallerySizes = variant === 'proof'
-  ? '(max-width: 760px) calc(100vw - 32px), 55vw'
-  : '(max-width: 760px) calc(100vw - 32px), min(1360px, calc(100vw - 64px))';
+const gallerySizes = (source: string) => {
+  if (variant === 'proof') return '(max-width: 760px) calc(100vw - 32px), 55vw';
+  const media = resolveV2ResponsiveMedia(source, 'gallery');
+  const ratio = media.width && media.height ? media.width / media.height : 1.5;
+  return `(max-width: 760px) min(calc(100vw - 32px), ${Math.round(620 * ratio)}px, ${80 * ratio}svh), min(calc(100vw - 64px), ${Math.round(560 * ratio)}px)`;
+};
 const responsivePayload = (source: string, role: V2MediaRole, sizes: string) => {
   const media = resolveV2ResponsiveMedia(source, role);
   const serialise = (items: Array<{ path: string; width: number }>) => items
@@ -62,9 +65,11 @@ const responsivePayload = (source: string, role: V2MediaRole, sizes: string) => 
 const galleryData = galleryImages.map((image) => ({
   alt: image.alt,
   caption: image.caption,
-  main: responsivePayload(image.src, 'gallery', gallerySizes),
+  main: responsivePayload(image.src, 'gallery', gallerySizes(image.src)),
   lightbox: responsivePayload(image.src, 'lightbox', '100vw')
 }));
+const firstRatio = galleryData[0]?.main.width && galleryData[0]?.main.height
+  ? galleryData[0].main.width / galleryData[0].main.height : 1.5;
 const bindingOwner = Astro.props.bindingOwner;
 const bindingField = Astro.props.bindingField;
 const galleryBinding = bindingOwner && bindingField ? adminBinding(Astro.url, {
@@ -82,6 +87,7 @@ const galleryBinding = bindingOwner && bindingField ? adminBinding(Astro.url, {
     id={galleryId}
     aria-label={`Галерея объекта «${title}»`}
     data-v2-project-gallery
+    style={`--project-gallery-ratio:${firstRatio}`}
     {...galleryBinding}
   >
     <div class="v2-project-gallery__stage" data-v2-project-gallery-context data-v2-project-gallery-swipe>
@@ -96,7 +102,7 @@ const galleryBinding = bindingOwner && bindingField ? adminBinding(Astro.url, {
             src={first.src}
             alt={first.alt}
             role="gallery"
-            sizes={gallerySizes}
+            sizes={gallerySizes(first.src)}
             loading={eagerFirst ? 'eager' : 'lazy'}
             fetchpriority={eagerFirst ? 'high' : 'auto'}
             decoding="async"
@@ -282,6 +288,7 @@ const galleryBinding = bindingOwner && bindingField ? adminBinding(Astro.url, {
       };
 
       const setMainImage = (image: V2GalleryImage) => {
+        if (image.main.width && image.main.height) gallery.style.setProperty('--project-gallery-ratio', String(image.main.width / image.main.height));
         media.classList.remove('is-broken');
         mainFallback?.setAttribute('hidden', '');
         mainImage.hidden = false;
