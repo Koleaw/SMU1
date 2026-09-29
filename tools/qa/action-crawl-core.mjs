@@ -15,11 +15,29 @@ const SAFE_ADMIN_CONTAINERS = new Set([
   'veBreadcrumbs', 'vePageTree', 'veRecentList', 'veFavoritesList', 'vePageDialogResults', 'veCommandResults'
 ]);
 
+// These hashes carry calculator state and never refer to a DOM anchor.
+// Keep the accepted routes/keys narrow; arbitrary hashes retain anchor checks.
+export function parseToolStateHash(route, hash) {
+  const params = new URLSearchParams(String(hash || '').replace(/^#/u, ''));
+  if ([...params.keys()].length !== 1) return null;
+  const add = params.get('add');
+  if (route === '/instrumenty/maf/' && /^[a-z0-9][a-z0-9-]{0,119}$/u.test(add || '')) return { kind: 'add-product', id: add };
+  const project = params.get('project');
+  if (/^\/instrumenty\/(?:metal|raskroy|fundament|ograzhdenie|plitka|maf|zdanie)\/$/u.test(route)
+    && /^[a-zA-Z0-9-]{1,100}$/u.test(project || '')) return { kind: 'open-project', id: project };
+  return null;
+}
+
 export function classifyPublicAction(action) {
   if (action.disabled) return { policy: 'disabled-state', execute: false };
   if (!action.visible) return { policy: 'hidden-state', execute: false };
   if ((action.dataActions || []).includes('data-public-search-control')) {
     return { policy: 'public-search-semantic-coverage', execute: false };
+  }
+  if (action.tag !== 'a' && (action.dataActions || []).includes('data-public-tool-control')) {
+    if (['print', 'import', 'copy', 'csv', 'project-export', 'all-export'].includes(action.toolAction)
+      || (action.tag === 'input' && action.type === 'file')) return { policy: 'tool-native-document-action', execute: false };
+    return { policy: 'public-tool-semantic-coverage', execute: false };
   }
   if (action.tag === 'a') {
     if ((action.dataActions || []).includes('data-v2-entry-skip-link') || /^К основному содержанию$/iu.test(String(action.name || '').trim())) {

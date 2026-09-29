@@ -2,8 +2,9 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { classifyPublicAction, validateContactProtocol } from './action-crawl-core.mjs';
+import { classifyPublicAction, validateContactProtocol, parseToolStateHash } from './action-crawl-core.mjs';
 import { exercisePublicSearch } from './public-search-probe.mjs';
+import { exerciseToolSemantics } from './tool-semantic-probe.mjs';
 import { evaluateGalleryViewport } from './gallery-viewport-contract.mjs';
 import { CdpBrowser, createDistServer } from './cdp-browser.mjs';
 import { PUBLIC_LIFECYCLE_SEMANTIC_IDS } from './evidence-contract.mjs';
@@ -175,13 +176,15 @@ const registerExpression = `(() => {
       id, tag: element.tagName.toLowerCase(), role: element.getAttribute('role') || '', name: nameOf(element),
       href: element.href || element.getAttribute('href') || '', type: element.type || '', target: element.target || '',
       download: element.hasAttribute('download'), inForm: Boolean(element.closest('form')),
+      toolAction: element.dataset.action || '', toolField: Boolean(element.dataset.field || element.matches('[data-project-name],[data-maf-search]')),
       formAction: element.formAction || element.closest('form')?.action || '', formMethod: element.formMethod || element.closest('form')?.method || '',
       visible: visible(element), disabled: Boolean(element.disabled || element.getAttribute('aria-disabled') === 'true'),
       selected: element.getAttribute('aria-current') === 'true' || element.getAttribute('aria-current') === 'page'
         || element.getAttribute('aria-selected') === 'true' || element.getAttribute('aria-pressed') === 'true',
       tabIndex: element.tabIndex, dataActions: [
         ...Array.from(element.attributes).filter((item) => item.name.startsWith('data-') && item.name !== 'data-h6-action-id').map((item) => item.name),
-        ...(element.closest('[data-search-dialog]') ? ['data-public-search-control'] : [])
+        ...(element.closest('[data-search-dialog]') ? ['data-public-search-control'] : []),
+        ...(element.closest('[data-tool-app]') ? ['data-public-tool-control'] : [])
       ]
     };
   });
@@ -320,6 +323,8 @@ const validateLink = (action, pageUrl) => {
   }
   const route = normalizeRoute(target.pathname);
   const currentRoute = normalizeRoute(new URL(pageUrl).pathname);
+  const toolState = parseToolStateHash(route, target.hash);
+  if (toolState && expectedRouteSet.has(route)) return { status: 'pass', kind: 'tool-state-link', route, expectedFinalRoute: route, toolState };
   if (target.hash && route === currentRoute) {
     return { status: 'pass', kind: 'same-page-anchor', route, expectedFinalRoute: route, anchor: decodeURIComponent(target.hash.slice(1)) };
   }
@@ -406,9 +411,22 @@ const executeInternalLink = async (action, link, mode) => {
       h1: Array.from(document.querySelectorAll('h1')).map((item) => item.textContent?.replace(/\\s+/gu, ' ').trim()).filter(Boolean),
       frameworkOverlay: Boolean(document.querySelector('vite-error-overlay,nextjs-portal,[data-nextjs-dialog-overlay],[data-error-overlay]')),
       anchorExists: ${JSON.stringify(link.anchor || '')} ? Boolean(document.getElementById(${JSON.stringify(link.anchor || '')})) : true
+      ,toolState: (() => {
+        const state = ${JSON.stringify(link.toolState || null)};
+        if (!state) return null;
+        try {
+          const projects = JSON.parse(localStorage.getItem('smu1.tools.projects.v1') || '{}').projects || [];
+          const app = document.querySelector('[data-tool-app]');
+          const currentName = app?.querySelector('[data-project-name]')?.value;
+          const matching = projects.filter(p => p.tool === app?.dataset.toolId && p.name === currentName);
+          if (state.kind === 'add-product') return matching.some(p => p.input?.rows?.some(r => r.snapshot?.id === state.id && Number(r.quantity) >= 1))
+            && !!app?.querySelector('[data-result-table] tbody tr') && !new URLSearchParams(location.hash.slice(1)).has('add');
+          return matching.some(p => p.id === state.id) && app?.dataset.ready === 'true';
+        } catch { return false; }
+      })()
     }))()`).catch(() => null);
     const finalRoute = destination?.location ? normalizeRoute(new URL(destination.location).pathname) : '';
-    if (destination?.readyState !== 'loading' && finalRoute === link.expectedFinalRoute) break;
+    if (destination?.readyState !== 'loading' && finalRoute === link.expectedFinalRoute && (!link.toolState || destination.toolState === true)) break;
     await new Promise((resolve) => setTimeout(resolve, 40));
   }
   await new Promise((resolve) => setTimeout(resolve, 45));
@@ -423,6 +441,7 @@ const executeInternalLink = async (action, link, mode) => {
   const finalHash = destination?.location ? decodeURIComponent(new URL(destination.location).hash.slice(1)) : '';
   const routeMatches = finalRoute === link.expectedFinalRoute;
   const anchorMatches = !link.anchor || (destination?.anchorExists && finalHash === link.anchor);
+  const toolStateMatches = !link.toolState || destination?.toolState === true;
   return {
     mode,
     before,
@@ -432,15 +451,18 @@ const executeInternalLink = async (action, link, mode) => {
     expectedAnchor: link.anchor || '',
     routeMatches,
     anchorMatches,
+    toolStateMatches,
     events: actionEvents,
     requests: actionRequests,
     unexpectedMutationRequests,
-    status: focusPrepared && routeMatches && anchorMatches && destination?.h1?.length === 1
+    status: focusPrepared && routeMatches && anchorMatches && toolStateMatches && destination?.h1?.length === 1
       && !destination?.frameworkOverlay && failures.length === 0 && unexpectedMutationRequests.length === 0 ? 'pass' : 'fail'
   };
 };
 
 const exerciseCurrentSurface = async ({ requestedUrl, loadedLocation }) => {
+  const toolSemantics = await browser.evaluate(`Boolean(document.querySelector('[data-tool-app]'))`)
+    ? await exerciseToolSemantics(browser, { requestedUrl }) : null;
   const actionResultsById = new Map();
   let inventoried = 0;
   for (let wave = 0; wave < 3; wave += 1) {
@@ -493,6 +515,15 @@ const exerciseCurrentSurface = async ({ requestedUrl, loadedLocation }) => {
         result.executionNote = 'Intentionally not executed: QA must not send a lead or open a file picker.';
       } else if (policy.policy === 'public-search-semantic-coverage') {
         result.executionNote = 'Exercised by the public search semantic probe: query, result focus, clear, examples, pagination, close and Escape.';
+      } else if (policy.policy === 'public-tool-semantic-coverage') {
+        const covered = action.toolField || ['details', 'summary'].includes(action.tag)
+          || (action.tag === 'button' && action.type === 'submit')
+          || toolSemantics?.coveredActions.includes(action.toolAction);
+        result.toolSemantics = toolSemantics;
+        result.status = covered && toolSemantics?.status === 'pass' ? 'pass' : 'fail';
+        result.executionNote = covered ? 'Calculator semantic probe: keyboard input, recalculation, local save/reload, tabs and independent project/row operations.' : 'Calculator action has no semantic coverage.';
+      } else if (policy.policy === 'tool-native-document-action') {
+        result.executionNote = 'Native print, file picker, downloads and clipboard are inventoried here; exported document/file contents require the separate tool acceptance suite.';
       }
       actionResultsById.set(action.id, result);
       inventoried += 1;

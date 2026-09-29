@@ -1,6 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { classifyAdminAction, classifyPublicAction, validateContactProtocol } from './action-crawl-core.mjs';
+import { classifyAdminAction, classifyPublicAction, validateContactProtocol, parseToolStateHash } from './action-crawl-core.mjs';
+
+test('tool state hashes require the right route, one known key and a bounded ID', () => {
+  assert.deepEqual(parseToolStateHash('/instrumenty/maf/', '#add=skamya-park'), { kind: 'add-product', id: 'skamya-park' });
+  assert.deepEqual(parseToolStateHash('/instrumenty/metal/', '#project=123-ab'), { kind: 'open-project', id: '123-ab' });
+  for (const [route, hash] of [['/instrumenty/metal/', '#add=skamya-park'], ['/kontakty/', '#project=a'], ['/instrumenty/maf/', '#add=x&project=y'], ['/instrumenty/maf/', '#add=%3Cimg%3E'], ['/instrumenty/maf/', '#tool-contact']]) assert.equal(parseToolStateHash(route, hash), null);
+});
+
+test('local calculator forms require semantic coverage while native document UI remains separate', () => {
+  const action = { tag: 'button', type: 'submit', inForm: true, visible: true, dataActions: ['data-public-tool-control'] };
+  assert.equal(classifyPublicAction(action).policy, 'public-tool-semantic-coverage');
+  for (const toolAction of ['print', 'import', 'copy', 'csv', 'project-export', 'all-export']) assert.equal(classifyPublicAction({ ...action, toolAction }).policy, 'tool-native-document-action');
+  assert.equal(classifyPublicAction({ ...action, dataActions: [] }).policy, 'protected-form-action');
+  assert.equal(classifyPublicAction({ ...action, tag: 'a', href: '/kontakty/' }).policy, 'internal-link-action');
+});
 
 test('public action policy never executes leads, files or external links', () => {
   assert.equal(classifyPublicAction({ tag: 'button', type: 'submit', visible: true }).policy, 'protected-form-action');

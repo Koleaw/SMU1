@@ -154,7 +154,8 @@ routeRegistryPayload = createV2RouteRegistry({
   categories,
   products,
   projects,
-  jobs
+  jobs,
+  tools: content('tools')
 });
 routeRegistry = routeRegistryPayload.routes;
 const productRoute = (product) => {
@@ -242,8 +243,8 @@ const classifierResolverTableAudit = () => {
   });
   const productionEntries = routeRegistry.filter((route) => route.interceptEligible !== false);
   const compatibilityAliases = routeRegistry.filter((route) => route.routeKind === 'legacy-redirect');
-  record('routing.registry-108-production-plus-3-aliases', productionEntries.length === 108
-    && compatibilityAliases.length === 3 && routeRegistry.length === 111,
+  record('routing.registry-116-production-plus-3-aliases', productionEntries.length === 116
+    && compatibilityAliases.length === 3 && routeRegistry.length === 119,
   { productionEntries: productionEntries.length, compatibilityAliases: compatibilityAliases.length,
     total: routeRegistry.length, aliases: compatibilityAliases.map((route) => route.pathname) });
 
