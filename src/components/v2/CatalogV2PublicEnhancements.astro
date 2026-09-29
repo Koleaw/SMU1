@@ -1,0 +1,65 @@
+<script>
+  import { waitForRevealMedia } from '../../utils/v2ImageReady';
+
+  const initCatalogV2Enhancements = () => {
+    const root = document.querySelector<HTMLElement>('[data-catalog-v2-root]');
+    if (!root || root.dataset.enhancementsReady === 'true') return;
+    root.dataset.enhancementsReady = 'true';
+
+    root.querySelectorAll<HTMLImageElement>('[data-v2-image]').forEach((image) => {
+      const markBroken = () => {
+        image.hidden = true;
+        image.closest<HTMLElement>('[data-v2-media]')?.classList.add('is-broken');
+      };
+      if (image.complete && image.naturalWidth === 0) markBroken();
+      else image.addEventListener('error', markBroken, { once: true });
+    });
+
+    const revealItems = Array.from(root.querySelectorAll<HTMLElement>('[data-v2-reveal]'));
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // H4 exclusively owns production entrance and scroll visibility. Keep
+    // the accepted image readiness/fallback pipeline independent so a slow
+    // or broken asset never removes its accessible replacement.
+    const mediaItems = revealItems.filter((element) => element.querySelector('img:not([data-v2-image-readiness-ignore])'));
+    const compactMediaProfile = reducedMotion.matches
+      || document.documentElement.dataset.v2MotionProfile === 'save-data';
+    let mediaObserver: IntersectionObserver | undefined;
+    const watchMedia = (element: HTMLElement, timeoutMs = 6000) => {
+      if (element.dataset.v2MediaReadiness === 'watching') return;
+      element.dataset.v2MediaReadiness = 'watching';
+      mediaObserver?.unobserve(element);
+      void waitForRevealMedia(element, timeoutMs);
+    };
+    const watchAllMedia = (timeoutMs = 6000) => mediaItems
+      .forEach((element) => watchMedia(element, timeoutMs));
+
+    if (compactMediaProfile || !('IntersectionObserver' in window)) {
+      watchAllMedia(0);
+      } else {
+        try {
+          // Prepare first-screen media synchronously. An observer callback can
+          // arrive after the entrance timeline has already revealed the hero.
+          mediaItems.filter((element) => element.querySelector('[data-v2-page-critical]'))
+            .forEach((element) => watchMedia(element));
+          mediaObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) watchMedia(entry.target as HTMLElement);
+          });
+        }, { rootMargin: '20% 0px 20% 0px', threshold: 0.01 });
+        const observePendingMedia = () => mediaItems
+          .filter((element) => element.dataset.v2MediaReadiness !== 'watching')
+          .forEach((element) => mediaObserver?.observe(element));
+        observePendingMedia();
+        window.addEventListener('pagehide', () => mediaObserver?.disconnect());
+        window.addEventListener('pageshow', (event) => {
+          if (event.persisted) observePendingMedia();
+        });
+      } catch {
+        watchAllMedia(0);
+      }
+    }
+  };
+
+  initCatalogV2Enhancements();
+  document.addEventListener('astro:page-load', initCatalogV2Enhancements);
+</script>

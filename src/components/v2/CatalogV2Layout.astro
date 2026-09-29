@@ -1,5 +1,6 @@
 ---
 import PublicV2Layout from '../../layouts/PublicV2Layout.astro';
+import CatalogV2Enhancements from './CatalogV2Enhancements.astro';
 import HomeV2Header from './home-v2/HomeV2Header.astro';
 import HomeV2Footer from './home-v2/HomeV2Footer.astro';
 import V2PaletteSwitch from './V2PaletteSwitch.astro';
@@ -8,7 +9,7 @@ import catalogStylesheetUrl from '../../styles/v2/catalog-v2.css?url';
 import productFinalStylesheetUrl from '../../styles/v2/product-final-stage-a.css?url';
 import catalogPolishStylesheetUrl from '../../styles/v2/catalog-public-polish.css?url';
 import settings from '../../content/site-settings/global.json';
-import { adminBinding, adminDisposition } from '../../admin/bindings/adminBinding';
+import { adminBinding, adminDisposition, isLocalAdminCanvas } from '../../admin/bindings/adminBinding';
 
 interface Props {
   title: string;
@@ -74,6 +75,10 @@ const headerMobileCtaBinding = Astro.props.headerMobileCtaBinding
 const mobileCtaBinding = Astro.props.mobileCtaBinding
   ?? (Astro.props.mobileCtaLabel === undefined ? globalCtaBinding('footer-mobile') : {});
 const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
+// Match PublicV2Layout's public motion root. Local editor and compatibility
+// pages keep the former preview reveal fallback rather than H4 media watchers.
+const hasPublicMotion = !isDesignLab && !isLocalAdminCanvas(Astro.url) && !refreshTarget
+  && !['/lavochki-i-skameyki/', '/urny/', '/navesy/'].includes(productionV2Path(Astro.url.pathname));
 const productFinalEnabled = productFinalPrototype === 'hub'
   || productFinalPrototype === 'category'
   || productFinalPrototype === 'standard-product'
@@ -137,227 +142,4 @@ const directionTheme = /(?:^|\/)topiarii(?:\/|$)/.test(themePath) ? 'topiary'
   </div>
 </PublicV2Layout>
 
-<script>
-  import { waitForRevealMedia } from '../../utils/v2ImageReady';
-
-  const initCatalogV2Enhancements = () => {
-    const root = document.querySelector<HTMLElement>('[data-catalog-v2-root]');
-    if (!root || root.dataset.enhancementsReady === 'true') return;
-    root.dataset.enhancementsReady = 'true';
-
-    root.querySelectorAll<HTMLImageElement>('[data-v2-image]').forEach((image) => {
-      const markBroken = () => {
-        image.hidden = true;
-        image.closest<HTMLElement>('[data-v2-media]')?.classList.add('is-broken');
-      };
-      if (image.complete && image.naturalWidth === 0) markBroken();
-      else image.addEventListener('error', markBroken, { once: true });
-    });
-
-    const revealItems = Array.from(root.querySelectorAll<HTMLElement>('[data-v2-reveal]'));
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const isProduction = Boolean(root.closest('[data-v2-motion-root][data-v2-entry-mode="public"]'));
-
-    if (isProduction) {
-      // H4 exclusively owns production entrance and scroll visibility. Keep
-      // the accepted image readiness/fallback pipeline independent so a slow
-      // or broken asset never removes its accessible replacement.
-      const mediaItems = revealItems.filter((element) => element.querySelector('img:not([data-v2-image-readiness-ignore])'));
-      const compactMediaProfile = reducedMotion.matches
-        || document.documentElement.dataset.v2MotionProfile === 'save-data';
-      let mediaObserver: IntersectionObserver | undefined;
-      const watchMedia = (element: HTMLElement, timeoutMs = 6000) => {
-        if (element.dataset.v2MediaReadiness === 'watching') return;
-        element.dataset.v2MediaReadiness = 'watching';
-        mediaObserver?.unobserve(element);
-        void waitForRevealMedia(element, timeoutMs);
-      };
-      const watchAllMedia = (timeoutMs = 6000) => mediaItems
-        .forEach((element) => watchMedia(element, timeoutMs));
-
-      if (compactMediaProfile || !('IntersectionObserver' in window)) {
-        watchAllMedia(0);
-        } else {
-          try {
-            // Prepare first-screen media synchronously. An observer callback can
-            // arrive after the entrance timeline has already revealed the hero.
-            mediaItems.filter((element) => element.querySelector('[data-v2-page-critical]'))
-              .forEach((element) => watchMedia(element));
-            mediaObserver = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-              if (entry.isIntersecting) watchMedia(entry.target as HTMLElement);
-            });
-          }, { rootMargin: '20% 0px 20% 0px', threshold: 0.01 });
-          const observePendingMedia = () => mediaItems
-            .filter((element) => element.dataset.v2MediaReadiness !== 'watching')
-            .forEach((element) => mediaObserver?.observe(element));
-          observePendingMedia();
-          window.addEventListener('pagehide', () => mediaObserver?.disconnect());
-          window.addEventListener('pageshow', (event) => {
-            if (event.persisted) observePendingMedia();
-          });
-        } catch {
-          watchAllMedia(0);
-        }
-      }
-      return;
-    }
-
-    // Design Lab keeps the accepted catalog reveal observer for visual parity.
-    const pageArrivalManaged = document.documentElement.dataset.v2PageBootstrap === 'arrival'
-      && document.documentElement.dataset.v2PageState !== 'done';
-    if (pageArrivalManaged) {
-      revealItems.forEach((element) => {
-        element.classList.remove('hv2-reveal-pending');
-        element.classList.add('hv2-reveal-visible');
-        delete element.dataset.v2RevealQueued;
-      });
-      root.dataset.enhancementsReady = 'arrival';
-      return;
-    }
-    let observer: IntersectionObserver | undefined;
-    let revealScanQueued = false;
-    const revealElement = (element: HTMLElement) => {
-      if (element.dataset.v2RevealQueued === 'true') return;
-      element.dataset.v2RevealQueued = 'true';
-      observer?.unobserve(element);
-      void waitForRevealMedia(element).then(() => {
-        element.classList.remove('hv2-reveal-pending');
-        element.classList.add('hv2-reveal-visible');
-      });
-    };
-    const revealAll = () => revealItems.forEach(revealElement);
-    const revealReached = (viewportFactor = 0.94) => {
-      revealScanQueued = false;
-      revealItems.forEach((element) => {
-        if (!element.classList.contains('hv2-reveal-pending')) return;
-        if (element.getBoundingClientRect().top < window.innerHeight * viewportFactor) revealElement(element);
-      });
-    };
-    const queueRevealScan = () => {
-      if (revealScanQueued) return;
-      revealScanQueued = true;
-      requestAnimationFrame(() => revealReached());
-    };
-
-    if (reducedMotion.matches || !('IntersectionObserver' in window)) {
-      revealAll();
-      return;
-    }
-
-    try {
-      revealItems.forEach((element) => element.classList.add('hv2-reveal-pending'));
-      observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          revealElement(entry.target as HTMLElement);
-        });
-      }, { rootMargin: '0px 0px -7% 0px', threshold: 0.08 });
-
-      revealItems.forEach((element) => observer?.observe(element));
-      window.addEventListener('scroll', queueRevealScan, { passive: true });
-      window.addEventListener('resize', queueRevealScan);
-      requestAnimationFrame(() => requestAnimationFrame(() => revealReached()));
-      window.setTimeout(() => revealReached(1), 1600);
-    } catch {
-      revealAll();
-    }
-
-  };
-
-  initCatalogV2Enhancements();
-  document.addEventListener('astro:page-load', initCatalogV2Enhancements);
-</script>
-
-<script>
-  const initProductFinalHandoff = () => {
-    document.querySelectorAll<HTMLElement>(
-      '[data-catalog-v2-root][data-product-final-prototype]'
-    ).forEach((root) => {
-      if (root.dataset.productFinalControllerReady === 'true') return;
-
-      const handoff = root.querySelector<HTMLElement>('[data-product-final-handoff]');
-      const scene = handoff?.querySelector<HTMLElement>('[data-product-final-handoff-scene]');
-      const hero = scene?.querySelector<HTMLElement>('[data-product-final-hero]');
-      const track = scene?.querySelector<HTMLElement>('[data-product-final-track]');
-      if (!handoff || !scene || !hero || !track) return;
-
-      root.dataset.productFinalControllerReady = 'true';
-      const desktop = window.matchMedia('(min-width: 981px)');
-      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-      let sceneHeight = 0;
-      let travel = 0;
-      let frame = 0;
-      let measureFrame = 0;
-
-      const reset = () => {
-        handoff.removeAttribute('data-product-final-handoff-ready');
-        root.removeAttribute('data-product-final-handoff-active');
-        handoff.style.removeProperty('--product-final-scene-height');
-        root.style.removeProperty('--product-final-scene-height');
-        track.style.removeProperty('transform');
-        track.style.removeProperty('--product-final-progress');
-        sceneHeight = 0;
-        travel = 0;
-      };
-
-      const sync = () => {
-        frame = 0;
-        if (!sceneHeight || !handoff.hasAttribute('data-product-final-handoff-ready')) return;
-        const progress = Math.min(1, Math.max(0, -handoff.getBoundingClientRect().top / sceneHeight));
-        root.toggleAttribute('data-product-final-handoff-active', window.scrollY <= sceneHeight + 1);
-        track.style.setProperty('--product-final-progress', progress.toFixed(4));
-        track.style.transform = `translate3d(0, ${(-travel * progress).toFixed(3)}px, 0)`;
-      };
-
-      const queueSync = () => {
-        if (frame) return;
-        frame = window.requestAnimationFrame(sync);
-      };
-
-      const measure = () => {
-        measureFrame = 0;
-        if (!desktop.matches || reducedMotion.matches) {
-          reset();
-          return;
-        }
-
-        const nextHeight = hero.getBoundingClientRect().height;
-        // A sticky scene taller than its viewport can keep lower content out of reach.
-        // Let long text and short windows use normal document scrolling.
-        if (!Number.isFinite(nextHeight) || nextHeight <= 0 || nextHeight > window.innerHeight) {
-          reset();
-          return;
-        }
-
-        sceneHeight = nextHeight;
-        travel = Math.min(72, Math.max(42, sceneHeight * 0.08));
-        handoff.style.setProperty('--product-final-scene-height', `${sceneHeight.toFixed(3)}px`);
-        root.style.setProperty('--product-final-scene-height', `${sceneHeight.toFixed(3)}px`);
-        handoff.setAttribute('data-product-final-handoff-ready', '');
-        queueSync();
-      };
-
-      const queueMeasure = () => {
-        if (measureFrame) return;
-        measureFrame = window.requestAnimationFrame(measure);
-      };
-
-      window.addEventListener('scroll', queueSync, { passive: true });
-      window.addEventListener('resize', queueMeasure);
-      desktop.addEventListener('change', queueMeasure);
-      reducedMotion.addEventListener('change', queueMeasure);
-      if ('ResizeObserver' in window) {
-        new ResizeObserver(queueMeasure).observe(hero);
-      }
-      hero.querySelectorAll<HTMLImageElement>('img').forEach((image) => {
-        if (!image.complete) image.addEventListener('load', queueMeasure, { once: true });
-      });
-
-      measure();
-    });
-  };
-
-  initProductFinalHandoff();
-  document.addEventListener('astro:page-load', initProductFinalHandoff);
-</script>
+{!productionV2Path(currentPath).startsWith('/instrumenty/') && <CatalogV2Enhancements publicMotion={hasPublicMotion} handoff={productFinalEnabled} />}

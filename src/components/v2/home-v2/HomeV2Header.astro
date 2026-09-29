@@ -341,6 +341,9 @@ const globalHref = (fieldPath: string) => adminDisposition(Astro.url, {
 </style>
 
 <script>
+  // Cache the search controls with the header. The search engine itself
+  // still loads only when a visitor opens search.
+  import '../../../scripts/public-search-dialog.mjs';
   const initHomeV2Header = () => {
     const header = document.querySelector<HTMLElement>('[data-home-v2-header]');
     const menu = document.querySelector<HTMLElement>('[data-hv2-mobile-menu]');

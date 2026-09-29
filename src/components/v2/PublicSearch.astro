@@ -1,7 +1,6 @@
 ---
 import { withBase } from '../../utils/withBase';
 import searchModuleUrl from '../../scripts/public-search.mjs?url&no-inline';
-import searchDialogUrl from '../../scripts/public-search-dialog.mjs?url&no-inline';
 import searchStyleUrl from '../../styles/v2/public-search.css?url&no-inline';
 ---
 
@@ -41,7 +40,3 @@ import searchStyleUrl from '../../styles/v2/public-search.css?url&no-inline';
 </dialog>
 
 <link rel="stylesheet" href={searchStyleUrl} />
-
-<script is:inline type="module" src={searchDialogUrl}></script>
-
-

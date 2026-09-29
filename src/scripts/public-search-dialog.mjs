@@ -19,7 +19,7 @@ const initSearchDialog = () => {
       try {
         const moduleUrl = new URL(dialog.dataset.searchModule, location.href);
         if (loadAttempt++) moduleUrl.searchParams.set('retry', String(loadAttempt));
-        modulePromise ||= import(moduleUrl.href);
+        modulePromise ||= import(/* @vite-ignore */ moduleUrl.href);
         const client = await modulePromise;
         client.initPublicSearch(dialog);
       } catch {

@@ -34,9 +34,11 @@ const client = await readFile(resolve(dist, modulePath), 'utf8');
 assert.ok(client.includes('initPublicSearch') && client.includes('searchPublicEntries'), 'Lazy search client missing after deploy pruning');
 assert.ok(!home.includes(`src="${moduleUrl}"`), 'Search engine should stay lazy');
 assert.ok(!home.includes('__VITE_PRELOAD__'), 'Unresolved Vite preload placeholder breaks native lazy imports');
-const bootstrapUrl = home.match(/<script[^>]+src="([^"]*public-search-dialog[^\"]+\.mjs)"/)?.[1];
+const bootstrapUrl = home.match(/<script[^>]+src="([^"]*HomeV2Header[^\"]+\.js)"/)?.[1];
 const styleUrl = home.match(/<link[^>]+href="([^"]*public-search[^\"]+\.css)"/)?.[1];
 assert.ok(bootstrapUrl && styleUrl, 'Cacheable search dialog script and styles missing');
+const bootstrap = await readFile(resolve(dist, bootstrapUrl.slice(base.length)), 'utf8');
+assert.ok(bootstrap.includes('data-search-dialog') && bootstrap.includes('data-search-open'), 'Bundled header must initialize the search dialog');
 for (const url of [bootstrapUrl, styleUrl]) {
   assert.ok(url.startsWith(base), 'Search resource does not respect site base');
   assert.ok((await stat(resolve(dist, url.slice(base.length)))).isFile(), `Missing search resource after deploy pruning: ${url}`);

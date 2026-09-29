@@ -1,0 +1,9 @@
+---
+import CatalogV2PublicEnhancements from './CatalogV2PublicEnhancements.astro';
+import CatalogV2PreviewEnhancements from './CatalogV2PreviewEnhancements.astro';
+import ProductFinalHandoff from './ProductFinalHandoff.astro';
+interface Props { publicMotion: boolean; handoff: boolean; }
+const { publicMotion, handoff } = Astro.props as Props;
+---
+{publicMotion ? <CatalogV2PublicEnhancements /> : <CatalogV2PreviewEnhancements />}
+{handoff && <ProductFinalHandoff />}

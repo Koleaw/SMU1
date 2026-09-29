@@ -13,6 +13,8 @@ import ownerDirectionsUrl from '../styles/v2/owner-directions.css?url';
 import CookieBanner from '../components/CookieBanner.astro';
 import V2EntryExperience from '../components/v2/motion/V2EntryExperience.astro';
 import V2PageTransition from '../components/v2/motion/V2PageTransition.astro';
+import FullPublicMotionRuntime from '../components/v2/motion/FullPublicMotionRuntime.astro';
+import ToolPublicMotionRuntime from '../components/v2/motion/ToolPublicMotionRuntime.astro';
 import siteSettings from '../content/site-settings/global.json';
 import yandex from '../data/yandex.json';
 import { isProductionDeploy, isTestDeploy, NOINDEX_ROBOTS } from '../utils/deployEnvironment';
@@ -69,8 +71,11 @@ const isPublicV2Motion = isProduction
   && !isEditorCanvas
   && !refreshTarget
   && !compatibilityRoutes.has(currentProductionPath);
-const isEntryEnabled = isPublicV2Motion || isEntryPreview;
-const entryMode = isPublicV2Motion ? 'public' : isEntryPreview ? 'preview' : undefined;
+// Utility pages have no hero or blocking logo intro. Keep the established
+// page transition while making their form available from the first paint.
+const isToolPage = isPublicV2Motion && currentProductionPath.startsWith('/instrumenty/');
+const isEntryEnabled = (isPublicV2Motion && !isToolPage) || isEntryPreview;
+const entryMode = isEntryEnabled ? (isPublicV2Motion ? 'public' : 'preview') : undefined;
 const transitionRouteRegistryJson = isPublicV2Motion
   ? await loadV2TransitionRouteRegistryJson()
   : '';
@@ -132,6 +137,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
   data-v2-entry-enabled={entryMode}
   data-v2-public-route={isProduction ? 'true' : undefined}
   data-v2-base={v2BasePath}
+  data-v2-tool-route={isToolPage ? 'true' : undefined}
 >
   <head>
     <meta charset="UTF-8" />
@@ -159,7 +165,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       />
     )}
     {isPublicV2Motion && <V2PageTransition part="head" />}
-    {isPublicV2Motion && (
+    {isPublicV2Motion && !isToolPage && (
       <script is:inline>
         (() => {
           const root = document.documentElement;
@@ -518,81 +524,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
       <slot />
     )}
     {isProduction && !isEditorCanvas && <CookieBanner />}
-    <script>
-      const initV2HeroScroll = () => {
-        if (document.documentElement.dataset.v2HeroScrollReady === 'true') return;
-        const heroes = Array.from(document.querySelectorAll<HTMLElement>('[data-v2-hero-scroll]'));
-        if (heroes.length === 0) return;
-        document.documentElement.dataset.v2HeroScrollReady = 'true';
-
-        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-        const desktopMotion = window.matchMedia('(min-width: 761px)');
-        let frame = 0;
-
-        const reset = () => {
-          heroes.forEach((hero) => {
-            hero.style.setProperty('--v2-hero-scroll-y', '0px');
-            hero.style.setProperty('--v2-hero-media-scroll-y', '0px');
-            hero.style.setProperty('--v2-hero-scroll-opacity', '1');
-          });
-        };
-
-        const sync = () => {
-          frame = 0;
-          if (reducedMotion.matches || !desktopMotion.matches) {
-            reset();
-            return;
-          }
-
-          heroes.forEach((hero) => {
-            const copy = hero.querySelector<HTMLElement>('[data-v2-hero-scroll-copy]');
-            const media = hero.querySelector<HTMLElement>('[data-v2-hero-scroll-media]');
-            if (!copy && !media) return;
-            const rect = hero.getBoundingClientRect();
-            const height = Math.max(rect.height, 1);
-            const progress = Math.min(1, Math.max(0, -rect.top / height));
-            const copyTravel = Math.min(180, height * 0.2) * progress;
-            const mediaTravel = Math.min(270, height * 0.3) * progress;
-            // Let the next section cover the media while the copy clears the
-            // persistent header before their visual layers can intersect.
-            const fadeProgress = Math.min(1, Math.max(0, (progress - 0.32) / 0.2));
-            hero.style.setProperty('--v2-hero-scroll-y', `${copyTravel.toFixed(2)}px`);
-            hero.style.setProperty('--v2-hero-media-scroll-y', `${mediaTravel.toFixed(2)}px`);
-            hero.style.setProperty('--v2-hero-scroll-opacity', String(1 - fadeProgress));
-          });
-        };
-
-        const queue = () => {
-          if (frame) return;
-          frame = window.requestAnimationFrame(sync);
-        };
-
-        window.addEventListener('scroll', queue, { passive: true });
-        window.addEventListener('resize', queue);
-        reducedMotion.addEventListener('change', queue);
-        desktopMotion.addEventListener('change', queue);
-        if ('ResizeObserver' in window) {
-          const observer = new ResizeObserver(queue);
-          heroes.forEach((hero) => observer.observe(hero));
-        }
-        sync();
-      };
-
-      initV2HeroScroll();
-      document.addEventListener('astro:page-load', initV2HeroScroll);
-    </script>
-    <script>
-      import { initializeV2EntranceController } from '../scripts/v2EntranceController';
-      import { initializeV2MotionController } from '../scripts/v2MotionController';
-      import { initializeV2PageTransitionController } from '../scripts/v2PageTransitionController';
-
-      initializeV2PageTransitionController();
-      initializeV2EntranceController();
-      initializeV2MotionController();
-      document.addEventListener('astro:page-load', initializeV2PageTransitionController);
-      document.addEventListener('astro:page-load', initializeV2EntranceController);
-      document.addEventListener('astro:page-load', initializeV2MotionController);
-    </script>
+    {isToolPage ? <ToolPublicMotionRuntime /> : <FullPublicMotionRuntime />}
     {isEditorCanvas && (
       <script
         is:inline

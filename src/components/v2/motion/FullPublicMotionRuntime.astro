@@ -1,0 +1,77 @@
+---
+// Existing public and Design Lab motion runtime; tool routes use a compact entry.
+---
+    <script>
+      const initV2HeroScroll = () => {
+        if (document.documentElement.dataset.v2HeroScrollReady === 'true') return;
+        const heroes = Array.from(document.querySelectorAll<HTMLElement>('[data-v2-hero-scroll]'));
+        if (heroes.length === 0) return;
+        document.documentElement.dataset.v2HeroScrollReady = 'true';
+
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const desktopMotion = window.matchMedia('(min-width: 761px)');
+        let frame = 0;
+
+        const reset = () => {
+          heroes.forEach((hero) => {
+            hero.style.setProperty('--v2-hero-scroll-y', '0px');
+            hero.style.setProperty('--v2-hero-media-scroll-y', '0px');
+            hero.style.setProperty('--v2-hero-scroll-opacity', '1');
+          });
+        };
+
+        const sync = () => {
+          frame = 0;
+          if (reducedMotion.matches || !desktopMotion.matches) {
+            reset();
+            return;
+          }
+
+          heroes.forEach((hero) => {
+            const copy = hero.querySelector<HTMLElement>('[data-v2-hero-scroll-copy]');
+            const media = hero.querySelector<HTMLElement>('[data-v2-hero-scroll-media]');
+            if (!copy && !media) return;
+            const rect = hero.getBoundingClientRect();
+            const height = Math.max(rect.height, 1);
+            const progress = Math.min(1, Math.max(0, -rect.top / height));
+            const copyTravel = Math.min(180, height * 0.2) * progress;
+            const mediaTravel = Math.min(270, height * 0.3) * progress;
+            // Let the next section cover the media while the copy clears the
+            // persistent header before their visual layers can intersect.
+            const fadeProgress = Math.min(1, Math.max(0, (progress - 0.32) / 0.2));
+            hero.style.setProperty('--v2-hero-scroll-y', `${copyTravel.toFixed(2)}px`);
+            hero.style.setProperty('--v2-hero-media-scroll-y', `${mediaTravel.toFixed(2)}px`);
+            hero.style.setProperty('--v2-hero-scroll-opacity', String(1 - fadeProgress));
+          });
+        };
+
+        const queue = () => {
+          if (frame) return;
+          frame = window.requestAnimationFrame(sync);
+        };
+
+        window.addEventListener('scroll', queue, { passive: true });
+        window.addEventListener('resize', queue);
+        reducedMotion.addEventListener('change', queue);
+        desktopMotion.addEventListener('change', queue);
+        if ('ResizeObserver' in window) {
+          const observer = new ResizeObserver(queue);
+          heroes.forEach((hero) => observer.observe(hero));
+        }
+        sync();
+      };
+
+      initV2HeroScroll();
+      document.addEventListener('astro:page-load', initV2HeroScroll);
+
+      import { initializeV2EntranceController } from '../../../scripts/v2EntranceController';
+      import { initializeV2MotionController } from '../../../scripts/v2MotionController';
+      import { initializeV2PageTransitionController } from '../../../scripts/v2PageTransitionController';
+
+      initializeV2PageTransitionController();
+      initializeV2EntranceController();
+      initializeV2MotionController();
+      document.addEventListener('astro:page-load', initializeV2PageTransitionController);
+      document.addEventListener('astro:page-load', initializeV2EntranceController);
+      document.addEventListener('astro:page-load', initializeV2MotionController);
+    </script>

@@ -1,0 +1,12 @@
+---
+// Rendered only on tools: no hero choreography or blocking logo controller.
+---
+<script>
+  import { initializeToolEntrance } from '../../../scripts/toolEntrance';
+  import { initializeV2PageTransitionController } from '../../../scripts/v2PageTransitionController';
+
+  initializeToolEntrance();
+  initializeV2PageTransitionController();
+  document.addEventListener('astro:page-load', initializeToolEntrance);
+  document.addEventListener('astro:page-load', initializeV2PageTransitionController);
+</script>
