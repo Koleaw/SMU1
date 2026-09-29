@@ -49,12 +49,15 @@ export async function exerciseToolSemantics(browser, { requestedUrl } = {}) {
     const numeric = await browser.evaluate(`(() => { const el = document.querySelector('[data-fields] input[inputmode="decimal"]'); return el ? { path: el.dataset.field, value: el.value } : null; })()`);
     if (numeric) {
       const selector = `[data-field="${numeric.path}"]`;
+      const priorSummary = await browser.evaluate(`document.querySelector('[data-summary]').textContent`);
       await fill(selector, '');
       // Empty required input must invalidate, while an optional empty input may
       // remain valid. In both cases the persisted input must reflect the edit.
       check('empty-input-stored', await waitFor(`(() => { const p = ${current}; return p && ${JSON.stringify(numeric.path)}.split('.').reduce((v,k) => v?.[k], p.input) === ''; })()`));
-      check('empty-input-honest-result', await waitFor(`Boolean((!document.querySelector('[data-summary] dl') && !document.querySelector('[data-error]').hidden) || (document.querySelector('[data-summary] dl') && document.querySelector('[data-error]').hidden))`));
-      await fill(selector, String(numeric.value).replace('.', ',') || '1');
+      check('empty-input-honest-result', await waitFor(`Boolean((!document.querySelector('[data-summary] dl') && !document.querySelector('[data-error]').hidden && !(${current})?.resultSnapshot) || (document.querySelector('[data-tool-app]').dataset.toolId === 'zdanie' && document.querySelector('[data-summary] dl') && document.querySelector('[data-error]').hidden && document.querySelector('[data-summary]').textContent !== ${JSON.stringify(priorSummary)}))`));
+      const commaValue = String(numeric.value).includes('.') || String(numeric.value).includes(',')
+        ? String(numeric.value).replace('.', ',') : `${numeric.value || '1'},0`;
+      await fill(selector, commaValue);
       check('decimal-comma-result', await waitFor(valid));
     }
     await click('[data-tool-form] button[type="submit"]', true);

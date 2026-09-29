@@ -30,7 +30,7 @@ for (const basePath of ['/', '/SMU1/']) test(`tool catalog retains its display t
 });
 
 test('catalog fallback still retains its original and arbitrary JSON gets no exception', async (t) => {
-  for (const config of [{ thumbnail: '/assets/original.jpg' }, { includeThumbnail: false }, { filename: 'other.json' }]) {
+  for (const config of [{ thumbnail: '/assets/original.jpg' }, { thumbnail: '/' }, { includeThumbnail: false }, { filename: 'other.json' }]) {
     const distRoot = await catalogFixture(t, config);
     const result = await auditDeployMediaReachability({ distRoot, expectedHtmlCount: 1, basePath: '/' });
     assert.equal(result.failClosed.pass, true);

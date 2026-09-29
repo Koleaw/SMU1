@@ -351,7 +351,7 @@ const extractTextReferences = (file, source, add, parseErrors) => {
             && keyPath.length === 3 && keyPath[0] === 'products'
             && Number.isInteger(keyPath[1]) && keyPath[2] === 'image'
             && typeof parsed.products?.[keyPath[1]]?.thumbnail === 'string'
-            && parsed.products[keyPath[1]].thumbnail.startsWith('/')) return;
+            && /^\/(?:_media|assets|uploads)\/[^\s?#]+\.(?:avif|gif|jpe?g|png|svg|webp)(?:[?#].*)?$/iu.test(parsed.products[keyPath[1]].thumbnail)) return;
           extractAssetTokens(candidate, (reference) => add(reference, `json:${keyPath.join('.')}`));
         });
       }
