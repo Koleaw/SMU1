@@ -4,6 +4,10 @@ import { field, fields, group, rowActions, button, svg, dim, txt, escape, format
 
 export const { example, blank, methodologyVersion, limits } = engine;
 export const referenceVersions = {};
+export const printColumns = [
+  { key: 'map', label: 'Карта' }, { key: 'type', label: 'Элемент' }, { key: 'name', label: 'Название / номер детали' },
+  { key: 'length', label: 'Длина, мм' }, { key: 'start', label: 'Начало, мм' }, { key: 'end', label: 'Конец, мм' },
+];
 export const rowTemplates = {
   parts: { id: '', name: '', profile: '', material: '', length: '', quantity: 1 },
   stock: { id: '', name: '', kind: 'stock', profile: '', material: '', length: '', quantity: 1 },
@@ -141,7 +145,7 @@ function diagramForGroup(grouped, input, active = '') {
   const focused = path ? input[path[1]]?.[Number(path[2])] : null;
   const activePart = path?.[1] === 'parts' ? focused?.id : null;
   const activeSource = path && path[1] !== 'parts' && focused?.id === map.sourceId && (path[1] === 'purchases') === (map.kind === 'purchase');
-  const x = 40, y = 62, width = 680, barHeight = 56, scale = width / map.length;
+  const x = 40, y = 72, width = 680, barHeight = 76, scale = width / map.length;
   let body = '';
   for (const segment of map.segments) {
     const left = x + segment.start * scale, segmentWidth = segment.length * scale;
@@ -150,15 +154,15 @@ function diagramForGroup(grouped, input, active = '') {
     body += `<g${selected ? ' class="is-active"' : ''}><title>${escape(`${segment.label}: ${format(segment.length)} мм; от ${format(segment.start)} до ${format(segment.end)} мм`)}</title><rect x="${left}" y="${y}" width="${segmentWidth}" height="${barHeight}" fill="${fill}" stroke="${selected ? '#b25f35' : 'var(--tool-paper)'}" stroke-width="${selected ? 3 : segment.type === 'part' ? 1 : 0}"/>`;
     if (segment.type === 'part' && segmentWidth >= 72) {
       const partIndex = input.parts.findIndex((row) => row.id === segment.partId) + 1;
-      body += txt(left + segmentWidth / 2, y + 23, `Д${partIndex}`, 'text-anchor="middle" fill="white" style="font-size:21px"');
-      body += txt(left + segmentWidth / 2, y + 46, `${format(segment.length)}`, 'text-anchor="middle" fill="white" style="font-size:20px"');
+      body += txt(left + segmentWidth / 2, y + 29, `Д${partIndex}`, 'text-anchor="middle" style="font-size:28px;fill:white"');
+      body += txt(left + segmentWidth / 2, y + 61, `${format(segment.length)}`, 'text-anchor="middle" style="font-size:28px;fill:white"');
     }
     if (segment.type === 'kerf') body += `<path d="M${left + segmentWidth / 2} ${y - 11}V${y}" stroke="#b25f35" stroke-width="2"/>`;
     body += '</g>';
   }
-  body += dim(x, 159, x + width, 159, `${format(map.length)} мм`, activeSource ? 'length' : '', active);
-  body += txt(40, 32, `${map.kind === 'purchase' ? 'Закупка' : map.kind === 'remnant' ? 'Остаток в наличии' : 'Заготовка в наличии'} · ${format(map.length)} мм`, 'style="font-size:23px"');
-  body += txt(40, 208, `Пропил: ${format(map.kerfLength)} мм · хвост: ${format(map.remainingLength)} мм`, 'style="font-size:21px"');
+  body += dim(x, 193, x + width, 193, `${format(map.length)} мм`, activeSource ? 'length' : '', active).replace('<text ', '<text style="font-size:28px" ');
+  body += txt(40, 37, `${map.kind === 'purchase' ? 'Закупка' : map.kind === 'remnant' ? 'Остаток в наличии' : 'Заготовка в наличии'} · ${format(map.length)} мм`, 'style="font-size:28px"');
+  body += txt(40, 247, `Пропил: ${format(map.kerfLength)} мм · хвост: ${format(map.remainingLength)} мм`, 'style="font-size:28px"');
   const numbers = maps.map((item) => item.number);
   const numberText = numbers.length > 12 ? `${numbers.slice(0, 12).join(', ')}… (${numbers.length} карт)` : numbers.join(', ');
   const details = map.parts.map((part) => {
@@ -167,7 +171,7 @@ function diagramForGroup(grouped, input, active = '') {
   });
   const uniqueDetails = [...new Set(details)];
   const title = repeats > 1 ? `Карты ${numberText} · ${repeats} одинаковых схем` : `Карта ${map.number} · заготовка ${map.sourceOrdinal}`;
-  return `<section class="tool-cut-map"><h3>${escape(title)}</h3><p class="tool-hint">${escape(map.profile)} · ${escape(map.material)} · ID ${escape(map.sourceId)}. Линейный масштаб: 1 мм = ${escape(format(scale, 4))} ед. схемы.</p>${svg(body, `${title}. ${map.profile}, ${map.material}. Длина ${map.length} мм.`, 232)}<ul class="tool-cut-parts">${uniqueDetails.map((detail) => `<li>${escape(detail)}</li>`).join('')}</ul>${repeats > 1 ? '<p class="tool-hint">Размеры одинаковы во всех картах группы. Номера экземпляров деталей и физических заготовок приведены в ведомости.</p>' : ''}</section>`;
+  return `<section class="tool-cut-map"><h3>${escape(title)}</h3><p class="tool-hint">${escape(map.profile)} · ${escape(map.material)} · ID ${escape(map.sourceId)}. Линейный масштаб: 1 мм = ${escape(format(scale, 4))} ед. схемы.</p>${svg(body, `${title}. ${map.profile}, ${map.material}. Длина ${map.length} мм.`, 275)}<ul class="tool-cut-parts">${uniqueDetails.map((detail) => `<li>${escape(detail)}</li>`).join('')}</ul>${repeats > 1 ? '<p class="tool-hint">Размеры одинаковы во всех картах группы. Номера экземпляров деталей и физических заготовок приведены в ведомости.</p>' : ''}</section>`;
 }
 
 export function diagram(result, input, active = '') {
@@ -180,6 +184,23 @@ export function diagram(result, input, active = '') {
 }
 
 export function printDiagram(result, input) { return mapGroups(result).map((item) => diagramForGroup(item, input)).join(''); }
+
+export function printInputs(input) {
+  const rows = [
+    { field: 'Ширина пропила, мм', value: input.kerf }, { field: 'Торцовка начала, мм (с её пропилом)', value: input.trimStart },
+    { field: 'Торцовка конца, мм (с её пропилом)', value: input.trimEnd }, { field: 'Минимальный полезный остаток, мм', value: input.minUsefulRemnant },
+  ];
+  for (const [path, label] of [['parts', 'Деталь'], ['stock', 'Наличие'], ['purchases', 'Вариант закупки']]) {
+    input[path].forEach((row, index) => {
+      const prefix = `${label} ${index + 1}`;
+      rows.push({ field: `${prefix}: название / профиль / материал`, value: [row.name, row.profile, row.material].filter(Boolean).join(' · ') });
+      if (path === 'stock') rows.push({ field: `${prefix}: вид`, value: row.kind === 'remnant' ? 'Конечный остаток в наличии' : 'Мерная заготовка в наличии' });
+      rows.push({ field: `${prefix}: длина, мм`, value: row.length });
+      rows.push({ field: `${prefix}: количество, шт.`, value: path === 'purchases' && (row.quantity === null || row.quantity === '') ? 'Без ограничения: можно докупить по потребности' : row.quantity });
+    });
+  }
+  return table({ columns: [{ key: 'field', label: 'Параметр' }, { key: 'value', label: 'Значение' }], rows });
+}
 
 export function extra(result) {
   const blocks = result.extraTables || prepareResult(result).extraTables;

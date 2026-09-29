@@ -42,8 +42,8 @@ export function form(input) {
   return html;
 }
 
-const label = (x, y, value, attrs = '') => txt(x, y, value, `style="font-size:24px" ${attrs}`);
-const dimension = (...args) => dim(...args).replace('<text ', '<text style="font-size:24px" ');
+const label = (x, y, value, attrs = '') => txt(x, y, value, `style="font-size:28px" ${attrs}`);
+const dimension = (...args) => dim(...args).replace('<text ', '<text style="font-size:28px" ');
 const colors = ['#adc4b7', '#b3c5d2', '#d8c19e', '#c8c0d0', '#b9c8a6', '#d3b9b0'];
 
 export function diagram(result, input, active = '') {
@@ -89,7 +89,8 @@ export function diagram(result, input, active = '') {
 }
 
 export const printDiagram = (result, input) => diagram(result, input);
+export const printInputs = () => '<p>Все введённые параметры и пожелания приведены в разделе «Задано заказчиком». Неизвестные значения перечислены в разделе «Нужно уточнить». Числа в этих разделах даны в подписанных единицах.</p>';
 
 export function extra(result) {
-  return result.extraTables.map((section) => `<section class="tool-building-brief"><h3>${escape(section.title)}</h3>${section.rows.length ? table(section) : '<p class="tool-hint">Данных пока нет.</p>'}</section>`).join('');
+  return result.extraTables.map((section) => `<section class="tool-building-brief"><h3>${escape(section.title)}</h3>${section.rows.length ? `<div class="tool-building-screen-brief"><dl>${section.rows.map(row => `<div><dt>${escape(row.parameter)}</dt><dd>${escape(format(row.value))}${row.unit ? ` ${escape(row.unit)}` : ''}</dd>${row.detail ? `<dd class="tool-hint">${escape(row.detail)}</dd>` : ''}</div>`).join('')}</dl></div><div class="tool-building-print-brief">${table(section)}</div>` : '<p class="tool-hint">Данных пока нет.</p>'}</section>`).join('');
 }

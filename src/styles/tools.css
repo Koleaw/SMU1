@@ -15,3 +15,6 @@
 @media print{.tool-print h3{font-size:12pt;margin:5mm 0 3mm;break-after:avoid}.tool-print footer{break-inside:avoid;margin-top:4mm}.tool-print .tool-product-card{min-height:48mm;overflow:auto;font-size:9pt}.tool-print .tool-product-card img{float:left;width:45mm;height:38mm;margin:0 5mm 3mm 0}.tool-print .tool-product-card h3{margin:1mm 0 3mm}.tool-print .tool-product-card p{font-size:9pt}}
 
 .tool-field-wide{grid-column:1/-1}
+.tool-building-print-brief{display:none}.tool-building-screen-brief dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 22px;margin:0}.tool-building-screen-brief dl>div{min-width:0;padding:12px 0;border-bottom:1px solid var(--tool-border)}.tool-building-brief dt{font-weight:600}.tool-building-brief dd{margin:5px 0;overflow-wrap:anywhere}.tool-building-brief h3{font-size:17px;margin:20px 0 8px}.tool-plan-legend{padding-left:18px!important;font-size:13px;line-height:1.6}@media(max-width:600px){.tool-building-screen-brief dl{grid-template-columns:1fr}}@media print{.tool-building-screen-brief{display:none}.tool-building-print-brief{display:block}}
+
+.tool-workspace .tool-visual-panel{position:static;z-index:auto}
