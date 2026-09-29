@@ -240,10 +240,13 @@ const runSourceChecks = () => {
     && imageReadySource.includes('Изображение не удалось загрузить')
     && !/\.finally\([^)]*\)[\s\S]{0,240}v2-image-ready/.test(imageReadySource));
   const publicLayoutSource = read('src/layouts/PublicV2Layout.astro');
+  const motionRuntimeSource = read('src/components/v2/motion/FullPublicMotionRuntime.astro');
   addCheck('motion.hero-scroll-contract', renderingSource.includes('data-v2-hero-scroll')
     && renderingSource.includes('data-v2-hero-scroll-copy')
-    && publicLayoutSource.includes('--v2-hero-scroll-y')
-    && publicLayoutSource.includes('requestAnimationFrame(sync)'));
+    && publicLayoutSource.includes('import FullPublicMotionRuntime')
+    && publicLayoutSource.includes('<FullPublicMotionRuntime')
+    && motionRuntimeSource.includes('--v2-hero-scroll-y')
+    && motionRuntimeSource.includes('requestAnimationFrame(sync)'));
   const navSource = read('src/components/v2/V2SectionNav.astro');
   const finalCssSource = fs.existsSync(path.join(root, 'src', 'styles', 'v2', 'final-art-direction-v2.css'))
     ? read('src/styles/v2/final-art-direction-v2.css')

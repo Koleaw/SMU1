@@ -1,9 +1,7 @@
 <script>
   const initProductFinalHandoff = () => {
-    document.querySelectorAll<HTMLElement>(
-      '[data-catalog-v2-root][data-product-final-prototype]'
-    ).forEach((root) => {
-      if (root.dataset.productFinalControllerReady === 'true') return;
+    const root = document.querySelector<HTMLElement>('[data-catalog-v2-root]');
+    if (!root || root.dataset.productFinalControllerReady === 'true') return;
 
       const handoff = root.querySelector<HTMLElement>('[data-product-final-handoff]');
       const scene = handoff?.querySelector<HTMLElement>('[data-product-final-handoff-scene]');
@@ -12,8 +10,8 @@
       if (!handoff || !scene || !hero || !track) return;
 
       root.dataset.productFinalControllerReady = 'true';
-      const desktop = window.matchMedia('(min-width: 981px)');
-      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const desktop = matchMedia('(min-width: 981px)');
+      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
       let sceneHeight = 0;
       let travel = 0;
       let frame = 0;
@@ -41,7 +39,7 @@
 
       const queueSync = () => {
         if (frame) return;
-        frame = window.requestAnimationFrame(sync);
+        frame = requestAnimationFrame(sync);
       };
 
       const measure = () => {
@@ -54,7 +52,7 @@
         const nextHeight = hero.getBoundingClientRect().height;
         // A sticky scene taller than its viewport can keep lower content out of reach.
         // Let long text and short windows use normal document scrolling.
-        if (!Number.isFinite(nextHeight) || nextHeight <= 0 || nextHeight > window.innerHeight) {
+        if (!(nextHeight > 0 && nextHeight <= window.innerHeight)) {
           reset();
           return;
         }
@@ -69,22 +67,19 @@
 
       const queueMeasure = () => {
         if (measureFrame) return;
-        measureFrame = window.requestAnimationFrame(measure);
+        measureFrame = requestAnimationFrame(measure);
       };
 
-      window.addEventListener('scroll', queueSync, { passive: true });
-      window.addEventListener('resize', queueMeasure);
+      addEventListener('scroll', queueSync, { passive: true });
+      addEventListener('resize', queueMeasure);
       desktop.addEventListener('change', queueMeasure);
       reducedMotion.addEventListener('change', queueMeasure);
       if ('ResizeObserver' in window) {
         new ResizeObserver(queueMeasure).observe(hero);
       }
-      hero.querySelectorAll<HTMLImageElement>('img').forEach((image) => {
-        if (!image.complete) image.addEventListener('load', queueMeasure, { once: true });
-      });
+      hero.addEventListener('load', queueMeasure, true);
 
       measure();
-    });
   };
 
   initProductFinalHandoff();

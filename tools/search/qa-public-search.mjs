@@ -9,7 +9,7 @@ import { createPublicSearchIndex } from '../../src/utils/publicSearchIndex.mjs';
 const root = process.cwd();
 const distArgument = process.argv.find((argument) => argument.startsWith('--dist='))?.slice('--dist='.length);
 const dist = resolve(root, distArgument || 'dist');
-const groups = { productSections: 'product-sections', categories: 'product-categories', products: 'products', services: 'services', projects: 'projects' };
+const groups = { productSections: 'product-sections', categories: 'product-categories', products: 'products', services: 'services', projects: 'projects', tools: 'tools' };
 const snapshot = Object.fromEntries(await Promise.all(Object.entries(groups).map(async ([key, folder]) => {
   const directory = resolve(root, 'src/content', folder);
   const records = await Promise.all((await readdir(directory)).filter((name) => name.endsWith('.json')).map(async (name) => JSON.parse(await readFile(resolve(directory, name), 'utf8'))));
