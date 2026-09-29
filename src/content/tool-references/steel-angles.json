@@ -1,0 +1,9 @@
+{
+  "id": "steel-angles", "slug": "steel-angles", "title": "Равнополочные горячекатаные уголки", "version": "1.0.0", "unit": "kg/m", "densityKgM3": 7850,
+  "source": {"title": "ГОСТ 8509-93, таблица 1, страницы 2–3; теоретическая плотность 7,85 г/см³", "url": "https://files.stroyinf.ru/Data2/1/4294852/4294852730.pdf"},
+  "entries": [
+    {"id":"40x40x4","designation":"Уголок 40×40×4, ГОСТ 8509-93","massKgM":2.42,"widthMm":40,"heightMm":40,"thicknessMm":4},
+    {"id":"50x50x5","designation":"Уголок 50×50×5, ГОСТ 8509-93","massKgM":3.77,"widthMm":50,"heightMm":50,"thicknessMm":5},
+    {"id":"63x63x6","designation":"Уголок 63×63×6, ГОСТ 8509-93","massKgM":5.72,"widthMm":63,"heightMm":63,"thicknessMm":6}
+  ]
+}

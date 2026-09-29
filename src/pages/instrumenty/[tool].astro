@@ -1,0 +1,7 @@
+---
+import {getCollection} from 'astro:content';
+import ToolPage from '../../components/tools/ToolPage.astro';
+export async function getStaticPaths(){return (await getCollection('tools')).map(({data})=>({params:{tool:data.id},props:{tool:data}}));}
+const {tool}=Astro.props;
+---
+<ToolPage tool={tool}/>

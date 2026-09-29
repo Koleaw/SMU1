@@ -1,0 +1,11 @@
+---
+import {getCollection} from 'astro:content';
+import CatalogV2Layout from '../../components/v2/CatalogV2Layout.astro';
+import {withBase} from '../../utils/withBase';
+import '../../styles/tools.css';
+const tools=(await getCollection('tools')).map(x=>x.data).sort((a,b)=>a.order-b.order);
+const symbols=['M','↔','▱','⌑','▦','▤','⌂'];
+---
+<CatalogV2Layout title="Строительные инструменты и калькуляторы — СМУ-1" description="Семь инструментов для комплектации, раскроя и подготовки строительных задач. Схемы, ведомости, сохранение расчётов и печать." canonicalPath="/instrumenty/" currentPath="/instrumenty/" contactHref={withBase('/kontakty/')} rootClass="tools-page">
+  <div class="tools-container"><nav class="tool-breadcrumb" aria-label="Хлебные крошки"><a href={withBase('/')}>Главная</a><span>/</span><span>Инструменты</span></nav><header class="tool-heading"><p class="tool-kicker">Из практики цеха и стройки</p><h1>Сначала посчитать.<br/>Потом изготовить.</h1><p>Семь инструментов для вашей задачи: от веса металла до задания на здание. Схема, понятная ведомость и расчёты, которые можно продолжить позже.</p></header><div class="tool-grid">{tools.map((tool,i)=><a class="tool-card" href={withBase(`/instrumenty/${tool.id}/`)}><span class="tool-card-top"><span class="tool-symbol" aria-hidden="true">{symbols[i]}</span><span>0{i+1} / 07</span></span><h2>{tool.title}</h2><p>{tool.description}</p><span class="tool-card-link">Открыть инструмент <span aria-hidden="true">↗</span></span></a>)}</div><section class="tool-export"><h2>Ваши расчёты остаются у вас</h2><p>Откройте «Мои расчёты» в любом инструменте. В папке можно переименовать, дублировать и удалить расчёт с отменой. Для переноса между устройствами и доменами используйте файл проекта.</p><p class="tool-hint">Регистрация не нужна. Локальное сохранение не заменяет резервную копию: очистка браузера может удалить данные.</p></section></div>
+</CatalogV2Layout>
