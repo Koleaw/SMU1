@@ -20,6 +20,7 @@ import {
 import { promisify } from 'node:util';
 import { resolveAstroCli } from './astro-cli.mjs';
 import { hashPassword } from './security.mjs';
+import { COLLECTION_KEYS } from './content-registry.mjs';
 
 const execFileAsync = promisify(execFile);
 const root = process.cwd();
@@ -452,7 +453,7 @@ export default defineConfig({
     process.platform === 'win32' ? 'junction' : 'dir'
   );
 
-  const collections = ['jobs', 'product-categories', 'product-sections', 'products', 'projects', 'services', 'site-settings', 'static-pages'];
+  const collections = COLLECTION_KEYS;
   await Promise.all(collections.map((collection) => mkdir(path.join(contentRoot, collection), { recursive: true })));
   await Promise.all([
     mkdir(path.join(contentRoot, '.admin-data'), { recursive: true }),

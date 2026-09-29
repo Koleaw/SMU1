@@ -28,19 +28,10 @@ import { reorderEntityPages } from '../state/entity-reorder.mjs';
 import { createMediaScheduler } from '../../../tools/admin-api/media-scheduler.mjs';
 import { createOverlayRenderGuard } from './overlay-render-guard.mjs';
 import { homePosterControlLayout } from './home-poster-control.mjs';
+import { COLLECTION_KEYS as COLLECTIONS } from '../../../tools/admin-api/content-registry.mjs';
 
 const BRIDGE_PROTOCOL = 'smu1-editor-bridge';
 const BRIDGE_VERSION = 1;
-const COLLECTIONS = Object.freeze([
-  'product-sections',
-  'product-categories',
-  'products',
-  'services',
-  'projects',
-  'jobs',
-  'site-settings',
-  'static-pages'
-]);
 const GROUP_ORDER = Object.freeze([
   'Главная',
   'Направления',
@@ -790,7 +781,7 @@ function entryOrder(left, right) {
     || String(left.title || '').localeCompare(String(right.title || ''), 'ru');
 }
 
-function buildPageRegistry(summaries) {
+export function buildPageRegistry(summaries) {
   const pages = [];
   const add = (descriptor) => pages.push(Object.freeze({
     emitted: descriptor.emitted !== false,
@@ -807,6 +798,7 @@ function buildPageRegistry(summaries) {
   const products = list('products');
   const projects = list('projects');
   const jobs = list('jobs');
+  const tools = list('tools');
   const staticPages = list('static-pages');
   const sectionBySlug = new Map(sections.map((entry) => [entry.slug, entry]));
   const categoryBySlug = new Map(categories.map((entry) => [entry.slug, entry]));
@@ -868,6 +860,13 @@ function buildPageRegistry(summaries) {
   const customOrder = staticPages.find((entry) => entry.slug === 'custom-order');
   if (customOrder) add({ kind: 'custom', group: 'Компания и связь', typeLabel: 'Изготовление на заказ', title: customOrder.title, route: '/izgotovlenie-na-zakaz/', collection: 'static-pages', slug: customOrder.slug, isActive: activeEntry(customOrder), entry: customOrder });
 
+  add({ kind: 'tools', group: 'Компания и связь', typeLabel: 'Архив инструментов', title: 'Строительные инструменты', route: '/instrumenty/', readOnly: true });
+  for (const entry of tools) add({
+    kind: 'tool', group: 'Компания и связь', typeLabel: 'Строительный инструмент', title: entry.title,
+    route: `/instrumenty/${entry.slug}/`, collection: 'tools', slug: entry.slug,
+    parentRoute: '/instrumenty/', entry
+  });
+
   add({ kind: 'vacancies', group: 'Вакансии', typeLabel: 'Архив вакансий', title: 'Вакансии', route: '/vakansii/', collection: 'site-settings', slug: 'global', scope: 'shared' });
   for (const entry of jobs) add({
     kind: 'job', group: 'Вакансии', typeLabel: 'Вакансия', title: entry.title,
@@ -883,6 +882,12 @@ function buildPageRegistry(summaries) {
 
   return pages.sort((left, right) => GROUP_ORDER.indexOf(left.group) - GROUP_ORDER.indexOf(right.group)
     || entryOrder(left.entry || left, right.entry || right));
+}
+
+export function affectedRoutesForPageBinding(binding, pages) {
+  const declared = Array.isArray(binding?.affectedRoutes) ? binding.affectedRoutes : [];
+  if (declared.includes('*')) return pages.filter((page) => page.emitted).map((page) => page.route);
+  return [...new Set(declared.filter(Boolean))];
 }
 
 function createToastRegion(region, liveRegion) {
@@ -2279,9 +2284,7 @@ export async function startVisualEditor() {
   }
 
   function affectedRoutesForBinding(binding) {
-    const declared = Array.isArray(binding?.affectedRoutes) ? binding.affectedRoutes : [];
-    if (declared.includes('*')) return state.pages.filter((page) => page.emitted).map((page) => page.route);
-    return [...new Set(declared.filter(Boolean))];
+    return affectedRoutesForPageBinding(binding, state.pages);
   }
 
   function renderProvenance(binding) {

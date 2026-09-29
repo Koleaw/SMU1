@@ -14,11 +14,7 @@ import { required, clear, element, debounce, focusWithoutScroll, safeExternalOpe
 import { icon } from '../ui/icons.mjs';
 import { createNotifications } from '../ui/notifications.mjs';
 import { renderDataTools } from '../settings/data-tools.mjs';
-
-const COLLECTIONS = Object.freeze([
-  'product-sections', 'product-categories', 'products', 'services',
-  'projects', 'jobs', 'site-settings', 'static-pages'
-]);
+import { COLLECTION_KEYS as COLLECTIONS } from '../../../tools/admin-api/content-registry.mjs';
 const REPO_IDENTITY = 'smu1-site:h6';
 const STRUCTURAL_CONFLICT_PATHS = new Set(['slug', 'pageBlocks', 'gallery', 'images', 'order', 'relatedProductSlugs']);
 
