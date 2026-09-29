@@ -152,10 +152,10 @@ function diagramForGroup(grouped, input, active = '') {
     const selected = activeSource || (segment.type === 'part' && activePart === segment.partId) || (segment.type === 'kerf' && active === 'kerf') || (segment.type === 'remnant' && active === 'minUsefulRemnant') || (segment.type === 'trim' && ((segment.start === 0 && active === 'trimStart') || (segment.end === map.length && active === 'trimEnd')));
     const fill = segment.type === 'part' ? 'var(--tool-ink)' : segment.type === 'remnant' ? '#a9c9ba' : segment.type === 'kerf' ? '#b25f35' : 'url(#tool-hatch)';
     body += `<g${selected ? ' class="is-active"' : ''}><title>${escape(`${segment.label}: ${format(segment.length)} мм; от ${format(segment.start)} до ${format(segment.end)} мм`)}</title><rect x="${left}" y="${y}" width="${segmentWidth}" height="${barHeight}" fill="${fill}" stroke="${selected ? '#b25f35' : 'var(--tool-paper)'}" stroke-width="${selected ? 3 : segment.type === 'part' ? 1 : 0}"/>`;
-    if (segment.type === 'part' && segmentWidth >= 72) {
+    if (segment.type === 'part' && segmentWidth >= Math.max(96, format(segment.length).length * 23)) {
       const partIndex = input.parts.findIndex((row) => row.id === segment.partId) + 1;
-      body += txt(left + segmentWidth / 2, y + 29, `Д${partIndex}`, 'text-anchor="middle" style="font-size:28px;fill:white"');
-      body += txt(left + segmentWidth / 2, y + 61, `${format(segment.length)}`, 'text-anchor="middle" style="font-size:28px;fill:white"');
+      body += txt(left + segmentWidth / 2, y + 29, `Д${partIndex}`, 'class="tool-cut-part-label" text-anchor="middle" style="font-size:28px;fill:white"');
+      body += txt(left + segmentWidth / 2, y + 61, `${format(segment.length)}`, 'class="tool-cut-part-label" text-anchor="middle" style="font-size:28px;fill:white"');
     }
     if (segment.type === 'kerf') body += `<path d="M${left + segmentWidth / 2} ${y - 11}V${y}" stroke="#b25f35" stroke-width="2"/>`;
     body += '</g>';

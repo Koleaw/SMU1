@@ -1,4 +1,5 @@
 import {number, optional, text, list, choice, clone} from '../core/numbers.mjs';
+import {validateShape} from '../core/projects.mjs';
 import reference from '../../content/tool-references/steel-angles.json' with {type:'json'};
 export const methodologyVersion = '1.0.0';
 export const referenceVersions = {'steel-angles':reference.version};
@@ -8,6 +9,7 @@ export const emptyRow = {name:'',shape:'strip',width:'',height:'',thickness:'',d
 export const blank = {rows:[clone(emptyRow)]};
 export const example = {rows:[{...emptyRow,name:'Полоса для каркаса',width:40,thickness:4,length:6000,quantity:1,price:90,priceUnit:'kg'},{...emptyRow,name:'Лист для деталей',shape:'sheet',width:1000,length:2000,thickness:2,quantity:1}]};
 export function calculate(input) {
+  validateShape(input,example);
   const rows = list(input.rows,'Ведомость',100,1).map((r,index)=>{
     const p=`Позиция ${index+1}`;
     const shape=choice(r.shape,Object.keys(shapes),`${p}, форма`);
@@ -44,8 +46,9 @@ export function calculate(input) {
     const priceUnit=choice(r.priceUnit,['m','kg','t','sheet'],`${p}, единица цены`);
     if(price!==null && (priceUnit==='sheet' && shape!=='sheet' || priceUnit==='m' && shape==='sheet')) throw new Error(`${p}: для листа используйте цену за лист, кг или тонну; для профиля — метр, кг или тонну.`);
     const cost=price===null?null:price*(priceUnit==='kg'?mass:priceUnit==='t'?mass/1000:priceUnit==='sheet'?quantity:totalLength);
-    return {index:index+1,name:text(r.name,`${p}, название`,120)||designation,shape,designation,length,quantity,dimensions,massPerMetre,massPerSheet,totalLength,mass,price,priceUnit,cost,source};
+    return {index:index+1,name:text(r.name,`${p}, название`,120)||designation,shape,designation,length,quantity,dimensions,massPerMetre,massPerSheet,totalLength,mass,price,priceUnit:({m:'₽/м',kg:'₽/кг',t:'₽/т',sheet:'₽/лист'})[priceUnit],cost,source};
   });
   const totalMass=rows.reduce((n,r)=>n+r.mass,0), totalLength=rows.reduce((n,r)=>n+r.totalLength,0), knownCost=rows.reduce((n,r)=>n+(r.cost??0),0), priced=rows.filter(r=>r.cost!==null).length;
-  return {rows, totalMass,totalLength,knownCost,completeCost:priced===rows.length,priced,coefficients:{densityKgM3:density},summary:[{label:'Теоретическая масса',value:totalMass,unit:'кг'},{label:'Метраж профилей',value:totalLength,unit:'м'},{label:priced===rows.length?'Стоимость металла':`Известная часть стоимости (${priced}/${rows.length})`,value:priced?knownCost:'Не указана',unit:priced?'₽':''}],columns:[{key:'index',label:'№'},{key:'name',label:'Позиция'},{key:'designation',label:'Профиль / размеры'},{key:'length',label:'Длина, мм'},{key:'quantity',label:'Шт.'},{key:'massPerMetre',label:'кг/м'},{key:'massPerSheet',label:'кг/лист'},{key:'totalLength',label:'Метраж, м'},{key:'mass',label:'Масса, кг'},{key:'price',label:'Цена'},{key:'priceUnit',label:'Единица цены'},{key:'cost',label:'Стоимость, ₽'},{key:'source',label:'Основание'}],warnings:['Теоретическая масса отличается от взвешивания поставки. Трубы по геометрии: реальные скругления и допуски не учтены.','Цена относится только к металлу. Изготовление, монтаж и доставка не включены.',...(priced<rows.length?['Полная стоимость неизвестна: у части позиций нет цены.']:[])]};
+  if(knownCost>1e14||!Number.isFinite(knownCost))throw new Error('Стоимость комплекта превышает допустимый предел 100 трлн ₽. Проверьте размеры, количество и единицы цены.');
+  return {rows, totalMass,totalLength,knownCost,completeCost:priced===rows.length,priced,coefficients:{densityKgM3:density,tabulatedProfiles:rows.filter(r=>r.shape==='angle').map(r=>({position:r.index,designation:r.designation,massKgM:r.massPerMetre,source:r.source}))},summary:[{label:'Теоретическая масса',value:totalMass,unit:'кг'},{label:'Метраж профилей',value:totalLength,unit:'м'},{label:priced===rows.length?'Стоимость металла':`Известная часть стоимости (${priced}/${rows.length})`,value:priced?knownCost:'Не указана',unit:priced?'₽':''}],columns:[{key:'index',label:'№'},{key:'name',label:'Позиция'},{key:'designation',label:'Профиль / размеры'},{key:'length',label:'Длина, мм'},{key:'quantity',label:'Шт.'},{key:'massPerMetre',label:'кг/м'},{key:'massPerSheet',label:'кг/лист'},{key:'totalLength',label:'Метраж, м'},{key:'mass',label:'Масса, кг'},{key:'price',label:'Цена'},{key:'priceUnit',label:'Единица цены'},{key:'cost',label:'Стоимость, ₽'},{key:'source',label:'Основание'}],warnings:['Теоретическая масса отличается от взвешивания поставки. Трубы по геометрии: реальные скругления и допуски не учтены.','Цена относится только к металлу. Изготовление, монтаж и доставка не включены.',...(priced<rows.length?['Полная стоимость неизвестна: у части позиций нет цены.']:[])]};
 }

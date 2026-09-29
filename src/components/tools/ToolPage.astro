@@ -1,35 +1,43 @@
 ---
 import CatalogV2Layout from '../v2/CatalogV2Layout.astro';
-import V2Breadcrumbs from '../v2/V2Breadcrumbs.astro';
+import {adminBinding,adminDisposition} from '../../admin/bindings/adminBinding';
 import {withBase} from '../../utils/withBase';
 import {safeInlineJson} from '../../utils/safeInlineJson.mjs';
 import settings from '../../content/site-settings/global.json';
 import '../../styles/tools.css';
 const {tool}=Astro.props;
 const path=`/instrumenty/${tool.id}/`;
+const binding=(fieldPath:string)=>adminBinding(Astro.url,{renderer:{family:'tool',variant:'calculator'},owner:{collection:'tools',slug:tool.id},fieldPath,stableItemId:tool.id,scope:'local',tool:'long-text',affectedRoutes:[path,'/instrumenty/']});
+const fixed=adminDisposition(Astro.url,{kind:'template-fixed',reason:'Интерфейс расчёта — версионированный код. Методики и справочники зарегистрированы отдельно; пользовательский ввод не редактируется через админку.',source:'src/components/tools/ToolPage.astro'});
 ---
 <CatalogV2Layout title={tool.seoTitle} description={tool.description} canonicalPath={path} currentPath={path} contactHref="#tool-contact" headerCtaLabel="Обсудить задачу" mobileCtaLabel="Обсудить задачу" rootClass="tools-page">
   <div class="tools-container">
     <nav class="tool-breadcrumb" aria-label="Хлебные крошки"><a href={withBase('/')}>Главная</a><span>/</span><a href={withBase('/instrumenty/')}>Инструменты</a></nav>
-    <header class="tool-heading"><p class="tool-kicker">СМУ-1 · Практика строительства</p><h1>{tool.title}</h1><p>{tool.description}</p></header>
-    <section class="tool-app" data-tool-app data-tool-id={tool.id} data-base={withBase('/')} aria-label={tool.title}>
-      <script type="application/json" data-tool-content set:html={safeInlineJson(tool)} />
-      <div class="tool-toolbar"><label class="tool-project-name">Название расчёта<input data-project-name type="text" maxlength="120" value="" /></label><div class="tool-toolbar-actions"><button type="button" class="tool-button" data-action="new">Новый расчёт</button><button type="button" class="tool-button" data-action="example">Открыть пример</button><button type="button" class="tool-button" data-action="folder">Мои расчёты</button></div></div>
+    <header class="tool-heading"><p class="tool-kicker" {...fixed}>СМУ-1 · Практика строительства</p><h1 {...binding('title')}>{tool.title}</h1><p {...binding('description')}>{tool.description}</p></header>
+    <section class="tool-app ym-hide-content" data-tool-app data-tool-id={tool.id} data-base={withBase('/')} aria-label={tool.title} {...fixed}>
+      <script is:inline type="application/json" data-tool-content set:html={safeInlineJson({...tool,contact:{email:settings.email,phone:settings.phonePrimary}})} />
+      <div class="tool-toolbar"><label class="tool-project-name">Название расчёта<input class="ym-disable-keys" data-project-name type="text" maxlength="120" value="" /></label><div class="tool-toolbar-actions"><button type="button" class="tool-button" data-action="new">Новый расчёт</button><button type="button" class="tool-button" data-action="example">Открыть пример</button><button type="button" class="tool-button" data-action="folder">Мои расчёты</button></div></div>
       <p class="tool-save" data-save-status role="status">Загрузка инструмента…</p>
       <p class="tool-demo" data-demo hidden>Демонстрационные данные. Для своей задачи нажмите «Новый расчёт».</p>
       <p class="tool-history" data-history hidden></p>
+      <p class="tool-error" data-error role="alert" tabindex="-1" hidden></p>
       <div class="tool-folder" data-folder hidden></div>
       <nav class="tool-tabs" aria-label="Рабочие области"><button type="button" data-action="tab" data-tab="data" aria-pressed="true">Данные</button><button type="button" data-action="tab" data-tab="diagram" aria-pressed="false">Схема</button><button type="button" data-action="tab" data-tab="result" aria-pressed="false">Результат</button></nav>
       <div class="tool-workspace" data-active-tab="data">
         <section class="tool-input-panel" data-panel="data"><h2 class="tool-panel-title">Исходные данные</h2><form data-tool-form novalidate><div data-fields></div><div class="tool-calculate"><button class="tool-button tool-primary" type="submit">Рассчитать</button><button class="tool-button" type="button" data-action="cancel" hidden>Отменить расчёт</button></div></form></section>
-        <section class="tool-visual-panel" data-panel="diagram"><div class="tool-panel-heading"><h2 class="tool-panel-title">Схема</h2><button type="button" class="tool-button" data-action="fit">Показать целиком</button></div><div data-diagram class="tool-diagram"></div><p class="tool-hint">Схема поясняет расчёт. Выберите поле, чтобы выделить соответствующий размер.</p></section>
-        <section class="tool-result-panel" data-panel="result"><h2 class="tool-panel-title">Результат</h2><p class="tool-error" data-error role="alert" hidden></p><div data-summary class="tool-summary" aria-live="polite"></div><div data-notes class="tool-notes"></div><div data-extra></div><details class="tool-details"><summary>Полная ведомость</summary><div data-result-table></div></details></section>
+        <section class="tool-visual-panel" data-panel="diagram"><div class="tool-panel-heading" style="flex-wrap:wrap"><h2 class="tool-panel-title">Схема</h2><div class="tool-row-actions" style="display:flex;flex-wrap:wrap;gap:6px;margin:0"><button type="button" class="tool-button" data-action="zoom" aria-label="Увеличить схему в два раза">Увеличить</button><button type="button" class="tool-button" data-action="fit">Показать целиком</button></div></div><div data-diagram class="tool-diagram" tabindex="0" aria-label="Схема расчёта; увеличенную схему можно прокручивать стрелками"></div><p class="tool-hint">Схема поясняет расчёт. Выберите поле, чтобы выделить соответствующий размер.</p></section>
+        <section class="tool-result-panel" data-panel="result"><h2 class="tool-panel-title">Результат</h2><div data-summary class="tool-summary" aria-live="polite"></div><div data-notes class="tool-notes"></div><div data-extra></div><details class="tool-details"><summary>Полная ведомость</summary><div data-result-table></div></details></section>
       </div>
       <section class="tool-export"><h2>Сохранить и передать</h2><div class="tool-export-actions"><button type="button" class="tool-button" data-action="project-export">Файл проекта</button><button type="button" class="tool-button" data-action="import">Импорт проекта</button><button type="button" class="tool-button" data-action="csv" data-needs-result>Скачать CSV</button><button type="button" class="tool-button" data-action="print" data-needs-result>Печать / сохранить в PDF</button></div><input type="file" accept=".json,application/json" data-import-file hidden/><p class="tool-hint">Без регистрации и телефона. Расчёты хранятся в этом браузере. Очистка данных браузера может удалить их. Для переноса с preview на другой домен выгрузите файл проекта.</p><p data-export-status role="status"></p></section>
       <section class="tool-contact" id="tool-contact"><div><p class="tool-kicker">От расчёта к изготовлению</p><h2>Подготовьте запрос в СМУ-1</h2><p>Приложите ведомость, опишите задачу и уточните условия изготовления.</p></div><div class="tool-contact-actions"><button type="button" class="tool-button tool-primary" data-action="copy" data-needs-result>Скопировать запрос</button><a class="tool-button" href={`mailto:${settings.email}`} data-contact-link>Открыть почту</a><a class="tool-button" href={settings.telegram} target="_blank" rel="noopener noreferrer" data-contact-link>Открыть Telegram</a><a class="tool-service" href={withBase(tool.service.href)} data-service-link>{tool.service.label} →</a></div><p class="tool-hint">Открытие почты или Telegram не отправляет заявку. Отправьте подготовленный текст и файлы в выбранном приложении.</p></section>
       <noscript><p class="tool-error">Для вычислений необходим JavaScript. Методика и пример доступны ниже. Обсудить задачу: <a href={`mailto:${settings.email}`}>{settings.email}</a>, <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g,'')}`}>{settings.phonePrimary}</a>.</p></noscript>
     </section>
-    <section class="tool-method" aria-labelledby="method-title"><div><p class="tool-kicker">Как устроен расчёт</p><h2 id="method-title">Методика и ограничения</h2><p>{tool.audience}</p><h3>Что потребуется</h3><ul>{tool.inputs.map((s:string)=><li>{s}</li>)}</ul></div><div><h3>Пример</h3><p>{tool.exampleText}</p><h3>Расчёт</h3>{tool.methodology.map((s:string)=><p>{s}</p>)}<h3>Границы применения</h3><ul>{tool.limitations.map((s:string)=><li>{s}</li>)}</ul><h3>Источники</h3><ul>{tool.sources.map((s:{title:string,url:string})=><li><a href={s.url} target="_blank" rel="noopener noreferrer">{s.title}</a></li>)}</ul><p class="tool-hint">Методика СМУ-1 · версия 1.0.0. В файле проекта сохраняются версия и использованные коэффициенты.</p></div></section>
+    <section class="tool-method" aria-labelledby="method-title">
+      <div><p class="tool-kicker" {...fixed}>Как устроен расчёт</p><h2 id="method-title" {...fixed}>Методика и ограничения</h2><p {...binding('audience')}>{tool.audience}</p><h3 {...fixed}>Что потребуется</h3><ul>{tool.inputs.map((s:string,i:number)=><li {...binding(`inputs.${i}`)}>{s}</li>)}</ul></div>
+      <div><h3 {...fixed}>Пример</h3><p {...binding('exampleText')}>{tool.exampleText}</p><h3 {...fixed}>Расчёт</h3>{tool.methodology.map((s:string,i:number)=><p {...binding(`methodology.${i}`)}>{s}</p>)}<h3 {...fixed}>Границы применения</h3><ul>{tool.limitations.map((s:string,i:number)=><li {...binding(`limitations.${i}`)}>{s}</li>)}</ul>
+      {tool.sources.length>0&&<><h3 {...fixed}>Источники</h3><ul>{tool.sources.map((s:{title:string,url:string},i:number)=><li><a href={s.url} {...binding(`sources.${i}.title`)} target="_blank" rel="noopener noreferrer">{s.title}</a></li>)}</ul></>}
+      <p class="tool-hint" {...fixed}>Методика СМУ-1 · версия 1.0.0. В файле проекта сохраняются версия и использованные коэффициенты.</p></div>
+    </section>
   </div>
 </CatalogV2Layout>
 <script>import '../../tools/app.mjs';</script>

@@ -6,7 +6,7 @@ export function set(object,path,value) { const parts=path.split('.'); let p=obje
 export const field = (path,label,options={}) => ({path,label,...options});
 export function inputField(input, f) {
   const value=get(input,f.path), id=`tool-${f.path.replaceAll('.','-')}`;
-  const attr=`id="${id}" data-field="${escape(f.path)}"`;
+  const attr=`id="${id}" data-field="${escape(f.path)}" class="ym-disable-keys"`;
   const control=f.options?`<select ${attr}>${f.options.map(o=>{const [v,t]=Array.isArray(o)?o:[o,o];return `<option value="${escape(v)}" ${String(value)===String(v)?'selected':''}>${escape(t)}</option>`}).join('')}</select>`:f.type==='checkbox'?`<input ${attr} type="checkbox" ${value?'checked':''}>`:f.type==='textarea'?`<textarea ${attr} maxlength="${f.maxlength||2000}" rows="3">${escape(value)}</textarea>`:`<input ${attr} type="text" ${f.type==='text'?'':'inputmode="decimal"'} maxlength="${f.type==='text'?f.maxlength||160:24}" value="${escape(value)}" ${f.placeholder?`placeholder="${escape(f.placeholder)}"`:''} autocomplete="off">`;
   return `<label class="tool-field ${f.type==='checkbox'?'tool-check':''} ${f.options||f.type==='textarea'||f.type==='text'?'tool-field-wide':''}" for="${id}"><span>${escape(f.label)}${f.unit?` <small>${escape(f.unit)}</small>`:''}</span>${control}${f.hint?`<small>${escape(f.hint)}</small>`:''}</label>`;
 }

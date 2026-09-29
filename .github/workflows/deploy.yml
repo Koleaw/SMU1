@@ -145,6 +145,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Verify construction tool methods and project format
+        run: npm run test:tools
+
       - name: Run H6 admin tests and secondary editor browser round-trip
         run: npm run qa:h6:admin
 

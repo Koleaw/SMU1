@@ -420,6 +420,7 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
           metrikaCounterId: yandex.metrika.counterId,
           metrikaScriptSrc: yandex.metrika.scriptSrc,
           metrikaInit: yandex.metrika.init,
+          metrikaBasePath: v2BasePath,
           metrikaDelayMs: 7000
         }}
       >
@@ -427,6 +428,24 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
           const stateKey = '__smu1MetrikaState';
           window[stateKey] = window[stateKey] || { loaded: false, timer: null };
           const state = window[stateKey];
+          // Tool URLs can carry local project IDs; send only their stable route.
+          // Evaluate at loading time because client navigation can precede the delay.
+          const toolPrefixes = ['/instrumenty/', '/SMU1/instrumenty/', `${metrikaBasePath}instrumenty/`];
+          const isToolUrl = (value) => {
+            if (!value) return false;
+            try {
+              const { pathname } = new URL(value, location.origin);
+              return toolPrefixes.some((prefix) => pathname === prefix.slice(0, -1) || pathname.startsWith(prefix));
+            } catch { return false; }
+          };
+          const analyticsUrl = (value) => {
+            if (!value) return '';
+            if (!isToolUrl(value)) return value;
+            const url = new URL(value, location.origin);
+            url.search = '';
+            url.hash = '';
+            return url.href;
+          };
 
           const loadMetrika = () => {
             if (state.loaded || !metrikaCounterId || !metrikaScriptSrc) return;
@@ -443,7 +462,12 @@ const jsonLdGraph = [organizationData, websiteData, ...extraStructuredData].filt
               k.src = r;
               a.parentNode.insertBefore(k, a);
             })(window, document, 'script', metrikaScriptSrc, 'ym');
-            window.ym(metrikaCounterId, 'init', { ...metrikaInit, referrer: document.referrer, url: location.href });
+            window.ym(metrikaCounterId, 'init', {
+              ...metrikaInit,
+              webvisor: isToolUrl(location.href) ? false : metrikaInit.webvisor,
+              referrer: analyticsUrl(document.referrer),
+              url: analyticsUrl(location.href)
+            });
           };
 
           const scheduleMetrika = () => {

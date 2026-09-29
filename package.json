@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:tools": "node --test src/tools/core/*.test.mjs src/tools/calculations/*.test.mjs src/tools/adapters/*.test.mjs",
     "test": "npm run test:admin-h6:ci",
     "dev": "astro dev",
     "admin": "node tools/admin-api/launcher.mjs --open",
@@ -42,7 +43,7 @@
     "qa:h6:public-evidence": "npm run qa:h6:route-passport && npm run qa:h6:public-actions",
     "qa:h6:verify-evidence": "node tools/qa/verify-h6-evidence.mjs",
     "qa:h6:admin": "npm run test:admin-h6:ci && npm run qa:admin-browser",
-    "qa:final": "npm run check && npm run qa:h6:admin && npm run test:h6-evidence-contracts && npm run build && npm run qa:h6:exact-targeted && npm run qa:performance && npm run qa:final:static && npm run test:public-search && npm run qa:public-search && npm run deploy:prepare && npm run qa:performance && npm run qa:public-search && npm run qa:final:browser && npm run qa:deploy-isolation && npm run qa:h6:public-evidence && npm run qa:h6:admin-actions && npm run qa:h6:media-privacy && npm run qa:h6:backup-restore && npm run qa:h6:verify-evidence"
+    "qa:final": "npm run check && npm run test:tools && npm run qa:h6:admin && npm run test:h6-evidence-contracts && npm run build && npm run qa:h6:exact-targeted && npm run qa:performance && npm run qa:final:static && npm run test:public-search && npm run qa:public-search && npm run deploy:prepare && npm run qa:performance && npm run qa:public-search && npm run qa:final:browser && npm run qa:deploy-isolation && npm run qa:h6:public-evidence && npm run qa:h6:admin-actions && npm run qa:h6:media-privacy && npm run qa:h6:backup-restore && npm run qa:h6:verify-evidence"
   },
   "dependencies": {
     "@astrojs/sitemap": "3.7.4",
