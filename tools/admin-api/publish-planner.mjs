@@ -25,6 +25,8 @@ const SHA_RE = /^[a-f0-9]{40}$/u;
 const GIT_OBJECT_RE = /^(?:missing|[a-f0-9]{40})$/u;
 const REVISION_RE = /^(?:missing|sha256:[a-f0-9]{64}:[0-9]+)$/u;
 const COLLECTIONS = new Set([
+  'tools',
+  'tool-references',
   'jobs',
   'product-categories',
   'product-sections',

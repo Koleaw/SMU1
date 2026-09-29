@@ -90,7 +90,12 @@ export function searchPublicMatches(prepared, input) {
 
 export const searchPublicEntries = (prepared, input) => searchPublicMatches(prepared, input).map((row) => row.entry);
 
-const kindLabel = { product: 'Изделие', category: 'Категория', direction: 'Направление', project: 'Объект' };
+export const kindLabel = Object.freeze({ product: 'Изделие', category: 'Категория', direction: 'Направление', project: 'Объект', tool: 'Инструмент' });
+
+export const isValidPublicSearchEntry = (entry) => Boolean(entry && typeof entry.title === 'string'
+  && typeof entry.description === 'string' && typeof entry.keywords === 'string'
+  && Object.hasOwn(kindLabel, entry.kind) && /^\/(?:[a-z0-9-]+\/)+$/.test(entry.href)
+  && !/^\/(?:admin|design-lab|api)\//.test(entry.href));
 
 export function initPublicSearch(dialog) {
   if (dialog.dataset.searchReady) return;
@@ -122,7 +127,7 @@ export function initPublicSearch(dialog) {
     if (pending) { status.textContent = 'Загружаем поиск…'; return; }
     if (failed) { status.textContent = 'Не удалось загрузить поиск. Проверьте соединение и попробуйте ещё раз.'; return; }
     if (!prepared) return;
-    if (!query) { status.textContent = 'Найдите изделие, категорию, направление или выполненный объект.'; return; }
+    if (!query) { status.textContent = 'Найдите изделие, инструмент, направление или выполненный объект.'; return; }
     results = searchPublicMatches(prepared, query);
     status.textContent = results.length ? `Найдено: ${results.length}` : 'Ничего не найдено. Попробуйте название модели или более короткий запрос.';
     const titleResults = results.filter((row) => row.titleOnly);
@@ -209,10 +214,7 @@ export function initPublicSearch(dialog) {
       if (!response.ok) throw new Error('Search unavailable');
       const payload = await response.json();
       if (payload.version !== 1 || !Array.isArray(payload.entries) || !payload.entries.length) throw new Error('Invalid index');
-      const valid = payload.entries.every((entry) => entry && typeof entry.title === 'string'
-        && typeof entry.description === 'string' && typeof entry.keywords === 'string'
-        && Object.hasOwn(kindLabel, entry.kind) && /^\/(?:[a-z0-9-]+\/)+$/.test(entry.href)
-        && !/^\/(?:admin|design-lab|api)\//.test(entry.href));
+      const valid = payload.entries.every(isValidPublicSearchEntry);
       if (!valid) throw new Error('Invalid search entry');
       prepared = prepareSearch(payload.entries);
     } catch { failed = true; }

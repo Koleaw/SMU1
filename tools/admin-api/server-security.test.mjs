@@ -30,6 +30,8 @@ async function createContentRoot(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-admin-security-'));
   await Promise.all([
     'jobs',
+    'tools',
+    'tool-references',
     'product-categories',
     'product-sections',
     'products',

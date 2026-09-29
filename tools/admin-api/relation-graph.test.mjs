@@ -282,7 +282,7 @@ test('rename rejects locked, reserved, duplicate, invalid and route-colliding sl
 test('the current production corpus has a complete collision-free relation graph', async () => {
   const collectionNames = [
     'product-sections', 'product-categories', 'products', 'services',
-    'projects', 'jobs', 'static-pages', 'site-settings'
+    'projects', 'jobs', 'static-pages', 'site-settings', 'tools', 'tool-references'
   ];
   const collections = {};
   for (const collection of collectionNames) {
@@ -299,7 +299,9 @@ test('the current production corpus has a complete collision-free relation graph
   const second = buildRelationGraph({ collections, navigation });
 
   assert.deepEqual(second, first, 'graph output must be deterministic for the same corpus');
-  assert.equal(first.records.length, 107);
+  assert.equal(first.records.length, 115);
+  assert.equal(first.records.filter((record) => record.collection === 'tools').length, 7);
+  assert.equal(first.records.find((record) => record.id === 'tools:metal').route, '/instrumenty/metal/');
   assert.ok(first.relations.length > 300);
   assert.ok(first.media.length > 200);
   assert.deepEqual(first.routeCollisions, []);

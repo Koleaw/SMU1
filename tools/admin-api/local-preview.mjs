@@ -9,7 +9,7 @@ import { createSafeNodeChildEnvironment } from './runtime-identity.mjs';
 const execFileAsync = promisify(execFile);
 const TOKEN_RE = /^[a-f0-9]{32}$/u;
 const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
-const COLLECTIONS = new Set(['product-sections', 'product-categories', 'products', 'services', 'projects', 'jobs', 'static-pages']);
+const COLLECTIONS = new Set(['product-sections', 'product-categories', 'products', 'services', 'projects', 'jobs', 'static-pages', 'tools', 'tool-references']);
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
 
 export class LocalPreviewError extends Error {
@@ -183,7 +183,7 @@ export function createLocalPreviewService(options = {}) {
     const content = await readJson(recordPath).catch((error) => {
       throw new LocalPreviewError('LOCAL_PREVIEW_RECORD_NOT_FOUND', 'Сохранённая запись не найдена.', { status: 404, cause: error });
     });
-    content.isActive = true;
+    if (!['tools', 'tool-references'].includes(collection)) content.isActive = true;
     await writeJson(recordPath, content);
 
     if (collection === 'products') {
@@ -209,6 +209,8 @@ export function createLocalPreviewService(options = {}) {
     }
     if (collection === 'projects') return { content, route: `/vypolnennye-obekty/${slug}/` };
     if (collection === 'jobs') return { content, route: `/vakansii/${slug}/` };
+    if (collection === 'tools') return { content, route: `/instrumenty/${slug}/` };
+    if (collection === 'tool-references') return { content, route: '/instrumenty/metal/' };
     if (collection === 'static-pages') {
       if (slug === 'home') return { content, route: '/' };
       if (slug === 'custom-order') return { content, route: '/izgotovlenie-na-zakaz/' };

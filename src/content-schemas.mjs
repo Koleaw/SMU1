@@ -325,6 +325,31 @@ const pageBlockSchema = z.object({
 });
 
 export const contentSchemas = {
+  tools: z.object({
+    id: z.enum(['metal', 'raskroy', 'fundament', 'ograzhdenie', 'plitka', 'maf', 'zdanie']),
+    slug: z.enum(['metal', 'raskroy', 'fundament', 'ograzhdenie', 'plitka', 'maf', 'zdanie']),
+    title: z.string().min(1).max(160), description: z.string().min(1).max(500),
+    seoTitle: z.string().min(1).max(180), order: z.number().int().min(1).max(7),
+    audience: z.string().min(1).max(500), inputs: z.array(z.string().min(1).max(500)).min(1).max(20),
+    methodology: z.array(z.string().min(1).max(1600)).min(1).max(20),
+    limitations: z.array(z.string().min(1).max(1200)).min(1).max(20),
+    exampleText: z.string().min(1).max(2500),
+    service: z.object({ label: z.string().min(1).max(160), href: internalPageHrefSchema }).strict(),
+    queries: z.array(z.string().min(1).max(160)).min(1).max(20),
+    sources: z.array(z.object({ title: z.string().min(1).max(250), url: z.string().url().regex(/^https:\/\//u) }).strict()).max(10)
+  }).strict().refine((record) => record.id === record.slug, { message: 'ID инструмента должен совпадать с адресом.', path: ['slug'] }),
+  'tool-references': z.object({
+    id: z.string().regex(/^[a-z][a-z0-9-]{0,79}$/u), slug: z.string().regex(/^[a-z][a-z0-9-]{0,79}$/u),
+    title: z.string().min(1).max(250), version: z.string().regex(/^\d+\.\d+\.\d+$/u),
+    unit: z.literal('kg/m'), source: z.object({ title: z.string().min(1).max(250), url: z.string().url().regex(/^https:\/\//u) }).strict(),
+    densityKgM3: z.number().positive().max(30000).optional(),
+    entries: z.array(z.object({
+      id: z.string().min(1).max(100), designation: z.string().min(1).max(250), massKgM: z.number().positive().max(100000),
+      widthMm: z.number().positive().max(10000).optional(), heightMm: z.number().positive().max(10000).optional(),
+      thicknessMm: z.number().positive().max(1000).optional()
+    }).strict()).min(1).max(1000)
+  }).strict().refine((record) => record.id === record.slug && new Set(record.entries.map((entry) => entry.id)).size === record.entries.length,
+    { message: 'ID справочника должен совпадать с адресом; ID позиций должны быть уникальны.' }),
   'product-sections': z.object({
     title: z.string(), slug: z.string(), shortDescription: z.string(), heroTitle: z.string(), heroDescription: z.string(),
     order: z.number(), showOnHome: z.boolean(), isActive: z.boolean(), mode: z.enum(['catalog-hub', 'custom-direction']),

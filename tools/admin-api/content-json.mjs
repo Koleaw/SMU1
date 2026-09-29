@@ -14,10 +14,12 @@ const MEDIA_KEYS = new Set([
 ]);
 const OPERATION_TTL_MS = 15 * 60 * 1000;
 const FULL_COLLECTIONS = [
+  'tools', 'tool-references',
   'static-pages', 'services', 'product-sections', 'product-categories', 'products', 'projects', 'jobs'
 ];
 const FULL_SINGLETONS = ['site-settings', 'navigation', 'yandex'];
 const PAGE_KIND_BY_COLLECTION = {
+  tools: 'tool',
   'static-pages': 'static-page',
   'product-sections': 'product-section',
   'product-categories': 'product-category',
@@ -29,6 +31,8 @@ const COLLECTION_BY_PAGE_KIND = Object.fromEntries(
   Object.entries(PAGE_KIND_BY_COLLECTION).map(([collection, kind]) => [kind, collection])
 );
 const COLLECTION_EXPORT_NAMES = {
+  tools: ['tool', 'tools'],
+  'tool-references': ['tool-reference', 'tool-references'],
   'product-sections': ['product-section', 'product-sections'],
   'product-categories': ['product-category', 'product-categories'],
   products: ['product', 'products'],
@@ -39,6 +43,8 @@ const COLLECTION_EXPORT_NAMES = {
   'static-pages': ['static-page', 'static-pages']
 };
 const REQUIRED_TEXT_FIELDS = {
+  tools: ['id', 'slug', 'title', 'description', 'seoTitle', 'audience', 'exampleText'],
+  'tool-references': ['id', 'slug', 'title', 'version', 'unit'],
   'product-sections': ['title', 'slug', 'shortDescription', 'heroTitle', 'heroDescription', 'image', 'placeholderLabel', 'seoTitle', 'seoDescription'],
   'product-categories': ['title', 'slug', 'parentSectionSlug', 'shortDescription', 'heroTitle', 'heroDescription', 'image', 'placeholderLabel', 'seoTitle', 'seoDescription'],
   products: ['title', 'slug', 'productCategorySlug', 'shortDescription', 'leadText', 'currency', 'image', 'placeholderLabel', 'seoTitle', 'seoDescription'],
@@ -49,7 +55,7 @@ const REQUIRED_TEXT_FIELDS = {
   'static-pages': ['title', 'slug', 'seoTitle', 'seoDescription', 'heroTitle']
 };
 const ROUTE_SLUG_COLLECTIONS = new Set(['static-pages', 'product-sections', 'services']);
-const RESERVED_TOP_LEVEL_SLUGS = new Set(['admin', 'izgotovlenie-na-zakaz', '404']);
+const RESERVED_TOP_LEVEL_SLUGS = new Set(['admin', 'izgotovlenie-na-zakaz', 'instrumenty', '404']);
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -312,6 +318,7 @@ function reportPayload(data) {
 }
 
 function pageRoute(collection, item, lookups) {
+  if (collection === 'tools') return `/instrumenty/${item.slug}/`;
   if (collection === 'static-pages') {
     if (item.slug === 'home') return '/';
     if (item.slug === 'custom-order') return '/izgotovlenie-na-zakaz/';

@@ -43,6 +43,8 @@ export const v2Route = (value: string, scopeOrPathname: V2Scope | string) => {
   if (!value || EXTERNAL_OR_FRAGMENT.test(value)) return value;
   const productionPath = productionV2Path(value);
   if (MEDIA_OR_TOOL_PATH.test(productionPath)) return productionPath;
+  // Tools have one public implementation and no design-lab duplicate routes.
+  if (productionPath.startsWith('/instrumenty/')) return productionPath;
 
   const scope = scopeOrPathname === 'production' || scopeOrPathname === 'design-lab'
     ? scopeOrPathname

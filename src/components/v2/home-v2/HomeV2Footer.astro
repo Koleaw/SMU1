@@ -45,7 +45,7 @@ const transitionLabel = (href: string, fallback: string) => v2TransitionLabelFor
 const contactTransitionLabel = contactHref.startsWith('#')
   ? undefined
   : transitionLabel(contactHref, 'Контакты');
-const v2Roots = [...directionV2Roots, aboutV2Root, contactsV2Root, vacanciesV2Root, legalV2Root, customOrderV2Root];
+const v2Roots = [...directionV2Roots, aboutV2Root, contactsV2Root, vacanciesV2Root, legalV2Root, customOrderV2Root, '/instrumenty/'];
 const currentState = (href: string) => v2CurrentState(currentPath, href, v2Roots);
 const isDesignLab = getV2Scope(Astro.url.pathname) === 'design-lab';
 const globalBinding = (fieldPath: string, tool = 'short-text', options: Record<string, unknown> = {}) => adminBinding(Astro.url, {

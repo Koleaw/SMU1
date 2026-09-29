@@ -14,6 +14,8 @@ export const DIRECTORY_COLLECTIONS = Object.freeze([
   'services',
   'projects',
   'jobs',
+  'tools',
+  'tool-references',
   'static-pages'
 ]);
 

@@ -15,6 +15,8 @@ const jsonCollection = (directory: string) => glob({
 });
 
 export const collections = {
+  tools: defineCollection({ loader: jsonCollection('tools'), schema: contentSchemas.tools }),
+  'tool-references': defineCollection({ loader: jsonCollection('tool-references'), schema: contentSchemas['tool-references'] }),
   'product-sections': defineCollection({
     loader: jsonCollection('product-sections'),
     schema: contentSchemas['product-sections']

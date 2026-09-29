@@ -334,7 +334,20 @@ const YANDEX_PATHS = freezeArray([
   'links', 'links.yandexMapsCompanyUrl', 'links.yandexReviewUrl'
 ]);
 
+const TOOL_PATHS = freezeArray([
+  'id', 'slug', 'title', 'description', 'seoTitle', 'order', 'audience',
+  ...scalarArrayPaths('inputs'), ...scalarArrayPaths('methodology'), ...scalarArrayPaths('limitations'),
+  'exampleText', ...objectPaths('service', ['label', 'href']), ...scalarArrayPaths('queries'),
+  ...objectArrayPaths('sources', ['title', 'url'])
+]);
+const TOOL_REFERENCE_PATHS = freezeArray([
+  'id', 'slug', 'title', 'version', 'unit', 'densityKgM3', ...objectPaths('source', ['title', 'url']),
+  ...objectArrayPaths('entries', ['id', 'designation', 'massKgM', 'widthMm', 'heightMm', 'thicknessMm'])
+]);
+
 export const DECLARED_SCHEMA_PATHS = deepFreeze({
+  tools: TOOL_PATHS,
+  'tool-references': TOOL_REFERENCE_PATHS,
   'product-sections': PRODUCT_SECTION_PATHS,
   'product-categories': PRODUCT_CATEGORY_PATHS,
   products: PRODUCT_PATHS,
@@ -348,6 +361,8 @@ export const DECLARED_SCHEMA_PATHS = deepFreeze({
 });
 
 export const TEMPLATE_FAMILIES = deepFreeze({
+  TOOL: { key: 'tool', routeFamily: '/instrumenty/[tool]/', consumers: ['src/components/tools/ToolPage.astro', 'src/pages/instrumenty/[tool].astro', 'src/utils/publicSearchIndex.mjs'] },
+  TOOL_REFERENCE: { key: 'tool-reference', routeFamily: '/instrumenty/metal/', consumers: ['src/tools/calculations/metal.mjs'] },
   HOME: { key: 'home', routeFamily: '/', consumers: ['src/components/v2/home-final/HomeFinal.astro', 'src/components/v2/home-v2/homeV2Presentation.ts'] },
   DIRECTION_HUB: { key: 'direction-hub', routeFamily: '/[slug]/', consumers: ['src/components/v2/CatalogSectionV2.astro'] },
   SPECIALIZED_DIRECTION: { key: 'specialized-direction', routeFamily: '/[slug]/', consumers: ['src/components/v2/pages/CanopiesV2Page.astro', 'src/components/v2/pages/MetalworksV2Page.astro', 'src/components/v2/pages/TopiaryV2Page.astro'] },
@@ -373,6 +388,13 @@ const TEMPLATE_KEYS = Object.freeze(Object.fromEntries(
 ));
 
 const FIELD_LABELS = Object.freeze({
+  id: 'Стабильный идентификатор',
+  audience: 'Кому помогает инструмент', inputs: 'Входные данные и единицы',
+  methodology: 'Методика расчёта', limitations: 'Ограничения методики', exampleText: 'Контрольный пример',
+  service: 'Связанная услуга', queries: 'Гипотезы поисковых запросов', sources: 'Источники методики',
+  source: 'Источник справочника', version: 'Версия справочника', unit: 'Единица справочных значений',
+  densityKgM3: 'Плотность, кг/м³', entries: 'Позиции справочника', designation: 'Обозначение позиции',
+  massKgM: 'Масса метра, кг/м', widthMm: 'Ширина, мм', heightMm: 'Высота, мм', thicknessMm: 'Толщина, мм',
   title: 'Заголовок',
   slug: 'Адрес страницы',
   shortDescription: 'Краткое описание',
@@ -866,6 +888,8 @@ const FIELD_LABELS = Object.freeze({
 });
 
 const REQUIRED_ROOT_FIELDS = deepFreeze({
+  tools: ['id', 'slug', 'title', 'description', 'seoTitle', 'order', 'audience', 'inputs', 'methodology', 'limitations', 'exampleText', 'service', 'queries', 'sources'],
+  'tool-references': ['id', 'slug', 'title', 'version', 'unit', 'source', 'entries'],
   'product-sections': ['title', 'slug', 'shortDescription', 'heroTitle', 'heroDescription', 'order', 'showOnHome', 'isActive', 'mode', 'image', 'placeholderLabel', 'seoTitle', 'seoDescription'],
   'product-categories': ['title', 'slug', 'parentSectionSlug', 'shortDescription', 'heroTitle', 'heroDescription', 'order', 'showInSectionGrid', 'isActive', 'image', 'placeholderLabel', 'mode', 'seoTitle', 'seoDescription'],
   products: ['title', 'slug', 'productCategorySlug', 'shortDescription', 'leadText', 'priceMode', 'priceFrom', 'currency', 'image', 'placeholderLabel', 'order', 'isActive', 'showInCatalog', 'seoTitle', 'seoDescription'],
@@ -930,6 +954,8 @@ const DELIBERATELY_HIDDEN_PATHS = new Set([
 ]);
 
 const PUBLIC_REQUIRED_FIELDS = deepFreeze({
+  tools: ['id', 'slug', 'title', 'description', 'seoTitle', 'methodology', 'limitations', 'exampleText', 'service'],
+  'tool-references': ['id', 'slug', 'title', 'version', 'unit', 'source', 'entries'],
   'product-sections': ['title', 'slug', 'heroTitle', 'heroDescription', 'image'],
   'product-categories': ['title', 'slug', 'parentSectionSlug', 'heroTitle', 'heroDescription', 'image'],
   products: ['title', 'slug', 'productCategorySlug', 'shortDescription', 'leadText', 'image'],
@@ -943,6 +969,8 @@ const PUBLIC_REQUIRED_FIELDS = deepFreeze({
 });
 
 const DEFAULT_TEMPLATES_BY_OWNER = deepFreeze({
+  tools: [TEMPLATE_KEYS.TOOL],
+  'tool-references': [TEMPLATE_KEYS.TOOL_REFERENCE],
   'product-sections': [TEMPLATE_KEYS.DIRECTION_HUB, TEMPLATE_KEYS.SPECIALIZED_DIRECTION],
   'product-categories': [TEMPLATE_KEYS.CATEGORY, TEMPLATE_KEYS.DIRECTION_HUB],
   products: [TEMPLATE_KEYS.STANDARD_PRODUCT, TEMPLATE_KEYS.PREMIUM_PRODUCT],
@@ -1112,7 +1140,7 @@ const createSemanticsFor = (owner, path, requiredForSave) => {
 
 const createFieldCoverage = (owner, path, allPaths) => {
   const legacy = isLegacyPath(owner, path);
-  const deliberatelyHidden = DELIBERATELY_HIDDEN_PATHS.has(path);
+  const deliberatelyHidden = DELIBERATELY_HIDDEN_PATHS.has(path) || (['tools', 'tool-references'].includes(owner) && ['id', 'version', 'unit', 'densityKgM3'].includes(path));
   const coverageStatus = legacy
     ? FIELD_COVERAGE_STATUS.LEGACY_ONLY
     : deliberatelyHidden
@@ -1123,7 +1151,7 @@ const createFieldCoverage = (owner, path, allPaths) => {
     ? EDITOR_FIELD_STATUS.LEGACY_NOT_RENDERED
     : isContainer
       ? EDITOR_FIELD_STATUS.COMPUTED
-      : deliberatelyHidden || owner === 'yandex' || /^(?:seoTitle|seoDescription)$/u.test(path)
+      : deliberatelyHidden || owner === 'yandex' || owner === 'tool-references' || /^(?:seoTitle|seoDescription)$/u.test(path)
         ? EDITOR_FIELD_STATUS.ADVANCED
         : EDITOR_FIELD_STATUS.FRIENDLY;
   const requiredForSave = (REQUIRED_ROOT_FIELDS[owner] ?? []).includes(path);
@@ -1162,6 +1190,8 @@ const buildOwnerCoverage = (owner, paths, kind) => deepFreeze({
 
 export const FIELD_RENDERER_COVERAGE = deepFreeze({
   collections: {
+    tools: buildOwnerCoverage('tools', TOOL_PATHS, 'collection'),
+    'tool-references': buildOwnerCoverage('tool-references', TOOL_REFERENCE_PATHS, 'collection'),
     'product-sections': buildOwnerCoverage('product-sections', PRODUCT_SECTION_PATHS, 'collection'),
     'product-categories': buildOwnerCoverage('product-categories', PRODUCT_CATEGORY_PATHS, 'collection'),
     products: buildOwnerCoverage('products', PRODUCT_PATHS, 'collection'),
@@ -1178,6 +1208,18 @@ export const FIELD_RENDERER_COVERAGE = deepFreeze({
 });
 
 export const CONTENT_COMPLETENESS_POLICIES = deepFreeze({
+  tools: {
+    blocksSave: { source: 'contentSchemas', requiredFields: REQUIRED_ROOT_FIELDS.tools },
+    blocksPublic: { appliesWhen: { kind: 'always' }, requiredFields: PUBLIC_REQUIRED_FIELDS.tools,
+      rules: [{ kind: 'non-empty-list', path: 'methodology' }, { kind: 'non-empty-list', path: 'limitations' }] },
+    recommendations: []
+  },
+  'tool-references': {
+    blocksSave: { source: 'contentSchemas', requiredFields: REQUIRED_ROOT_FIELDS['tool-references'] },
+    blocksPublic: { appliesWhen: { kind: 'always' }, requiredFields: PUBLIC_REQUIRED_FIELDS['tool-references'],
+      rules: [{ kind: 'non-empty-list', path: 'entries' }] },
+    recommendations: []
+  },
   'product-sections': {
     blocksSave: { source: 'contentSchemas', requiredFields: REQUIRED_ROOT_FIELDS['product-sections'] },
     blocksPublic: {
@@ -1677,6 +1719,8 @@ export function resolvePageBlockTemplateFamily(collection, record = {}) {
 }
 
 export function getRecordTemplateFamilies(owner, record = {}) {
+  if (owner === 'tools') return Object.freeze([TEMPLATE_KEYS.TOOL]);
+  if (owner === 'tool-references') return Object.freeze([TEMPLATE_KEYS.TOOL_REFERENCE]);
   if (owner === 'product-sections' || owner === 'services' || owner === 'static-pages') {
     const family = resolvePageBlockTemplateFamily(owner, record);
     return Object.freeze(family ? [family] : []);

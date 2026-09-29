@@ -3,14 +3,43 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createPublicSearchIndex } from '../../src/utils/publicSearchIndex.mjs';
-import { normalizeSearch, prepareSearch, searchPublicEntries, searchPublicMatches, searchSnippet } from '../../src/scripts/public-search.mjs';
+import { createV2RouteRegistry, classifyV2Route, resolveV2TransitionMode } from '../../src/utils/v2TransitionRouting.mjs';
+import { normalizeSearch, prepareSearch, searchPublicEntries, searchPublicMatches, searchSnippet, isValidPublicSearchEntry, kindLabel } from '../../src/scripts/public-search.mjs';
 
-const collections = { productSections: 'product-sections', categories: 'product-categories', products: 'products', services: 'services', projects: 'projects' };
+const collections = { productSections: 'product-sections', categories: 'product-categories', products: 'products', services: 'services', projects: 'projects', tools: 'tools' };
 const snapshot = Object.fromEntries(Object.entries(collections).map(([key, folder]) => [key, readdirSync(resolve('src/content', folder))
   .filter((name) => name.endsWith('.json')).map((name) => JSON.parse(readFileSync(resolve('src/content', folder, name), 'utf8')))]));
 const index = createPublicSearchIndex(snapshot);
 const prepared = prepareSearch(index.entries);
 const find = (query) => searchPublicEntries(prepared, query);
+
+test('seven tools are searchable, accepted by the client and have a visible kind label', () => {
+  const tools = index.entries.filter((entry) => entry.kind === 'tool');
+  assert.equal(tools.length, 7);
+  assert.equal(kindLabel.tool, 'Инструмент');
+  assert.ok(tools.every(isValidPublicSearchEntry));
+  for (const [query, slug] of [['раскрой трубы', 'raskroy'], ['объем бетона', 'fundament'], ['раскладка плитки', 'plitka'], ['ведомость МАФ', 'maf']]) {
+    assert.ok(find(query).some((entry) => entry.href === `/instrumenty/${slug}/`), query);
+  }
+  assert.equal(isValidPublicSearchEntry({ ...tools[0], kind: 'untrusted' }), false);
+  assert.equal(isValidPublicSearchEntry({ ...tools[0], href: '/instrumenty/metal/?project=private' }), false);
+  assert.equal(isValidPublicSearchEntry({ ...tools[0], href: 'https://outside.example/instrumenty/' }), false);
+});
+
+test('tool routes keep their section and transitions with root and repository bases', () => {
+  const registry = createV2RouteRegistry(snapshot).routes;
+  for (const basePath of ['/', '/SMU1/']) {
+    const from = classifyV2Route(`${basePath}instrumenty/`, { basePath, registry });
+    assert.equal(from.routeKind, 'tools-archive');
+    for (const slug of ['metal', 'raskroy', 'fundament', 'ograzhdenie', 'plitka', 'maf', 'zdanie']) {
+      const tool = classifyV2Route(`${basePath}instrumenty/${slug}/`, { basePath, registry });
+      assert.equal(tool.routeKind, 'tool');
+      assert.equal(tool.rootSectionId, 'tools');
+      assert.equal(tool.navigationTarget, `${basePath}instrumenty/${slug}/`);
+      assert.equal(resolveV2TransitionMode(from, tool), 'calm');
+    }
+  }
+});
 
 test('every currently published exact title has its own route among first exact matches', () => {
   assert.ok(index.entries.length > 50);

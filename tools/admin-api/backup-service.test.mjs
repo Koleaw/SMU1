@@ -79,9 +79,17 @@ test('automatic backup is non-blocking, checksummed, deduplicated and retained s
 
 test('portable full export contains content, settings, media and a verifiable manifest', async (t) => {
   const fx = await fixture(t);
+  const toolPath = path.join(fx.repoRoot, 'src', 'content', 'tools');
+  const referencePath = path.join(fx.repoRoot, 'src', 'content', 'tool-references');
+  await fs.mkdir(toolPath, { recursive: true });
+  await fs.mkdir(referencePath, { recursive: true });
+  await fs.writeFile(path.join(toolPath, 'metal.json'), '{"id":"metal","title":"Металл"}\n');
+  await fs.writeFile(path.join(referencePath, 'steel-angles.json'), '{"id":"steel-angles","version":"1.0.0"}\n');
   const snapshot = await fx.service.createSnapshot({ transactionId: 'tx-export', backupKind: 'manual' });
   const exported = await fx.service.exportPortable({ snapshotId: snapshot.snapshotId });
   assert.equal(exported.manifestSha256, snapshot.manifestSha256);
+  assert.equal(await fs.readFile(path.join(exported.exportPath, 'files', 'src', 'content', 'tools', 'metal.json'), 'utf8'), '{"id":"metal","title":"Металл"}\n');
+  assert.equal(await fs.readFile(path.join(exported.exportPath, 'files', 'src', 'content', 'tool-references', 'steel-angles.json'), 'utf8'), '{"id":"steel-angles","version":"1.0.0"}\n');
   assert.equal(await fs.readFile(path.join(exported.exportPath, 'files', 'src', 'content', 'products', 'bench.json'), 'utf8'), '{"slug":"bench","title":"Лавка"}\n');
   assert.deepEqual(
     await fs.readFile(path.join(exported.exportPath, 'files', 'public', 'uploads', 'bench.jpg')),

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { createContentJsonService, diffContent, mergeContent } from './content-json.mjs';
 import { contentSchemas } from '../../src/content-schemas.mjs';
 
-const directoryCollections = ['product-sections', 'product-categories', 'products', 'services', 'projects', 'jobs', 'static-pages'];
+const directoryCollections = ['product-sections', 'product-categories', 'products', 'services', 'projects', 'jobs', 'static-pages', 'tools', 'tool-references'];
 
 function project(slug, overrides = {}) {
   return {
@@ -281,10 +281,16 @@ test('full site export includes the registry and round-trips without changes', a
   t.after(f.cleanup);
   await f.write('static-pages', 'home', staticPage('home'));
   await f.write('projects', 'legacy', project('legacy'));
+  const tool = JSON.parse(await fs.readFile(new URL('../../src/content/tools/metal.json', import.meta.url), 'utf8'));
+  await f.write('tools', 'metal', tool);
+  const reference = { id: 'test-reference', slug: 'test-reference', title: 'Контрольный справочник', version: '1.0.0', unit: 'kg/m', source: { title: 'Источник эталона', url: 'https://example.org/reference' }, densityKgM3: 7850, entries: [{ id: 'strip', designation: 'Полоса 40 × 4', massKgM: 1.256 }] };
+  await f.write('tool-references', 'test-reference', reference);
   const exported = await f.service.exportFullSite();
   assert.equal(exported.payload.type, 'smu1_full_site_export');
-  assert.deepEqual(Object.keys(exported.payload.collections), ['static-pages', 'services', 'product-sections', 'product-categories', 'products', 'projects', 'jobs']);
+  assert.deepEqual(Object.keys(exported.payload.collections), ['tools', 'tool-references', 'static-pages', 'services', 'product-sections', 'product-categories', 'products', 'projects', 'jobs']);
   assert.deepEqual(Object.keys(exported.payload.singletons), ['site-settings', 'navigation', 'yandex']);
+  assert.deepEqual(exported.payload.collections.tools.items[0], tool);
+  assert.deepEqual(exported.payload.collections['tool-references'].items[0], reference);
   const preview = await f.service.preview({ owner: 'admin', scope: 'full-site', writeMode: 'merge', rawJson: JSON.stringify(exported.payload) });
   assert.equal(preview.result, 'ready');
   assert.equal(preview.canApply, false);

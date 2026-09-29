@@ -20,6 +20,8 @@ const COLLECTIONS = [
   'services',
   'projects',
   'jobs',
+  'tools',
+  'tool-references',
   'site-settings',
   'static-pages'
 ];

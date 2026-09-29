@@ -78,6 +78,8 @@ function manifest({
 test('strict classifier allows only exact content records, singletons, and canonical uploads', () => {
   const digest = 'a'.repeat(64);
   assert.equal(classifyPublishPath('src/content/products/item.json').kind, 'content-record');
+  assert.equal(classifyPublishPath('src/content/tools/metal.json').kind, 'content-record');
+  assert.equal(classifyPublishPath('src/content/tool-references/steel-angles.json').kind, 'content-record');
   assert.equal(classifyPublishPath('src/data/navigation.json').allowed, true);
   assert.equal(classifyPublishPath('src/data/yandex.json').allowed, true);
   assert.equal(classifyPublishPath(`public/uploads/${digest}.webp`).kind, 'canonical-upload');

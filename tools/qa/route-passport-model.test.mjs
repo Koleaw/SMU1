@@ -19,12 +19,14 @@ import {
 test('authoritative source model describes every current production route and required viewport', () => {
   const model = buildExpectedRouteModel();
   const summary = summarizeRouteModel(model.routes);
-  assert.equal(summary.total, 111);
+  assert.equal(summary.total, 119);
   assert.deepEqual(model.editorOnlyRoutes, [
     '/vypolnennye-obekty/objekt-parkovaya-zona/', '/vypolnennye-obekty/objekt-vhodnaya-gruppa/'
   ]);
   assert.equal(model.routes.some(route => model.editorOnlyRoutes.includes(route.pathname)), false);
-  assert.deepEqual(summary.routeClasses, { canonical: 107, '404': 1, alias: 3 });
+  assert.deepEqual(summary.routeClasses, { canonical: 115, '404': 1, alias: 3 });
+  assert.equal(summary.rendererFamilies.tool, 8);
+  assert.equal(model.routes.filter(route => route.rendererFamily === 'tool').every(route => route.sourceOwners.length > 0), true);
   assert.equal(summary.rendererVariants['product-list'], 11);
   assert.equal(summary.rendererVariants['gallery-only'], 6);
   assert.equal(summary.rendererVariants['text-only'], 2);

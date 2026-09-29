@@ -21,6 +21,7 @@ function blank(value) {
 }
 
 function publicEnabled(collection, value) {
+  if (collection === 'tools' || collection === 'tool-references') return true;
   if (collection === 'site-settings') return true;
   if (collection === 'static-pages') return value?.isActive !== false;
   return value?.isActive === true;

@@ -16,7 +16,8 @@ const routes = {
   construction: '/stroitelstvo-i-remonty/',
   projects: '/vypolnennye-obekty/',
   contacts: '/kontakty/',
-  vacancies: '/vakansii/'
+  vacancies: '/vakansii/',
+  tools: '/instrumenty/'
 } as const;
 
 const productRoutes = new Set<string>([
@@ -43,7 +44,7 @@ const directionRoutes = new Set<string>([
   routes.construction
 ]);
 
-const companyRoutes = new Set<string>([routes.contacts, routes.vacancies]);
+const companyRoutes = new Set<string>([routes.tools, routes.contacts, routes.vacancies]);
 
 const additions = {
   about: { label: 'О компании', href: '/o-nas/' },

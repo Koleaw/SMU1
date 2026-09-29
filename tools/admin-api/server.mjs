@@ -75,8 +75,10 @@ const execFileAsync = promisify(execFile);
 const SAFE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ROUTE_SLUG_COLLECTIONS = new Set(['static-pages', 'product-sections', 'services']);
 const LOCKED_STATIC_PAGE_SLUGS = new Set(['home', 'custom-order', 'vypolnennye-obekty']);
-const RESERVED_TOP_LEVEL_SLUGS = new Set(['admin', 'izgotovlenie-na-zakaz', '404']);
+const RESERVED_TOP_LEVEL_SLUGS = new Set(['admin', 'izgotovlenie-na-zakaz', 'instrumenty', '404']);
 const COLLECTIONS = {
+  tools: { label: 'Строительные инструменты: содержание', type: 'directory', path: path.join(contentRoot, 'tools') },
+  'tool-references': { label: 'Проверенные справочники инструментов', type: 'directory', path: path.join(contentRoot, 'tool-references') },
   'product-sections': {
     label: 'Страницы каталога',
     type: 'directory',

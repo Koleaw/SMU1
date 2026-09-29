@@ -9,7 +9,7 @@ import V2ProductCard from './V2ProductCard.astro';
 import V2DirectContact from './V2DirectContact.astro';
 import V2HeroHandoff from './V2HeroHandoff.astro';
 import V2SectionNav from './V2SectionNav.astro';
-import { adminBinding, adminListField, adminListItem, isLocalAdminCanvas } from '../../admin/bindings/adminBinding';
+import { adminBinding, adminDisposition, adminListField, adminListItem, isLocalAdminCanvas } from '../../admin/bindings/adminBinding';
 import {
   catalogV2CategoryHref,
   catalogV2ProductHref,
@@ -234,6 +234,9 @@ const mobileCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-labe
 
         <div class="hv2-actions v2-product-summary__actions" data-v2-reveal="entry-actions" data-v2-entrance-role="actions-meta">
           <a class="hv2-button hv2-button--primary" href="#contact" {...productUiBinding('standardHeroPrimaryLabel', 'link-label')}>{settings.productUi.standardHeroPrimaryLabel}</a>
+          {product.showInCatalog !== false && <a class="hv2-text-link" href={withBase(`/instrumenty/maf/#add=${encodeURIComponent(product.slug)}`)} data-v2-transition-label="Ведомость МАФ" {...adminDisposition(Astro.url, {
+            kind: 'template-fixed', reason: 'Системная ссылка передаёт стабильный ID изделия в локальную ведомость МАФ.', source: 'src/components/v2/CatalogStandardProductV2.astro#maf-add'
+          })}>В ведомость МАФ</a>}
           <a class="hv2-text-link" href={settings.telegram} target="_blank" rel="noopener noreferrer" {...productUiBinding('standardHeroSecondaryLabel', 'link-label')}>
             {settings.productUi.standardHeroSecondaryLabel}
           </a>

@@ -300,6 +300,8 @@ function deriveRouteExpectations(validation, plan) {
   for (const diff of plan.diffs) {
     const entity = diff?.entity;
     if (!entity?.collection || !entity?.slug) continue;
+    if (entity.collection === 'tools') add('/instrumenty/', 'html', 'tool-archive-content');
+    if (entity.collection === 'tool-references') add('/instrumenty/metal/', 'html', 'tool-reference-consumer');
     const before = graphRecord(validation.beforeGraph, entity.collection, entity.slug);
     const after = graphRecord(validation.afterGraph, entity.collection, entity.slug);
     const beforeRoute = before?.route ?? null;

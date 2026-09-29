@@ -23,7 +23,7 @@ async function freePort() {
 async function contentRoot() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-secondary-exact-'));
   await Promise.all([
-    'product-categories', 'product-sections', 'products', 'static-pages', 'services', 'projects', 'jobs'
+    'product-categories', 'product-sections', 'products', 'static-pages', 'services', 'projects', 'jobs', 'tools', 'tool-references'
   ].map((collection) => fs.mkdir(path.join(root, collection), { recursive: true })));
   await Promise.all([
     fs.copyFile(

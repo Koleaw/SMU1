@@ -8,6 +8,8 @@ const COLLECTION_ORDER = Object.freeze([
   'products',
   'projects',
   'jobs',
+  'tools',
+  'tool-references',
   'site-settings'
 ]);
 
@@ -24,12 +26,14 @@ export const DEFAULT_LOCKED_STATIC_SLUGS = Object.freeze([
 ]);
 
 export const DEFAULT_RESERVED_TOP_LEVEL_SLUGS = Object.freeze([
+  'instrumenty',
   'admin',
   'izgotovlenie-na-zakaz',
   '404'
 ]);
 
 export const DEFAULT_FIXED_ROUTES = Object.freeze([
+  { id: 'tools-archive', path: '/instrumenty/' },
   { id: 'home', path: '/', aliasFor: { collection: 'static-pages', slug: 'home' } },
   { id: 'custom-order', path: '/izgotovlenie-na-zakaz/', aliasFor: { collection: 'static-pages', slug: 'custom-order' } },
   { id: 'projects-archive', path: '/vypolnennye-obekty/', aliasFor: { collection: 'static-pages', slug: 'vypolnennye-obekty' } },
@@ -225,6 +229,7 @@ function recordRoute(record, indexes) {
   }
   if (record.collection === 'projects') return normalizeRoutePathname(`/vypolnennye-obekty/${record.slug}/`);
   if (record.collection === 'jobs') return normalizeRoutePathname(`/vakansii/${record.slug}/`);
+  if (record.collection === 'tools') return normalizeRoutePathname(`/instrumenty/${record.slug}/`);
   return null;
 }
 

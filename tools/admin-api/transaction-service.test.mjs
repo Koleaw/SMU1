@@ -32,6 +32,8 @@ async function fixture(t) {
       services: collection('services'),
       projects: collection('projects'),
       jobs: collection('jobs'),
+      tools: collection('tools'),
+      'tool-references': collection('tool-references'),
       'site-settings': {
         type: 'single-file',
         slug: 'global',
@@ -159,6 +161,26 @@ test('active record creation receives a required HTML smoke expectation', async 
     && item.after?.collection === 'products'
     && item.after?.slug === slug
     && item.after?.expected === 'html'));
+});
+
+test('tool copy and reference transactions validate their public consumers', async (t) => {
+  const { service } = await fixture(t);
+  const tool = await service.readRecord({ collection: 'tools', slug: 'metal' });
+  const toolPreview = await service.preview({
+    ...context('tool-copy'), operations: [{ type: 'upsert-record', collection: 'tools', slug: 'metal', baseRevision: tool.revision,
+      content: { ...tool.content, description: `${tool.content.description} Проверка текста.` } }]
+  });
+  assert.equal(toolPreview.state, 'prepared');
+  assert.deepEqual(toolPreview.metadata.routeExpectations, [
+    { route: '/instrumenty/', expected: 'html' }, { route: '/instrumenty/metal/', expected: 'html' }
+  ]);
+  const reference = await service.readRecord({ collection: 'tool-references', slug: 'steel-angles' });
+  const referencePreview = await service.preview({
+    ...context('tool-reference'), operations: [{ type: 'upsert-record', collection: 'tool-references', slug: 'steel-angles', baseRevision: reference.revision,
+      content: { ...reference.content, version: '1.0.1' } }]
+  });
+  assert.equal(referencePreview.state, 'prepared');
+  assert.deepEqual(referencePreview.metadata.routeExpectations, [{ route: '/instrumenty/metal/', expected: 'html' }]);
 });
 
 test('rename cascades a category slug into products and removes the physical alias', async (t) => {

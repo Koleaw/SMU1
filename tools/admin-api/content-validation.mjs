@@ -477,6 +477,17 @@ export function validateContentRecord(input, maybeValue, maybeOptions = {}) {
 
   issues.push(...validateRegisteredUrls(validatedValue, definition, context));
   issues.push(...validateRegisteredMedia(validatedValue, definition, context));
+  if (collection === 'tool-references' && schemaResult.success && isPlainObject(context.previous)) {
+    const scientificFields = ['unit', 'densityKgM3', 'source', 'entries'];
+    const referenceChanged = scientificFields.some((field) => JSON.stringify(validatedValue[field]) !== JSON.stringify(context.previous[field]));
+    if (referenceChanged && validatedValue.version === context.previous.version) {
+      issues.push(createValidationIssue({
+        ...context, code: 'TOOL_REFERENCE_VERSION_REQUIRED', path: 'version',
+        userMessage: 'При изменении значений, единиц или источника справочника обновите его версию после проверки.',
+        technicalDetail: 'Reference scientific fields changed without a reference version change.'
+      }));
+    }
+  }
   if (definition.supportsPageBlocks) issues.push(...validatePageBlocks(validatedValue, context));
 
   return validationResult({

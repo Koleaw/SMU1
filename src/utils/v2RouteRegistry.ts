@@ -11,9 +11,10 @@ export const loadV2TransitionRouteRegistry = () => {
     getCollection('product-categories'),
     getCollection('products'),
     getCollection('projects'),
-    getCollection('jobs')
-  ]).then(([productSections, services, categories, products, projects, jobs]) => (
-    createV2RouteRegistry({ productSections, services, categories, products, projects, jobs })
+    getCollection('jobs'),
+    getCollection('tools')
+  ]).then(([productSections, services, categories, products, projects, jobs, tools]) => (
+    createV2RouteRegistry({ productSections, services, categories, products, projects, jobs, tools })
   ));
   return registryPromise;
 };

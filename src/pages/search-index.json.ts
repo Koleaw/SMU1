@@ -4,11 +4,11 @@ import { createPublicSearchIndex } from '../utils/publicSearchIndex.mjs';
 export const prerender = true;
 
 export async function GET() {
-  const [productSections, services, categories, products, projects] = await Promise.all([
+  const [productSections, services, categories, products, projects, tools] = await Promise.all([
     getCollection('product-sections'), getCollection('services'),
-    getCollection('product-categories'), getCollection('products'), getCollection('projects')
+    getCollection('product-categories'), getCollection('products'), getCollection('projects'), getCollection('tools')
   ]);
-  return new Response(JSON.stringify(createPublicSearchIndex({ productSections, services, categories, products, projects })), {
+  return new Response(JSON.stringify(createPublicSearchIndex({ productSections, services, categories, products, projects, tools })), {
     headers: { 'Content-Type': 'application/json; charset=utf-8' }
   });
 }

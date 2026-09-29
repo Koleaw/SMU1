@@ -99,6 +99,7 @@ const isSitemapPageAllowed = (page) => {
     !routePath.startsWith('/admin/') &&
     !routePath.startsWith('/api/') &&
     !routePath.startsWith('/design-lab/') &&
+    !routePath.endsWith('.json') &&
     routePath !== '/404.html' &&
     routePath !== '/404/' &&
     !excludedCompatibilityRoutes.has(routePath) &&

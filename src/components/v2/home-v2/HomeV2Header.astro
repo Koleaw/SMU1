@@ -65,7 +65,7 @@ const transitionLabel = (href: string, fallback: string) => v2TransitionLabelFor
 const contactTransitionLabel = contactHref.startsWith('#')
   ? undefined
   : transitionLabel(contactHref, 'Контакты');
-const companyV2Roots = [aboutV2Root, contactsV2Root, vacanciesV2Root, legalV2Root];
+const companyV2Roots = [aboutV2Root, contactsV2Root, vacanciesV2Root, legalV2Root, '/instrumenty/'];
 const v2Roots = [
   ...productV2Roots,
   metalworksV2Root,

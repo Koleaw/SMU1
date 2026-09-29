@@ -11,6 +11,7 @@ export const V2_COMPATIBILITY_ROUTES = Object.freeze([
 /** @type {Readonly<Record<string, string>>} */
 export const V2_CANONICAL_ROUTE_LABELS = Object.freeze({
   '/': 'Главная',
+  '/instrumenty/': 'Строительные инструменты',
   '/ulichnaya-mebel/': 'Уличная мебель',
   '/ograzhdeniya-i-zabory/': 'Ограждения и заборы',
   '/navesy-i-kozyrki/': 'Навесы и козырьки',
@@ -29,6 +30,7 @@ export const V2_CANONICAL_ROUTE_LABELS = Object.freeze({
 /** @type {Readonly<Record<string, string>>} */
 const ROOT_BY_TOP_LEVEL_PATH = Object.freeze({
   '/': 'home',
+  '/instrumenty/': 'tools',
   '/ulichnaya-mebel/': 'ulichnaya-mebel',
   '/ograzhdeniya-i-zabory/': 'ograzhdeniya-i-zabory',
   '/navesy-i-kozyrki/': 'navesy-i-kozyrki',
@@ -47,6 +49,7 @@ const ROOT_BY_TOP_LEVEL_PATH = Object.freeze({
 /** @type {Readonly<Record<string, string>>} */
 const FIXED_ROUTE_KINDS = Object.freeze({
   '/': 'home',
+  '/instrumenty/': 'tools-archive',
   '/vypolnennye-obekty/': 'projects-archive',
   '/o-nas/': 'company',
   '/kontakty/': 'contacts',
@@ -221,6 +224,7 @@ export const V2_FALLBACK_ROUTE_REGISTRY = Object.freeze(uniqueDescriptors([
  * @param {unknown[]} [snapshot.products]
  * @param {unknown[]} [snapshot.projects]
  * @param {unknown[]} [snapshot.jobs]
+ * @param {unknown[]} [snapshot.tools]
  * @returns {V2RouteRegistryPayload}
  */
 export const createV2RouteRegistry = (snapshot = {}) => {
@@ -246,6 +250,10 @@ export const createV2RouteRegistry = (snapshot = {}) => {
 
   const descriptors = [
     ...fixedDescriptors(),
+    ...records(snapshot.tools).map((tool) => ({
+      pathname: `/instrumenty/${cleanSlug(tool.slug || tool.id)}/`,
+      routeKind: 'tool', rootSectionId: 'tools', label: cleanLabel(tool.title)
+    })),
     ...sections.map((section) => {
       const slug = cleanSlug(section.slug);
       const pathname = `/${slug}/`;

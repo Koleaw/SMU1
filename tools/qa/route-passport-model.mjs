@@ -263,7 +263,7 @@ const resolveDeclaredOwners = (declarations, byCollectionSlug) => declarations.f
 export function buildExpectedRouteModel({ root = process.cwd() } = {}) {
   const contentRoot = path.join(root, 'src', 'content');
   const collections = Object.fromEntries([
-    'product-sections', 'services', 'product-categories', 'products', 'projects', 'jobs', 'site-settings', 'static-pages'
+    'product-sections', 'services', 'product-categories', 'products', 'projects', 'jobs', 'site-settings', 'static-pages', 'tools', 'tool-references'
   ].map((name) => [name, readCollection(contentRoot, name, root)]));
   const active = (name) => collections[name].filter((entry) => entry.data.isActive !== false);
   const byCollectionSlug = new Map(Object.entries(collections).map(([name, entries]) => [
@@ -276,7 +276,8 @@ export function buildExpectedRouteModel({ root = process.cwd() } = {}) {
     categories: active('product-categories').map((entry) => entry.data),
     products: active('products').map((entry) => entry.data),
     projects: active('projects').map((entry) => entry.data),
-    jobs: active('jobs').map((entry) => entry.data)
+    jobs: active('jobs').map((entry) => entry.data),
+    tools: active('tools').map((entry) => entry.data)
   });
   // The local editor also lists saved unpublished records. Derive those routes
   // from the same content/route registry, rather than treating them as public.
@@ -284,7 +285,7 @@ export function buildExpectedRouteModel({ root = process.cwd() } = {}) {
   const editorRegistry = createV2RouteRegistry({
     productSections: editorRecords('product-sections'), services: editorRecords('services'),
     categories: editorRecords('product-categories'), products: editorRecords('products'),
-    projects: editorRecords('projects'), jobs: editorRecords('jobs')
+    projects: editorRecords('projects'), jobs: editorRecords('jobs'), tools: editorRecords('tools')
   });
   const publicRouteSet = new Set(registry.routes.map((route) => normalizeRoute(route.pathname)));
   const editorOnlyRoutes = editorRegistry.routes.map((route) => normalizeRoute(route.pathname))
@@ -348,6 +349,18 @@ export function buildExpectedRouteModel({ root = process.cwd() } = {}) {
           ...(pathname === '/kontakty/' ? [templateOwner('src/components/v2/practical/practicalV2Data.ts', 'Contact presentation adapter.')] : []),
           ...(pathname === '/politika-konfidencialnosti/' ? [templateOwner('src/components/v2/practical/V2PrivacyPolicy.astro', 'Legal structure must be materialized and explicitly confirmed.')] : [])
         ]
+      };
+    }
+    if (descriptor.routeKind === 'tool' || descriptor.routeKind === 'tools-archive') {
+      const entry = byCollectionSlug.get('tools')?.get(pathname.split('/').filter(Boolean).at(-1));
+      return {
+        ...base, rendererFamily: 'tool', rendererVariant: descriptor.routeKind === 'tool' ? 'calculator' : 'archive',
+        sourceOwners: [
+          ...(entry ? [owner(entry)] : active('tools').map((item) => owner(item))),
+          templateOwner('src/components/tools/ToolPage.astro', 'Versioned calculation interface; content and references have separate registered collections.')
+        ],
+        expectedTools: [],
+        modelEvidence: { toolId: entry?.data.id || '', calculationUi: 'template-fixed', contentCollection: 'tools' }
       };
     }
     if (descriptor.routeKind === 'section-hub' || descriptor.routeKind === 'direction') {

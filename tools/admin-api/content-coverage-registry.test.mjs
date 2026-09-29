@@ -219,7 +219,7 @@ function valuePaths(value, pathPrefix = '', result = new Set()) {
   return result;
 }
 
-test('coverage registry matches every declared path in all eight Zod schemas and both singleton schemas', () => {
+test('coverage registry matches every declared path in all Zod schemas and both singleton schemas', () => {
   const actual = schemaPathsByOwner();
   assert.deepEqual(sorted(Object.keys(actual)), sorted([...COLLECTION_KEYS, 'navigation', 'yandex']));
 
@@ -281,7 +281,7 @@ test('required-for-save flags follow the public Zod optional contract while publ
 });
 
 test('each field row carries editor, renderer, relation/media and fixture metadata without false WYSIWYG claims', () => {
-  assert.equal(Object.keys(FIELD_RENDERER_COVERAGE.collections).length, 8);
+  assert.equal(Object.keys(FIELD_RENDERER_COVERAGE.collections).length, 10);
   assert.deepEqual(sorted(Object.keys(FIELD_RENDERER_COVERAGE.singletons)), ['navigation', 'yandex']);
 
   const validCoverageStatuses = new Set(Object.values(FIELD_COVERAGE_STATUS));

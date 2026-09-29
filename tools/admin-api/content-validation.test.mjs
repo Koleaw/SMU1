@@ -26,7 +26,7 @@ function clone(value) {
 
 const aboutFixture = () => readJson('src/content/static-pages/about.json');
 
-test('all current records in all eight collections pass the shared Astro schema boundary', () => {
+test('all current records in all registered collections pass the shared Astro schema boundary', () => {
   assert.equal(assertSchemaRegistryComplete(), true);
   const covered = new Set();
 
@@ -46,6 +46,21 @@ test('all current records in all eight collections pass the shared Astro schema 
   }
 
   assert.deepEqual([...covered].sort(), [...COLLECTION_KEYS].sort());
+});
+
+test('tool schemas reject unknown formulas, unsafe links, duplicate reference IDs and unversioned mass changes', () => {
+  const tool = readJson('src/content/tools/metal.json');
+  assert.equal(validateContentRecord('tools', { ...tool, formula: 'eval(input)' }).success, false);
+  assert.equal(validateContentRecord('tools', { ...tool, slug: 'other' }).success, false);
+  assert.equal(validateContentRecord('tools', { ...tool, service: { label: 'Ссылка', href: 'javascript:alert(1)' } }).success, false);
+  const reference = readJson('src/content/tool-references/steel-angles.json');
+  assert.equal(validateContentRecord('tool-references', { ...reference, entries: [reference.entries[0], reference.entries[0]] }).success, false);
+  const modified = clone(reference);
+  modified.entries[0].massKgM += 1;
+  const checked = validateContentRecord('tool-references', modified, { previous: reference });
+  assert.ok(checked.errors.some((issue) => issue.code === 'TOOL_REFERENCE_VERSION_REQUIRED'));
+  modified.version = '1.0.1';
+  assert.equal(validateContentRecord('tool-references', modified, { previous: reference }).success, true);
 });
 
 test('schema failures use stable structured issues with safe Russian and technical text', () => {

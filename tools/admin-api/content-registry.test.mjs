@@ -14,9 +14,9 @@ import {
   requireCollectionDefinition
 } from './content-registry.mjs';
 
-test('registry covers exactly the eight Astro content schemas and both data singletons', () => {
+test('registry covers every Astro content schema and both data singletons', () => {
   assert.deepEqual([...COLLECTION_KEYS].sort(), Object.keys(contentSchemas).sort());
-  assert.equal(Object.keys(COLLECTION_REGISTRY).length, 8);
+  assert.equal(Object.keys(COLLECTION_REGISTRY).length, 10);
   assert.deepEqual(SINGLETON_KEYS, ['navigation', 'yandex']);
   assert.equal(getSingletonDefinition('navigation').storage, 'single-file-array');
   assert.equal(getSingletonDefinition('yandex').storage, 'single-file-object');

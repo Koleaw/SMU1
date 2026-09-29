@@ -117,7 +117,7 @@ async function createContentRoot(t, { full = false } = {}) {
     await fs.cp(path.join(process.cwd(), 'src', 'content'), root, { recursive: true, force: true });
   }
   await Promise.all([
-    'product-categories', 'product-sections', 'products', 'static-pages', 'services', 'projects', 'jobs', '.admin-data'
+    'product-categories', 'product-sections', 'products', 'static-pages', 'services', 'projects', 'jobs', 'tools', 'tool-references', '.admin-data'
   ].map((collection) => (
     fs.mkdir(path.join(root, collection), { recursive: true })
   )));

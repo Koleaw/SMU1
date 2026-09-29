@@ -5,6 +5,8 @@ export const COLLECTION_KEYS = Object.freeze([
   'services',
   'projects',
   'jobs',
+  'tools',
+  'tool-references',
   'site-settings',
   'static-pages'
 ]);
@@ -20,6 +22,8 @@ const COLLECTION_LABELS = Object.freeze({
   services: 'Проектные страницы',
   projects: 'Выполненные объекты',
   jobs: 'Вакансии',
+  tools: 'Строительные инструменты: содержание',
+  'tool-references': 'Проверенные справочники инструментов',
   'site-settings': 'Настройки сайта',
   'static-pages': 'Страницы'
 });
@@ -45,6 +49,8 @@ const MEDIA_FIELDS_BY_COLLECTION = Object.freeze({
     'images[]', 'images[].src', 'images[].image', 'images[].url'
   ]),
   jobs: Object.freeze([]),
+  tools: Object.freeze([]),
+  'tool-references': Object.freeze([]),
   'site-settings': Object.freeze([]),
   'static-pages': Object.freeze([
     'image', 'trustImage', 'heroMediaVideo', 'heroMediaVideoMobile', 'heroMediaPoster', 'heroMediaPosterMobile',
@@ -67,6 +73,11 @@ const URL_FIELDS_BY_COLLECTION = Object.freeze({
   ]),
   projects: Object.freeze([]),
   jobs: Object.freeze([]),
+  tools: Object.freeze([
+    Object.freeze({ path: 'service.href', context: 'internal' }),
+    Object.freeze({ path: 'sources[].url', context: 'https' })
+  ]),
+  'tool-references': Object.freeze([Object.freeze({ path: 'source.url', context: 'https' })]),
   'site-settings': Object.freeze([
     Object.freeze({ path: 'telegram', context: 'https', allowEmpty: true, allowedHosts: Object.freeze(['t.me', 'telegram.me']) }),
     Object.freeze({ path: 'notFoundPage.primaryHref', context: 'internal' }),

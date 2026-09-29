@@ -241,7 +241,7 @@ async function isolatedContentRoot(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smu1-launcher-api-'));
   await Promise.all([
     'jobs', 'product-categories', 'product-sections', 'products', 'projects',
-    'services', 'site-settings', 'static-pages'
+    'services', 'site-settings', 'static-pages', 'tools', 'tool-references'
   ].map((collection) => fs.mkdir(path.join(root, collection), { recursive: true })));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   return root;

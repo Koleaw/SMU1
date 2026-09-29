@@ -543,6 +543,8 @@ export function publicRouteFor(collection, content = {}, relations = {}) {
   }
   if (collection === 'projects') return `/vypolnennye-obekty/${slug}/`;
   if (collection === 'jobs') return `/vakansii/${slug}/`;
+  if (collection === 'tools') return `/instrumenty/${slug}/`;
+  if (collection === 'tool-references') return '/instrumenty/metal/';
   if (collection === 'navigation') return '/';
   return '';
 }

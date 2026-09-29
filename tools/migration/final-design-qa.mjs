@@ -279,7 +279,8 @@ const runDistChecks = () => {
     ...projects.map(({ data }) => `/vypolnennye-obekty/${data.slug}/`),
     '/o-nas/', '/kontakty/', '/vakansii/',
     ...jobs.map(({ data }) => `/vakansii/${data.slug}/`),
-    '/politika-konfidencialnosti/', '/izgotovlenie-na-zakaz/'
+    '/politika-konfidencialnosti/', '/izgotovlenie-na-zakaz/', '/instrumenty/',
+    ...records('tools').map(({ data }) => `/instrumenty/${data.slug}/`)
   ].filter(Boolean).map(normalizeRoute);
   const uniqueExpectedRoutes = [...new Set(expectedRoutes)];
   const missingRoutes = uniqueExpectedRoutes.filter((route) => !fs.existsSync(htmlTarget(route)));
