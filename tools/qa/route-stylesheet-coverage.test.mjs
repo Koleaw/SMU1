@@ -3,7 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 
-const readSource = (relative) => readFile(path.resolve(relative), 'utf8');
+const readSource = async (relative) => (await readFile(path.resolve(relative), 'utf8')).replaceAll('\r\n', '\n');
 const families = [
   { layout: 'practical/PracticalV2Layout', css: 'practical-v2', variable: 'practicalStylesheetUrl', parent: 'CatalogV2Layout' },
   { layout: 'engineering/EngineeringDirectionV2Layout', css: 'engineering-direction-v2', variable: 'engineeringStylesheetUrl', parent: 'DirectionV2Layout' },

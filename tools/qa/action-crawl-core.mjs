@@ -28,6 +28,13 @@ export function parseToolStateHash(route, hash) {
   return null;
 }
 
+export function isPublishedToolStateLink(route, hash, productIds) {
+  const state = parseToolStateHash(route, hash);
+  // Published HTML may add a known catalog item. A local project ID is never
+  // a statically published destination and must not bypass anchor validation.
+  return state?.kind === 'add-product' && productIds.has(state.id);
+}
+
 export function classifyPublicAction(action) {
   if (action.disabled) return { policy: 'disabled-state', execute: false };
   if (!action.visible) return { policy: 'hidden-state', execute: false };

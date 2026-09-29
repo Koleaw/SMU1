@@ -517,6 +517,7 @@ const exerciseCurrentSurface = async ({ requestedUrl, loadedLocation }) => {
         result.executionNote = 'Exercised by the public search semantic probe: query, result focus, clear, examples, pagination, close and Escape.';
       } else if (policy.policy === 'public-tool-semantic-coverage') {
         const covered = action.toolField || ['details', 'summary'].includes(action.tag)
+          || ((action.dataActions || []).includes('data-diagram') && toolSemantics?.checks.some(check => check.name === 'keyboard-diagram-focus' && check.passed))
           || (action.tag === 'button' && action.type === 'submit')
           || toolSemantics?.coveredActions.includes(action.toolAction);
         result.toolSemantics = toolSemantics;

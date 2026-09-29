@@ -39,10 +39,26 @@ export async function exerciseToolSemantics(browser, { requestedUrl } = {}) {
   try {
     check('initial-result', await waitFor(valid));
     check('initial-save', await waitFor(`document.querySelector('[data-save-status]')?.textContent === 'Сохранено на этом устройстве'`));
+    check('idle-worker-cancel-hidden', await browser.evaluate(`!document.querySelector('[data-action="cancel"]').getClientRects().length`));
+    check('private-calculation-markup', await browser.evaluate(`(() => {
+      const app = document.querySelector('[data-tool-app]');
+      return app?.classList.contains('ym-hide-content') && [...app.querySelectorAll('input:not([type="file"]), textarea')].every(field => field.classList.contains('ym-disable-keys'));
+    })()`));
     for (const name of ['diagram', 'result', 'data']) {
       if (await action('tab', true, `[data-tab="${name}"]`)) check(`keyboard-tab-${name}`, await browser.evaluate(`document.querySelector('[data-active-tab]').dataset.activeTab === ${JSON.stringify(name)} && document.querySelector('[data-tab="${name}"]').getAttribute('aria-pressed') === 'true'`));
     }
     await action('tab', false, '[data-tab="diagram"]');
+    const hasSvg = await browser.evaluate(`Boolean(document.querySelector('[data-diagram] svg'))`);
+    if (hasSvg) {
+      await action('zoom', true);
+      check('keyboard-zoom-diagram', await browser.evaluate(`document.activeElement === document.querySelector('[data-diagram]') && [...document.querySelectorAll('[data-diagram] svg')].every(s => s.style.width === '200%') && document.querySelector('[data-diagram]').scrollWidth > document.querySelector('[data-diagram]').clientWidth`));
+      await browser.dispatchKey('ArrowRight', { code: 'ArrowRight' });
+      check('keyboard-diagram-scroll', await waitFor(`document.querySelector('[data-diagram]').scrollLeft > 0`));
+    } else {
+      check('non-svg-zoom-hidden', await browser.evaluate(`!document.querySelector('[data-action="zoom"]').getClientRects().length`));
+      await browser.evaluate(`document.querySelector('[data-diagram]').focus()`);
+    }
+    check('keyboard-diagram-focus', await browser.evaluate(`document.activeElement === document.querySelector('[data-diagram]')`));
     await action('fit', true);
     check('fit-diagram', await browser.evaluate(`!!document.querySelector('[data-diagram] svg, [data-diagram] .tool-product-card') && [...document.querySelectorAll('[data-diagram] svg')].every(s => s.style.width === '100%')`));
     await action('tab', true, '[data-tab="data"]');
@@ -55,6 +71,15 @@ export async function exerciseToolSemantics(browser, { requestedUrl } = {}) {
       // remain valid. In both cases the persisted input must reflect the edit.
       check('empty-input-stored', await waitFor(`(() => { const p = ${current}; return p && ${JSON.stringify(numeric.path)}.split('.').reduce((v,k) => v?.[k], p.input) === ''; })()`));
       check('empty-input-honest-result', await waitFor(`Boolean((!document.querySelector('[data-summary] dl') && !document.querySelector('[data-error]').hidden && !(${current})?.resultSnapshot) || (document.querySelector('[data-tool-app]').dataset.toolId === 'zdanie' && document.querySelector('[data-summary] dl') && document.querySelector('[data-error]').hidden && document.querySelector('[data-summary]').textContent !== ${JSON.stringify(priorSummary)}))`));
+      await fill(selector, '-1');
+      check('invalid-input-error-visible-in-data', await waitFor(`(() => {
+        const error = document.querySelector('[data-error]');
+        return document.querySelector('[data-active-tab]').dataset.activeTab === 'data' && !error.hidden
+          && error.getClientRects().length > 0 && getComputedStyle(error).visibility === 'visible'
+          && !document.querySelector('[data-summary] dl') && !(${current})?.resultSnapshot;
+      })()`));
+      await click('[data-tool-form] button[type="submit"]', true);
+      check('invalid-submit-focuses-error', await waitFor(`document.activeElement === document.querySelector('[data-error]')`));
       const commaValue = String(numeric.value).includes('.') || String(numeric.value).includes(',')
         ? String(numeric.value).replace('.', ',') : `${numeric.value || '1'},0`;
       await fill(selector, commaValue);

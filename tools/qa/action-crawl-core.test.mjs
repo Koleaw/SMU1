@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { classifyAdminAction, classifyPublicAction, validateContactProtocol, parseToolStateHash } from './action-crawl-core.mjs';
+import { classifyAdminAction, classifyPublicAction, validateContactProtocol, parseToolStateHash, isPublishedToolStateLink } from './action-crawl-core.mjs';
 
 test('tool state hashes require the right route, one known key and a bounded ID', () => {
   assert.deepEqual(parseToolStateHash('/instrumenty/maf/', '#add=skamya-park'), { kind: 'add-product', id: 'skamya-park' });
   assert.deepEqual(parseToolStateHash('/instrumenty/metal/', '#project=123-ab'), { kind: 'open-project', id: '123-ab' });
   for (const [route, hash] of [['/instrumenty/metal/', '#add=skamya-park'], ['/kontakty/', '#project=a'], ['/instrumenty/maf/', '#add=x&project=y'], ['/instrumenty/maf/', '#add=%3Cimg%3E'], ['/instrumenty/maf/', '#tool-contact']]) assert.equal(parseToolStateHash(route, hash), null);
+});
+
+test('static tool state links require a published catalog ID and never publish local projects', () => {
+  const ids = new Set(['skamya-park']);
+  assert.equal(isPublishedToolStateLink('/instrumenty/maf/', '#add=skamya-park', ids), true);
+  assert.equal(isPublishedToolStateLink('/instrumenty/maf/', '#add=unknown-model', ids), false);
+  assert.equal(isPublishedToolStateLink('/instrumenty/maf/', '#project=local-project', ids), false);
+  assert.equal(isPublishedToolStateLink('/instrumenty/metal/', '#add=skamya-park', ids), false);
 });
 
 test('local calculator forms require semantic coverage while native document UI remains separate', () => {

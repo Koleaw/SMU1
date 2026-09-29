@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { contentSchemas } from '../../src/content-schemas.mjs';
+import { isPublishedToolStateLink } from '../qa/action-crawl-core.mjs';
 
 const root = process.cwd();
 const contentRoot = path.join(root, 'src', 'content');
@@ -267,6 +268,7 @@ const runDistChecks = () => {
   const categories = categoryRecords.filter(({ data }) => data.isActive !== false && activeSectionSlugs.has(data.parentSectionSlug));
   const activeCategorySlugs = new Set(categories.map(({ data }) => data.slug));
   const products = productRecords.filter(({ data }) => data.isActive !== false && activeCategorySlugs.has(data.productCategorySlug));
+  const publishedToolProductIds = new Set(products.filter(({ data }) => data.showInCatalog !== false).map(({ data }) => data.slug));
   const projects = records('projects').filter(({ data }) => data.isActive !== false);
   const jobs = records('jobs').filter(({ data }) => data.isActive !== false);
   const expectedRoutes = [
@@ -391,6 +393,7 @@ const runDistChecks = () => {
       if (targetRoute.startsWith('/design-lab/')) linkIssues.push(`${route}:design-lab-target:${href}`);
       if (compatibilityRoutes.has(targetRoute)) linkIssues.push(`${route}:legacy-target:${href}`);
       if (resolved.hash) {
+        if (isPublishedToolStateLink(targetRoute, resolved.hash, publishedToolProductIds)) continue;
         let id = '';
         try { id = decodeURIComponent(resolved.hash.slice(1)); } catch { id = resolved.hash.slice(1); }
         const targetIds = idsByRoute.get(targetRoute);
