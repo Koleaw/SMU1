@@ -556,7 +556,10 @@ const inventoryExpression = `(() => {
   };
   const runtimeSurfaces = Array.from(document.querySelectorAll('[data-smu1-editor-affordance],[data-v2-entry-skip-link],[data-v2-entry-root],[data-v2-entry-overlay],[data-v2-page-transition],[data-v2-page-bootstrap-overlay],[data-cookie-banner],.hv2-header__dropdown-indicator,.v2-breadcrumbs i[aria-hidden="true"],.v2-product-gallery__zoom,.v2-project-gallery__zoom,[data-v2-image-fallback]'))
     .map((element, index) => ({ locator: locator(element, index), kind: runtimeSurfaceOf(element), visible: visuallyVisible(element), accessible: accessibilityVisible(element) }));
-  const actualRendererFamily = document.querySelector('[data-home-final-root]') ? 'home'
+  const toolVariant = document.querySelector('[data-tool-app]') ? 'calculator'
+    : document.querySelector('.tools-page .tool-grid') ? 'archive' : '';
+  const actualRendererFamily = toolVariant ? 'tool'
+    : document.querySelector('[data-home-final-root]') ? 'home'
     : document.querySelector('.v2-project-detail') ? 'project'
     : document.querySelector('.v2-project-archive') ? 'project-archive'
     : document.querySelector('[data-practical-v2-root]') ? 'practical'
@@ -573,7 +576,7 @@ const inventoryExpression = `(() => {
     robots: document.querySelector('meta[name="robots"]')?.content || '',
     h1: Array.from(document.querySelectorAll('h1')).map((element) => clean(element.textContent)),
     sections, media, backgroundMedia, interactions, businessOccurrences, galleries, bindings, listMarkers, dispositions, archiveRows, publicAssets,
-    catalogPrototype, productPresentation, productGalleryCount, directionVariant, practicalKind,
+    catalogPrototype, productPresentation, productGalleryCount, directionVariant, practicalKind, toolVariant,
     categoryHasProducts, categoryHasExamples, projectSparse, projectGalleryCount, actualRendererFamily,
     documentSize: { clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight },
     stableGeometry, runtimeSurfaces, fontDiagnostics,
@@ -612,6 +615,7 @@ const verifyLocalMedia = async (snapshot, crawlOrigin) => {
 };
 
 const runtimeVariant = (expected, snapshot) => {
+  if (expected.rendererFamily === 'tool') return snapshot.toolVariant || 'unknown';
   if (expected.rendererFamily === 'category') {
     if (snapshot.categoryHasProducts && snapshot.categoryHasExamples) return 'mixed';
     if (snapshot.categoryHasProducts) return 'product-list';

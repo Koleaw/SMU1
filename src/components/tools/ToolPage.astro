@@ -11,9 +11,9 @@ const hasScaledDiagram=tool.id!=='maf';
 const binding=(fieldPath:string)=>adminBinding(Astro.url,{renderer:{family:'tool',variant:'calculator'},owner:{collection:'tools',slug:tool.id},fieldPath,stableItemId:tool.id,scope:'local',tool:'long-text',affectedRoutes:[path,'/instrumenty/']});
 const fixed=adminDisposition(Astro.url,{kind:'template-fixed',reason:'Интерфейс расчёта — версионированный код. Методики и справочники зарегистрированы отдельно; пользовательский ввод не редактируется через админку.',source:'src/components/tools/ToolPage.astro'});
 ---
-<CatalogV2Layout title={tool.seoTitle} description={tool.description} canonicalPath={path} currentPath={path} contactHref="#tool-contact" headerCtaLabel="Обсудить задачу" mobileCtaLabel="Обсудить задачу" rootClass="tools-page">
+<CatalogV2Layout title={tool.seoTitle} description={tool.description} canonicalPath={path} currentPath={path} contactHref="#tool-contact" headerCtaLabel="Обсудить задачу" mobileCtaLabel="Обсудить задачу" headerCtaBinding={fixed} headerMobileCtaBinding={fixed} mobileCtaBinding={fixed} rootClass="tools-page">
   <div class="tools-container">
-    <nav class="tool-breadcrumb" aria-label="Хлебные крошки"><a href={withBase('/')}>Главная</a><span>/</span><a href={withBase('/instrumenty/')}>Инструменты</a></nav>
+    <nav class="tool-breadcrumb" aria-label="Хлебные крошки" {...fixed}><a href={withBase('/')}>Главная</a><span>/</span><a href={withBase('/instrumenty/')}>Инструменты</a></nav>
     <header class="tool-heading"><p class="tool-kicker" {...fixed}>СМУ-1 · Практика строительства</p><h1 {...binding('title')}>{tool.title}</h1><p {...binding('description')}>{tool.description}</p></header>
     <section class="tool-app ym-hide-content" data-tool-app data-tool-id={tool.id} data-base={withBase('/')} aria-label={tool.title} {...fixed}>
       <script is:inline type="application/json" data-tool-content set:html={safeInlineJson({...tool,contact:{email:settings.email,phone:settings.phonePrimary}})} />
@@ -34,9 +34,9 @@ const fixed=adminDisposition(Astro.url,{kind:'template-fixed',reason:'Интер
       <noscript><p class="tool-error">Для вычислений необходим JavaScript. Методика и пример доступны ниже. Обсудить задачу: <a href={`mailto:${settings.email}`}>{settings.email}</a>, <a href={`tel:${settings.phonePrimary.replace(/[^+\d]/g,'')}`}>{settings.phonePrimary}</a>.</p></noscript>
     </section>
     <section class="tool-method" aria-labelledby="method-title">
-      <div><p class="tool-kicker" {...fixed}>Как устроен расчёт</p><h2 id="method-title" {...fixed}>Методика и ограничения</h2><p {...binding('audience')}>{tool.audience}</p><h3 {...fixed}>Что потребуется</h3><ul>{tool.inputs.map((s:string,i:number)=><li {...binding(`inputs.${i}`)}>{s}</li>)}</ul></div>
-      <div><h3 {...fixed}>Пример</h3><p {...binding('exampleText')}>{tool.exampleText}</p><h3 {...fixed}>Расчёт</h3>{tool.methodology.map((s:string,i:number)=><p {...binding(`methodology.${i}`)}>{s}</p>)}<h3 {...fixed}>Границы применения</h3><ul>{tool.limitations.map((s:string,i:number)=><li {...binding(`limitations.${i}`)}>{s}</li>)}</ul>
-      {tool.sources.length>0&&<><h3 {...fixed}>Источники</h3><ul>{tool.sources.map((s:{title:string,url:string},i:number)=><li><a href={s.url} {...binding(`sources.${i}.title`)} target="_blank" rel="noopener noreferrer">{s.title}</a></li>)}</ul></>}
+      <div><p class="tool-kicker" {...fixed}>Как устроен расчёт</p><h2 id="method-title" {...fixed}>Методика и ограничения</h2><p {...binding('audience')}>{tool.audience}</p><h3 {...fixed}>Что потребуется</h3><ul>{tool.inputs.map((s:string,i:number)=><li {...binding(`inputs[${i}]`)}>{s}</li>)}</ul></div>
+      <div><h3 {...fixed}>Пример</h3><p {...binding('exampleText')}>{tool.exampleText}</p><h3 {...fixed}>Расчёт</h3>{tool.methodology.map((s:string,i:number)=><p {...binding(`methodology[${i}]`)}>{s}</p>)}<h3 {...fixed}>Границы применения</h3><ul>{tool.limitations.map((s:string,i:number)=><li {...binding(`limitations[${i}]`)}>{s}</li>)}</ul>
+      {tool.sources.length>0&&<><h3 {...fixed}>Источники</h3><ul>{tool.sources.map((s:{title:string,url:string},i:number)=><li><a href={s.url} {...binding(`sources[${i}].title`)} target="_blank" rel="noopener noreferrer">{s.title}</a></li>)}</ul></>}
       <p class="tool-hint" {...fixed}>Методика СМУ-1 · версия 1.0.0. В файле проекта сохраняются версия и использованные коэффициенты.</p></div>
     </section>
   </div>
