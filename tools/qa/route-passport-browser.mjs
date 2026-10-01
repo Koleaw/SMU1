@@ -5,6 +5,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { CdpBrowser, createDistServer } from './cdp-browser.mjs';
 import { sourceWorkingTreeDirty } from './git-evidence.mjs';
+import { waitForRenderedTool } from './rendered-tool-ready.mjs';
 import {
   bindingFieldPathExists,
   comparableBusinessText,
@@ -213,6 +214,7 @@ browser.on('Network.loadingFailed', ({ blockedReason, canceled, errorText, type 
 
 const settleMediaAndScroll = () => browser.evaluate(`(async () => {
   const initialY = window.scrollY;
+  await (${waitForRenderedTool.toString()})(8000);
   const fontStylesheet = document.querySelector('[data-v2-font-stylesheet]');
   if (fontStylesheet instanceof HTMLLinkElement && !fontStylesheet.dataset.v2FontState) {
     await Promise.race([
@@ -317,6 +319,7 @@ const inventoryExpression = `(() => {
     if (element.closest('.v2-breadcrumbs i[aria-hidden="true"]')) return 'breadcrumb-separator';
     if (element.closest('.v2-product-gallery__zoom,.v2-project-gallery__zoom')) return 'gallery-control';
     if (element.closest('[data-v2-image-fallback],.v2-media-empty[aria-hidden="true"]')) return 'media-fallback-status';
+    if (element.closest('[data-v2-map-status],[data-v2-map-message]')) return 'map-loading-status';
     return '';
   };
   const parseBinding = (owner) => {
@@ -554,7 +557,7 @@ const inventoryExpression = `(() => {
     headingMaxWidth: fontHeadingStyle?.maxWidth || '',
     zeroAdvance: fontMeasure ? Math.round(fontMeasure.measureText('0').width * 1000) / 1000 : 0
   };
-  const runtimeSurfaces = Array.from(document.querySelectorAll('[data-smu1-editor-affordance],[data-v2-entry-skip-link],[data-v2-entry-root],[data-v2-entry-overlay],[data-v2-page-transition],[data-v2-page-bootstrap-overlay],[data-cookie-banner],.hv2-header__dropdown-indicator,.v2-breadcrumbs i[aria-hidden="true"],.v2-product-gallery__zoom,.v2-project-gallery__zoom,[data-v2-image-fallback]'))
+  const runtimeSurfaces = Array.from(document.querySelectorAll('[data-smu1-editor-affordance],[data-v2-entry-skip-link],[data-v2-entry-root],[data-v2-entry-overlay],[data-v2-page-transition],[data-v2-page-bootstrap-overlay],[data-cookie-banner],.hv2-header__dropdown-indicator,.v2-breadcrumbs i[aria-hidden="true"],.v2-product-gallery__zoom,.v2-project-gallery__zoom,[data-v2-image-fallback],[data-v2-map-status],[data-v2-map-message]'))
     .map((element, index) => ({ locator: locator(element, index), kind: runtimeSurfaceOf(element), visible: visuallyVisible(element), accessible: accessibilityVisible(element) }));
   const toolVariant = document.querySelector('[data-tool-app]') ? 'calculator'
     : document.querySelector('.tools-page .tool-grid') ? 'archive' : '';
@@ -1031,7 +1034,7 @@ try {
             status: equivalenceIssues.length ? 'fail' : 'pass',
             issues: equivalenceIssues,
             normalization: {
-              excludedRuntimeSurfaces: ['cookie-banner', 'entry-skip-link', 'entry-transition'],
+              excludedRuntimeSurfaces: [...new Set([...snapshot.runtimeSurfaces, ...editorSnapshot.runtimeSurfaces].map(surface => surface.kind).filter(Boolean))].sort(),
               publicRuntimeSurfaces: snapshot.runtimeSurfaces,
               editorRuntimeSurfaces: editorSnapshot.runtimeSurfaces,
               publicComparableTextOccurrences: publicComparableText.length,
@@ -1204,7 +1207,7 @@ try {
           status: equivalenceIssues.length ? 'fail' : 'pass',
           issues: equivalenceIssues,
           normalization: {
-            excludedRuntimeSurfaces: ['cookie-banner', 'entry-skip-link', 'entry-transition'],
+            excludedRuntimeSurfaces: [...new Set([...snapshot.runtimeSurfaces, ...editorSnapshot.runtimeSurfaces].map(surface => surface.kind).filter(Boolean))].sort(),
             publicRuntimeSurfaces: snapshot.runtimeSurfaces,
             editorRuntimeSurfaces: editorSnapshot.runtimeSurfaces,
             publicComparableTextOccurrences: publicComparableText.length,
