@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import { PUBLIC_QA_IMAGE, PUBLIC_QA_CHROME, publicRuntimeImage } from './public-runtime.mjs';
+import { PUBLIC_QA_IMAGE, PUBLIC_QA_CHROME, publicRuntimeImage, publicRuntimeLaunchArgs } from './public-runtime.mjs';
 
 const fixture = () => ({
   environment: { H6_QA_CONTAINER_IMAGE: PUBLIC_QA_IMAGE, CHROME_PATH: PUBLIC_QA_CHROME, ImageVersion: '20260920.314.1' },
@@ -35,6 +35,14 @@ test('container identity fails closed on unpinned images, missing markers and di
 test('local and native runner evidence retains its original image distinction', () => {
   assert.equal(publicRuntimeImage({ environment: {}, platform: 'win32' }), 'win32');
   assert.notEqual(publicRuntimeImage({ environment: { ImageVersion: 'old' } }), publicRuntimeImage({ environment: { ImageVersion: 'new' } }));
+});
+
+test('root browser arguments apply only to the verified container and its exact browser', () => {
+  assert.deepEqual(publicRuntimeLaunchArgs(PUBLIC_QA_CHROME, { ...fixture(), uid: 0 }), ['--no-sandbox']);
+  assert.deepEqual(publicRuntimeLaunchArgs(PUBLIC_QA_CHROME, { ...fixture(), uid: 1000 }), []);
+  assert.deepEqual(publicRuntimeLaunchArgs('native-browser', { environment: {}, uid: 0 }), []);
+  assert.throws(() => publicRuntimeLaunchArgs('different-browser', { ...fixture(), uid: 0 }));
+  assert.throws(() => publicRuntimeLaunchArgs(PUBLIC_QA_CHROME, { ...fixture(), uid: 0, exists: () => false }));
 });
 
 test('every public evidence producer and verifier uses the exact same pinned container', () => {

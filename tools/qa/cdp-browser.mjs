@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { publicRuntimeLaunchArgs } from './public-runtime.mjs';
 
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const ANALYTICS_OR_FORM_URL = /(?:mc\.yandex\.ru|metrika|webvisor|google-analytics\.com|googletagmanager\.com|formspree\.io|api\.web3forms\.com)/iu;
@@ -176,15 +177,18 @@ export class CdpBrowser {
     this.profileDir = await mkdtemp(path.join(os.tmpdir(), 'smu1-h6-cdp-'));
     this.child = spawn(this.chromePath, [
       ...(this.headful ? [] : [this.chromePath.includes('headless-shell') ? '--headless' : '--headless=new']),
+      ...publicRuntimeLaunchArgs(this.chromePath),
       '--disable-extensions', '--disable-component-extensions-with-background-pages', '--no-first-run',
       '--no-default-browser-check', '--remote-allow-origins=*', '--autoplay-policy=no-user-gesture-required',
       '--remote-debugging-port=0', `--user-data-dir=${this.profileDir}`, '--window-size=1440,900', 'about:blank'
-    ], { stdio: 'ignore', windowsHide: true });
+    ], { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
+    let launchStderr = '';
+    this.child.stderr.on('data', chunk => { launchStderr = (launchStderr + chunk.toString()).slice(-4096); });
     const deadline = Date.now() + 30_000;
     let debuggerUrl = '';
     const activePortFilename = path.join(this.profileDir, 'DevToolsActivePort');
     while (Date.now() < deadline && !debuggerUrl) {
-      if (this.child.exitCode !== null) throw new Error(`Chrome exited before DevTools was ready (${this.child.exitCode}).`);
+      if (this.child.exitCode !== null) throw new Error(`Chrome exited before DevTools was ready (${this.child.exitCode}). ${launchStderr.trim()}`);
       if (!this.debugPort) {
         const activePort = await readFile(activePortFilename, 'utf8').catch(() => '');
         const [portLine = '', browserSocketPath = ''] = activePort.trim().split(/\r?\n/u);

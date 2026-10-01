@@ -20,3 +20,14 @@ export function publicRuntimeImage({ environment = process.env, platform = proce
   }
   return configured;
 }
+
+export function publicRuntimeLaunchArgs(chromePath, options = {}) {
+  const environment = options.environment ?? process.env;
+  if (!environment.H6_QA_CONTAINER_IMAGE) return [];
+  publicRuntimeImage({ ...options, environment });
+  if (chromePath !== PUBLIC_QA_CHROME) throw new Error('Public QA must launch the pinned container browser.');
+  // The official image runs trusted localhost tests as root. Chromium cannot
+  // use its user sandbox in that mode; native and non-root runs keep it enabled.
+  const uid = options.uid ?? process.getuid?.();
+  return uid === 0 ? ['--no-sandbox'] : [];
+}
