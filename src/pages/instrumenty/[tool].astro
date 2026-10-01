@@ -1,7 +1,10 @@
 ---
-import {getCollection} from 'astro:content';
+import {getCollection, type CollectionEntry} from 'astro:content';
 import ToolPage from '../../components/tools/ToolPage.astro';
 export async function getStaticPaths(){return (await getCollection('tools')).map(({data})=>({params:{tool:data.id},props:{tool:data}}));}
-const {tool}=Astro.props;
+// Local editor renders routes on demand, without getStaticPaths props.
+let {tool}=Astro.props as {tool?: CollectionEntry<'tools'>['data']};
+if (!tool) tool=(await getCollection('tools')).find(({data})=>data.id===String(Astro.params.tool || ''))?.data;
+if (!tool) return Astro.rewrite('/404.html');
 ---
 <ToolPage tool={tool}/>

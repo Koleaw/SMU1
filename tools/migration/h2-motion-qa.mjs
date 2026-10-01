@@ -1281,13 +1281,15 @@ const captureH3CoveredAtEvent = async ({ fromHref, targetHref }) => {
     };
   })()`;
   const interceptionReady = await evaluate(`(${installHeldNavigationCapture.toString()})(
-    ${JSON.stringify(targetHref)}, () => ${coveredGeometryExpression})`);
+    ${JSON.stringify(targetHref)}, () => ${coveredGeometryExpression},
+    ${JSON.stringify({ variant: 'h3', from: classify(fromHref).normalizedPathname, to: classify(targetHref).normalizedPathname })})`);
   if (!interceptionReady) throw new Error('Navigation API is unavailable for H3 covered capture.');
 
   await fireRouteClick(targetHref, { label: expectedLabel });
   const held = await waitForCondition(`window.__smu1H4CoveredNavigation?.prevented === true
     && document.documentElement.dataset.v2PageState === 'navigating'`, 3500, 5);
   const geometry = await evaluate('window.__smu1H4CoveredGeometry || null');
+  const eventGeometry = await evaluate('window.__smu1H4CoveredEventGeometry || null');
   // A semantic event sample and a PNG have different observation times. Keep
   // fresh geometry on both sides of the PNG; the event snapshot cannot stand
   // in for either live observation while CDP or the screenshot is delayed.
@@ -1307,7 +1309,9 @@ const captureH3CoveredAtEvent = async ({ fromHref, targetHref }) => {
     || outgoingTrace.find((row) => row.pageState === 'covered');
   // Backwards-compatible field: actualOffset now explicitly records the
   // synchronous semantic sample. The manifest's PNG offset stays separate.
-  const actualOffset = covering && Number.isFinite(geometry?.sampledAt)
+  const actualOffset = covering && Number.isFinite(eventGeometry?.sampledAt)
+    ? eventGeometry.sampledAt - covering.at : null;
+  const navigationSampleOffset = covering && Number.isFinite(geometry?.sampledAt)
     ? geometry.sampledAt - covering.at : null;
   const captureStartOffset = covering && Number.isFinite(preCaptureGeometry?.sampledAt)
     ? preCaptureGeometry.sampledAt - covering.at : null;
@@ -1319,6 +1323,7 @@ const captureH3CoveredAtEvent = async ({ fromHref, targetHref }) => {
     if (capture?.filename.endsWith('sheet-03-covered-event.png')) {
       capture.actualCaptureOffset = captureStartOffset;
       capture.semanticSampleOffset = actualOffset;
+      capture.navigationSampleOffset = navigationSampleOffset;
       capture.captureWindowStartOffset = captureStartOffset;
       capture.captureWindowEndOffset = captureEndOffset;
       capture.coveredEventOffset = coveredEventOffset;
@@ -1353,10 +1358,12 @@ const captureH3CoveredAtEvent = async ({ fromHref, targetHref }) => {
   return {
     filename,
     geometry,
+    eventGeometry,
     preCaptureGeometry,
     postCaptureGeometry,
     actualOffset,
     semanticSampleOffset: actualOffset,
+    navigationSampleOffset,
     captureStartOffset,
     captureEndOffset,
     coveredEventOffset,
@@ -1673,6 +1680,7 @@ const transitionFilmstripAudit = async () => {
     targetHref: hrefFor(routes.deep)
   });
   const coveredGeometry = coveredCapture.geometry;
+  const coveredEventGeometry = coveredCapture.eventGeometry;
   const coveredPreGeometry = coveredCapture.preCaptureGeometry;
   const coveredPostGeometry = coveredCapture.postCaptureGeometry;
   const coveredExpectedLabel = classify(hrefFor(routes.deep)).canonicalLabel;
@@ -1688,6 +1696,19 @@ const transitionFilmstripAudit = async () => {
     .some((row) => row.doc === coveredCapture.trace.find((item) => item.pageState === 'covering')?.doc);
   const coveredFrameVerified = Boolean(coveredCapture.filename && coveredCapture.held
     && coveredCapture.arrived
+    && coveredEventGeometry?.href === hrefFor(routes.home)
+    && coveredEventGeometry?.pageState === 'covered'
+    && coveredEventGeometry?.pageVariant === 'h3'
+    && coveredEventGeometry?.locked
+    && coveredEventGeometry?.sheetLeft <= 3
+    && coveredEventGeometry?.sheetRight >= coveredEventGeometry?.overlayWidth - 3
+    && coveredEventGeometry?.gridVisible
+    && coveredEventGeometry?.labelVisible
+    && coveredEventGeometry?.transitionLabel === coveredExpectedLabel
+    && coveredEventGeometry?.event?.variant === 'h3'
+    && coveredEventGeometry?.event?.from === classify(hrefFor(routes.home)).normalizedPathname
+    && coveredEventGeometry?.event?.to === classify(hrefFor(routes.deep)).normalizedPathname
+    && coveredEventGeometry?.event?.navigationId === coveredToken?.navigationId
     && coveredCapture.usable && coveredGeometry?.href === hrefFor(routes.home)
     && coveredGeometry?.pageState === 'navigating'
     && coveredGeometry?.pageVariant === 'h3'
@@ -1723,7 +1744,8 @@ const transitionFilmstripAudit = async () => {
     && coveredSemanticEvent
     && coveredCapture.actualOffset >= 250
     && coveredCapture.actualOffset <= 360
-    && coveredCapture.captureStartOffset >= coveredCapture.actualOffset
+    && coveredCapture.navigationSampleOffset >= coveredCapture.actualOffset
+    && coveredCapture.captureStartOffset >= coveredCapture.navigationSampleOffset
     && coveredCapture.captureEndOffset >= coveredCapture.captureStartOffset
     && coveredCapture.captureEndOffset >= coveredCapture.actualOffset
     && coveredCapture.captureEndOffset < 1000
@@ -1948,10 +1970,12 @@ const transitionFilmstripAudit = async () => {
         filename: coveredCapture.filename,
         verified: coveredFrameVerified,
         geometry: coveredCapture.geometry,
+        eventGeometry: coveredCapture.eventGeometry,
         preCaptureGeometry: coveredCapture.preCaptureGeometry,
         postCaptureGeometry: coveredCapture.postCaptureGeometry,
         actualOffset: coveredCapture.actualOffset,
         semanticSampleOffset: coveredCapture.semanticSampleOffset,
+        navigationSampleOffset: coveredCapture.navigationSampleOffset,
         captureStartOffset: coveredCapture.captureStartOffset,
         captureEndOffset: coveredCapture.captureEndOffset,
         coveredEventOffset: coveredCapture.coveredEventOffset,
