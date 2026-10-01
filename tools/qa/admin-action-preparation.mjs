@@ -72,6 +72,9 @@ export function adminActionProbeExpression(action, { scroll = false, interaction
     const frame = action.context === 'shell' ? null : Array.from(document.querySelectorAll('iframe')).find((frame,index) => 'iframe-' + (frame.id || index + 1) === action.context);
     const documentValue = action.context === 'shell' ? document : frame?.contentDocument;
     if (!documentValue) return { found:false, executable:false, reason:'missing-document' };
+    const canvasDocument = action.containerId === 'veOverlay' ? document.querySelector('#veFrame')?.contentDocument : null;
+    const fontsPending = () => [documentValue, canvasDocument].some(doc => doc?.fonts?.status === 'loading');
+    if (fontsPending()) return { found:true, executable:false, reason:'fonts-loading' };
     let element = find(documentValue, action);
     if (!element) return { found:false, executable:false, reason:'missing-control' };
     if (${JSON.stringify(scroll)}) {
@@ -102,6 +105,7 @@ export function adminActionProbeExpression(action, { scroll = false, interaction
     await frameTick();
     if (!element.isConnected || find(documentValue, action) !== element) return { found:true, executable:false, reason:'replaced' };
     const rect = element.getBoundingClientRect(), style = documentValue.defaultView.getComputedStyle(element);
+    if (fontsPending()) return { found:true, executable:false, reason:'fonts-loading' };
     if (element.hidden || element.disabled || element.getAttribute('aria-disabled') === 'true' || element.closest('[hidden]')
       || style.display === 'none' || style.visibility === 'hidden' || rect.width < 1 || rect.height < 1) return { found:true, executable:false, reason:'hidden' };
     if (['x','y','width','height'].some(key => Math.abs(rect[key] - before[key]) > 0.25)) return { found:true, executable:false, reason:'moving' };
@@ -117,14 +121,23 @@ export function adminActionProbeExpression(action, { scroll = false, interaction
   })()`;
 }
 
-// Readiness may be sampled repeatedly; this helper never dispatches or retries an action.
+// Readiness and pointer placement may be sampled repeatedly. Never click or
+// retry an action here: the caller dispatches one activation after preparation.
 export async function prepareAdminAction(browser, action, {timeoutMs = 8000, interaction = 'click'} = {}) {
   const deadline = Date.now() + timeoutMs;
   let last, first = true;
   do {
     last = await browser.evaluate(adminActionProbeExpression(action, {scroll:first, interaction}));
     first = false;
-    if (last?.executable && (interaction === 'click' || last.active)) return last;
+    if (last?.executable && interaction === 'click') {
+      // A hover or a just-completed font/layout update can move an overlay
+      // between its first hit test and native pointerdown. Prime the pointer,
+      // then require the same exact control and point to remain stable.
+      const point = last.point;
+      await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+      last = await browser.evaluate(adminActionProbeExpression(action, {scroll:false, interaction}));
+      if (last?.executable && Math.abs(last.point.x - point.x) <= 0.25 && Math.abs(last.point.y - point.y) <= 0.25) return last;
+    } else if (last?.executable && last.active) return last;
     if (['missing-document','missing-control','hidden','missing-binding-source'].includes(last?.reason)) return last;
     await new Promise(resolve => setTimeout(resolve,40));
   } while (Date.now() < deadline);

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -61,4 +62,44 @@ test('clipped shell overlay reveals its iframe source and dispatches once to the
     // Exact mkdtemp-owned fixture, including its isolated iframe document.
     await rm(root,{recursive:true,force:true});
   }
+});
+
+test('overlay preparation waits for real iframe fonts and rechecks a hover-induced move before one native click', {skip:!preferredChromePath()}, async()=>{
+  const font=await readFile(new URL('../../public/assets/fonts/manrope/manrope-400-latin-cyrillic.woff2',import.meta.url));
+  let releaseFont;
+  const shell=`<!doctype html><body style="margin:0"><div id="veApp"><iframe id="veFrame" src="/canvas" style="position:absolute;inset:0;width:100%;height:800px;border:0"></iframe><div id="veOverlay" style="position:absolute;inset:0;pointer-events:none"></div><div id="veInlineEditor" hidden></div></div><script>
+    window.counts={target:0,blocker:0,hover:0};
+    const update=()=>{const source=veFrame.contentDocument.querySelector('[data-smu1-binding-id]'),r=source.getBoundingClientRect();let b=veOverlay.querySelector('button');if(!b){b=document.createElement('button');b.dataset.bindingId='home:cta';b.dataset.controlKey='target';b.className='ve-overlay-target';b.textContent='Edit CTA';b.setAttribute('aria-pressed','false');b.onclick=()=>{counts.target++;b.setAttribute('aria-pressed','true');veInlineEditor.hidden=false;veInlineEditor.dataset.bindingId='home:cta';};b.onpointerenter=()=>{if(!counts.hover){counts.hover++;source.style.top='471px';update();}};veOverlay.append(b);}b.style.cssText='position:absolute;pointer-events:auto;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;height:'+r.height+'px';};
+    addEventListener('message',event=>{if(event.data==='ready'){update();document.body.dataset.ready='true';}if(event.data==='font-ready')update();});
+  </script>`;
+  const canvas=`<!doctype html><style>@font-face{font-family:QA;src:url('/font.woff2')}body{margin:0}#source{position:absolute;top:350px;left:300px;width:200px;height:36px;font:20px QA}</style><div id="source" data-smu1-binding-id="home:cta" data-smu1-binding='{"tool":"short-text"}'>Second CTA</div><script>
+    document.fonts.load('20px QA').then(()=>{source.style.top='401px';parent.postMessage('font-ready','*');});parent.postMessage('ready','*');
+  </script>`;
+  const server=createServer((req,res)=>{
+    if(req.url==='/font.woff2'){releaseFont=()=>{if(!res.writableEnded)res.writeHead(200,{'content-type':'font/woff2'}).end(font);};return;}
+    res.writeHead(200,{'content-type':'text/html; charset=utf-8'}).end(req.url==='/canvas'?canvas:shell);
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const browser=new CdpBrowser();
+  try{
+    await browser.start();await browser.setViewport({width:1440,height:900,mobile:false});
+    await browser.navigate('http://127.0.0.1:'+server.address().port+'/');
+    const deadline=Date.now()+5000;
+    while(!releaseFont||!await browser.evaluate("document.body.dataset.ready==='true'")){if(Date.now()>deadline)throw Error('delayed font fixture not ready');await new Promise(r=>setTimeout(r,20));}
+    assert.equal(await browser.evaluate('veFrame.contentDocument.fonts.status'),'loading');
+    const action={context:'shell',containerId:'veOverlay',tag:'button',dataAttributes:{'data-binding-id':'home:cta','data-control-key':'target'}};
+    await browser.evaluate(armAdminActionTraceExpression());
+    let settled=false;
+    const pending=prepareAdminAction(browser,action).then(value=>{settled=true;return value;});
+    await new Promise(r=>setTimeout(r,100));
+    assert.equal(settled,false,'a fallback-font position must not be reported actionable');
+    releaseFont();
+    const prepared=await pending;
+    assert.equal(prepared.executable,true,JSON.stringify(prepared));
+    assert.equal(prepared.point.y,489,'the final point accounts for both the font and hover moves');
+    assert.deepEqual(await browser.evaluate('window.counts'),{target:0,blocker:0,hover:1},'preparation has not clicked');
+    await browser.dispatchClick(prepared.point);
+    assert.equal(adminControlPostcondition(action,prepared.before,await browser.evaluate(adminActionStateExpression(action)),[],await browser.evaluate('window.__h6AdminActionTrace.events')),true);
+    assert.deepEqual(await browser.evaluate('window.counts'),{target:1,blocker:0,hover:1},'exactly one native click reached the intended control');
+  }finally{releaseFont?.();await browser.close();await new Promise(resolve=>server.close(resolve));}
 });
