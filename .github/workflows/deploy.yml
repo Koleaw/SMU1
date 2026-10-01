@@ -331,6 +331,8 @@ jobs:
       CHROME_PATH: /ms-playwright/chromium-1243/chrome-linux64/chrome
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Trust this mounted checkout for container Git commands
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22.12.0
@@ -357,6 +359,8 @@ jobs:
       BASE_PATH: ${{ needs.build.outputs.base_path }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Trust this mounted checkout for container Git commands
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22.12.0
@@ -407,6 +411,8 @@ jobs:
       BASE_PATH: ${{ needs.build.outputs.base_path }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Trust this mounted checkout for container Git commands
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22.12.0
@@ -445,6 +451,8 @@ jobs:
       BASE_PATH: ${{ needs.build.outputs.base_path }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Trust this mounted checkout for container Git commands
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22.12.0
@@ -503,6 +511,8 @@ jobs:
       CHROME_PATH: /ms-playwright/chromium-1243/chrome-linux64/chrome
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Trust this mounted checkout for container Git commands
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22.12.0
@@ -604,6 +614,8 @@ jobs:
         with:
           path: qa-tools
           fetch-depth: 0
+      - name: Trust the mounted QA checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE/qa-tools"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22.12.0
@@ -624,6 +636,8 @@ jobs:
         with:
           path: site
           ref: ${{ steps.original.outputs.source_sha }}
+      - name: Trust the mounted original checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE/site"
       - name: Preserve the original source identity and share unchanged dependencies
         run: |
           git -C site switch -c preview

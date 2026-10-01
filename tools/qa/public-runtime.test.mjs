@@ -56,4 +56,16 @@ test('every public evidence producer and verifier uses the exact same pinned con
   }
   assert.match(jobs['public-runtime'], /run: node tools\/qa\/public-runtime-preflight\.mjs/u);
   assert.match(jobs['public-evidence'], /name: Reconcile every shard[\s\S]*?shell: bash/u);
+  for (const id of ['public-runtime', 'public-inputs', 'public-actions', 'public-evidence', 'release']) {
+    const trust = 'run: git config --global --add safe.directory "$GITHUB_WORKSPACE"';
+    assert.equal(jobs[id].split(trust).length - 1, 1, `${id}: trust only the mounted checkout`);
+    assert.ok(jobs[id].indexOf(trust) > jobs[id].indexOf('uses: actions/checkout@'));
+    assert.ok(jobs[id].indexOf(trust) < jobs[id].indexOf('uses: actions/setup-node@'));
+  }
+  for (const subdirectory of ['qa-tools', 'site']) {
+    assert.ok(jobs['resume-evidence'].includes(`run: git config --global --add safe.directory "$GITHUB_WORKSPACE/${subdirectory}"`));
+  }
+  assert.doesNotMatch(workflow, /safe\.directory\s+["']?\*/u, 'no wildcard repository trust');
+  const preflight = fs.readFileSync(new URL('./public-runtime-preflight.mjs', import.meta.url), 'utf8');
+  assert.ok(preflight.indexOf("git('rev-parse', '--show-toplevel')") < preflight.indexOf('await browser.start()'));
 });
