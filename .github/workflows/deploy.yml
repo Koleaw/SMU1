@@ -317,10 +317,33 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  public-runtime:
+    if: inputs.resume_evidence_run == ''
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --ipc=host
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      H6_QA_CONTAINER_IMAGE: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      CHROME_PATH: /ms-playwright/chromium-1243/chrome-linux64/chrome
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.12.0
+      - name: Verify pinned browser and container before the public crawl
+        run: node tools/qa/public-runtime-preflight.mjs
+
   public-inputs:
     # The expensive crawl starts only after the shorter independent gates pass.
-    needs: [build, admin-actions, admin-acceptance]
+    needs: [build, admin-actions, admin-acceptance, public-runtime]
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --ipc=host
     timeout-minutes: 15
     permissions:
       contents: read
@@ -329,6 +352,8 @@ jobs:
       cache_key: ${{ steps.inputs.outputs.cache_key }}
       input_key: ${{ steps.inputs.outputs.input_key }}
     env:
+      H6_QA_CONTAINER_IMAGE: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      CHROME_PATH: /ms-playwright/chromium-1243/chrome-linux64/chrome
       BASE_PATH: ${{ needs.build.outputs.base_path }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -366,6 +391,9 @@ jobs:
     needs: [build, public-inputs]
     if: needs.public-inputs.outputs.cache_hit != 'true'
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --ipc=host
     timeout-minutes: 75
     permissions:
       contents: read
@@ -374,6 +402,8 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
     env:
+      H6_QA_CONTAINER_IMAGE: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      CHROME_PATH: /ms-playwright/chromium-1243/chrome-linux64/chrome
       BASE_PATH: ${{ needs.build.outputs.base_path }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -403,10 +433,15 @@ jobs:
     needs: [build, public-inputs, public-actions]
     if: always() && !cancelled() && needs.public-inputs.result == 'success' && (needs.public-inputs.outputs.cache_hit == 'true' || needs.public-actions.result == 'success')
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --ipc=host
     timeout-minutes: 15
     permissions:
       contents: read
     env:
+      H6_QA_CONTAINER_IMAGE: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      CHROME_PATH: /ms-playwright/chromium-1243/chrome-linux64/chrome
       BASE_PATH: ${{ needs.build.outputs.base_path }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -433,6 +468,7 @@ jobs:
           merge-multiple: true
       - name: Reconcile every shard and validate full public evidence
         if: needs.public-inputs.outputs.cache_hit != 'true'
+        shell: bash
         run: |
           inputs=()
           for shard in {1..8}; do inputs+=("--input=.admin-runtime/h6-qa/public-action-shards/shard-${shard}.json"); done
@@ -456,9 +492,15 @@ jobs:
   release:
     needs: [build, admin-actions, admin-acceptance, public-evidence]
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --ipc=host
     timeout-minutes: 20
     permissions:
       contents: read
+    env:
+      H6_QA_CONTAINER_IMAGE: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      CHROME_PATH: /ms-playwright/chromium-1243/chrome-linux64/chrome
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -545,12 +587,18 @@ jobs:
   resume-evidence:
     if: inputs.resume_evidence_run != '' && inputs.deploy_target == 'test' && github.ref_name != 'main' && github.ref_name != 'master'
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --ipc=host
     timeout-minutes: 30
     permissions:
       contents: read
       actions: read
     outputs:
       source_sha: ${{ steps.original.outputs.source_sha }}
+    env:
+      H6_QA_CONTAINER_IMAGE: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      CHROME_PATH: /ms-playwright/chromium-1243/chrome-linux64/chrome
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

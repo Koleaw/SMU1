@@ -33,14 +33,14 @@ test('CI retains independent failed stages and gates publishing on complete evid
   const workflow = await fs.readFile(new URL('../../.github/workflows/deploy.yml', import.meta.url), 'utf8');
   const jobSource = workflow.slice(workflow.indexOf('\njobs:') + 7);
   const jobs = Object.fromEntries([...jobSource.matchAll(/^  ([a-z-]+):\r?\n([\s\S]*?)(?=^  [a-z-]+:\r?$|(?![\s\S]))/gmu)].map(match=>[match[1],match[2]]));
-  assert.deepEqual(Object.keys(jobs), ['build','admin-actions','admin-acceptance','public-inputs','public-actions','public-evidence','release','deploy-test','resume-evidence','deploy-resumed-preview']);
+  assert.deepEqual(Object.keys(jobs), ['build','admin-actions','admin-acceptance','public-runtime','public-inputs','public-actions','public-evidence','release','deploy-test','resume-evidence','deploy-resumed-preview']);
   for (const name of ['build','admin-actions','admin-acceptance']) assert.match(jobs[name], /if: inputs\.resume_evidence_run == ''/u);
   assert.match(jobs['admin-actions'], /--stage=actions/u);
   assert.match(jobs['admin-acceptance'], /--stage=acceptance/u);
   assert.doesNotMatch(jobs['admin-actions'], /^    needs:/mu);
   assert.doesNotMatch(jobs['admin-acceptance'], /^    needs:/mu);
   for (const name of ['admin-actions','admin-acceptance','public-actions']) assert.match(jobs[name], /if: always\(\)/u);
-  assert.match(jobs['public-inputs'], /needs: \[build, admin-actions, admin-acceptance\]/u);
+  assert.match(jobs['public-inputs'], /needs: \[build, admin-actions, admin-acceptance, public-runtime\]/u);
   assert.match(jobs['public-inputs'], /public-action-cache\.mjs restore/u);
   assert.doesNotMatch(jobs['public-inputs'], /restore-keys:/u);
   assert.match(jobs['public-actions'], /cache_hit != 'true'/u);

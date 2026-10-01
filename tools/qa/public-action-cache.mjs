@@ -8,6 +8,7 @@ import { CdpBrowser } from './cdp-browser.mjs';
 import { buildExpectedRouteModel, fingerprintArtifact, discoverArtifactFiles } from './route-passport-model.mjs';
 import { validatePublicActionEvidence } from './evidence-contract.mjs';
 import { sourceWorkingTreeDirty } from './git-evidence.mjs';
+import { publicRuntimeImage } from './public-runtime.mjs';
 
 export const PUBLIC_CRAWL_SHARDS = 8;
 const digest = value => crypto.createHash('sha256').update(value).digest('hex');
@@ -48,6 +49,7 @@ export function publicHarnessFiles(root, entries = [
 }
 
 export async function currentPublicActionInputs({ root = process.cwd(), distRoot = path.join(root, 'dist'), basePath = process.env.BASE_PATH || '/' } = {}) {
+  const runtimeImage = publicRuntimeImage();
   const browser = await new CdpBrowser().start();
   let chromium;
   try { chromium = await browser.send('Browser.getVersion'); }
@@ -64,7 +66,7 @@ export async function currentPublicActionInputs({ root = process.cwd(), distRoot
     routes: buildExpectedRouteModel({ root }).routes,
     runtime: {
       node: process.versions.node, platform: process.platform, arch: process.arch,
-      image: process.env.ImageVersion || process.env.RUNNER_OS || process.platform,
+      image: runtimeImage,
       chromium
     }
   };

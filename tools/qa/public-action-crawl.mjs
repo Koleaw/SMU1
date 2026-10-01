@@ -113,7 +113,11 @@ const artifactFiles = discoverArtifactFiles(options.distRoot);
 const artifactFingerprint = fingerprintArtifact(options.distRoot, artifactFiles);
 const publicInputs = await currentPublicActionInputs({ root, distRoot: options.distRoot, basePath });
 const expectedInputKey = option('--expected-input-key');
-if (expectedInputKey && expectedInputKey !== publicInputs.key) throw new Error('Public QA artifact, harness or runtime differs from the prepared input identity.');
+if (expectedInputKey && expectedInputKey !== publicInputs.key) {
+  await mkdir(path.dirname(options.output), { recursive: true });
+  await writeFile(`${options.output}.inputs.json`, JSON.stringify({ expectedInputKey, ...publicInputs }, null, 2));
+  throw new Error('Public QA artifact, harness or runtime differs from the prepared input identity.');
+}
 const artifactIsolation = inspectPublicArtifactIsolation(options.distRoot, artifactFiles);
 const expectedRouteSet = new Set(model.routes.map((route) => route.pathname));
 const expectedRouteByPath = new Map(model.routes.map((route) => [route.pathname, route]));
