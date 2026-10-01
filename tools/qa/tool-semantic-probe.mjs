@@ -51,7 +51,7 @@ export async function exerciseToolSemantics(browser, { requestedUrl } = {}) {
     const hasSvg = await browser.evaluate(`Boolean(document.querySelector('[data-diagram] svg'))`);
     if (hasSvg) {
       await action('zoom', true);
-      check('keyboard-zoom-diagram', await browser.evaluate(`document.activeElement === document.querySelector('[data-diagram]') && [...document.querySelectorAll('[data-diagram] svg')].every(s => s.style.width === '200%') && document.querySelector('[data-diagram]').scrollWidth > document.querySelector('[data-diagram]').clientWidth`));
+      check('keyboard-zoom-diagram', await waitFor(`document.activeElement === document.querySelector('[data-diagram]') && [...document.querySelectorAll('[data-diagram] svg')].every(s => s.style.width === '200%') && document.querySelector('[data-diagram]').scrollWidth > document.querySelector('[data-diagram]').clientWidth`));
       await browser.dispatchKey('ArrowRight', { code: 'ArrowRight' });
       check('keyboard-diagram-scroll', await waitFor(`document.querySelector('[data-diagram]').scrollLeft > 0`));
     } else {

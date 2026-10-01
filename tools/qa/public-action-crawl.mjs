@@ -10,6 +10,7 @@ import { CdpBrowser, createDistServer } from './cdp-browser.mjs';
 import { PUBLIC_LIFECYCLE_SEMANTIC_IDS } from './evidence-contract.mjs';
 import { sourceWorkingTreeDirty } from './git-evidence.mjs';
 import { currentPublicActionInputs } from './public-action-cache.mjs';
+import { restorePublicBaseline } from './public-baseline.mjs';
 import { parsePublicActionShard, routesForPublicActionShard } from './public-action-shards.mjs';
 import {
   assessDistFreshness,
@@ -345,9 +346,8 @@ const validateLink = (action, pageUrl) => {
 };
 
 const restoreInitialPage = async (requestedUrl) => {
-  await browser.send('Storage.clearDataForOrigin', { origin: originValue, storageTypes: 'all' }).catch(() => {});
-  await browser.navigate(requestedUrl, { waitForFonts: false });
-  await settleInteractiveSurface();
+  await restorePublicBaseline(browser, { origin: originValue, requestedUrl });
+  if (!await settleInteractiveSurface()) throw new Error(`Public action surface did not settle: ${requestedUrl}`);
   await browser.evaluate(registerExpression);
 };
 
@@ -467,6 +467,9 @@ const executeInternalLink = async (action, link, mode) => {
 const exerciseCurrentSurface = async ({ requestedUrl, loadedLocation }) => {
   const toolSemantics = await browser.evaluate(`Boolean(document.querySelector('[data-tool-app]'))`)
     ? await exerciseToolSemantics(browser, { requestedUrl }) : null;
+  // The semantic probe adds projects and rows. Start the independent concrete
+  // control inventory from the same fresh DOM used by subsequent link resets.
+  if (toolSemantics) await restoreInitialPage(requestedUrl);
   const actionResultsById = new Map();
   let inventoried = 0;
   for (let wave = 0; wave < 3; wave += 1) {
