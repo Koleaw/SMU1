@@ -1,6 +1,18 @@
 import { findAdminActionElement } from './admin-action-state.mjs';
 import { visibleClickPoint } from './actionable-click.mjs';
 
+// An overlay can remain still while its source is in the delay phase of a
+// reveal transition. Observe the source and its ancestors, not only the shell
+// rectangle. Infinite decorative animations do not define action readiness.
+export function hasPendingFiniteAnimations(element) {
+  for (let node = element; node; node = node.parentElement) {
+    if (node.getAnimations?.().some(animation =>
+      (animation.pending || animation.playState === 'running')
+      && Number.isFinite(animation.effect?.getComputedTiming().endTime))) return true;
+  }
+  return false;
+}
+
 // Only the outer canvas scrollport moves; fixed iframe descendants may not
 // propagate scrollIntoView to this ancestor. No focus or action is dispatched.
 export function revealAdminCanvasControl(documentValue, element) {
@@ -73,6 +85,10 @@ export function adminActionProbeExpression(action, { scroll = false, interaction
     const documentValue = action.context === 'shell' ? document : frame?.contentDocument;
     if (!documentValue) return { found:false, executable:false, reason:'missing-document' };
     const canvasDocument = action.containerId === 'veOverlay' ? document.querySelector('#veFrame')?.contentDocument : null;
+    const source = canvasDocument && Array.from(canvasDocument.querySelectorAll('[data-smu1-binding-id]'))
+      .find(node => node.getAttribute('data-smu1-binding-id') === action.dataAttributes?.['data-binding-id']);
+    const animationsPending = element => (${hasPendingFiniteAnimations.toString()})(element)
+      || (${hasPendingFiniteAnimations.toString()})(source);
     const fontsPending = () => [documentValue, canvasDocument].some(doc => doc?.fonts?.status === 'loading');
     if (fontsPending()) return { found:true, executable:false, reason:'fonts-loading' };
     let element = find(documentValue, action);
@@ -106,6 +122,7 @@ export function adminActionProbeExpression(action, { scroll = false, interaction
     if (!element.isConnected || find(documentValue, action) !== element) return { found:true, executable:false, reason:'replaced' };
     const rect = element.getBoundingClientRect(), style = documentValue.defaultView.getComputedStyle(element);
     if (fontsPending()) return { found:true, executable:false, reason:'fonts-loading' };
+    if (animationsPending(element)) return { found:true, executable:false, reason:'animation-running' };
     if (element.hidden || element.disabled || element.getAttribute('aria-disabled') === 'true' || element.closest('[hidden]')
       || style.display === 'none' || style.visibility === 'hidden' || rect.width < 1 || rect.height < 1) return { found:true, executable:false, reason:'hidden' };
     if (['x','y','width','height'].some(key => Math.abs(rect[key] - before[key]) > 0.25)) return { found:true, executable:false, reason:'moving' };
@@ -128,7 +145,7 @@ export async function prepareAdminAction(browser, action, {timeoutMs = 8000, int
   let last, first = true;
   do {
     last = await browser.evaluate(adminActionProbeExpression(action, {scroll:first, interaction}));
-    first = false;
+    if (last?.reason !== 'fonts-loading') first = false;
     if (last?.executable && interaction === 'click') {
       // A hover or a just-completed font/layout update can move an overlay
       // between its first hit test and native pointerdown. Prime the pointer,
@@ -141,5 +158,6 @@ export async function prepareAdminAction(browser, action, {timeoutMs = 8000, int
     if (['missing-document','missing-control','hidden','missing-binding-source'].includes(last?.reason)) return last;
     await new Promise(resolve => setTimeout(resolve,40));
   } while (Date.now() < deadline);
-  return last || {found:false,executable:false,reason:'readiness-timeout'};
+  return { ...last, found:Boolean(last?.found), executable:false, timedOut:true,
+    reason:last?.reason || 'readiness-timeout', lastReason:last?.reason || 'unstable-pointer-point' };
 }

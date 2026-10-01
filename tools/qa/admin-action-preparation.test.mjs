@@ -8,6 +8,46 @@ import { CdpBrowser, createDistServer, preferredChromePath } from './cdp-browser
 import { adminControlPostcondition } from './admin-action-state.mjs';
 import { prepareAdminAction, adminActionStateExpression, armAdminActionTraceExpression } from './admin-action-preparation.mjs';
 
+test('an unstable final pointer point never becomes executable merely because the readiness budget expired', async()=>{
+  let count=0;
+  const browser={evaluate:async()=>({found:true,executable:true,point:{x:++count*10,y:20}}),send:async()=>{}};
+  const result=await prepareAdminAction(browser,{}, {timeoutMs:1});
+  assert.equal(result.executable,false);
+  assert.equal(result.reason,'readiness-timeout');
+  assert.equal(result.lastReason,'unstable-pointer-point');
+});
+
+test('a temporarily stationary overlay is not ready while its source ancestor has a delayed transform', {skip:!preferredChromePath()}, async()=>{
+  const root=await mkdtemp(path.join(os.tmpdir(),'smu1-admin-delayed-source-'));
+  await writeFile(path.join(root,'index.html'),`<!doctype html><body style="margin:0"><div id="veApp"><iframe id="veFrame" src="/canvas.html" style="position:absolute;inset:0;width:100%;height:800px;border:0"></iframe><div id="veOverlay" style="position:absolute;inset:0;pointer-events:none"></div><div id="veInlineEditor" hidden></div></div><script>
+  window.clicks=0;
+  const update=()=>{const s=veFrame.contentDocument.querySelector('[data-smu1-binding-id]'),r=s.getBoundingClientRect();let b=veOverlay.querySelector('button');if(!b){b=document.createElement('button');b.dataset.bindingId='home:contact';b.dataset.controlKey='target';b.setAttribute('aria-pressed','false');b.onclick=()=>{clicks++;b.setAttribute('aria-pressed','true');veInlineEditor.hidden=false;veInlineEditor.dataset.bindingId='home:contact';};veOverlay.append(b);}b.style.cssText='position:absolute;pointer-events:auto;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;height:'+r.height+'px';};
+  veFrame.onload=()=>{update();document.body.dataset.ready='true';};addEventListener('message',e=>{if(e.data==='settled')update();});
+  </script>`);
+  await writeFile(path.join(root,'canvas.html'),`<!doctype html><body style="margin:0"><div id="group" style="position:absolute;top:350px;left:300px"><span data-smu1-binding-id="home:contact" data-smu1-binding='{"tool":"short-text"}' style="display:block;width:200px;height:18px">Contact label</span></div><script>
+  window.begin=()=>{window.motion=group.animate([{transform:'translateY(0)'},{transform:'translateY(80px)'}],{duration:160,delay:220,fill:'forwards'});motion.finished.then(()=>parent.postMessage('settled','*'));};
+  </script>`);
+  const server=await createDistServer({distRoot:root}),browser=await new CdpBrowser().start();
+  try{
+    await browser.setViewport({width:1440,height:900,mobile:false});await browser.navigate(server.origin+'/');
+    const deadline=Date.now()+5000;while(!await browser.evaluate("document.body.dataset.ready==='true'")){if(Date.now()>deadline)throw Error('fixture not ready');await new Promise(r=>setTimeout(r,20));}
+    await browser.evaluate('veFrame.contentWindow.begin()');
+    const action={context:'shell',containerId:'veOverlay',tag:'button',dataAttributes:{'data-binding-id':'home:contact','data-control-key':'target'}};
+    await browser.evaluate(armAdminActionTraceExpression());
+    let settled=false;const pending=prepareAdminAction(browser,action).then(value=>{settled=true;return value;});
+    await new Promise(r=>setTimeout(r,150));
+    assert.equal(settled,false,'stable overlay frames during the source animation delay are not actionability');
+    const prepared=await pending;
+    assert.equal(prepared.executable,true,JSON.stringify(prepared));
+    assert.equal(prepared.point.y,439);
+    assert.equal(await browser.evaluate('veFrame.contentWindow.motion.playState'),'finished');
+    assert.equal(await browser.evaluate('clicks'),0);
+    await browser.dispatchClick(prepared.point);
+    assert.equal(adminControlPostcondition(action,prepared.before,await browser.evaluate(adminActionStateExpression(action)),[],await browser.evaluate('window.__h6AdminActionTrace.events')),true);
+    assert.equal(await browser.evaluate('clicks'),1);
+  }finally{await browser.close();await server.close();await rm(root,{recursive:true,force:true});}
+});
+
 test('clipped shell overlay reveals its iframe source and dispatches once to the exact stable control', {skip:!preferredChromePath()}, async()=>{
   const root=await mkdtemp(path.join(os.tmpdir(),'smu1-admin-action-preparation-'));
   const markup=`<!doctype html><html><body style="margin:0"><div id="veApp"><div id="veCanvasScroller" style="position:absolute;left:260px;top:100px;width:1000px;height:600px;overflow:auto"><div id="veCanvasViewport" style="position:relative;width:1440px;height:580px"><iframe id="veFrame" style="border:0;width:100%;height:100%" src="/canvas.html"></iframe><div id="veOverlay" style="position:absolute;inset:0;overflow:clip;pointer-events:none"></div></div></div><div id="veInlineEditor" hidden></div></div><script>
