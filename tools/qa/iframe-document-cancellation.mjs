@@ -38,8 +38,7 @@ export function classifyIframeDocumentCancellation(request, { requests = [], fra
     if (!successfulDocument(replacement, origin) || replacement.frameId !== request.frameId
       || !replacement.loaderId || replacement.loaderId === request.loaderId
       || !(request.requestTimestamp <= replacement.requestTimestamp
-        && replacement.requestTimestamp <= request.failureTimestamp
-        && request.failureTimestamp <= replacement.finishedTimestamp)
+        && replacement.requestTimestamp <= request.failureTimestamp)
       || !(request.startedSequence < replacement.startedSequence
         && replacement.startedSequence < request.failureSequence
         && request.failureSequence < replacement.finishedSequence)) continue;
@@ -48,8 +47,22 @@ export function classifyIframeDocumentCancellation(request, { requests = [], fra
       && frame.sequence > replacement.startedSequence && frame.sequence < replacement.finishedSequence
       && sameAddress(frame.url, replacement.url));
     if (!replacementCommit) continue;
+    // Network.loadingFinished timestamps the response body, not the frame
+    // commit. Chromium can finish the new HTML bytes, then cancel an old
+    // image, then commit the replacement frame. Accept that order only with
+    // the exact old/new loader IDs and the observed pre-commit cancellation.
+    // https://chromedevtools.github.io/devtools-protocol/tot/Network/#event-loadingFinished
+    const beforeNetworkFinish = request.failureTimestamp <= replacement.finishedTimestamp;
+    const beforeFrameCommit = request.failureSequence < replacementCommit.sequence
+      && finite(replacement.responseTimestamp) && finite(replacement.responseSequence)
+      && replacement.requestTimestamp <= replacement.responseTimestamp
+      && replacement.responseTimestamp <= replacement.finishedTimestamp
+      && replacement.startedSequence < replacement.responseSequence
+      && replacement.responseSequence < request.failureSequence;
+    if (!beforeNetworkFinish && !beforeFrameCommit) continue;
     return {
       kind: 'iframe-document-replaced', frameId: request.frameId, parentId: previousCommit.parentId,
+      cancellationPhase: beforeNetworkFinish ? 'before-response-finished' : 'before-frame-commit',
       previousLoaderId: request.loaderId, replacementLoaderId: replacement.loaderId,
       previousDocumentRequestId: previousDocument.requestId, replacementDocumentRequestId: replacement.requestId,
       previousCommitSequence: previousCommit.sequence, replacementCommitSequence: replacementCommit.sequence,

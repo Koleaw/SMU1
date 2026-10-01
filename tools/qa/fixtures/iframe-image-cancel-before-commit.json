@@ -1,0 +1,155 @@
+{
+  "source": {
+    "workflowRun": 36828769928,
+    "job": 110260330035,
+    "sha": "c4063717b9ac4407992ba1990273c8568be19a10"
+  },
+  "origin": "http://127.0.0.1:46451",
+  "resourceRequestId": "2351.828",
+  "requests": [
+    {
+      "requestId": "B03BCFF8FF16C126464F7483428E31F2",
+      "scenario": "two-tab-conflict",
+      "atMs": 5450,
+      "method": "GET",
+      "frameId": "10A044BD7352D3C5095A151B08D7E966",
+      "loaderId": "B03BCFF8FF16C126464F7483428E31F2",
+      "requestTimestamp": 193.889535,
+      "startedSequence": 829,
+      "url": {
+        "origin": "http://127.0.0.1:46451",
+        "pathname": "/ulichnaya-mebel/lavochki-i-skameyki/bolshaya-skameyka-amplituda/",
+        "queryKeys": [
+          "__smu1_editor",
+          "editorMode",
+          "editorRevision",
+          "editorSession"
+        ]
+      },
+      "resourceType": "Document",
+      "status": 200,
+      "mimeType": "text/html",
+      "fromDiskCache": false,
+      "failed": false,
+      "finished": true,
+      "failure": "",
+      "canceled": false,
+      "blockedReason": "",
+      "corsError": false,
+      "releaseEndpoint": false,
+      "releaseMutation": false,
+      "responseAtMs": 5495,
+      "responseTimestamp": 193.934615,
+      "responseSequence": 833,
+      "finishedAtMs": 5538,
+      "finishedTimestamp": 193.942046,
+      "finishedSequence": 876
+    },
+    {
+      "requestId": "2351.828",
+      "scenario": "two-tab-conflict",
+      "atMs": 6491,
+      "method": "GET",
+      "frameId": "10A044BD7352D3C5095A151B08D7E966",
+      "loaderId": "B03BCFF8FF16C126464F7483428E31F2",
+      "requestTimestamp": 194.927634,
+      "startedSequence": 1019,
+      "url": {
+        "origin": "http://127.0.0.1:46451",
+        "pathname": "/uploads/chatgpt-image-23-2026-11-44-15-5-1779535385788.png",
+        "queryKeys": []
+      },
+      "resourceType": "Image",
+      "status": null,
+      "mimeType": "",
+      "fromDiskCache": false,
+      "failed": true,
+      "finished": false,
+      "failure": "net::ERR_ABORTED",
+      "canceled": true,
+      "blockedReason": "",
+      "corsError": false,
+      "releaseEndpoint": false,
+      "releaseMutation": false,
+      "failureAtMs": 6794,
+      "failureTimestamp": 195.234694,
+      "failureSequence": 1042
+    },
+    {
+      "requestId": "C3F32CFB80C60D0449B710DA1B5926CE",
+      "scenario": "two-tab-conflict",
+      "atMs": 6743,
+      "method": "GET",
+      "frameId": "10A044BD7352D3C5095A151B08D7E966",
+      "loaderId": "C3F32CFB80C60D0449B710DA1B5926CE",
+      "requestTimestamp": 195.180588,
+      "startedSequence": 1040,
+      "url": {
+        "origin": "http://127.0.0.1:46451",
+        "pathname": "/ulichnaya-mebel/lavochki-i-skameyki/bolshaya-skameyka-amplituda/",
+        "queryKeys": [
+          "__smu1_editor",
+          "editorMode",
+          "editorRevision",
+          "editorSession"
+        ]
+      },
+      "resourceType": "Document",
+      "status": 200,
+      "mimeType": "text/html",
+      "fromDiskCache": false,
+      "failed": false,
+      "finished": true,
+      "failure": "",
+      "canceled": false,
+      "blockedReason": "",
+      "corsError": false,
+      "releaseEndpoint": false,
+      "releaseMutation": false,
+      "responseAtMs": 6780,
+      "responseTimestamp": 195.217687,
+      "responseSequence": 1041,
+      "finishedAtMs": 6843,
+      "finishedTimestamp": 195.229569,
+      "finishedSequence": 1086
+    }
+  ],
+  "frameNavigations": [
+    {
+      "scenario": "two-tab-conflict",
+      "atMs": 5503,
+      "sequence": 834,
+      "frameId": "10A044BD7352D3C5095A151B08D7E966",
+      "loaderId": "B03BCFF8FF16C126464F7483428E31F2",
+      "parentId": "6D73FB2116109BCCB7BB19DF9688B492",
+      "url": {
+        "origin": "http://127.0.0.1:46451",
+        "pathname": "/ulichnaya-mebel/lavochki-i-skameyki/bolshaya-skameyka-amplituda/",
+        "queryKeys": [
+          "__smu1_editor",
+          "editorMode",
+          "editorRevision",
+          "editorSession"
+        ]
+      }
+    },
+    {
+      "scenario": "two-tab-conflict",
+      "atMs": 6798,
+      "sequence": 1043,
+      "frameId": "10A044BD7352D3C5095A151B08D7E966",
+      "loaderId": "C3F32CFB80C60D0449B710DA1B5926CE",
+      "parentId": "6D73FB2116109BCCB7BB19DF9688B492",
+      "url": {
+        "origin": "http://127.0.0.1:46451",
+        "pathname": "/ulichnaya-mebel/lavochki-i-skameyki/bolshaya-skameyka-amplituda/",
+        "queryKeys": [
+          "__smu1_editor",
+          "editorMode",
+          "editorRevision",
+          "editorSession"
+        ]
+      }
+    }
+  ]
+}

@@ -1,7 +1,33 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import { createTelemetry } from './visual-editor-acceptance.mjs';
 import { classifyIframeDocumentCancellation, reconcileScenarioNetworkIssues } from './iframe-document-cancellation.mjs';
+
+test('recorded Chromium cancellation after HTML bytes but before frame commit has exact replacement proof', () => {
+  const fixture = JSON.parse(readFileSync(new URL('./fixtures/iframe-image-cancel-before-commit.json', import.meta.url), 'utf8'));
+  const resource = fixture.requests.find(row => row.requestId === fixture.resourceRequestId);
+  const replacement = fixture.requests.find(row => row.resourceType === 'Document' && row.loaderId !== resource.loaderId);
+  assert.equal(resource.failureTimestamp, 195.234694);
+  assert.equal(replacement.finishedTimestamp, 195.229569);
+  const proof = classifyIframeDocumentCancellation(resource, fixture);
+  assert.equal(proof?.cancellationPhase, 'before-frame-commit');
+  assert.equal(proof.resourceFailureSequence, 1042);
+  assert.equal(proof.replacementCommitSequence, 1043);
+  assert.equal(proof.replacementFinishedSequence, 1086);
+  for (const mutate of [
+    copy => { copy.frameNavigations.pop(); },
+    copy => { copy.frameNavigations.at(-1).sequence = 1041; },
+    copy => { copy.requests.find(row => row.requestId === replacement.requestId).status = 500; },
+    copy => { copy.requests.find(row => row.requestId === replacement.requestId).responseTimestamp = null; },
+    copy => { copy.requests.find(row => row.requestId === replacement.requestId).responseSequence = 1044; },
+    copy => { copy.requests.find(row => row.requestId === resource.requestId).failure = 'net::ERR_CONNECTION_RESET'; }
+  ]) {
+    const copy = structuredClone(fixture);
+    mutate(copy);
+    assert.equal(classifyIframeDocumentCancellation(copy.requests.find(row => row.requestId === resource.requestId), copy), null);
+  }
+});
 
 // The request/abort offsets reproduce the old two-tab diagnostic. New CDP
 // identities and commits are explicit fixture evidence, not inferred from it.
