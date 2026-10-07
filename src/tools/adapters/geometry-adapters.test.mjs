@@ -30,13 +30,14 @@ test('foundation adapter: selectable forming sides use controlled CSV conversion
   assert.throws(() => fundament.calculate({ ...input, formwork: { ...input.formwork, outerSides: '0,8' } }));
 });
 
-test('geometry adapters: geometry changes clear fields that become unavailable', () => {
+test('geometry adapters: foundation mode switches preserve dormant inputs; fence normalizes sides', () => {
   const input = { ...structuredClone(fundament.example), type: 'slab' };
   input.formwork.inner = true;
   input.layers[0].area = 'strip';
   fundament.onInput(input, 'type');
-  assert.equal(input.formwork.inner, false);
-  assert.equal(input.layers[0].area, 'footprint');
+  assert.equal(input.formwork.inner, true);
+  assert.equal(input.layers[0].area, 'strip');
+  assert.throws(()=>fundament.calculate(input),/Область под лентой/);
   const fence = { ...structuredClone(ograzhdenie.example), type: 'line' };
   fence.openings[0].side = 3;
   ograzhdenie.onInput(fence, 'type');

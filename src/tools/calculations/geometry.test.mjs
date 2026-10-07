@@ -227,7 +227,7 @@ test('all engines: strict input, empty/null/negative/huge/nonfinite and read-onl
     for (const invalid of ['', ' ', null, undefined, -1, Infinity, NaN, '1e3', '1,2.3', '1.0001', 1000001, {}, []]) assert.throws(() => calculate({ ...example, length: invalid }));
     assert.throws(() => calculate({ ...example, unexpected: 'field' }), error => error.field === 'input.unexpected');
     const result = calculate(example);
-    assert.equal(result.methodologyVersion, '1.0.0');
+    assert.equal(result.methodologyVersion, calculate === foundation ? '1.1.0' : '1.0.0');
     assert.ok(result.rows.every(row => result.columns.every(column => Object.hasOwn(row, column.key))));
     assert.deepEqual(calculate(result.input), result, 'normalization and restoration must preserve calculation result');
   }

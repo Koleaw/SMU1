@@ -1,6 +1,7 @@
 import { object, number, mm, enumValue, boolean, text, array, uniqueIds, integer, fail, asMm } from './geometry-validation.mjs';
+import { calculate as calculateShapes } from './foundation-shapes.mjs';
 
-export const methodologyVersion = '1.0.0';
+export const methodologyVersion = '1.1.0';
 export const example = { type: 'slab', length: 8000, width: 6000, height: 250, stripWidth: 400, reservePercent: 5, formwork: { outer: true, inner: false, height: 250 }, layers: [{ id: 'sand', name: 'Песчаная подготовка', area: 'footprint', thickness: 100 }] };
 export const blank = { type: 'slab', length: '', width: '', height: '', stripWidth: '', reservePercent: 0, formwork: { outer: false, inner: false, height: 0 }, layers: [] };
 
@@ -12,6 +13,7 @@ function sides(value, field) {
 }
 
 export function calculate(raw) {
+  if (raw?.type === 'polygon' || raw?.type === 'network') return calculateShapes(raw);
   object(raw, ['type', 'length', 'width', 'height', 'stripWidth', 'reservePercent', 'formwork', 'layers']);
   const type = enumValue(raw.type, ['slab', 'strip'], 'type');
   const L = mm(raw.length, 'length');

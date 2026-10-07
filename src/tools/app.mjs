@@ -4,6 +4,7 @@ import {storageKey,newId,readProjects,writeProjects,parseFile,serialize,createPr
 import {isProductionDeploy} from '../utils/deployEnvironment';
 import yandex from '../data/yandex.json';
 import {toolContacts} from './core/contact.mjs';
+import {inputHistory} from './core/input-history.mjs';
 const loaders=import.meta.glob(['./adapters/*.mjs','!./adapters/*.test.mjs']);
 const loadAdapter=id=>loaders[`./adapters/${id}.mjs`]();
 let teardown=()=>{};
@@ -30,6 +31,10 @@ async function init(){
   current=projects.find(p=>p.id===requested&&p.tool===tool)||projects.filter(p=>p.tool===tool).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt))[0];
   if(!current||adding&&current.demo){current=createProject(tool,adding?adapter.blank:adapter.example,`${adding?'Моя ведомость':'Пример'} · ${content.title}`,adapter.methodologyVersion,adapter.referenceVersions||{},!adding);projects.push(current);}
   const historical=()=>current.imported || current.methodologyVersion!==adapter.methodologyVersion || JSON.stringify(current.referenceVersions)!==JSON.stringify(adapter.referenceVersions||{});
+  const histories=new Map();
+  const edits=()=>{if(!histories.has(current.id))histories.set(current.id,inputHistory(current.input));return histories.get(current.id);};
+  if(adapter.history)edits();
+  const historyButtons=()=>{if(!adapter.history)return;for(const [action,enabled] of [['undo',edits().canUndo],['redo',edits().canRedo]]){const button=$(`[data-action="history-${action}"]`);if(button)button.disabled=!enabled;}};
   const exportStatus=message=>$('[data-export-status]').textContent=message;
   const shape=p=>adapter.validateDraft?adapter.validateDraft(p.input):validateShape(p.input,adapter.draftTemplate||adapter.example);
   function save(){
@@ -58,6 +63,7 @@ async function init(){
     $('[data-project-name]').value=current.name;$('[data-demo]').hidden=!current.demo;
     if(focused)root.querySelector(`[data-field="${CSS.escape(focused)}"]`)?.focus();
     $('[data-row-undo]').hidden=!removedRow||removedRow.projectId!==current.id;
+    historyButtons();
   }
   function tab(name){$('[data-active-tab]').dataset.activeTab=name;root.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));}
   function clearResult(message='Введите исходные данные для расчёта.'){
@@ -91,17 +97,18 @@ async function init(){
     }delete current.resultSnapshot;delete current.snapshotText;save();}
     finally{if(rev===revision)cancel.hidden=true;}
   }
-  function changed(){current.demo=false;delete current.resultSnapshot;delete current.snapshotText;$('[data-demo]').hidden=true;if(!started){started=true;event(tool,'start');}revision++;computeController?.abort();clearResult('Данные изменились. Проверяем расчёт…');clearTimeout(timer);clearTimeout(saveTimer);timer=setTimeout(compute,220);saveTimer=setTimeout(save,350);}
+  function changed(key='',record=true){if(adapter.history&&record)edits().record(current.input,key);historyButtons();current.demo=false;delete current.resultSnapshot;delete current.snapshotText;$('[data-demo]').hidden=true;if(!started){started=true;event(tool,'start');}revision++;computeController?.abort();clearResult('Данные изменились. Проверяем расчёт…');clearTimeout(timer);clearTimeout(saveTimer);timer=setTimeout(compute,220);saveTimer=setTimeout(save,350);}
   function summaryText(includeRows=true){const block=t=>`${t.title||'Ведомость'}:\n${t.columns.map(c=>c.label).join(' | ')}\n${t.rows.map(r=>t.columns.map(c=>format(r[c.key])).join(' | ')).join('\n')}`;return `${content.title}\n${current.name}\nМетодика ${current.methodologyVersion}\n${result.summary.map(s=>`${s.label}: ${format(s.value)} ${s.unit||''}`).join('\n')}\n${(result.warnings||result.notes||[]).join('\n')}${includeRows?`\n\n${[result,...(result.extraTables||[])].map(block).join('\n\n')}`:''}`;}
   function switchProject(p){clearTimeout(timer);save();computeController?.abort();current=p;if(projects.some(saved=>saved.id===p.id))observed.set(p.id,projectState(p));history.replaceState(history.state,'',`${location.pathname}#project=${encodeURIComponent(p.id)}`);result=null;reported=false;started=false;renderForm();showHistory();folder();void compute();}
-  on(root,'input',e=>{const path=e.target.dataset.field;if(path){set(current.input,path,e.target.type==='checkbox'?e.target.checked:e.target.value);adapter.onInput?.(current.input,path);changed();}if(e.target.matches('[data-project-name]')){current.name=e.target.value.trim()||'Без названия';clearTimeout(saveTimer);saveTimer=setTimeout(()=>{save();folder();},350);}});
-  on(root,'change',e=>{if(e.target.dataset.field&&(e.target.tagName==='SELECT'||e.target.type==='checkbox'))renderForm();});
+  on(root,'input',e=>{const path=e.target.dataset.field;if(path){const before=adapter.history?clone(current.input):undefined;set(current.input,path,e.target.type==='checkbox'?e.target.checked:e.target.value);adapter.onInput?.(current.input,path,before);changed(e.target.tagName==='INPUT'&&e.target.type!=='checkbox'?path:'');}if(e.target.matches('[data-project-name]')){current.name=e.target.value.trim()||'Без названия';clearTimeout(saveTimer);saveTimer=setTimeout(()=>{save();folder();},350);}});
+  on(root,'change',e=>{if(e.target.dataset.field&&(adapter.renderOnChange||e.target.tagName==='SELECT'||e.target.type==='checkbox'))renderForm();});
   on(root,'focusin',e=>{if(e.target.dataset.field){active=e.target.dataset.field;if(result)$('[data-diagram]').innerHTML=adapter.diagram(result,current.input,active,root);}});
   on($('[data-tool-form]'),'submit',e=>{e.preventDefault();if(!started){started=true;event(tool,'start');}clearTimeout(timer);void compute().then(()=>{if(result)tab('result');else if(!$('[data-error]').hidden)$('[data-error]').focus();});});
   on(root,'click',async e=>{
     const b=e.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;
     try{
       if(action==='tab')tab(b.dataset.tab);
+      else if(['history-undo','history-redo'].includes(action)&&adapter.history&&!historical()){const value=action==='history-undo'?edits().undo():edits().redo();if(value){current.input=value;removedRow=null;renderForm();changed('',false);}}
       else if(action==='fit'){$('[data-diagram]').scrollTo({top:0,left:0});$('[data-diagram]').querySelectorAll('svg').forEach(s=>{s.style.width='100%';s.style.maxWidth='100%';});}
       else if(action==='zoom'){$('[data-diagram]').querySelectorAll('svg').forEach(s=>{s.style.width='200%';s.style.maxWidth='none';});$('[data-diagram]').focus();}
       else if(action==='folder'){folderOpen=!folderOpen;folder();}
@@ -141,7 +148,7 @@ async function init(){
   root.querySelectorAll('[data-service-link]').forEach(link=>on(link,'click',()=>event(tool,'service')));
   root.querySelectorAll('[data-contact-link]').forEach(link=>on(link,'click',()=>event(tool,'contact_start')));
   teardown=()=>{clearTimeout(timer);clearTimeout(saveTimer);revision++;computeController?.abort();save();life.abort();delete root.dataset.ready;};
-  try{if(!historical())shape(current);await adapter.prepare?.(root,historical()?clone(adapter.blank):current.input);adapter.bind?.(root,life.signal);renderForm();showHistory();await compute();}catch(error){clearResult(error.message);exportStatus('Сохранённый расчёт сохранён в папке. Начните новый или выгрузите файл.');}
+  try{if(!historical())shape(current);await adapter.prepare?.(root,historical()?clone(adapter.blank):current.input);adapter.bind?.(root,life.signal,{render:renderForm,getInput:()=>current.input,commit:fn=>{if(historical())return;try{fn(current.input);renderForm();changed();}catch(error){exportStatus(error.message);}}});renderForm();showHistory();await compute();}catch(error){clearResult(error.message);exportStatus('Сохранённый расчёт сохранён в папке. Начните новый или выгрузите файл.');}
 }
 document.addEventListener('astro:before-swap',()=>teardown());
 document.addEventListener('astro:page-load',()=>void init());

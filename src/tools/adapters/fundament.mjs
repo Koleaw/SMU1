@@ -1,15 +1,54 @@
 import * as engine from '../calculations/foundation.mjs';
 import { field, fields, group, rowActions, button, svg, dim, txt, escape, format } from '../core/view.mjs';
+import * as editor from '../editors/foundation.mjs';
+import { defaultShapes } from '../calculations/foundation-shapes.mjs';
+import { validateShape } from '../core/projects.mjs';
 
 export const { methodologyVersion } = engine;
 const complete = input => ({ ...structuredClone(input), formwork: { ...input.formwork, outerSides: '0,1,2,3', innerSides: '0,1,2,3' } });
 export const example = complete(engine.example);
 export const blank = complete(engine.blank);
+export const history = true;
+export const renderOnChange = true;
+export const bind = editor.bind;
+const shapeTemplate = { polygon:{closed:true,vertices:[{x:0,y:0}]},network:{segments:[{x1:0,y1:0,x2:0,y2:0}],footprint:{closed:true,vertices:[{x:0,y:0}]}},surfaces:{mode:'all',edges:['']} };
+export function validateDraft(input) {
+  const copy=structuredClone(input);
+  if(Object.hasOwn(copy,'modeDrafts')) {
+    if(!copy.modeDrafts||typeof copy.modeDrafts!=='object'||Array.isArray(copy.modeDrafts))throw Error('Некорректные черновики режимов.');
+    for(const [type,draft] of Object.entries(copy.modeDrafts)){
+      if(!['slab','strip','polygon','network'].includes(type))throw Error('Неизвестный черновик режима.');
+      validateShape(draft,{input:example,surfaces:{mode:'all',edges:[]}},'modeDrafts');
+      if(draft.surfaces.edges.some(id=>typeof id!=='string'||id.length>160))throw Error('Некорректная граница.');
+    }
+    delete copy.modeDrafts;
+  }
+  if(Object.hasOwn(copy,'shapes')) {
+    validateShape(copy.shapes,shapeTemplate,'shapes');
+    for(const list of [copy.shapes.polygon.vertices,copy.shapes.network.segments,copy.shapes.network.footprint.vertices])if(list.length>32)throw Error('Геометрия ограничена 32 элементами.');
+    delete copy.shapes;
+  }
+  // 1.0 projects may contain either UI side strings or normalized engine arrays.
+  for(const key of ['outerSides','innerSides']) {
+    if(copy.formwork?.[key]===undefined)copy.formwork[key]='0,1,2,3';
+    if(Array.isArray(copy.formwork?.[key]))copy.formwork[key]=copy.formwork[key].join(',');
+  }
+  validateShape(copy,example);
+  if(!['slab','strip','polygon','network'].includes(copy.type))throw Error('Неизвестный режим геометрии.');
+}
+export function action(name,context) {
+  if(name==='geo-example'&&!context.input.shapes)context.input.shapes=defaultShapes();
+  return editor.action(name,context);
+}
 export const rowTemplates = { layers: { id: '', name: 'Подготовительный слой', area: 'footprint', thickness: '' } };
 export const rowLimits = { layers: 8 };
 const sideOptions = [['0,1,2,3', 'Все четыре стороны'], ['0,2', 'Стороны 1 и 3'], ['1,3', 'Стороны 2 и 4'], ['0', 'Только сторона 1'], ['1', 'Только сторона 2'], ['2', 'Только сторона 3'], ['3', 'Только сторона 4'], ['0,1', 'Стороны 1 и 2'], ['0,3', 'Стороны 1 и 4'], ['1,2', 'Стороны 2 и 3'], ['2,3', 'Стороны 3 и 4'], ['0,1,2', 'Стороны 1, 2 и 3'], ['0,1,3', 'Стороны 1, 2 и 4'], ['0,2,3', 'Стороны 1, 3 и 4'], ['1,2,3', 'Стороны 2, 3 и 4']];
 export function calculate(input) {
   const raw = structuredClone(input);
+  delete raw.modeDrafts;
+  if (['polygon','network'].includes(raw.type)) return engine.calculate(raw);
+  delete raw.shapes;
+  if(raw.type==='slab'&&raw.formwork)raw.formwork.inner=false;
   if (raw.formwork && typeof raw.formwork === 'object') for (const kind of ['outerSides', 'innerSides']) {
     if (typeof raw.formwork[kind] === 'string') {
       if (!sideOptions.some(([value]) => value === raw.formwork[kind])) throw new Error('Выберите допустимое сочетание сторон опалубки.');
@@ -18,25 +57,37 @@ export function calculate(input) {
   }
   return engine.calculate(raw);
 }
-export function onInput(input, path) {
-  if (path === 'type' && input.type === 'slab') {
-    input.formwork.inner = false;
-    for (const layer of input.layers) if (layer.area === 'strip') layer.area = 'footprint';
+export function onInput(input, path, before) {
+  if(path==='type'&&before&&before.type!==input.type) {
+    const snapshot=structuredClone(before);delete snapshot.shapes;delete snapshot.modeDrafts;
+    for(const key of ['outerSides','innerSides'])snapshot.formwork[key]=Array.isArray(snapshot.formwork[key])?snapshot.formwork[key].join(','):snapshot.formwork[key]??'0,1,2,3';
+    input.modeDrafts ||= {};
+    input.modeDrafts[before.type]={input:snapshot,surfaces:structuredClone(before.shapes?.surfaces||{mode:'all',edges:[]})};
+    const saved=input.modeDrafts[input.type];
+    if(saved){Object.assign(input,structuredClone(saved.input));if(input.shapes)input.shapes.surfaces=structuredClone(saved.surfaces);}
+    else {
+      if(input.shapes)input.shapes.surfaces={mode:'all',edges:[]};
+      if(['slab','polygon'].includes(input.type)){input.formwork.inner=false;input.layers.forEach(layer=>{if(layer.area==='strip')layer.area='footprint';});}
+    }
   }
+  if (path === 'type' && ['polygon','network'].includes(input.type) && !input.shapes) input.shapes=defaultShapes();
 }
-export function form(input) {
-  const dims = [field('type', 'Геометрия', { options: [['slab', 'Прямоугольная плита'], ['strip', 'Замкнутая лента']] }), field('length', 'Наружная длина L', { unit: 'мм' }), field('width', 'Наружная ширина W', { unit: 'мм' }), field('height', 'Высота бетона H', { unit: 'мм' })];
-  if (input.type === 'strip') dims.push(field('stripWidth', 'Ширина ленты b', { unit: 'мм' }));
+export function form(input,root) {
+  const custom=['polygon','network'].includes(input.type);
+  const dims = [field('type', 'Геометрия', { options: [['slab', 'Прямоугольная плита'], ['strip', 'Замкнутая прямоугольная лента'],['polygon','Плита по контуру'],['network','Лента с внутренними ветвями']] }), ...(!custom?[field('length', 'Наружная длина L', { unit: 'мм' }), field('width', 'Наружная ширина W', { unit: 'мм' })]:[]), field('height', 'Высота бетона H', { unit: 'мм' })];
+  if (['strip','network'].includes(input.type)) dims.push(field('stripWidth', 'Ширина ленты b', { unit: 'мм' }));
   dims.push(field('reservePercent', 'Дополнительный запас', { unit: '%' }));
-  let html = group('Заданная геометрия', fields(input, dims), 'Размеры плиты или ленты задаёт пользователь. Инструмент не подбирает конструкцию фундамента.');
+  let html = `<div class="tool-row-actions">${button('history-undo','Отменить','disabled')}${button('history-redo','Повторить','disabled')}</div><details data-preserve-open="geo-examples"><summary>Готовые примеры · заменяют текущий ввод с возможностью отмены</summary><div class="tool-row-actions">${button('geo-example','Прямоугольник по контуру','data-kind="rectangle"')}${button('geo-example','Г-образная плита','data-kind="l"')}${button('geo-example','Лента с перемычкой','data-kind="bridge"')}</div></details>`;
+  html += group('Заданная геометрия', fields(input, dims), 'Размеры задаёт пользователь. Прямоугольные режимы: L и W по наружным границам. Лента с ветвями: участки по осям. Инструмент не подбирает конструкцию фундамента.');
+  if(custom)html+=editor.editor(input,root);
   const forms = [field('formwork.outer', 'Наружные стороны', { type: 'checkbox' })];
   if (input.type === 'strip') forms.push(field('formwork.inner', 'Внутренние стороны', { type: 'checkbox' }));
   if (input.formwork.outer) forms.push(field('formwork.outerSides', 'Какие наружные стороны', { options: sideOptions }));
   if (input.type === 'strip' && input.formwork.inner) forms.push(field('formwork.innerSides', 'Какие внутренние стороны', { options: sideOptions }));
   forms.push(field('formwork.height', 'Формуемая высота', { unit: 'мм', hint: 'Задаётся отдельно от высоты бетона.' }));
-  html += group('Опалубка', fields(input, forms), 'Стороны 1 и 3 идут вдоль длины, 2 и 4 — вдоль ширины. Выберите только поверхности, для которых нужна опалубка.');
+  html += custom?editor.surfaceForm(input):group('Опалубка', fields(input, forms), 'Стороны 1 и 3 идут вдоль длины, 2 и 4 — вдоль ширины. Выберите только поверхности, для которых нужна опалубка. Сохранённый выбор внутренних сторон в режиме плиты не применяется.');
   html += group('Подготовительные слои', '<p class="tool-hint">Порядок сверху вниз: первый слой непосредственно под бетоном. Коэффициенты уплотнения не применяются.</p>');
-  html += input.layers.map((layer, i) => group(`Слой ${i + 1}`, fields(input, [field(`layers.${i}.name`, 'Название слоя', { type: 'text', maxlength: 120 }), field(`layers.${i}.area`, 'Область', { options: input.type === 'strip' ? [['footprint', 'Всё прямоугольное пятно'], ['strip', 'Только под лентой']] : [['footprint', 'Всё прямоугольное пятно']] }), field(`layers.${i}.thickness`, 'Толщина слоя', { unit: 'мм' })]) + rowActions('layers', i, input.layers.length))).join('');
+  html += input.layers.map((layer, i) => group(`Слой ${i + 1}`, fields(input, [field(`layers.${i}.name`, 'Название слоя', { type: 'text', maxlength: 120 }), field(`layers.${i}.area`, 'Область', { options: [['footprint', custom?'Всё заданное внешнее пятно':'Всё прямоугольное пятно'],...(['strip','network'].includes(input.type)||layer.area==='strip'?[['strip','Только под лентой (объединение)']]:[])] }), field(`layers.${i}.thickness`, 'Толщина слоя', { unit: 'мм' })]) + rowActions('layers', i, input.layers.length))).join('');
   return html + button('add-row', '+ Добавить слой', 'data-path="layers"');
 }
 
@@ -46,6 +97,7 @@ const vertical = (x, y, height, value, key, active) => `<g transform="translate(
 const layerColors = ['#d5bc92', '#a7bbc0', '#c8c8bb', '#bab5aa', '#bed3c1', '#ded0a7', '#c1bdcd', '#bbc8d3'];
 
 export function diagram(result, input, active = '') {
+  if(result.geometry.type) return editor.plan(input,-1,false,result.geometry);
   const g = result.geometry;
   const scale = Math.min(490 / g.length, 260 / g.width);
   const x = 135 + (490 - g.length * scale) / 2, y = 120 + (260 - g.width * scale) / 2;
@@ -87,5 +139,5 @@ export function diagram(result, input, active = '') {
 }
 
 export function extra(result) {
-  return `<p class="tool-hint">Площадь бетона в плане: <strong>${escape(format(result.totals.concreteAreaM2))} м²</strong>. Пятно целиком: ${escape(format(result.totals.footprintAreaM2))} м². Ведомость разделяет бетон, дополнительный запас, опалубку и подготовительные слои.</p>`;
+  return `<p class="tool-hint">Площадь бетона в плане: <strong>${escape(format(result.totals.concreteAreaM2))} м²</strong>. Пятно целиком: ${result.totals.footprintAreaM2===null?'не задано':`${escape(format(result.totals.footprintAreaM2))} м²`}. Ведомость разделяет бетон, дополнительный запас, опалубку и подготовительные слои.</p>${editor.extra(result)}`;
 }

@@ -1,5 +1,6 @@
 // Calculator controls mutate only disposable local browser projects. Native
 // print/file/clipboard/download operations have a separate document QA suite.
+import { exerciseFoundationGeometry } from './foundation-semantic-probe.mjs';
 export async function exerciseToolSemantics(browser, { requestedUrl } = {}) {
   const checks = [];
   const coveredActions = new Set();
@@ -171,6 +172,7 @@ export async function exerciseToolSemantics(browser, { requestedUrl } = {}) {
       check('maf-category-reset-restores-catalogue', await waitFor(`document.querySelector('[data-maf-category]').value === '' && JSON.stringify(${cards}) === ${JSON.stringify(JSON.stringify(allIds))}`));
       check('maf-filters-preserve-project', await browser.evaluate(`JSON.stringify((${current}).input) === ${JSON.stringify(beforeFilter)}`));
     }
+    if(await browser.evaluate(`document.querySelector('[data-tool-app]')?.dataset.toolId === 'fundament'`)) await exerciseFoundationGeometry({browser,check,action,click,fill,waitFor,current,valid});
     await action('example', true);
     check('final-example-restored', await waitFor(valid));
     if (await browser.evaluate(`!!document.querySelector('[data-action="to-metal"]')`)) {
