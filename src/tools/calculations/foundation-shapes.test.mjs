@@ -100,6 +100,7 @@ test('invalid contours never return a plausible quantity',()=>{
 
 test('micrometre inputs, square half-width, comma, SI conversions and display rounding',()=>{
   const p=contour([[99999,99999],[100000,99999],[100000,100000],[99999,100000]]);near(polygon(p).areaM2,.000001);
+  assert.equal(format(polygon(p).areaM2),'1,00e-6','nonzero material must never be presented as zero');
   const n=net([[0,0,'1,001',0]]),g=network(n,'1,001');near(g.areaM2,2.002*1.001/1e6);near(g.edges[0].x1,-.5005);
   const raw=input('polygon');raw.shapes.polygon=contour([[0,0],['1234,567',0],['1234,567',1000],[0,1000]]);raw.height=100;raw.reservePercent=7.5;
   const r=calculate(raw);near(r.totals.concreteVolumeM3,.1234567);near(r.totals.reserveVolumeM3,.0092592525);assert.equal(format(r.totals.concreteVolumeM3),'0,123');near(r.totals.orderVolumeM3,.1327159525);

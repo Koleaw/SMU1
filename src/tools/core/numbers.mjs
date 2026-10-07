@@ -13,5 +13,5 @@ export function text(value, label = 'Текст', max = 500) {
 }
 export function list(value, label, max = 100, min = 0) { if (!Array.isArray(value) || value.length < min || value.length > max) throw new Error(`${label}: от ${min} до ${max} строк.`); return value; }
 export function choice(value, values, label) { if (!values.includes(value)) throw new Error(`${label}: выберите значение из списка.`); return value; }
-export const format = (value, digits = 3) => typeof value === 'number' ? new Intl.NumberFormat('ru-RU', {maximumFractionDigits:digits}).format(value) : String(value ?? 'Не указано');
+export const format = (value, digits = 3) => typeof value === 'number' ? (value !== 0 && Math.abs(value) < 10 ** -digits ? value.toExponential(2).replace('.', ',') : new Intl.NumberFormat('ru-RU', {maximumFractionDigits:digits}).format(value)) : String(value ?? 'Не указано');
 export const clone = value => JSON.parse(JSON.stringify(value));
