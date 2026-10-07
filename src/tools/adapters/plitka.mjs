@@ -1,15 +1,23 @@
 import * as engine from '../calculations/tile.mjs';
 import { field, fields, group, svg, dim, txt, escape, format } from '../core/view.mjs';
+import {validateShape} from '../core/projects.mjs';
 
 export const { calculate, example, blank, methodologyVersion } = engine;
 export const rowTemplates = {};
+export function validateDraft(input){
+  const {centerX,centerY,...draft}=input;
+  validateShape(draft,engine.example);
+  for(const value of [centerX,centerY])if(value!==undefined&&!['tile','joint'].includes(value))throw new Error('Центр раскладки: выберите плитку или шов.');
+}
+export function onInput(input,path){if(path==='mode')for(const key of ['centerX','centerY'])if(Object.hasOwn(input,key))input[key]=input.mode==='symmetric-joint'?'joint':'tile';}
 export function form(input) {
-  let html = group('Прямоугольная поверхность', fields(input, [field('length', 'Длина поверхности', { unit: 'мм' }), field('width', 'Ширина поверхности', { unit: 'мм' }), field('gap', 'Зазор по периметру', { unit: 'мм', hint: 'Вычитается с каждой стороны.' })]));
+  let html = group('Одна поверхность: пол или стена', fields(input, [field('length', 'Длина поверхности', { unit: 'мм', hint: 'Например, 3000 мм = 3 м.' }), field('width', 'Ширина / высота поверхности', { unit: 'мм', hint: 'Для стены — высота облицовки.' })]), 'Введите размеры прямоугольника, который хотите облицевать кафелем.');
   html += group('Один формат плитки', fields(input, [field('tileLength', 'Длина плитки', { unit: 'мм' }), field('tileWidth', 'Ширина плитки', { unit: 'мм' }), field('seam', 'Ширина шва', { unit: 'мм' }), field('rotate', 'Повернуть на 90°', { type: 'checkbox' })]));
   const layout = [field('mode', 'Начало раскладки', { options: [['edge', 'От края'], ['symmetric-tile', 'Центр по плитке'], ['symmetric-joint', 'Центр по шву']] })];
   layout.push(field('offsetX', 'Сдвиг по длине', { unit: 'мм' }), field('offsetY', 'Сдвиг по ширине', { unit: 'мм' }), field('narrowCut', 'Выделять подрезки уже', { unit: 'мм' }));
-  html += group('Сетка и подрезки', fields(input, layout), 'Сдвиг перемещает всю сетку. Сравните центр по плитке и по шву: варианты дают разные подрезки.');
-  return html + group('Закупка', fields(input, [field('reservePercent', 'Дополнительный запас', { unit: '%' }), field('packSize', 'Плиток в упаковке', { unit: 'шт.' })]), 'Подрезки уже включены в исходные плитки. Каждый подрезанный элемент требует отдельной плитки; повторное использование обрезков не рассчитывается.');
+  for(const key of ['centerX','centerY'])if(Object.hasOwn(input,key))layout.push(field(key,`Центр по ${key==='centerX'?'длине':'ширине'}`,{options:[['tile','Середина плитки'],['joint','Середина шва']]}));
+  html += group('Сколько купить', fields(input, [field('reservePercent', 'Запас на бой и замену', { unit: '%' }), field('packSize', 'Плиток в упаковке', { unit: 'шт.', hint: 'Посмотрите на упаковке. Для покупки поштучно укажите 1.' })]), 'На каждую деталь с подрезкой заложена отдельная целая плитка. Запас добавляется сверх этого количества.');
+  return html + `<details class="tool-advanced" data-preserve-open="tile-settings"><summary>Дополнительные настройки раскладки</summary>${group('Края и подрезки', fields(input, [field('gap', 'Зазор по периметру', { unit: 'мм', hint: 'Вычитается с каждой стороны.' }), ...layout]), 'Сдвиг перемещает всю сетку. Сравните центр по плитке и по шву: варианты дают разные подрезки. Повторное использование обрезков не рассчитывается.')}</details>`;
 }
 const label = (x, y, value, attrs = '') => txt(x, y, value, `style="font-size:clamp(25px,calc(41px - 2vw),33px)" ${attrs}`);
 const dimension = (...args) => dim(...args).replace('<text ', '<text style="font-size:clamp(25px,calc(41px - 2vw),33px)" ');
@@ -27,7 +35,7 @@ export function diagram(result, input, active = '') {
     const category = t.narrow ? 'narrow' : t.cut ? 'cut' : 'full';
     paths[category].push(`M${x + t.x * scale} ${y + t.y * scale}h${t.width * scale}v${t.height * scale}h${-t.width * scale}Z`);
   }
-  for (const [category, commands] of Object.entries(paths)) if (commands.length) body += `<path d="${commands.join('')}" fill="${colors[category]}" stroke="${category === 'narrow' ? '#ac3418' : active.startsWith('offset') ? '#b34e14' : '#647b84'}" stroke-width="${category === 'narrow' ? 1.6 : 0.4}"/>`;
+  for (const [category, commands] of Object.entries(paths)) if (commands.length) body += `<path d="${commands.join('')}" fill="${colors[category]}" stroke="${category === 'narrow' ? '#ac3418' : active.startsWith('offset') ? '#b34e14' : '#647b84'}" stroke-width="${category === 'narrow' ? 2 : 0.4}" ${category==='narrow'?'vector-effect="non-scaling-stroke"':''}/>`;
   body += `<rect x="${x + g.gap * scale}" y="${y + g.gap * scale}" width="${g.usefulLength * scale}" height="${g.usefulWidth * scale}" fill="none" stroke="${active === 'gap' ? '#b34e14' : '#637579'}" stroke-width="1.4" stroke-dasharray="6 4"/>`;
   body += dimension(x, 82, x + w, 82, `${format(g.length)} мм`, 'length', active);
   body += vertical(83, y, h, `${format(g.width)} мм`, 'width', active);
@@ -47,5 +55,5 @@ export function diagram(result, input, active = '') {
 }
 export function extra(result) {
   const t = result.totals;
-  return `<p class="tool-hint">Полезное поле: ${escape(format(t.usefulAreaM2))} м². Исходных плиток: <strong>${escape(format(t.sourceCount))}</strong> + ${escape(format(t.reserveCount))} шт. дополнительного запаса = ${escape(format(t.requiredCount))} шт. После округления до упаковок: <strong>${escape(format(t.purchasedCount))} шт.</strong></p>`;
+  return `${t.narrowCount ? `<div class="tool-warning"><strong>Узкие подрезки: ${format(t.narrowCount)} шт.</strong><p>Красные элементы на схеме уже ${format(result.input.narrowCut)} мм хотя бы по одной стороне. Сравните центровку или сдвиг в дополнительных настройках перед покупкой.</p></div>` : ''}<p class="tool-hint">Для раскладки: <strong>${format(t.sourceCount)} плиток</strong> (${format(t.fullCount)} целых + ${format(t.cutCount)} на детали с подрезкой). Запас: ${format(t.reserveCount)} шт. Всего нужно ${format(t.requiredCount)} шт.; упаковками — <strong>${format(t.purchasedCount)} шт.</strong> Полезная площадь: ${format(t.usefulAreaM2)} м².</p>`;
 }

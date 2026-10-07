@@ -65,7 +65,7 @@ export function calculate(raw) {
       if (tile.topCut) edgeCutSets.top.add(tile.height);
       if (tile.bottomCut) edgeCutSets.bottom.add(tile.height);
       const groupKey = `${width}:${height}:${cut}`;
-      const group = groups.get(groupKey) ?? { name: cut ? 'Подрезанный элемент' : 'Целая плитка', length: tile.width, width: tile.height, count: 0, sourceCount: 0, narrow: narrow ? 'Узкая подрезка' : '', detail: cut ? 'Одна исходная плитка на каждый элемент; обрезки повторно не используются' : 'Без подрезки' };
+      const group = groups.get(groupKey) ?? { name: cut ? 'Подрезанный элемент' : 'Целая плитка', length: tile.width, width: tile.height, count: 0, sourceCount: 0, narrow: narrow ? 'Узкая подрезка' : '', detail: cut ? 'Одна целая плитка на каждый элемент; обрезки повторно не используются' : 'Без подрезки' };
       group.count++; group.sourceCount++;
       groups.set(groupKey, group);
     }
@@ -76,8 +76,8 @@ export function calculate(raw) {
   const requiredCount = sourceCount + reserveCount;
   const packCount = ceilDiv(requiredCount, packSize);
   const purchasedCount = packCount * packSize;
-  const rows = [...groups.values(), { name: 'Дополнительный запас', length: asMm(TL / 2), width: asMm(TW / 2), count: reserveCount, sourceCount: reserveCount, narrow: '', detail: `${reservePercent}% от исходных плиток; округление вверх` }, { name: 'Закупка упаковками', length: asMm(TL / 2), width: asMm(TW / 2), count: packCount, sourceCount: purchasedCount, narrow: '', detail: `${packSize} шт. в упаковке; ${purchasedCount - requiredCount} шт. сверх расчёта из-за упаковки` }];
-  const warnings = ['Каждый подрезанный элемент требует отдельной исходной плитки. Повторное использование обрезков не оптимизируется; минимальная закупка не гарантируется.', 'Дополнительный запас задан отдельно и не заменяет уже учтённые подрезки.'];
+  const rows = [...groups.values(), { name: 'Дополнительный запас', length: asMm(TL / 2), width: asMm(TW / 2), count: reserveCount, sourceCount: reserveCount, narrow: '', detail: `${reservePercent}% от плиток для раскладки; округление вверх` }, { name: 'Закупка упаковками', length: asMm(TL / 2), width: asMm(TW / 2), count: packCount, sourceCount: purchasedCount, narrow: '', detail: `${packSize} шт. в упаковке; ${purchasedCount - requiredCount} шт. сверх расчёта из-за упаковки` }];
+  const warnings = ['Каждый подрезанный элемент требует отдельной целой плитки. Повторное использование обрезков не оптимизируется; минимальная закупка не гарантируется.', 'Дополнительный запас задан отдельно и не заменяет уже учтённые подрезки.'];
   if (narrowCount) warnings.push(`Узких подрезанных элементов: ${narrowCount}. Порог ${narrowCut / 2000} мм; сравните смещение и варианты центрирования.`);
   if (!sourceCount) warnings.push('Полезное поле попало в шов сетки. Проверьте формат, ширину шва и смещение.');
   const usefulAreaM2 = (usefulL / 2_000_000) * (usefulW / 2_000_000);
@@ -85,8 +85,8 @@ export function calculate(raw) {
     valid: true, methodologyVersion,
     input: { length: L / 2000, width: W / 2000, tileLength: TL / 2000, tileWidth: TW / 2000, seam: S / 2000, gap: G / 2000, rotate, mode, centerX, centerY, offsetX: OX / 2000, offsetY: OY / 2000, reservePercent, packSize, narrowCut: narrowCut / 2000 },
     totals: { fullCount, cutCount, sourceCount, reserveCount, requiredCount, packCount, purchasedCount, usefulAreaM2, tileAreaM2: tileArea / 1_000_000, narrowCount },
-    summary: [{ label: 'Целых элементов', value: fullCount, unit: 'шт.' }, { label: 'Подрезанных элементов', value: cutCount, unit: 'шт.' }, { label: 'Исходных плиток без запаса', value: sourceCount, unit: 'шт.' }, { label: 'Упаковок с запасом', value: packCount, unit: 'уп.' }],
-    columns: [{ key: 'name', label: 'Элемент' }, { key: 'length', label: 'Длина, мм' }, { key: 'width', label: 'Ширина, мм' }, { key: 'count', label: 'Количество' }, { key: 'sourceCount', label: 'Исходных плиток' }, { key: 'narrow', label: 'Подрезка' }, { key: 'detail', label: 'Примечание' }], rows,
+    summary: [{ label: 'Купить упаковок', value: packCount, unit: 'уп.' }, { label: 'Плиток в покупке', value: purchasedCount, unit: 'шт.' }, { label: 'Площадь облицовки', value: usefulAreaM2, unit: 'м²' }],
+    columns: [{ key: 'name', label: 'Элемент' }, { key: 'length', label: 'Длина, мм' }, { key: 'width', label: 'Ширина, мм' }, { key: 'count', label: 'Количество' }, { key: 'sourceCount', label: 'Плиток, шт.' }, { key: 'narrow', label: 'Подрезка' }, { key: 'detail', label: 'Примечание' }], rows,
     geometry: { length: L / 2000, width: W / 2000, gap: G / 2000, usefulLength: usefulL / 2000, usefulWidth: usefulW / 2000, tileLength: tileX / 2000, tileWidth: tileY / 2000, seam: S / 2000, tiles, edgeCuts: Object.fromEntries(Object.entries(edgeCutSets).map(([edge, values]) => [edge, [...values].sort((a, b) => a - b)])), originX: (G + originX) / 2000, originY: (G + originY) / 2000 }, warnings,
   };
 }

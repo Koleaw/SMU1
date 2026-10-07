@@ -6,6 +6,7 @@ const complete = input => ({ ...structuredClone(input), formwork: { ...input.for
 export const example = complete(engine.example);
 export const blank = complete(engine.blank);
 export const rowTemplates = { layers: { id: '', name: 'Подготовительный слой', area: 'footprint', thickness: '' } };
+export const rowLimits = { layers: 8 };
 const sideOptions = [['0,1,2,3', 'Все четыре стороны'], ['0,2', 'Стороны 1 и 3'], ['1,3', 'Стороны 2 и 4'], ['0', 'Только сторона 1'], ['1', 'Только сторона 2'], ['2', 'Только сторона 3'], ['3', 'Только сторона 4'], ['0,1', 'Стороны 1 и 2'], ['0,3', 'Стороны 1 и 4'], ['1,2', 'Стороны 2 и 3'], ['2,3', 'Стороны 3 и 4'], ['0,1,2', 'Стороны 1, 2 и 3'], ['0,1,3', 'Стороны 1, 2 и 4'], ['0,2,3', 'Стороны 1, 3 и 4'], ['1,2,3', 'Стороны 2, 3 и 4']];
 export function calculate(input) {
   const raw = structuredClone(input);

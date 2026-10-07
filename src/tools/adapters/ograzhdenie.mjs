@@ -10,7 +10,7 @@ export function form(input) {
   const defs = [field('type', 'План', { options: [['line', 'Прямая линия'], ['rectangle', 'Замкнутый прямоугольник']] }), field('length', 'Длина по осям L', { unit: 'мм' })];
   if (input.type === 'rectangle') defs.push(field('width', 'Ширина по осям W', { unit: 'мм' }));
   defs.push(field('height', 'Высота ограждения', { unit: 'мм' }), field('maxStep', 'Максимальный шаг по осям', { unit: 'мм' }));
-  return group('Геометрия по осям опор', fields(input, defs), 'Все длины отсчитываются между центрами опор. Фактический равномерный шаг на каждом участке не превышает заданный.')
+  return group('Геометрия по осям опор', fields(input, defs), 'Все длины отсчитываются между центрами опор. Например, 3000 мм по осям двух стоек шириной 100 мм дают 2900 мм между их гранями до учёта креплений. Фактический равномерный шаг на каждом участке не превышает заданный.')
     + input.openings.map((opening, i) => group(`Проём ${i + 1}`, fields(input, [field(`openings.${i}.name`, 'Название', { type: 'text', maxlength: 120 }), field(`openings.${i}.side`, 'Сторона', { options: (input.type === 'line' ? [0] : [0, 1, 2, 3]).map(side => [side, `Сторона ${side + 1}`]) }), field(`openings.${i}.position`, 'От начала стороны', { unit: 'мм', hint: 'По направлению обхода на схеме.' }), field(`openings.${i}.width`, 'Ширина по осям', { unit: 'мм' })]) + rowActions('openings', i, input.openings.length), 'Осевая ширина проёма больше свободной ширины въезда на величину, зависящую от стоек и креплений.')).join('')
     + button('add-row', '+ Добавить ворота / калитку', 'data-path="openings"');
 }

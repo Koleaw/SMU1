@@ -3,6 +3,7 @@ import {escape,get,set,table,button} from './core/view.mjs';
 import {storageKey,newId,readProjects,writeProjects,parseFile,serialize,createProject,duplicateProject,validateShape,csv,maxFileBytes} from './core/projects.mjs';
 import {isProductionDeploy} from '../utils/deployEnvironment';
 import yandex from '../data/yandex.json';
+import {toolContacts} from './core/contact.mjs';
 const loaders=import.meta.glob(['./adapters/*.mjs','!./adapters/*.test.mjs']);
 const loadAdapter=id=>loaders[`./adapters/${id}.mjs`]();
 let teardown=()=>{};
@@ -20,7 +21,7 @@ async function init(){
   const $=s=>root.querySelector(s),tool=root.dataset.toolId,base=root.dataset.base,content=JSON.parse($('[data-tool-content]').textContent);
   let adapter;try{adapter=await loadAdapter(tool);}catch(error){$('[data-save-status]').textContent='Не удалось загрузить инструмент. Перезагрузите страницу.';console.error(error);return;}
   if(!root.isConnected)return;
-  let projects=[],current,result=null,active='',timer,saveTimer,computeController,removed=null,blockedStorage=false,folderOpen=false,started=false,reported=false,revision=0;
+  let projects=[],current,result=null,active='',timer,saveTimer,computeController,removed=null,removedRow=null,blockedStorage=false,folderOpen=false,started=false,reported=false,revision=0;
   const pendingNew=new Map(),deletedIds=new Set(),observed=new Map();
   const projectState=p=>JSON.stringify({name:p.name,tool:p.tool,input:p.input,methodologyVersion:p.methodologyVersion,referenceVersions:p.referenceVersions,demo:p.demo,imported:p.imported});
   const status=message=>$('[data-save-status]').textContent=message;
@@ -49,10 +50,18 @@ async function init(){
     const panel=$('[data-folder]');panel.hidden=!folderOpen;if(!folderOpen)return;
     panel.innerHTML=`<h2>Мои расчёты · ${projects.length}/60</h2><p class="tool-hint">Каждый расчёт независим. Переименование доступно в поле над инструментом.</p>${button('all-export','Выгрузить всю папку')}${removed?button('undo-delete','Отменить удаление'):''}${projects.slice().sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).map(p=>`<div class="tool-folder-item"><div><p>${escape(p.name)}</p><small>${escape(p.tool)} · ${new Date(p.updatedAt).toLocaleDateString('ru-RU')}${p.demo?' · пример':''}</small></div><div class="tool-row-actions">${button('open-project','Открыть',`data-id="${escape(p.id)}"`)}${button('duplicate-project','Дублировать',`data-id="${escape(p.id)}"`)}${button('delete-project','Удалить',`data-id="${escape(p.id)}"`)}</div></div>`).join('')}`;
   }
-  function renderForm(){ const focused=document.activeElement?.dataset?.field;$('[data-fields]').innerHTML=historical()?'<p class="tool-hint">Исторический расчёт защищён от изменений. Пересчитайте копию по текущей методике.</p>':adapter.form(current.input,root);$('[data-project-name]').value=current.name;$('[data-demo]').hidden=!current.demo;if(focused)root.querySelector(`[data-field="${CSS.escape(focused)}"]`)?.focus(); }
+  function renderForm(){
+    const focused=document.activeElement?.dataset?.field;
+    const opened=[...root.querySelectorAll('[data-preserve-open][open]')].map(el=>el.dataset.preserveOpen);
+    $('[data-fields]').innerHTML=historical()?'<p class="tool-hint">Исторический расчёт защищён от изменений. Пересчитайте копию по текущей методике.</p>':adapter.form(current.input,root);
+    for(const key of opened)root.querySelector(`[data-preserve-open="${CSS.escape(key)}"]`)?.setAttribute('open','');
+    $('[data-project-name]').value=current.name;$('[data-demo]').hidden=!current.demo;
+    if(focused)root.querySelector(`[data-field="${CSS.escape(focused)}"]`)?.focus();
+    $('[data-row-undo]').hidden=!removedRow||removedRow.projectId!==current.id;
+  }
   function tab(name){$('[data-active-tab]').dataset.activeTab=name;root.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));}
   function clearResult(message='Введите исходные данные для расчёта.'){
-    result=null;$('[data-error]').hidden=true;$('[data-summary]').innerHTML='';$('[data-result-table]').innerHTML='';$('[data-extra]').innerHTML='';$('[data-notes]').innerHTML='';$('[data-diagram]').innerHTML=`<p class="tool-empty">${escape(message)}</p>`;root.querySelectorAll('[data-needs-result]').forEach(b=>b.disabled=true);
+    result=null;$('[data-action="zoom"]').hidden=true;$('[data-error]').hidden=true;root.querySelectorAll('[aria-invalid]').forEach(el=>{el.removeAttribute('aria-invalid');el.removeAttribute('aria-describedby');});$('[data-summary]').innerHTML='';$('[data-result-table]').innerHTML='';$('[data-extra]').innerHTML='';$('[data-notes]').innerHTML='';$('[data-diagram]').innerHTML=`<p class="tool-empty">${escape(message)}</p>`;root.querySelectorAll('[data-needs-result]').forEach(b=>b.disabled=true);
   }
   function renderResult(){
     $('[data-error]').hidden=true;
@@ -74,7 +83,12 @@ async function init(){
     if(historical()){clearResult('Откройте исторический снимок или пересчитайте его копию.');showHistory();return;}
     const cancel=$('[data-action="cancel"]');cancel.hidden=!adapter.asyncCalculate;
     try{shape(current);result=await (adapter.asyncCalculate?adapter.asyncCalculate(current.input,{signal:computeController.signal}):adapter.calculate(current.input,root));if(rev!==revision||!root.isConnected)return;renderResult();current.resultSnapshot={summary:result.summary,coefficients:result.coefficients||result.usedCoefficients||{},totals:result.totals||{}};current.snapshotText=summaryText(false);if(started&&!reported){reported=true;event(tool,'result');}save();}
-    catch(error){if(rev!==revision)return;clearResult(error.name==='AbortError'?'Расчёт отменён. Измените данные или нажмите «Рассчитать».':'Исправьте данные, чтобы получить актуальный результат.');if(error.name!=='AbortError'){$('[data-error]').textContent=error.message;$('[data-error]').hidden=false;}delete current.resultSnapshot;delete current.snapshotText;save();}
+    catch(error){if(rev!==revision)return;clearResult(error.name==='AbortError'?'Расчёт отменён. Измените данные или нажмите «Рассчитать».':'Исправьте данные, чтобы получить актуальный результат.');if(error.name!=='AbortError'){
+      const control=error.field?root.querySelector(`[data-field="${CSS.escape(error.field)}"]`):null;
+      const label=control?.closest('label')?.querySelector('span')?.textContent.trim();
+      $('[data-error]').textContent=`${label?`${label}: `:''}${error.message}`;$('[data-error]').hidden=false;
+      if(control){control.setAttribute('aria-invalid','true');control.setAttribute('aria-describedby','tool-input-error');const details=control.closest('details');if(details)details.open=true;}
+    }delete current.resultSnapshot;delete current.snapshotText;save();}
     finally{if(rev===revision)cancel.hidden=true;}
   }
   function changed(){current.demo=false;delete current.resultSnapshot;delete current.snapshotText;$('[data-demo]').hidden=true;if(!started){started=true;event(tool,'start');}revision++;computeController?.abort();clearResult('Данные изменились. Проверяем расчёт…');clearTimeout(timer);clearTimeout(saveTimer);timer=setTimeout(compute,220);saveTimer=setTimeout(save,350);}
@@ -97,17 +111,18 @@ async function init(){
       else if(action==='delete-project'){const id=b.dataset.id;removed=projects.find(p=>p.id===id);deletedIds.add(id);pendingNew.delete(id);projects=projects.filter(p=>p.id!==id);if(current.id===id){clearTimeout(timer);clearTimeout(saveTimer);revision++;computeController?.abort();current=createProject(tool,adapter.blank,`Новый · ${content.title}`,adapter.methodologyVersion,adapter.referenceVersions||{});history.replaceState(history.state,'',location.pathname);renderForm();showHistory();clearResult();}$('[data-save-status]').textContent='Расчёт удалён. Можно отменить в папке.';if(!blockedStorage)writeProjects(localStorage,readProjects(localStorage).filter(p=>!deletedIds.has(p.id)));folder();}
       else if(action==='undo-delete'&&removed){if(projects.length>=60)throw new Error('В папке уже 60 расчётов.');deletedIds.delete(removed.id);observed.delete(removed.id);if(!projects.some(p=>p.id===current.id)&&removed.tool===tool){current=removed;renderForm();showHistory();void compute();}projects.push(removed);pendingNew.set(removed.id,removed);removed=null;save();folder();}
       else if(action==='recalculate'){if(projects.length>=60)throw new Error('В папке уже 60 расчётов.');const p=duplicateProject(current);p.methodologyVersion=adapter.methodologyVersion;p.referenceVersions=clone(adapter.referenceVersions||{});delete p.imported;shape(p);switchProject(p);}
+      else if(action==='undo-row'&&removedRow?.projectId===current.id){const arr=get(current.input,removedRow.path),limit=adapter.rowLimits?.[removedRow.path]||100;if(arr.length>=limit)throw new Error(`Сначала освободите место в списке: не более ${limit} строк.`);arr.splice(Math.min(removedRow.index,arr.length),0,removedRow.row);removedRow=null;renderForm();changed();status('Удалённая позиция восстановлена.');}
       else if(['add-row','remove-row','duplicate-row','up-row','down-row'].includes(action)){
         const path=b.dataset.path,arr=get(current.input,path),i=Number(b.dataset.index);if(!Array.isArray(arr))return;
-        if(action==='add-row'||action==='duplicate-row'){if(arr.length>=100)throw new Error('В интерфейсе допускается не более 100 строк в одном списке.');const row=clone(action==='add-row'?adapter.rowTemplates[path]:arr[i]);if(Object.hasOwn(row,'id'))row.id=newId();arr.splice(action==='add-row'?arr.length:i+1,0,row);}
-        else if(action==='remove-row')arr.splice(i,1);else{const j=action==='up-row'?i-1:i+1;[arr[i],arr[j]]=[arr[j],arr[i]];}renderForm();changed();
+        if(action==='add-row'||action==='duplicate-row'){const limit=adapter.rowLimits?.[path]||100;if(arr.length>=limit)throw new Error(`Допускается не более ${limit} строк в этом списке.`);const row=clone(action==='add-row'?adapter.rowTemplates[path]:arr[i]);if(Object.hasOwn(row,'id'))row.id=newId();arr.splice(action==='add-row'?arr.length:i+1,0,row);}
+        else if(action==='remove-row'){removedRow={projectId:current.id,path,index:i,row:clone(arr[i])};arr.splice(i,1);}else{const j=action==='up-row'?i-1:i+1;[arr[i],arr[j]]=[arr[j],arr[i]];}renderForm();changed();
       }
       else if(action==='cancel'){revision++;computeController?.abort();clearResult('Расчёт отменён.');b.hidden=true;}
       else if(action==='project-export'||action==='all-export'){save();const file=serialize(action==='all-export'?projects:[current]);if(new TextEncoder().encode(file).length>maxFileBytes)throw new Error('Архив больше 4 МБ. Выгрузите расчёты отдельными файлами.');download('smu1-project.json',file,'application/json');event(tool,'export');exportStatus('Файл проекта подготовлен. Сохраните его на устройстве.');}
       else if(action==='import')$('[data-import-file]').click();
       else if(action==='csv'&&result){download(`${tool}-vedomost.csv`,csv(result),'text/csv;charset=utf-8');event(tool,'export');exportStatus('CSV подготовлен: UTF-8, разделитель «;».');}
       else if(action==='print'&&result){const {printDocument}=await import('./core/print.mjs');await printDocument({current,result,content,adapter,root});event(tool,'export');exportStatus('Открыт системный диалог печати. Выберите принтер или «Сохранить в PDF».');}
-      else if(action==='copy'&&result){const message=summaryText()+'\n\nПрошу уточнить возможность изготовления и стоимость. Ведомость прилагаю.';try{await navigator.clipboard.writeText(message);exportStatus('Текст запроса скопирован. Вставьте его в письмо или Telegram.');}catch{const area=document.createElement('textarea');area.className='ym-disable-keys';area.value=message;area.setAttribute('aria-label','Текст запроса для копирования');$('[data-export-status]').replaceChildren(area);area.focus();area.select();}event(tool,'contact_start');}
+      else if(action==='copy'&&result){const message=summaryText()+'\n\n'+toolContacts[tool].request;try{await navigator.clipboard.writeText(message);exportStatus('Текст запроса скопирован. Вставьте его в письмо или Telegram.');}catch{const area=document.createElement('textarea');area.className='ym-disable-keys';area.value=message;area.setAttribute('aria-label','Текст запроса для копирования');$('[data-export-status]').replaceChildren(area);area.focus();area.select();}event(tool,'contact_start');}
       else if(action==='to-metal'&&result&&adapter.toMetal){save();if(projects.length>=60)throw new Error('В папке уже 60 расчётов.');const metal=await loadAdapter('metal');const p=createProject('metal',adapter.toMetal(result),'Закупка из раскроя',metal.methodologyVersion,metal.referenceVersions||{});projects.push(p);pendingNew.set(p.id,p);if(blockedStorage)throw new Error('Хранилище недоступно. Выгрузите папку файлом проекта: закупка добавлена как отдельный расчёт.');writeProjects(localStorage,[...readProjects(localStorage),p]);pendingNew.delete(p.id);location.href=`${base}instrumenty/metal/#project=${encodeURIComponent(p.id)}`;}
       else if(adapter.action){const update=await adapter.action(action,{input:current.input,result,root,button:b,projects});if(update){renderForm();changed();}}
     }catch(error){exportStatus(error.message);}

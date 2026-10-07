@@ -4,6 +4,7 @@ import { field, fields, group, rowActions, button, svg, dim, txt, escape, format
 
 export const { example, blank, methodologyVersion, limits } = engine;
 export const referenceVersions = {};
+export const rowLimits = { parts: engine.limits.partRows, stock: engine.limits.sourceRows, purchases: engine.limits.purchaseRows };
 export const printColumns = [
   { key: 'map', label: 'Карта' }, { key: 'type', label: 'Элемент' }, { key: 'name', label: 'Название / номер детали' },
   { key: 'length', label: 'Длина, мм' }, { key: 'start', label: 'Начало, мм' }, { key: 'end', label: 'Конец, мм' },

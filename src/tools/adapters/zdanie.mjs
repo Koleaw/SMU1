@@ -2,6 +2,7 @@ import * as engine from '../calculations/building.mjs';
 import { field, fields, group, rowActions, button, svg, dim, txt, escape, format, table } from '../core/view.mjs';
 
 export const { calculate, example, blank, methodologyVersion, referenceVersions } = engine;
+export const rowLimits = { zones: engine.limits.zones, openings: engine.limits.openings };
 export const rowTemplates = {
   zones: { id: '', name: '', x: null, y: null, length: null, width: null },
   openings: { id: '', name: '', side: 'south', position: null, width: null, height: null },
@@ -13,7 +14,7 @@ export function form(input) {
     field('purpose', 'Что планируется разместить', { type: 'text', maxlength: 2000, placeholder: 'Склад, цех, другое назначение' }),
     field('region', 'Регион строительства', { type: 'text', maxlength: 2000, placeholder: 'Неизвестно' }),
     field('thermal', 'Исполнение', { options: Object.entries(engine.thermalNames) }),
-  ]), 'Неизвестные данные можно оставить пустыми: они попадут в список уточнений.');
+  ]), 'БВЗ — быстровозводимое здание. Это задание для обсуждения, а не инженерный проект. Неизвестные данные можно оставить пустыми: они попадут в список уточнений.');
   html += group('Габариты и высоты', fields(input, [
     dimensionField('length', 'Наружная длина L'), dimensionField('width', 'Наружная ширина W'),
     dimensionField('externalHeight', 'Наружная высота'), dimensionField('usefulHeight', 'Требуемая полезная высота', { hint: 'Свободная высота для эксплуатации, отдельно от наружной.' }),

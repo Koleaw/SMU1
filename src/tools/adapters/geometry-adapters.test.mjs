@@ -54,3 +54,10 @@ test('geometry adapter labels safely escape names in diagrams and form fields', 
   foundation.layers[0].name = attack;
   assert.ok(!fundament.diagram(fundament.calculate(foundation), foundation).includes('<img'));
 });
+test('normalized historical tile centres remain compatible and can change mode',()=>{
+  const input=plitka.calculate({...plitka.example,mode:'symmetric-tile',centerY:'joint'}).input;
+  plitka.validateDraft(input);assert.equal(plitka.calculate(input).totals.sourceCount,6);
+  input.mode='symmetric-joint';plitka.onInput(input,'mode');
+  assert.equal(input.centerX,'joint');assert.equal(input.centerY,'joint');
+  assert.throws(()=>plitka.validateDraft({...input,unknown:1}));
+});

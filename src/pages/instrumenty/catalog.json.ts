@@ -22,7 +22,11 @@ export async function GET() {
         characteristics, materials: (product.materials || []).join(', ').slice(0, 2000)
       };
     });
-  return new Response(JSON.stringify({ version: '1.0.0', products }), {
+  const categories = snapshot.categories.map(category => ({
+    id: category.slug, title: category.title,
+    productIds: snapshot.productRoutes.filter(route => route.category.slug === category.slug && route.product.showInCatalog !== false).map(route => route.product.slug)
+  })).filter(category => category.productIds.length);
+  return new Response(JSON.stringify({ version: '1.0.0', products, categories }), {
     headers: { 'Content-Type': 'application/json; charset=utf-8' }
   });
 }
