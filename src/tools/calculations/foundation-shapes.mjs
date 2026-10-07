@@ -22,7 +22,7 @@ export function calculate(raw) {
   const formHeight=asMm(mm(raw.formwork.height,'formwork.height',0,100_000));
   const surfaces=object(raw.shapes.surfaces,['mode','edges'],'shapes.surfaces');
   const mode=enumValue(surfaces.mode,['none','all','outer','inner','selected'],'shapes.surfaces.mode');
-  const selected=array(surfaces.edges,'shapes.surfaces.edges',512).map((id,i)=>text(id,`shapes.surfaces.edges.${i}`,'',160));
+  const selected=array(surfaces.edges,'shapes.surfaces.edges',200).map((id,i)=>text(id,`shapes.surfaces.edges.${i}`,'',160));
   if(new Set(selected).size!==selected.length)fail('shapes.surfaces.edges','Поверхности не должны повторяться.');
   if(mode==='selected'&&(!selected.length||selected.some(id=>!shape.edges.some(e=>e.id===id))))fail('shapes.surfaces.mode','Границы изменились или выбор пуст. Выберите поверхности заново либо режим «Все границы».');
   if(type==='polygon'&&mode==='inner')fail('shapes.surfaces.mode','У плиты без отверстий нет внутренних границ.');

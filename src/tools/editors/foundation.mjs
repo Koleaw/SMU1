@@ -44,6 +44,7 @@ export function editor(input,root) {
   const isPolygon=input.type==='polygon',list=items(input),i=index(input,root),path=pointsPath(input);
   const title=isPolygon?'вершина':'участок';
   let html=plan(input,i,true);
+  if(list[i]){const p=list[i],values=Object.values(p).map(parse);if(values.every(valid))html+=`<p class="tool-hint"><strong>${isPolygon?'Вершина':'Участок'} ${i+1}</strong>: ${isPolygon?`X ${escape(p.x)}, Y ${escape(p.y)} мм`:`длина по оси ${format(Math.hypot(parse(p.x2)-parse(p.x1),parse(p.y2)-parse(p.y1)))} мм; ширина ${escape(input.stripWidth)} мм`}. Высота бетона ${escape(input.height)} мм.</p>`;}
   html+=`<label class="tool-field tool-field-wide"><span>Выбранный ${isPolygon?'элемент':'участок'}</span><select data-geometry-select class="ym-disable-keys" aria-label="Выбранный элемент">${list.map((_,n)=>`<option value="${n}" ${n===i?'selected':''}>${isPolygon?'Вершина':'Участок'} ${n+1}</option>`).join('')}</select></label>`;
   if(list.length)html+=fields(input,(isPolygon?['x','y']:['x1','y1','x2','y2']).map(k=>field(`${path}.${i}.${k}`,`${k.toUpperCase()} ${isPolygon?'вершины':'по оси'}`,{unit:'мм'})));
   html+=`<div class="tool-row-actions">${button('geo-add',`+ ${isPolygon?'Вершина после выбранной':'Участок'}`)}${button('geo-remove',`Удалить: ${title} ${i+1}`,list.length?'':'disabled')}</div>`;
@@ -82,7 +83,7 @@ export function action(action,{input,root,button:b}) {
   if(action==='geo-foot-add'){if(fp.vertices.length>=32)throw Error('Не более 32 вершин.');fp.vertices.push({x:0,y:0});return true;}
   return false;
 }
-function nudge(input,i,direction,step){const item=items(input)[i];if(!item)return;const axis=['left','right'].includes(direction)?'x':'y',delta=['left','up'].includes(direction)?-step:step;for(const key of input.type==='polygon'?[axis]:[`${axis}1`,`${axis}2`]){const value=parse(item[key]);if(!Number.isFinite(value))throw Error('Сначала заполните координаты выбранного элемента.');item[key]=Math.round((value+delta)*1000)/1000;}}
+function nudge(input,i,direction,step){const item=items(input)[i];if(!item)return;const axis=['left','right'].includes(direction)?'x':'y',delta=['left','up'].includes(direction)?-step:step,keys=input.type==='polygon'?[axis]:[`${axis}1`,`${axis}2`];if(keys.some(key=>!Number.isFinite(parse(item[key]))))throw Error('Сначала заполните координаты выбранного элемента.');for(const key of keys)item[key]=Math.round((parse(item[key])+delta)*1000)/1000;}
 
 export function bind(root,signal,api) {
   const listen=(name,fn)=>root.addEventListener(name,fn,{signal});

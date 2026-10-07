@@ -67,6 +67,7 @@ async function init(){
   }
   function tab(name){$('[data-active-tab]').dataset.activeTab=name;root.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));}
   function clearResult(message='Введите исходные данные для расчёта.'){
+    document.querySelector('.tool-print')?.remove();
     result=null;$('[data-action="zoom"]').hidden=true;$('[data-error]').hidden=true;root.querySelectorAll('[aria-invalid]').forEach(el=>{el.removeAttribute('aria-invalid');el.removeAttribute('aria-describedby');});$('[data-summary]').innerHTML='';$('[data-result-table]').innerHTML='';$('[data-extra]').innerHTML='';$('[data-notes]').innerHTML='';$('[data-diagram]').innerHTML=`<p class="tool-empty">${escape(message)}</p>`;root.querySelectorAll('[data-needs-result]').forEach(b=>b.disabled=true);
   }
   function renderResult(){
