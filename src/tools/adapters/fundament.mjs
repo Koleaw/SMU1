@@ -9,7 +9,7 @@ const complete = input => ({ ...structuredClone(input), formwork: { ...input.for
 export const example = complete(engine.example);
 export const blank = complete(engine.blank);
 export const history = true;
-export const renderOnChange = true;
+export const refresh = editor.refresh;
 export const bind = editor.bind;
 const shapeTemplate = { polygon:{closed:true,vertices:[{x:0,y:0}]},network:{segments:[{x1:0,y1:0,x2:0,y2:0}],footprint:{closed:true,vertices:[{x:0,y:0}]}},surfaces:{mode:'all',edges:['']} };
 export function validateDraft(input) {

@@ -39,11 +39,20 @@ export function plan(input, selected=-1, interactive=false, geometry=null) {
   return `<svg class="tool-svg geo-plan" viewBox="0 0 760 500" role="${interactive?'group':'img'}" aria-label="${interactive?'Редактор геометрии: выберите вершину или участок':'План бетона и выбранных формуемых границ'}" data-geo-plan data-scale="${scale}" xmlns="http://www.w3.org/2000/svg">${body}</svg><p class="tool-hint">${shape?'Синий — бетон; коричневый пунктир — опалубка; зелёный — заданное пятно.':'Черновая схема: контур ещё не прошёл проверку. Материалы не рассчитаны.'}</p>`;
 }
 
+function preview(input,root) {
+  const isPolygon=input.type==='polygon',list=items(input),i=index(input,root);
+  let html=plan(input,i,true);
+  if(list[i]){const p=list[i],values=Object.values(p).map(parse);if(values.every(valid))html+=`<p class="tool-hint"><strong>${isPolygon?'Вершина':'Участок'} ${i+1}</strong>: ${isPolygon?`X ${escape(p.x)}, Y ${escape(p.y)} мм`:`длина по оси ${format(Math.hypot(parse(p.x2)-parse(p.x1),parse(p.y2)-parse(p.y1)))} мм; ширина ${escape(input.stripWidth)} мм`}. Высота бетона ${escape(input.height)} мм.</p>`;}
+  return html;
+}
+export function refresh(input,root) {
+  const target=root.querySelector('[data-geo-preview]');
+  if(target&&['polygon','network'].includes(input.type))target.innerHTML=preview(input,root);
+}
 export function editor(input,root) {
   const isPolygon=input.type==='polygon',list=items(input),i=index(input,root),path=pointsPath(input);
   const title=isPolygon?'вершина':'участок';
-  let html=plan(input,i,true);
-  if(list[i]){const p=list[i],values=Object.values(p).map(parse);if(values.every(valid))html+=`<p class="tool-hint"><strong>${isPolygon?'Вершина':'Участок'} ${i+1}</strong>: ${isPolygon?`X ${escape(p.x)}, Y ${escape(p.y)} мм`:`длина по оси ${format(Math.hypot(parse(p.x2)-parse(p.x1),parse(p.y2)-parse(p.y1)))} мм; ширина ${escape(input.stripWidth)} мм`}. Высота бетона ${escape(input.height)} мм.</p>`;}
+  let html=`<div data-geo-preview>${preview(input,root)}</div>`;
   html+=`<label class="tool-field tool-field-wide"><span>Выбранный ${isPolygon?'элемент':'участок'}</span><select data-geometry-select class="ym-disable-keys" aria-label="Выбранный элемент">${list.map((_,n)=>`<option value="${n}" ${n===i?'selected':''}>${isPolygon?'Вершина':'Участок'} ${n+1}</option>`).join('')}</select></label>`;
   if(list.length)html+=fields(input,(isPolygon?['x','y']:['x1','y1','x2','y2']).map(k=>field(`${path}.${i}.${k}`,`${k.toUpperCase()} ${isPolygon?'вершины':'по оси'}`,{unit:'мм'})));
   html+=`<div class="tool-row-actions">${button('geo-add',`+ ${isPolygon?'Вершина после выбранной':'Участок'}`)}${button('geo-remove',`Удалить: ${title} ${i+1}`,list.length?'':'disabled')}</div>`;

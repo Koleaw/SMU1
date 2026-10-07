@@ -4,6 +4,11 @@ export async function exerciseFoundationGeometry({browser,check,action,click,fil
   await click('[data-preserve-open="geo-examples"] > summary',true);
   await action('geo-example',true,'[data-kind="l"]');
   check('foundation-L-area-volume',await waitFor(`${valid} && (${current})?.resultSnapshot?.totals.concreteAreaM2 === 36 && (${current})?.resultSnapshot?.totals.concreteVolumeM3 === 9`));
+  await fill('[data-field="shapes.polygon.vertices.0.x"]','100');
+  await browser.dispatchKey('Tab',{code:'Tab'});
+  check('foundation-numeric-tab-preserves-focus',await waitFor(`document.activeElement?.dataset.field === 'shapes.polygon.vertices.0.y' && (${current})?.input.shapes.polygon.vertices[0].x === '100'`));
+  await action('history-undo',true);
+  check('foundation-tab-edit-undo',await waitFor(`${valid} && (${current})?.input.shapes.polygon.vertices[0].x === 0`));
   await action('geo-select',true,'[data-index="0"]');
   await action('geo-nudge',true,'[data-direction="right"]');
   check('foundation-diagram-nudge',await waitFor(`(${current})?.input.shapes.polygon.vertices[0].x === 100`));
