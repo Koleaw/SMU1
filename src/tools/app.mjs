@@ -67,7 +67,7 @@ async function init(){
     $('[data-error]').hidden=true;
     $('[data-summary]').innerHTML=result.summary.map(s=>`<dl class="tool-metric"><dt>${escape(s.label)}</dt><dd>${escape(format(s.value))} <small>${escape(s.unit||'')}</small></dd></dl>`).join('');
     $('[data-notes]').innerHTML=(result.warnings||result.notes||[]).map(s=>`<p>${escape(s)}</p>`).join('');
-    $('[data-result-table]').innerHTML=table(result);
+    $('[data-result-table]').innerHTML=table(result,{productLinks:tool==='maf'});
     $('[data-diagram]').innerHTML=adapter.diagram(result,current.input,active,root);
     $('[data-action="zoom"]').hidden=!$('[data-diagram] svg');
     $('[data-extra]').innerHTML=adapter.extra?.(result,current.input,root)||'';
