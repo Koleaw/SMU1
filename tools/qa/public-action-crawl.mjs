@@ -181,7 +181,7 @@ const registerExpression = `(() => {
       id, tag: element.tagName.toLowerCase(), role: element.getAttribute('role') || '', name: nameOf(element),
       href: element.href || element.getAttribute('href') || '', type: element.type || '', target: element.target || '',
       download: element.hasAttribute('download'), inForm: Boolean(element.closest('form')),
-      toolAction: element.dataset.action || '', toolField: Boolean(element.dataset.field || element.matches('[data-project-name],[data-maf-search]')),
+      toolAction: element.dataset.action || '', toolField: Boolean(element.dataset.field || element.matches('[data-project-name],[data-maf-search],[data-maf-category]')),
       formAction: element.formAction || element.closest('form')?.action || '', formMethod: element.formMethod || element.closest('form')?.method || '',
       visible: visible(element), disabled: Boolean(element.disabled || element.getAttribute('aria-disabled') === 'true'),
       selected: element.getAttribute('aria-current') === 'true' || element.getAttribute('aria-current') === 'page'

@@ -145,9 +145,31 @@ export async function exerciseToolSemantics(browser, { requestedUrl } = {}) {
       check('maf-add-real-item', await waitFor(`(${current}).input.rows.reduce((n,r) => n + Number(r.quantity), 0) === ${before + 1}`));
       await action('maf-alternative', true);
       check('maf-compare-copy', await waitFor(`JSON.stringify((${current}).input.rows) === JSON.stringify((${current}).input.alternative)`));
+      // Compare the actual filtered cards with the public catalogue, rather than
+      // treating a focused select or a smaller card count as proof of filtering.
+      const catalogue = await browser.evaluate(`(async () => {
+        const response = await fetch(document.querySelector('[data-tool-app]').dataset.base + 'instrumenty/catalog.json');
+        if (!response.ok) throw new Error('Catalogue fixture unavailable');
+        return response.json();
+      })()`);
+      const allIds = catalogue.products.map(product => product.id).sort();
+      const category = catalogue.categories[0];
+      if (!category?.productIds?.length) throw new Error('Category fixture unavailable');
+      const expectedIds = allIds.filter(id => category.productIds.includes(id));
+      const cards = `[...document.querySelectorAll('[data-maf-catalog] [data-product]')].map(el => el.dataset.product).sort()`;
+      const beforeFilter = await browser.evaluate(`JSON.stringify((${current}).input)`);
+      await browser.evaluate(`document.querySelector('[data-maf-category]').focus()`);
+      await browser.dispatchKey('Home', { code: 'Home' });
+      await browser.dispatchKey('ArrowDown', { code: 'ArrowDown' });
+      check('maf-keyboard-category-filter', await waitFor(`document.querySelector('[data-maf-category]').value === ${JSON.stringify(category.id)} && JSON.stringify(${cards}) === ${JSON.stringify(JSON.stringify(expectedIds))}`));
       await fill('[data-maf-search]', 'несуществующееизделие92831');
       check('maf-search-filter', await browser.evaluate(`!document.querySelector('[data-maf-catalog] [data-product]')`));
       await fill('[data-maf-search]', '');
+      check('maf-search-reset-keeps-category', await waitFor(`JSON.stringify(${cards}) === ${JSON.stringify(JSON.stringify(expectedIds))}`));
+      await browser.evaluate(`document.querySelector('[data-maf-category]').focus()`);
+      await browser.dispatchKey('Home', { code: 'Home' });
+      check('maf-category-reset-restores-catalogue', await waitFor(`document.querySelector('[data-maf-category]').value === '' && JSON.stringify(${cards}) === ${JSON.stringify(JSON.stringify(allIds))}`));
+      check('maf-filters-preserve-project', await browser.evaluate(`JSON.stringify((${current}).input) === ${JSON.stringify(beforeFilter)}`));
     }
     await action('example', true);
     check('final-example-restored', await waitFor(valid));
