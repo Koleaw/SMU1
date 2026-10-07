@@ -71,6 +71,7 @@ async function init(){
     result=null;$('[data-action="zoom"]').hidden=true;$('[data-error]').hidden=true;root.querySelectorAll('[aria-invalid]').forEach(el=>{el.removeAttribute('aria-invalid');el.removeAttribute('aria-describedby');});$('[data-summary]').innerHTML='';$('[data-result-table]').innerHTML='';$('[data-extra]').innerHTML='';$('[data-notes]').innerHTML='';$('[data-diagram]').innerHTML=`<p class="tool-empty">${escape(message)}</p>`;root.querySelectorAll('[data-needs-result]').forEach(b=>b.disabled=true);
   }
   function renderResult(){
+    document.querySelector('.tool-print')?.remove();
     $('[data-error]').hidden=true;
     $('[data-summary]').innerHTML=result.summary.map(s=>`<dl class="tool-metric"><dt>${escape(s.label)}</dt><dd>${escape(format(s.value))} <small>${escape(s.unit||'')}</small></dd></dl>`).join('');
     $('[data-notes]').innerHTML=(result.warnings||result.notes||[]).map(s=>`<p>${escape(s)}</p>`).join('');

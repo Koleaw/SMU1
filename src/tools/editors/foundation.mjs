@@ -8,6 +8,8 @@ const pointsPath=input=>input.type==='polygon'?'shapes.polygon.vertices':'shapes
 const items=input=>input.type==='polygon'?input.shapes.polygon.vertices:input.shapes.network.segments;
 const index=(input,root)=>Math.min(Math.max(0,Number(root?.dataset.geoIndex)||0),Math.max(0,items(input).length-1));
 const attrs=(action,extra='')=>`data-action="${action}" ${extra}`;
+const coordinatesText=(p,n)=>`${n+1}: ${Object.entries(p).map(([k,v])=>`${k.toUpperCase()} = ${v} мм`).join('; ')}`;
+function surfaceChoices(input) {const shape=shapeOf(input);return shape?shape.edges.map((e,i)=>`<label class="tool-check"><input type="checkbox" class="ym-disable-keys" data-geometry-edge="${escape(e.id)}" ${input.shapes.surfaces.edges.includes(e.id)?'checked':''}/><span>Граница ${i+1}: (${format(e.x1)}; ${format(e.y1)}) → (${format(e.x2)}; ${format(e.y2)}) мм · ${e.kind==='outer'?'наружная':'внутренняя'}</span></label>`).join(''):'<p class="tool-hint">Сначала исправьте геометрию для выбора её границ.</p>';}
 export function shapeOf(input) {try{return input.type==='polygon'?polygon(input.shapes.polygon):network(input.shapes.network,input.stripWidth);}catch{return null;}}
 
 export function plan(input, selected=-1, interactive=false, geometry=null) {
@@ -47,7 +49,12 @@ function preview(input,root) {
 }
 export function refresh(input,root) {
   const target=root.querySelector('[data-geo-preview]');
-  if(target&&['polygon','network'].includes(input.type))target.innerHTML=preview(input,root);
+  if(!target||!['polygon','network'].includes(input.type))return;
+  target.innerHTML=preview(input,root);
+  root.querySelectorAll('[data-geo-coordinate-text]').forEach(el=>{const n=Number(el.dataset.geoCoordinateText);if(items(input)[n])el.textContent=coordinatesText(items(input)[n],n);});
+  // Wait for the native Tab/click focus transition before replacing only the
+  // derived boundary choices, never numerical fields or their next controls.
+  setTimeout(()=>{const list=root.querySelector('[data-geo-surfaces]');if(!root.isConnected||!list)return;const focused=list.contains(document.activeElement)?document.activeElement.dataset.geometryEdge:null;list.innerHTML=surfaceChoices(input);if(focused)([...list.querySelectorAll('[data-geometry-edge]')].find(el=>el.dataset.geometryEdge===focused)||root.querySelector('[data-field="shapes.surfaces.mode"]'))?.focus();},0);
 }
 export function editor(input,root) {
   const isPolygon=input.type==='polygon',list=items(input),i=index(input,root),path=pointsPath(input);
@@ -58,7 +65,7 @@ export function editor(input,root) {
   html+=`<div class="tool-row-actions">${button('geo-add',`+ ${isPolygon?'Вершина после выбранной':'Участок'}`)}${button('geo-remove',`Удалить: ${title} ${i+1}`,list.length?'':'disabled')}</div>`;
   html+=`<p class="tool-hint">Выберите точку на схеме или в списке. Стрелки на выбранной точке и кнопки ниже сдвигают её на 100 мм (Shift — 10 мм). Координаты можно вводить точно; перетаскивание не требуется. X вправо, Y вниз.</p><div class="tool-row-actions">${[['left','← X −100'],['right','X +100 →'],['up','↑ Y −100'],['down','Y +100 ↓']].map(([d,l])=>button('geo-nudge',l,`data-direction="${d}" ${list.length?'':'disabled'}`)).join('')}</div>`;
   if(isPolygon)html+=fields(input,[field('shapes.polygon.closed','Замкнуть контур (последняя → первая)',{type:'checkbox'})]);
-  html+=`<details data-preserve-open="geo-coordinates"><summary>Все ${isPolygon?'вершины':'участки'} численно · порядок обхода</summary>${list.map((p,n)=>`<p>${n+1}: ${Object.entries(p).map(([k,v])=>`${k.toUpperCase()} = ${escape(v)} мм`).join('; ')} ${button('geo-select','Выбрать',`data-index="${n}"`)}</p>`).join('')}</details>`;
+  html+=`<details data-preserve-open="geo-coordinates"><summary>Все ${isPolygon?'вершины':'участки'} численно · порядок обхода</summary>${list.map((p,n)=>`<p><span data-geo-coordinate-text="${n}">${escape(coordinatesText(p,n))}</span> ${button('geo-select','Выбрать',`data-index="${n}"`)}</p>`).join('')}</details>`;
   if(!isPolygon){
     const fp=input.shapes.network.footprint;
     html+=`<details data-preserve-open="geo-footprint"><summary>Внешний контур для слоя «Всё пятно»</summary><p class="tool-hint">Необязательный отдельный ортогональный контур по внешним границам. Должен охватывать весь бетон. Для открытой сети площадь автоматически не определяется.</p>${fields(input,[field('shapes.network.footprint.closed','Замкнуть внешний контур',{type:'checkbox'})])}${fp.vertices.map((_,n)=>group(`Вершина пятна ${n+1}`,fields(input,['x','y'].map(k=>field(`shapes.network.footprint.vertices.${n}.${k}`,k.toUpperCase(),{unit:'мм'})))+button('geo-foot-remove','Удалить вершину',`data-index="${n}"`))).join('')}<div class="tool-row-actions">${button('geo-foot-add','+ Вершина пятна')}${button('geo-foot-clear','Убрать контур пятна')}</div></details>`;
@@ -67,9 +74,9 @@ export function editor(input,root) {
 }
 
 export function surfaceForm(input) {
-  const shape=shapeOf(input),modes=[['none','Без опалубки'],['all','Все границы'],['outer','Только наружные'],...(input.type==='network'?[['inner','Только внутренние']]:[]),['selected','Выбрать отдельные границы']];
+  const modes=[['none','Без опалубки'],['all','Все границы'],['outer','Только наружные'],...(input.type==='network'?[['inner','Только внутренние']]:[]),['selected','Выбрать отдельные границы']];
   let html=fields(input,[field('shapes.surfaces.mode','Формуемые поверхности',{options:modes}),field('formwork.height','Формуемая высота',{unit:'мм',hint:'Отдельно от высоты бетона. Верх и низ не учитываются.'})]);
-  if(input.shapes.surfaces.mode==='selected'&&shape)html+=`<div class="geo-surfaces">${shape.edges.map((e,i)=>`<label class="tool-check"><input type="checkbox" class="ym-disable-keys" data-geometry-edge="${escape(e.id)}" ${input.shapes.surfaces.edges.includes(e.id)?'checked':''}/><span>Граница ${i+1}: (${format(e.x1)}; ${format(e.y1)}) → (${format(e.x2)}; ${format(e.y2)}) мм · ${e.kind==='outer'?'наружная':'внутренняя'}</span></label>`).join('')}</div>`;
+  if(input.shapes.surfaces.mode==='selected')html+=button('geo-surfaces-clear','Выбрать границы заново')+`<div class="geo-surfaces" data-geo-surfaces>${surfaceChoices(input)}</div>`;
   return group('Опалубка по границам бетона',html,'Только открытые боковые границы объединения. Пересечения участков не создают внутренних поверхностей. До 200 отдельных границ либо вся группа. При изменении выбранной границы потребуется выбрать её заново.');
 }
 
@@ -82,6 +89,7 @@ export function action(action,{input,root,button:b}) {
   }
   if(!['polygon','network'].includes(input.type))return false;
   const list=items(input),i=index(input,root);
+  if(action==='geo-surfaces-clear'){input.shapes.surfaces.edges=[];return true;}
   if(action==='geo-add'){if(list.length>=32)throw Error('Не более 32 элементов.');if(input.type==='polygon'){const a=list[i],c=list[(i+1)%list.length];const midpoint=k=>a&&c&&valid(parse(a[k]))&&valid(parse(c[k]))?Math.round((parse(a[k])+parse(c[k]))*500)/1000:0;list.splice(i+1,0,{x:midpoint('x'),y:midpoint('y')});root.dataset.geoIndex=String(Math.min(i+1,list.length-1));}else{list.push({x1:0,y1:0,x2:1000,y2:0});root.dataset.geoIndex=String(list.length-1);}return true;}
   if(action==='geo-remove'){list.splice(i,1);root.dataset.geoIndex=String(Math.max(0,i-1));return true;}
   if(action==='geo-nudge'){nudge(input,i,b.dataset.direction,100);return true;}
