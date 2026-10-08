@@ -188,6 +188,21 @@
   overflow-wrap: normal;
   word-break: normal;
 }
+/* Direction sections retain full content tracks when their desktop grid collapses. */
+@media (max-width: 980px) {
+  :root[data-v2-public-route='true'] .home-v2-body .place-direction-v2 :is(.place-section-heading, .place-brief__grid),
+  :root[data-v2-public-route='true'] .home-v2-body .project-direction-v2--construction .project-contexts__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :root[data-v2-public-route='true'] .home-v2-body .place-direction-v2 :is(.place-section-heading, .place-brief__grid) > *,
+  :root[data-v2-public-route='true'] .home-v2-body .project-direction-v2--construction .project-contexts__grid > *,
+  :root[data-v2-public-route='true'] .home-v2-body .place-direction-v2 .immersive-direction-hero--landscaping .immersive-direction-hero__copy {
+    grid-column: 1 / -1;
+  }
+  :root[data-v2-public-route='true'] .home-v2-body .project-direction-v2--construction .project-scope__list .project-scope__item--featured {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 /* Phone cards need room for the complete number, including between breakpoints. */
 @media (min-width: 1121px) and (max-width: 1280px) {
   :root[data-v2-public-route='true'] .practical-v2 .practical-contacts__method-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

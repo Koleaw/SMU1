@@ -104,6 +104,8 @@
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root] .v2-product-card { min-height: 0; }
   :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root] .v2-product-card__media { aspect-ratio: 4 / 3; }
 }
+/* The gallery heading has no second column to reserve. */
+:root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-product-final-prototype='premium-product'] .v2-premium-gallery .v2-section-heading { display: block; }
 /* A single authored variant is an explanation, not a half-empty card grid. */
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root] .v2-premium-variants--single { padding-block: 32px; }
 :root[data-v2-public-route='true'] .home-v2-body .catalog-v2[data-catalog-v2-root] .v2-premium-variants--single > .hv2-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 24px 40px; align-items: start; }
