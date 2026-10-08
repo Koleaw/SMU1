@@ -182,3 +182,18 @@
   :root[data-v2-public-route='true'] .home-v2-body :is(.hv2-button, .hf-button)::after { transition: none; transform: none; }
   :root[data-v2-public-route='true'] .home-v2-body :is(.hv2-button--primary, .hv2-button--light, .hf-button--primary)::after { transform: rotate(45deg); }
 }
+:root[data-v2-public-route='true'] .home-v2-body a[href^='tel:'] > strong,
+:root[data-v2-public-route='true'] .home-v2-body .hv2-footer a[href^='tel:'] {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+/* Phone cards need room for the complete number, including between breakpoints. */
+@media (min-width: 1121px) and (max-width: 1280px) {
+  :root[data-v2-public-route='true'] .practical-v2 .practical-contacts__method-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :root[data-v2-public-route='true'] .practical-v2 .practical-contact-card { grid-column: auto; }
+}
+@media (max-width: 460px) {
+  :root[data-v2-public-route='true'] .practical-v2 .practical-contacts__method-grid { grid-template-columns: minmax(0, 1fr); }
+  :root[data-v2-public-route='true'] .practical-v2 .practical-contact-card { grid-column: 1; }
+}

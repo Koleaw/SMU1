@@ -1,4 +1,5 @@
 ---
+import V2TaskTools from '../V2TaskTools.astro';
 import DirectionV2FinalCTA from '../directions/DirectionV2FinalCTA.astro';
 import ImmersiveDirectionHero from '../directions/ImmersiveDirectionHero.astro';
 import DirectionV2Related from '../directions/DirectionV2Related.astro';
@@ -214,6 +215,8 @@ const blockBinding = (block: unknown, field: 'title' | 'intro' | 'items' | 'step
     itemsBinding={blockBinding(inputBlock, 'steps', 'list', 'object')}
     editorSource="src/content/product-sections/metallokonstruktsii-dlya-biznesa.json#pageBlocks[process]"
   />
+
+  <V2TaskTools tools={["metal","raskroy"]} />
 
   <DirectionV2Related
     eyebrow={presentation.related.eyebrow}

@@ -367,7 +367,7 @@ const mobileCtaBinding = productUiBinding('premiumHeroPrimaryLabel', 'link-label
 
     {executionVariants.length > 0 && (
       <section
-        class="v2-premium-variants"
+        class:list={['v2-premium-variants', { 'v2-premium-variants--single': executionVariants.length === 1 }]}
         id="premium-variants"
         aria-labelledby="premium-variants-title"
         data-premium-product-section
@@ -527,6 +527,7 @@ const mobileCtaBinding = productUiBinding('premiumHeroPrimaryLabel', 'link-label
       description={finalContactDescription}
       primaryLabel={settings.productUi.premiumContactPrimaryLabel}
       secondaryLabel={settings.productUi.premiumContactSecondaryLabel}
+      secondaryHref={relatedHref}
       variant="product"
       eyebrowBinding={productUiBinding('premiumContactEyebrow', 'short-text')}
       titleBinding={binding('customProjectTitle', 'heading', { projection: { kind: 'fallback', fallback: 'site-settings.productUi.premiumDefaultTitle' } })}

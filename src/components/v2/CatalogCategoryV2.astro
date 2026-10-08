@@ -1,4 +1,5 @@
 ---
+import V2TaskTools from './V2TaskTools.astro';
 import CatalogV2Layout from './CatalogV2Layout.astro';
 import { v2Href as resolveV2Href } from '../../utils/v2Routes';
 const withBase = (value: string) => resolveV2Href(value, Astro.url.pathname);
@@ -237,6 +238,8 @@ const sectionNavItems = [
         </section>
       )}
 
+      <V2TaskTools tools={section.slug === 'ulichnaya-mebel' ? ['maf'] : section.slug === 'ograzhdeniya-i-zabory' ? ['ograzhdenie'] : []} />
+
       <section class="v2-custom-cta" id="category-custom" aria-labelledby="v2-category-custom-title">
         <div class="hv2-shell hv2-grid v2-custom-cta__grid" data-v2-reveal>
           <div>
@@ -270,6 +273,8 @@ const sectionNavItems = [
       />
     </>
   ) : (
-    <V2CatalogSparseState category={category} sectionTitle={section.title} sectionHref={links.sectionHref} />
+    <V2CatalogSparseState category={category} sectionTitle={section.title} sectionHref={links.sectionHref}>
+      <V2TaskTools slot="tools" tools={section.slug === 'ograzhdeniya-i-zabory' && !['perila-i-poruchni', 'stolbiki-i-bollardy'].includes(category.slug) ? ['ograzhdenie'] : []} />
+    </V2CatalogSparseState>
   )}
 </CatalogV2Layout>

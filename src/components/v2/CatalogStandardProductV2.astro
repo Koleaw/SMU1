@@ -424,6 +424,7 @@ const mobileCtaBinding = productUiBinding('standardHeroPrimaryLabel', 'link-labe
     description={finalContactDescription}
     primaryLabel={settings.productUi.standardContactPrimaryLabel}
     secondaryLabel={settings.productUi.standardContactSecondaryLabel}
+    secondaryHref={relatedHref}
     variant="product"
     eyebrowBinding={productUiBinding('standardContactEyebrow', 'short-text')}
     titleBinding={binding('customProjectTitle', 'heading', { projection: { kind: 'fallback', fallback: product.showCustomProjectBlock !== false ? 'site-settings.productUi.standardDefaultCustomTitle' : 'site-settings.productUi.standardDefaultRegularTitle' } })}

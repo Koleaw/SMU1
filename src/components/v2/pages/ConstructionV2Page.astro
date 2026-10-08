@@ -1,4 +1,5 @@
 ---
+import V2TaskTools from '../V2TaskTools.astro';
 import DirectionV2FinalCTA from '../directions/DirectionV2FinalCTA.astro';
 import ImmersiveDirectionHero from '../directions/ImmersiveDirectionHero.astro';
 import DirectionV2Related from '../directions/DirectionV2Related.astro';
@@ -232,6 +233,8 @@ const blockBinding = (block: unknown, field: 'title' | 'intro' | 'items', tool: 
     descriptionBinding={blockBinding(briefBlock, 'intro', 'long-text')}
     itemsBinding={blockBinding(briefBlock, 'items', 'list', 'string')}
   />
+
+  <V2TaskTools tools={["zdanie","fundament"]} />
 
   <DirectionV2Related
     eyebrow={presentation.related.eyebrow}

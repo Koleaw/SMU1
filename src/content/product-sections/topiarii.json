@@ -6,7 +6,7 @@
   "homeImage": "/uploads/chatgpt-image-5-2026-21-56-34-1783277800820.png",
   "heroKicker": "Топиарии",
   "heroTitle": "Топиарии под заказ",
-  "heroDescription": "Изготавливаем декоративные топиарные фигуры и зеленые композиции для парков, входных групп, общественных пространств, коммерческих территорий и частных объектов.",
+  "heroDescription": "Изготавливаем декоративные фигуры и зелёные композиции. Пришлите идею или референс — обсудим форму, размеры и исполнение под ваш объект.",
   "order": 5,
   "showOnHome": true,
   "isActive": true,
@@ -29,30 +29,81 @@
     "sectionNav": {
       "label": "Разделы направления",
       "items": [
-        { "id": "direction-types", "label": "Что изготавливаем", "order": 10, "isActive": true },
-        { "id": "direction-scope", "label": "Где используют", "order": 20, "isActive": true },
-        { "id": "direction-brief", "label": "Исходные данные", "order": 30, "isActive": true },
-        { "id": "contact", "label": "Обсудить задачу", "order": 40, "isActive": true }
+        {
+          "id": "direction-types",
+          "label": "Что изготавливаем",
+          "order": 10,
+          "isActive": true
+        },
+        {
+          "id": "direction-scope",
+          "label": "Где используют",
+          "order": 20,
+          "isActive": true
+        },
+        {
+          "id": "direction-brief",
+          "label": "Исходные данные",
+          "order": 30,
+          "isActive": true
+        },
+        {
+          "id": "contact",
+          "label": "Обсудить задачу",
+          "order": 40,
+          "isActive": true
+        }
       ]
     },
-    "types": { "eyebrow": "Формы и композиции" },
-    "scope": { "eyebrow": "Сценарии применения" },
+    "types": {
+      "eyebrow": "Формы и композиции"
+    },
+    "scope": {
+      "eyebrow": "Сценарии применения"
+    },
     "brief": {
       "eyebrow": "Собственная идея",
       "title": "Покажите желаемый образ",
       "description": "Для первоначального обсуждения можно передать идею и те исходные материалы, которые уже есть.",
       "items": [
-        { "id": "photo", "label": "Фотография", "order": 10, "isActive": true },
-        { "id": "sketch", "label": "Эскиз", "order": 20, "isActive": true },
-        { "id": "brief", "label": "ТЗ", "order": 30, "isActive": true },
-        { "id": "description", "label": "Описание задачи", "order": 40, "isActive": true }
+        {
+          "id": "photo",
+          "label": "Фотография",
+          "order": 10,
+          "isActive": true
+        },
+        {
+          "id": "sketch",
+          "label": "Эскиз",
+          "order": 20,
+          "isActive": true
+        },
+        {
+          "id": "brief",
+          "label": "ТЗ",
+          "order": 30,
+          "isActive": true
+        },
+        {
+          "id": "description",
+          "label": "Описание задачи",
+          "order": 40,
+          "isActive": true
+        }
       ]
     },
     "related": {
       "eyebrow": "Дальше по задаче",
       "title": "Топиарии в благоустройстве",
       "items": [
-        { "id": "landscaping", "targetCollection": "services", "targetSlug": "blagoustroystvo-territoriy", "eyebrow": "Связанное направление", "order": 10, "isActive": true }
+        {
+          "id": "landscaping",
+          "targetCollection": "services",
+          "targetSlug": "blagoustroystvo-territoriy",
+          "eyebrow": "Связанное направление",
+          "order": 10,
+          "isActive": true
+        }
       ]
     },
     "contactEyebrow": "Обсудить проект",

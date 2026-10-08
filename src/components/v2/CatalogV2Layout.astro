@@ -120,11 +120,11 @@ const directionTheme = /(?:^|\/)topiarii(?:\/|$)/.test(themePath) ? 'topiary'
     data-product-final-prototype={productFinalPrototype}
     data-direction-theme={directionTheme}
   >
-    <a class="v2-skip-link" href="#main-content" {...adminDisposition(Astro.url, {
+    {(!hasPublicMotion || themePath.startsWith('/instrumenty/')) && <a class="v2-skip-link" href="#main-content" {...adminDisposition(Astro.url, {
       kind: 'template-fixed',
       reason: 'Accessibility-control переводит фокус к основному содержимому и не является бизнес-текстом страницы.',
       source: 'src/components/v2/CatalogV2Layout.astro#skip-link'
-    })}>К основному содержанию</a>
+    })}>К основному содержанию</a>}
     <HomeV2Header
       mode={resolvedHeaderMode}
       currentPath={currentPath}

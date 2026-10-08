@@ -155,7 +155,7 @@
 :root[data-v2-public-route='true'] .home-v2-body
   .catalog-v2[data-product-final-prototype='premium-product']
   .v2-premium-product-hero h1 {
-  max-width: 10ch;
+  max-width: 100%;
 }
 
 @media (min-width: 761px) {
