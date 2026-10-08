@@ -3,8 +3,8 @@ import { getCollection } from 'astro:content';
 import { v2Href } from '../../utils/v2Routes';
 import { adminBinding, adminDisposition } from '../../admin/bindings/adminBinding';
 
-interface Props { tools: string[] }
-const { tools } = Astro.props;
+interface Props { tools: string[]; compact?: boolean }
+const { tools, compact = false } = Astro.props;
 const available = await getCollection('tools');
 const items = tools.flatMap((id) => available.filter((entry) => entry.data.id === id));
 const binding = (id: string, fieldPath: string) => adminBinding(Astro.url, {
@@ -20,14 +20,7 @@ const binding = (id: string, fieldPath: string) => adminBinding(Astro.url, {
   <ul role="list">
     {items.map(({ data }) => <li>
       <a class="hv2-text-link" href={v2Href(`/instrumenty/${data.id}/`, Astro.url.pathname)} {...binding(data.id, 'title')}>{data.title}</a>
-      <p {...binding(data.id, 'description')}>{data.description}</p>
+      {!compact && <p {...binding(data.id, 'description')}>{data.description}</p>}
     </li>)}
   </ul>
 </aside>}
-<style>
-  .v2-task-tools { padding-block: 28px 36px; }
-  .v2-task-tools ul { display: flex; flex-wrap: wrap; gap: 24px 48px; margin: 12px 0 0; padding: 0; list-style: none; }
-  .v2-task-tools li { flex: 1 1 280px; max-width: 64ch; min-width: 0; }
-  .v2-task-tools li > p { margin: 8px 0 0; font-size: 16px; line-height: 1.55; }
-  .v2-task-tools a { width: fit-content; }
-</style>

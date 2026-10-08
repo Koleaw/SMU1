@@ -523,3 +523,8 @@
     transition: none;
   }
 }
+:root .home-v2-body .v2-task-tools { padding-block: 28px 36px; }
+:root .home-v2-body .v2-task-tools ul { display: flex; flex-wrap: wrap; gap: 24px 48px; margin: 12px 0 0; padding: 0; list-style: none; }
+:root .home-v2-body .v2-task-tools li { flex: 1 1 280px; max-width: 64ch; min-width: 0; }
+:root .home-v2-body .v2-task-tools li > p { margin: 8px 0 0; font-size: 16px; line-height: 1.55; }
+:root .home-v2-body .v2-task-tools a { width: fit-content; }
